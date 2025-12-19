@@ -1,0 +1,153 @@
+import type { Project, ProjectTask, FinancialEntry } from '@/types/database';
+import type { BU } from '@/types/database';
+
+// DB 타입 -> 프론트 타입 변환
+export function dbProjectToFrontend(p: Project): {
+  id: string;
+  bu: BU;
+  name: string;
+  cat: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+} {
+  return {
+    id: String(p.id),
+    bu: p.bu_code,
+    name: p.name,
+    cat: p.category,
+    startDate: p.start_date,
+    endDate: p.end_date,
+    status: p.status,
+  };
+}
+
+export function dbTaskToFrontend(t: ProjectTask): {
+  id: string;
+  bu: BU;
+  projectId: string;
+  title: string;
+  assignee: string;
+  dueDate: string;
+  status: 'todo' | 'in-progress' | 'done';
+} {
+  return {
+    id: String(t.id),
+    bu: t.bu_code,
+    projectId: String(t.project_id),
+    title: t.title,
+    assignee: t.assignee || '',
+    dueDate: t.due_date,
+    status: t.status === 'in_progress' ? 'in-progress' : t.status,
+  };
+}
+
+export function dbFinancialToFrontend(f: FinancialEntry): {
+  id: string;
+  projectId: string;
+  bu: BU;
+  type: 'revenue' | 'expense';
+  category: string;
+  name: string;
+  amount: number;
+  date: string;
+  status: 'planned' | 'paid' | 'canceled';
+} {
+  return {
+    id: String(f.id),
+    projectId: String(f.project_id),
+    bu: f.bu_code,
+    type: f.kind, // 'revenue' 또는 'expense'
+    category: f.category, // 실제 카테고리명 (안무제작, 인건비 등)
+    name: f.name,
+    amount: f.amount,
+    date: f.occurred_at,
+    status: f.status,
+  };
+}
+
+// 프론트 타입 -> DB 타입 변환
+export function frontendProjectToDb(p: {
+  bu: BU;
+  name: string;
+  cat: string;
+  startDate: string;
+  endDate: string;
+  status?: string;
+}): {
+  bu_code: BU;
+  name: string;
+  category: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+} {
+  const today = new Date().toISOString().split('T')[0];
+  return {
+    bu_code: p.bu,
+    name: p.name,
+    category: p.cat,
+    status: p.status || '준비중',
+    start_date: p.startDate || today,
+    end_date: p.endDate || today,
+  };
+}
+
+export function frontendTaskToDb(t: {
+  projectId: string;
+  bu: BU;
+  title: string;
+  assignee: string;
+  dueDate: string;
+  status?: 'todo' | 'in-progress' | 'done';
+}): {
+  project_id: number;
+  bu_code: BU;
+  title: string;
+  assignee: string;
+  due_date: string;
+  status: 'todo' | 'in_progress' | 'done';
+} {
+  const today = new Date().toISOString().split('T')[0];
+  return {
+    project_id: Number(t.projectId),
+    bu_code: t.bu,
+    title: t.title,
+    assignee: t.assignee,
+    due_date: t.dueDate || today,
+    status: t.status === 'in-progress' ? 'in_progress' : (t.status || 'todo'),
+  };
+}
+
+export function frontendFinancialToDb(f: {
+  projectId: string;
+  bu: BU;
+  type: 'revenue' | 'expense';
+  category?: string;
+  name: string;
+  amount: number;
+  date: string;
+  status?: 'planned' | 'paid' | 'canceled';
+}): {
+  project_id: number;
+  bu_code: BU;
+  kind: 'revenue' | 'expense';
+  category: string;
+  name: string;
+  amount: number;
+  occurred_at: string;
+  status: 'planned' | 'paid' | 'canceled';
+} {
+  const today = new Date().toISOString().split('T')[0];
+  return {
+    project_id: Number(f.projectId),
+    bu_code: f.bu,
+    kind: f.type,
+    category: f.category || f.type, // category가 없으면 type을 사용 (하위 호환성)
+    name: f.name,
+    amount: f.amount,
+    occurred_at: f.date || today,
+    status: f.status || 'planned',
+  };
+}
+
