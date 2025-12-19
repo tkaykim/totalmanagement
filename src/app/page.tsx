@@ -595,9 +595,9 @@ export default function HomePage() {
     dueDate: string;
   }): Promise<string | null> => {
     const missingFields: string[] = [];
-    if (!payload.title) missingFields.push('제목');
-    if (!payload.projectId) missingFields.push('프로젝트');
-    if (!payload.assignee) missingFields.push('담당자');
+    if (!payload.title?.trim()) missingFields.push('제목');
+    if (!payload.projectId?.trim()) missingFields.push('프로젝트');
+    if (!payload.assignee?.trim()) missingFields.push('담당자');
     
     if (missingFields.length > 0) {
       return `다음 항목을 입력해주세요: ${missingFields.join(', ')}`;
@@ -1344,10 +1344,10 @@ function DashboardView({
             ))}
           </div>
         </div>
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-orange-500" />
-            <h3 className="font-bold text-slate-800">최근 업무 현황 (FLOW 연동)</h3>
+        <div className="rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
+          <div className="mb-4 sm:mb-6 flex items-center gap-2">
+            <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+            <h3 className="text-base sm:text-lg font-bold text-slate-800">최근 업무 현황</h3>
           </div>
           <div className="space-y-3">
             {tasks.slice(0, 4).map((task) => (
@@ -1355,22 +1355,22 @@ function DashboardView({
                 key={task.id}
                 className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-bold">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-bold flex-shrink-0">
                     {task.assignee[0]}
                   </div>
-                  <div>
-                    <p className="font-bold text-slate-800">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-slate-800 text-xs sm:text-sm truncate">
                       [{BU_TITLES[task.bu]}] {task.title}
                     </p>
-                    <p className="mt-1 text-[10px] text-slate-400">
+                    <p className="mt-1 text-[9px] sm:text-[10px] text-slate-400 truncate">
                       {task.assignee} •{' '}
                       {projects.find((p) => p.id === task.projectId)?.name ?? '미지정 프로젝트'} •{' '}
                       {task.dueDate}
                     </p>
                   </div>
                 </div>
-                <span className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-tight text-white">
+                <span className="rounded-full bg-slate-900 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-tight text-white whitespace-nowrap flex-shrink-0">
                   {task.status === 'todo' ? 'TODO' : task.status === 'in-progress' ? 'IN PROGRESS' : 'DONE'}
                 </span>
               </div>
@@ -1425,11 +1425,11 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-      <p className="text-xs font-bold uppercase text-slate-400">{title}</p>
+    <div className="rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
+      <p className="text-[10px] sm:text-xs font-bold uppercase text-slate-400">{title}</p>
       <div className="mt-2 flex items-center justify-between">
-        <p className={cn('text-3xl font-black', accent)}>{formatCurrency(value)}</p>
-        <span className="rounded-full bg-slate-100 p-3 text-slate-500">{icon}</span>
+        <p className={cn('text-xl sm:text-2xl md:text-3xl font-black', accent)}>{formatCurrency(value)}</p>
+        <span className="rounded-full bg-slate-100 p-2 sm:p-3 text-slate-500 flex-shrink-0">{icon}</span>
       </div>
     </div>
   );
@@ -1469,96 +1469,105 @@ function ProjectsView({
       <BuTabs bu={bu} onChange={onBuChange} prefix="BU" />
 
       <div className="space-y-3">
-        {projects.map((p) => {
-          const projectTasks = tasks.filter((t) => t.projectId === p.id);
-          const projectRevenues = revenues.filter((r) => r.projectId === p.id);
-          const projectExpenses = expenses.filter((e) => e.projectId === p.id);
-          const revTotal = projectRevenues.reduce((sum, r) => sum + r.amount, 0);
-          const expTotal = projectExpenses.reduce((sum, e) => sum + e.amount, 0);
-          const profit = revTotal - expTotal;
-          const opened = openId === p.id;
+        {projects.length === 0 ? (
+          <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+            <div className="px-4 sm:px-6 py-8 sm:py-12 text-center">
+              <p className="text-xs sm:text-sm font-semibold text-slate-400">
+                현재 진행중인 프로젝트가 없습니다.
+              </p>
+            </div>
+          </div>
+        ) : (
+          projects.map((p) => {
+            const projectTasks = tasks.filter((t) => t.projectId === p.id);
+            const projectRevenues = revenues.filter((r) => r.projectId === p.id);
+            const projectExpenses = expenses.filter((e) => e.projectId === p.id);
+            const revTotal = projectRevenues.reduce((sum, r) => sum + r.amount, 0);
+            const expTotal = projectExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const profit = revTotal - expTotal;
+            const opened = openId === p.id;
 
-          return (
+            return (
             <div
               key={p.id}
               className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm"
             >
-              <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
                 <button
                   onClick={() => setOpenId(opened ? null : p.id)}
                   className="flex flex-1 items-center justify-between text-left"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-slate-900">{p.name}</p>
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">{p.name}</p>
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-slate-600 whitespace-nowrap">
                         {p.cat}
                       </span>
-                      <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <span className="rounded bg-emerald-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 whitespace-nowrap">
                         할일 {projectTasks.length}개
                       </span>
                     </div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400">
                       {p.startDate} ~ {p.endDate}
                     </p>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right text-[11px]">
-                      <p className="font-semibold text-blue-600">{formatCurrency(revTotal)}</p>
-                      <p className="text-red-500">- {formatCurrency(expTotal)}</p>
-                      <p className="font-semibold text-emerald-600">
+                  <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
+                    <div className="text-right text-[9px] sm:text-[11px]">
+                      <p className="font-semibold text-blue-600 whitespace-nowrap">{formatCurrency(revTotal)}</p>
+                      <p className="text-red-500 whitespace-nowrap">- {formatCurrency(expTotal)}</p>
+                      <p className="font-semibold text-emerald-600 whitespace-nowrap">
                         {profit >= 0 ? '+' : ''}
                         {formatCurrency(profit)}
                       </p>
                     </div>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">
                       {opened ? '접기 ▲' : '펼치기 ▼'}
                     </span>
                   </div>
                 </button>
-                <div className="ml-4 flex items-center gap-2">
+                <div className="ml-2 sm:ml-4 flex items-center gap-1 sm:gap-2 flex-shrink-0">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onEditProject(p);
                     }}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
                     title="프로젝트 수정"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onDeleteProject(p.id);
                     }}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-red-50 hover:text-red-600"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-red-50 hover:text-red-600"
                     title="프로젝트 삭제"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
                 </div>
               </div>
 
               {opened && (
-                <div className="border-t border-slate-100 bg-slate-50/60 px-6 py-5">
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="border-t border-slate-100 bg-slate-50/60 px-3 sm:px-6 py-4 sm:py-5">
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
                     {/* Tasks column */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-600">
+                        <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-emerald-600">
                           Project Tasks
                         </h4>
                         <button
                           onClick={() => onOpenTaskModal(p.id)}
-                          className="rounded-lg bg-emerald-500 px-3 py-1 text-[10px] font-semibold text-white hover:bg-emerald-600"
+                          className="rounded-lg bg-emerald-500 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-semibold text-white hover:bg-emerald-600 whitespace-nowrap"
                         >
                           할일 추가
                         </button>
                       </div>
                       <div className="space-y-1.5">
                         {projectTasks.length === 0 && (
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-[10px] sm:text-[11px] text-slate-400">
                             등록된 할 일이 없습니다.
                           </p>
                         )}
@@ -1567,17 +1576,17 @@ function ProjectsView({
                             key={t.id}
                             type="button"
                             onClick={() => onEditTask(t)}
-                            className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition hover:bg-slate-50"
+                            className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-2 sm:px-3 py-2 text-left transition hover:bg-slate-50"
                           >
-                            <div>
-                              <p className="text-xs font-semibold text-slate-800">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[10px] sm:text-xs font-semibold text-slate-800 truncate">
                                 {t.title}
                               </p>
-                              <p className="text-[10px] text-slate-400">
+                              <p className="text-[9px] sm:text-[10px] text-slate-400 truncate">
                                 {t.assignee} • {t.dueDate}
                               </p>
                             </div>
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold text-slate-600 whitespace-nowrap flex-shrink-0 ml-2">
                               {t.status === 'todo'
                                 ? 'TODO'
                                 : t.status === 'in-progress'
@@ -1592,19 +1601,19 @@ function ProjectsView({
                     {/* Revenue column */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-blue-600">
+                        <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-blue-600">
                           매출 내역
                         </h4>
               <button
                           onClick={() => onOpenModal(p.id)}
-                          className="rounded-lg border border-blue-200 px-3 py-1 text-[10px] font-semibold text-blue-600 hover:bg-blue-600 hover:text-white"
+                          className="rounded-lg border border-blue-200 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-semibold text-blue-600 hover:bg-blue-600 hover:text-white whitespace-nowrap"
               >
                           매출/지출 관리
               </button>
             </div>
                       <div className="space-y-1.5">
                         {projectRevenues.length === 0 && (
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-[10px] sm:text-[11px] text-slate-400">
                             등록된 매출이 없습니다.
                           </p>
                         )}
@@ -1621,12 +1630,12 @@ function ProjectsView({
 
                     {/* Expense column */}
                     <div className="space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-red-600">
+                      <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-600">
                         지출 내역
                       </h4>
                       <div className="space-y-1.5">
                         {projectExpenses.length === 0 && (
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-[10px] sm:text-[11px] text-slate-400">
                             등록된 지출이 없습니다.
                           </p>
                         )}
@@ -1645,7 +1654,8 @@ function ProjectsView({
               )}
             </div>
           );
-        })}
+          })
+        )}
       </div>
     </section>
   );
@@ -1677,19 +1687,19 @@ function TasksView({
       <BuTabs bu={bu} onChange={onBuChange} prefix="TASK" />
 
       <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 p-6">
-          <h3 className="text-lg font-bold text-slate-800">{BU_TITLES[bu]} 할일 관리</h3>
-          <span className="text-xs font-semibold text-slate-400">총 {rows.length}건</span>
+        <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-bold text-slate-800">{BU_TITLES[bu]} 할일 관리</h3>
+          <span className="text-[10px] sm:text-xs font-semibold text-slate-400 whitespace-nowrap">총 {rows.length}건</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-[11px]">
+          <table className="w-full text-left text-[10px] sm:text-[11px]">
             <thead className="bg-slate-50 text-slate-400">
               <tr>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">프로젝트</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">할일</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">담당자</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">마감일</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">상태</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">프로젝트</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">할일</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">담당자</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">마감일</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">상태</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -1699,17 +1709,17 @@ function TasksView({
                   onClick={() => onEditTask(task)}
                   className="cursor-pointer transition hover:bg-slate-50"
                 >
-                  <td className="px-6 py-3 font-semibold text-slate-600">
+                  <td className="px-3 sm:px-6 py-3 font-semibold text-slate-600 truncate max-w-[120px] sm:max-w-none">
                     {findProject(task.projectId)}
                   </td>
-                  <td className="px-6 py-3 text-slate-800">{task.title}</td>
-                  <td className="px-6 py-3 text-slate-700">{task.assignee}</td>
-                  <td className="px-6 py-3 text-slate-500">{task.dueDate}</td>
-                  <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 sm:px-6 py-3 text-slate-800 truncate max-w-[150px] sm:max-w-none">{task.title}</td>
+                  <td className="px-3 sm:px-6 py-3 text-slate-700 whitespace-nowrap">{task.assignee}</td>
+                  <td className="px-3 sm:px-6 py-3 text-slate-500 whitespace-nowrap">{task.dueDate}</td>
+                  <td className="px-3 sm:px-6 py-3" onClick={(e) => e.stopPropagation()}>
                     <select
                       value={task.status}
                       onChange={(e) => onStatusChange(task.id, e.target.value as TaskItem['status'])}
-                      className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] outline-none"
+                      className="rounded-lg border border-slate-200 px-2 py-1 text-[10px] sm:text-[11px] outline-none w-full"
                     >
                       <option value="todo">TODO</option>
                       <option value="in-progress">IN PROGRESS</option>
@@ -1789,19 +1799,19 @@ function SettlementView({
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-          <table className="w-full text-left text-[11px]">
+          <table className="w-full text-left text-[10px] sm:text-[11px]">
             <thead className="border-b border-slate-100 bg-blue-50/40 text-blue-700">
               <tr>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">프로젝트</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">구분</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight text-blue-600">금액</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">결제일</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">프로젝트</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">구분</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight text-blue-600 whitespace-nowrap">금액</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">결제일</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100" id="revenue-list-body">
               {rows.revRows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-6 text-center text-xs text-slate-400">
+                  <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-[10px] sm:text-xs text-slate-400">
                     등록된 매출이 없습니다.
                   </td>
                 </tr>
@@ -1813,16 +1823,16 @@ function SettlementView({
                       onClick={() => onEditFinance(r)}
                       className="cursor-pointer transition hover:bg-blue-50/30"
                     >
-                      <td className="px-6 py-4 font-bold text-slate-500">{findProject(r.projectId)}</td>
-                      <td className="px-6 py-4 font-medium text-slate-700">{r.category}</td>
-                      <td className="px-6 py-4 font-black text-blue-600 italic">{formatCurrency(r.amount)}</td>
-                      <td className="px-6 py-4 font-medium text-slate-400">{r.date}</td>
+                      <td className="px-3 sm:px-6 py-4 font-bold text-slate-500 truncate max-w-[100px] sm:max-w-none">{findProject(r.projectId)}</td>
+                      <td className="px-3 sm:px-6 py-4 font-medium text-slate-700 truncate max-w-[80px] sm:max-w-none">{r.category}</td>
+                      <td className="px-3 sm:px-6 py-4 font-black text-blue-600 italic whitespace-nowrap">{formatCurrency(r.amount)}</td>
+                      <td className="px-3 sm:px-6 py-4 font-medium text-slate-400 whitespace-nowrap">{r.date}</td>
                     </tr>
                   ))}
                   <tr className="bg-blue-50/20 border-t-2 border-blue-200">
-                    <td colSpan={2} className="px-6 py-4 font-bold text-slate-700">합계</td>
-                    <td className="px-6 py-4 font-black text-blue-600 italic">{formatCurrency(totalRevenue)}</td>
-                    <td className="px-6 py-4"></td>
+                    <td colSpan={2} className="px-3 sm:px-6 py-4 font-bold text-slate-700">합계</td>
+                    <td className="px-3 sm:px-6 py-4 font-black text-blue-600 italic whitespace-nowrap">{formatCurrency(totalRevenue)}</td>
+                    <td className="px-3 sm:px-6 py-4"></td>
                   </tr>
                 </>
               )}
@@ -1831,19 +1841,19 @@ function SettlementView({
         </div>
 
         <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-          <table className="w-full text-left text-[11px]">
+          <table className="w-full text-left text-[10px] sm:text-[11px]">
             <thead className="border-b border-slate-100 bg-red-50/40 text-red-700">
               <tr>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">프로젝트</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">구분</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight text-red-500">금액</th>
-                <th className="px-6 py-3 font-bold uppercase tracking-tight">결제일</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">프로젝트</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">구분</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight text-red-500 whitespace-nowrap">금액</th>
+                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">결제일</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100" id="expense-list-body">
               {rows.expRows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-6 text-center text-xs text-slate-400">
+                  <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-[10px] sm:text-xs text-slate-400">
                     등록된 지출이 없습니다.
                   </td>
                 </tr>
@@ -1855,16 +1865,16 @@ function SettlementView({
                       onClick={() => onEditFinance(e)}
                       className="cursor-pointer transition hover:bg-red-50/30"
                     >
-                      <td className="px-6 py-4 font-bold text-slate-500">{findProject(e.projectId)}</td>
-                      <td className="px-6 py-4 font-medium text-slate-700">{e.category}</td>
-                      <td className="px-6 py-4 font-black text-red-500 italic">{formatCurrency(e.amount)}</td>
-                      <td className="px-6 py-4 font-medium text-slate-400">{e.date}</td>
+                      <td className="px-3 sm:px-6 py-4 font-bold text-slate-500 truncate max-w-[100px] sm:max-w-none">{findProject(e.projectId)}</td>
+                      <td className="px-3 sm:px-6 py-4 font-medium text-slate-700 truncate max-w-[80px] sm:max-w-none">{e.category}</td>
+                      <td className="px-3 sm:px-6 py-4 font-black text-red-500 italic whitespace-nowrap">{formatCurrency(e.amount)}</td>
+                      <td className="px-3 sm:px-6 py-4 font-medium text-slate-400 whitespace-nowrap">{e.date}</td>
                     </tr>
                   ))}
                   <tr className="bg-red-50/20 border-t-2 border-red-200">
-                    <td colSpan={2} className="px-6 py-4 font-bold text-slate-700">합계</td>
-                    <td className="px-6 py-4 font-black text-red-500 italic">{formatCurrency(totalExpense)}</td>
-                    <td className="px-6 py-4"></td>
+                    <td colSpan={2} className="px-3 sm:px-6 py-4 font-bold text-slate-700">합계</td>
+                    <td className="px-3 sm:px-6 py-4 font-black text-red-500 italic whitespace-nowrap">{formatCurrency(totalExpense)}</td>
+                    <td className="px-3 sm:px-6 py-4"></td>
                   </tr>
                 </>
               )}
@@ -2144,13 +2154,13 @@ function OrganizationView({
 
 function BuTabs({ bu, onChange, prefix }: { bu: BU; onChange: (bu: BU) => void; prefix: string }) {
   return (
-    <div className="flex w-fit overflow-x-auto rounded-2xl bg-slate-200/60 p-1.5">
+    <div className="flex w-fit overflow-x-auto rounded-2xl bg-slate-200/60 p-1 sm:p-1.5">
       {(Object.keys(BU_TITLES) as BU[]).map((key) => (
         <button
           key={key}
           onClick={() => onChange(key)}
           className={cn(
-            'px-6 py-2.5 text-sm font-semibold transition',
+            'px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
             bu === key ? 'tab-active rounded-xl bg-white text-blue-600 shadow' : 'text-slate-600 hover:text-slate-900',
           )}
           id={`tab-${prefix}-${key}`}
@@ -2579,16 +2589,22 @@ function CreateTaskModal({
           <div className="space-y-1">
             <SelectField
               label="담당자"
-              value={form.assignee || ''}
+              value={form.assignee || '__PLACEHOLDER__'}
               onChange={(val) => {
                 if (val === '__CUSTOM__') {
                   setAssigneeMode('custom');
                   setForm((prev) => ({ ...prev, assignee: '' }));
+                } else if (val === '__PLACEHOLDER__') {
+                  setForm((prev) => ({ ...prev, assignee: '' }));
                 } else {
-                  setForm((prev) => ({ ...prev, assignee: val }));
+                  // 실제 담당자 이름이 선택된 경우
+                  setForm((prev) => ({ ...prev, assignee: val.trim() }));
                 }
               }}
-              options={assigneeOptions}
+              options={[
+                { value: '__PLACEHOLDER__', label: '담당자를 선택하세요' },
+                ...assigneeOptions,
+              ]}
             />
             <button
               type="button"
@@ -2640,7 +2656,12 @@ function CreateTaskModal({
       <ModalActions
         onPrimary={async () => {
           setError('');
-          const result = await onSubmit(form);
+          // 담당자 필드 trim 처리
+          const trimmedForm = {
+            ...form,
+            assignee: form.assignee?.trim() || '',
+          };
+          const result = await onSubmit(trimmedForm);
           if (result) {
             setError(result);
           }
@@ -2864,12 +2885,12 @@ function SelectField({
     <label className="space-y-1 text-sm font-semibold text-slate-700">
       <span className="text-xs text-slate-500">{label}</span>
       <select
-        value={value}
+        value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <option key={opt.value} value={opt.value} disabled={opt.value === '__PLACEHOLDER__'}>
             {opt.label}
           </option>
         ))}
@@ -2991,25 +3012,25 @@ function FinanceRow({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition hover:bg-slate-50',
+        'flex w-full items-center justify-between rounded-xl border px-2 sm:px-3 py-2 text-left transition hover:bg-slate-50',
         isBlue ? 'border-blue-100 bg-white' : 'border-red-100 bg-white',
       )}
     >
-      <div>
-        <p className="text-[11px] font-semibold text-slate-800">{entry.name}</p>
-        <p className="text-[10px] text-slate-400">
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] sm:text-[11px] font-semibold text-slate-800 truncate">{entry.name}</p>
+        <p className="text-[9px] sm:text-[10px] text-slate-400 truncate">
           {entry.date} • {entry.category}
         </p>
         <span
           className={cn(
-            'mt-1 inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold',
+            'mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold whitespace-nowrap',
             statusColor,
           )}
         >
           {statusLabel}
         </span>
       </div>
-      <span className={cn('text-xs font-bold', isBlue ? 'text-blue-600' : 'text-red-500')}>
+      <span className={cn('text-[10px] sm:text-xs font-bold whitespace-nowrap flex-shrink-0 ml-2', isBlue ? 'text-blue-600' : 'text-red-500')}>
         {formatCurrency(entry.amount)}
       </span>
     </button>
@@ -3356,6 +3377,11 @@ function EditTaskModal({
       });
     }
     
+    // 현재 사용자 명시적으로 추가
+    if (usersData?.currentUser?.name) {
+      names.add(usersData.currentUser.name);
+    }
+    
     return Array.from(names).sort();
   }, [orgData, usersData]);
 
@@ -3421,16 +3447,22 @@ function EditTaskModal({
           <div className="space-y-1">
             <SelectField
               label="담당자"
-              value={form.assignee || ''}
+              value={form.assignee || '__PLACEHOLDER__'}
               onChange={(val) => {
                 if (val === '__CUSTOM__') {
                   setAssigneeMode('custom');
                   setForm((prev) => ({ ...prev, assignee: '' }));
+                } else if (val === '__PLACEHOLDER__') {
+                  setForm((prev) => ({ ...prev, assignee: '' }));
                 } else {
-                  setForm((prev) => ({ ...prev, assignee: val }));
+                  // 실제 담당자 이름이 선택된 경우
+                  setForm((prev) => ({ ...prev, assignee: val.trim() }));
                 }
               }}
-              options={assigneeOptions}
+              options={[
+                { value: '__PLACEHOLDER__', label: '담당자를 선택하세요' },
+                ...assigneeOptions,
+              ]}
             />
             <button
               type="button"
@@ -3487,7 +3519,14 @@ function EditTaskModal({
         </div>
       </div>
       <ModalActions
-        onPrimary={() => onSubmit({ ...form, id: task.id })}
+        onPrimary={() => {
+          // 담당자 필드 trim 처리
+          const trimmedForm = {
+            ...form,
+            assignee: form.assignee?.trim() || '',
+          };
+          onSubmit({ ...trimmedForm, id: task.id });
+        }}
         onClose={onClose}
         primaryLabel="수정"
       />
