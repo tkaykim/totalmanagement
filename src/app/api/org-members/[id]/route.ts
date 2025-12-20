@@ -12,14 +12,14 @@ export async function PATCH(
 
     const updateData: any = {};
     if (body.name !== undefined) updateData.name = body.name;
-    if (body.title !== undefined) updateData.title = body.title;
+    if (body.title !== undefined) updateData.title = body.title || null;
     if (body.bu_code !== undefined) updateData.bu_code = body.bu_code || null;
     if (body.phone !== undefined) updateData.phone = body.phone || null;
     if (body.email !== undefined) updateData.email = body.email || null;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
     if (body.is_leader !== undefined) updateData.is_leader = body.is_leader;
     if (body.user_id !== undefined) updateData.user_id = body.user_id || null;
-    if (body.org_unit_id !== undefined) updateData.org_unit_id = body.org_unit_id;
+    if (body.org_unit_id !== undefined) updateData.org_unit_id = body.org_unit_id || null;
 
     const { data, error } = await supabase
       .from('org_members')

@@ -7,15 +7,11 @@ export async function GET(request: NextRequest) {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
     const bu = searchParams.get('bu') as BU | null;
-    const projectId = searchParams.get('project_id');
 
-    let query = supabase.from('project_tasks').select('*').order('due_date', { ascending: true });
+    let query = supabase.from('clients').select('*').order('created_at', { ascending: false });
 
     if (bu) {
       query = query.eq('bu_code', bu);
-    }
-    if (projectId) {
-      query = query.eq('project_id', projectId);
     }
 
     const { data, error } = await query;
@@ -33,19 +29,21 @@ export async function POST(request: NextRequest) {
     const supabase = await createPureClient();
     const body = await request.json();
 
+    // 빈 문자열을 null로 변환하는 헬퍼 함수
+    const toNullIfEmpty = (value: any) => (value === '' || value === null || value === undefined ? null : value);
+
     const { data, error } = await supabase
-      .from('project_tasks')
+      .from('clients')
       .insert({
-        project_id: body.project_id,
         bu_code: body.bu_code,
-        title: body.title,
-        assignee_id: body.assignee_id,
-        assignee: body.assignee,
-        due_date: body.due_date,
-        status: body.status || 'todo',
-        priority: body.priority || 'medium',
-        tag: body.tag,
-        created_by: body.created_by,
+        name: body.name,
+        industry: toNullIfEmpty(body.industry),
+        contact_person: toNullIfEmpty(body.contact_person),
+        phone: toNullIfEmpty(body.phone),
+        email: toNullIfEmpty(body.email),
+        address: toNullIfEmpty(body.address),
+        status: body.status || 'active',
+        last_meeting_date: toNullIfEmpty(body.last_meeting_date),
       })
       .select()
       .single();

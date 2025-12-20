@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
         status: body.status || '준비중',
         start_date: body.start_date,
         end_date: body.end_date,
+        client_id: body.client_id,
         created_by: body.created_by,
       })
       .select()

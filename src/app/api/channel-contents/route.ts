@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
-import type { BU } from '@/types/database';
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
-    const bu = searchParams.get('bu') as BU | null;
-    const projectId = searchParams.get('project_id');
+    const channelId = searchParams.get('channel_id');
 
-    let query = supabase.from('project_tasks').select('*').order('due_date', { ascending: true });
+    let query = supabase
+      .from('channel_contents')
+      .select('*')
+      .order('upload_date', { ascending: true });
 
-    if (bu) {
-      query = query.eq('bu_code', bu);
-    }
-    if (projectId) {
-      query = query.eq('project_id', projectId);
+    if (channelId) {
+      query = query.eq('channel_id', channelId);
     }
 
     const { data, error } = await query;
@@ -34,18 +32,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const { data, error } = await supabase
-      .from('project_tasks')
+      .from('channel_contents')
       .insert({
-        project_id: body.project_id,
-        bu_code: body.bu_code,
+        channel_id: body.channel_id,
         title: body.title,
+        stage: body.stage || 'planning',
         assignee_id: body.assignee_id,
-        assignee: body.assignee,
-        due_date: body.due_date,
-        status: body.status || 'todo',
-        priority: body.priority || 'medium',
-        tag: body.tag,
-        created_by: body.created_by,
+        assignee_name: body.assignee_name,
+        upload_date: body.upload_date,
       })
       .select()
       .single();

@@ -10,6 +10,7 @@ export function dbProjectToFrontend(p: Project): {
   startDate: string;
   endDate: string;
   status: string;
+  client_id?: number;
 } {
   return {
     id: String(p.id),
@@ -19,6 +20,7 @@ export function dbProjectToFrontend(p: Project): {
     startDate: p.start_date,
     endDate: p.end_date,
     status: p.status,
+    client_id: p.client_id,
   };
 }
 
@@ -30,6 +32,8 @@ export function dbTaskToFrontend(t: ProjectTask): {
   assignee: string;
   dueDate: string;
   status: 'todo' | 'in-progress' | 'done';
+  priority?: 'high' | 'medium' | 'low';
+  tag?: string;
 } {
   return {
     id: String(t.id),
@@ -39,6 +43,8 @@ export function dbTaskToFrontend(t: ProjectTask): {
     assignee: t.assignee || '',
     dueDate: t.due_date,
     status: t.status === 'in_progress' ? 'in-progress' : t.status,
+    priority: t.priority,
+    tag: t.tag,
   };
 }
 

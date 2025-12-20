@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   BarChart3,
   Bell,
@@ -22,7 +23,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { format, isWithinInterval, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, buToSlug } from '@/lib/utils';
 import {
   useProjects,
   useTasks,
@@ -50,9 +51,10 @@ import {
   frontendTaskToDb,
   frontendFinancialToDb,
 } from '@/features/erp/utils';
+import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO';
-type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization';
+type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio';
 
 type Project = {
   id: string;
@@ -236,6 +238,16 @@ export default function HomePage() {
   const router = useRouter();
   const [view, setView] = useState<View>('dashboard');
   const [bu, setBu] = useState<BU>('GRIGO');
+
+  // REACT BU 선택 시 자동으로 ReactStudio 뷰로 전환
+  const handleBuChange = (newBu: BU) => {
+    setBu(newBu);
+    if (newBu === 'REACT') {
+      setView('reactstudio');
+    } else if (view === 'reactstudio') {
+      setView('dashboard');
+    }
+  };
   const [periodType, setPeriodType] = useState<'all' | 'year' | 'quarter' | 'month' | 'custom'>('all');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedQuarter, setSelectedQuarter] = useState<number>(1);
@@ -720,6 +732,11 @@ export default function HomePage() {
     );
   }
 
+  // ReactStudio 뷰일 때는 별도 레이아웃 사용
+  if (view === 'reactstudio' && bu === 'REACT') {
+    return <ReactStudioDashboard bu={bu} />;
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <aside className="hidden h-screen w-64 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-900 text-white lg:flex">
@@ -766,7 +783,30 @@ export default function HomePage() {
             onClick={() => setView('organization')}
           />
         </nav>
-        <div className="mt-auto p-6">
+        <div className="mt-auto space-y-4 p-6">
+          <div className="border-t border-slate-700"></div>
+          <div className="space-y-2">
+            <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              사업부별 대시보드
+            </p>
+            {(Object.keys(BU_TITLES) as BU[]).map((buKey) => (
+              <Link
+                key={buKey}
+                href={`/${buToSlug(buKey)}`}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition',
+                  'text-slate-300 hover:bg-slate-800 hover:text-white'
+                )}
+              >
+                <span className="w-5 text-center">
+                  <FolderKanban className="h-4 w-4" />
+                </span>
+                <span>{BU_TITLES[buKey]}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div className="p-6 pt-0">
           <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-4">
             <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500">
               Signed in as
@@ -1013,7 +1053,7 @@ export default function HomePage() {
           {view === 'projects' && (
             <ProjectsView
               bu={bu}
-              onBuChange={setBu}
+              onBuChange={handleBuChange}
               projects={currentProjects}
               revenues={revenues}
               expenses={expenses}
@@ -1033,7 +1073,7 @@ export default function HomePage() {
           {view === 'settlement' && (
             <SettlementView
               bu={bu}
-              onBuChange={setBu}
+              onBuChange={handleBuChange}
               rows={settlementRows}
               projects={projects}
               onEditFinance={setEditFinanceModalOpen}
@@ -1043,7 +1083,7 @@ export default function HomePage() {
           {view === 'tasks' && (
             <TasksView
               bu={bu}
-              onBuChange={setBu}
+              onBuChange={handleBuChange}
               tasks={tasks}
               projects={currentProjects}
               onStatusChange={async (id, status) => {
@@ -1083,6 +1123,7 @@ export default function HomePage() {
               }}
             />
           )}
+
         </div>
       </main>
 

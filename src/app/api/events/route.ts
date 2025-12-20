@@ -7,15 +7,19 @@ export async function GET(request: NextRequest) {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
     const bu = searchParams.get('bu') as BU | null;
-    const projectId = searchParams.get('project_id');
+    const startDate = searchParams.get('start_date');
+    const endDate = searchParams.get('end_date');
 
-    let query = supabase.from('project_tasks').select('*').order('due_date', { ascending: true });
+    let query = supabase.from('events').select('*').order('event_date', { ascending: true });
 
     if (bu) {
       query = query.eq('bu_code', bu);
     }
-    if (projectId) {
-      query = query.eq('project_id', projectId);
+    if (startDate) {
+      query = query.gte('event_date', startDate);
+    }
+    if (endDate) {
+      query = query.lte('event_date', endDate);
     }
 
     const { data, error } = await query;
@@ -34,17 +38,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const { data, error } = await supabase
-      .from('project_tasks')
+      .from('events')
       .insert({
-        project_id: body.project_id,
         bu_code: body.bu_code,
         title: body.title,
-        assignee_id: body.assignee_id,
-        assignee: body.assignee,
-        due_date: body.due_date,
-        status: body.status || 'todo',
-        priority: body.priority || 'medium',
-        tag: body.tag,
+        event_date: body.event_date,
+        event_type: body.event_type || 'event',
+        description: body.description,
+        project_id: body.project_id,
         created_by: body.created_by,
       })
       .select()

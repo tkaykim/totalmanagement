@@ -6,6 +6,18 @@ import type {
   BU,
   FinancialKind,
   TaskStatus,
+  Client,
+  Equipment,
+  Channel,
+  ChannelContent,
+  Event,
+  Manual,
+  TaskPriority,
+  EquipmentStatus,
+  ChannelStatus,
+  ContentStage,
+  EventType,
+  ClientStatus,
 } from '@/types/database';
 
 const API_BASE = '/api';
@@ -25,6 +37,7 @@ export async function createProject(data: {
   start_date: string;
   end_date: string;
   created_by?: string;
+  client_id?: number;
 }): Promise<Project> {
   const res = await fetch(`${API_BASE}/projects`, {
     method: 'POST',
@@ -144,6 +157,13 @@ export async function updateFinancialEntry(
   return res.json();
 }
 
+export async function deleteFinancialEntry(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/financial-entries/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete financial entry');
+}
+
 export async function fetchOrgMembers(): Promise<(OrgUnit & { members: any[] })[]> {
   const res = await fetch(`${API_BASE}/org-members`);
   if (!res.ok) throw new Error('Failed to fetch org members');
@@ -151,9 +171,9 @@ export async function fetchOrgMembers(): Promise<(OrgUnit & { members: any[] })[
 }
 
 export async function createOrgMember(data: {
-  org_unit_id: number;
+  org_unit_id?: number;
   name: string;
-  title: string;
+  title?: string;
   bu_code?: string;
   phone?: string;
   email?: string;
@@ -173,9 +193,9 @@ export async function createOrgMember(data: {
 export async function updateOrgMember(
   id: number,
   data: Partial<{
-    org_unit_id: number;
+    org_unit_id?: number;
     name: string;
-    title: string;
+    title?: string;
     bu_code?: string;
     phone?: string;
     email?: string;
@@ -252,6 +272,286 @@ export async function updateUser(
     throw new Error(error.error || 'Failed to update user');
   }
   return res.json();
+}
+
+// ============================================
+// ReactStudio & Multi-BU API Functions
+// ============================================
+
+// Clients
+export async function fetchClients(bu?: BU): Promise<Client[]> {
+  const url = bu ? `${API_BASE}/clients?bu=${bu}` : `${API_BASE}/clients`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch clients');
+  return res.json();
+}
+
+export async function createClient(data: {
+  bu_code: BU;
+  name: string;
+  industry?: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  status?: ClientStatus;
+  last_meeting_date?: string;
+}): Promise<Client> {
+  const res = await fetch(`${API_BASE}/clients`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create client');
+  return res.json();
+}
+
+export async function updateClient(id: number, data: Partial<Client>): Promise<Client> {
+  const res = await fetch(`${API_BASE}/clients/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update client');
+  return res.json();
+}
+
+export async function deleteClient(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/clients/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete client');
+}
+
+// Equipment
+export async function fetchEquipment(bu?: BU): Promise<Equipment[]> {
+  const url = bu ? `${API_BASE}/equipment?bu=${bu}` : `${API_BASE}/equipment`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch equipment');
+  return res.json();
+}
+
+export async function createEquipment(data: {
+  bu_code: BU;
+  name: string;
+  category: string;
+  serial_number?: string;
+  status?: EquipmentStatus;
+  location?: string;
+  borrower_id?: string;
+  borrower_name?: string;
+  return_date?: string;
+  notes?: string;
+}): Promise<Equipment> {
+  const res = await fetch(`${API_BASE}/equipment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create equipment');
+  return res.json();
+}
+
+export async function updateEquipment(id: number, data: Partial<Equipment>): Promise<Equipment> {
+  const res = await fetch(`${API_BASE}/equipment/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update equipment');
+  return res.json();
+}
+
+export async function deleteEquipment(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/equipment/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete equipment');
+}
+
+// Channels
+export async function fetchChannels(bu?: BU): Promise<Channel[]> {
+  const url = bu ? `${API_BASE}/channels?bu=${bu}` : `${API_BASE}/channels`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch channels');
+  return res.json();
+}
+
+export async function createChannel(data: {
+  bu_code: BU;
+  name: string;
+  url?: string;
+  subscribers_count?: string;
+  total_views?: string;
+  status?: ChannelStatus;
+  manager_id?: string;
+  manager_name?: string;
+  next_upload_date?: string;
+  recent_video?: string;
+}): Promise<Channel> {
+  const res = await fetch(`${API_BASE}/channels`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create channel');
+  return res.json();
+}
+
+export async function updateChannel(id: number, data: Partial<Channel>): Promise<Channel> {
+  const res = await fetch(`${API_BASE}/channels/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update channel');
+  return res.json();
+}
+
+export async function deleteChannel(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/channels/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete channel');
+}
+
+// Channel Contents
+export async function fetchChannelContents(channelId?: number): Promise<ChannelContent[]> {
+  const url = channelId
+    ? `${API_BASE}/channel-contents?channel_id=${channelId}`
+    : `${API_BASE}/channel-contents`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch channel contents');
+  return res.json();
+}
+
+export async function createChannelContent(data: {
+  channel_id: number;
+  title: string;
+  stage?: ContentStage;
+  assignee_id?: string;
+  assignee_name?: string;
+  upload_date: string;
+}): Promise<ChannelContent> {
+  const res = await fetch(`${API_BASE}/channel-contents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create channel content');
+  return res.json();
+}
+
+export async function updateChannelContent(
+  id: number,
+  data: Partial<ChannelContent>
+): Promise<ChannelContent> {
+  const res = await fetch(`${API_BASE}/channel-contents/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update channel content');
+  return res.json();
+}
+
+export async function deleteChannelContent(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/channel-contents/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete channel content');
+}
+
+// Events
+export async function fetchEvents(bu?: BU, startDate?: string, endDate?: string): Promise<Event[]> {
+  const params = new URLSearchParams();
+  if (bu) params.append('bu', bu);
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+  const url = `${API_BASE}/events${params.toString() ? `?${params}` : ''}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch events');
+  return res.json();
+}
+
+export async function createEvent(data: {
+  bu_code: BU;
+  title: string;
+  event_date: string;
+  event_type?: EventType;
+  description?: string;
+  project_id?: number;
+  created_by?: string;
+}): Promise<Event> {
+  const res = await fetch(`${API_BASE}/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create event');
+  return res.json();
+}
+
+export async function updateEvent(id: number, data: Partial<Event>): Promise<Event> {
+  const res = await fetch(`${API_BASE}/events/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update event');
+  return res.json();
+}
+
+export async function deleteEvent(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/events/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete event');
+}
+
+// Manuals
+export async function fetchManuals(bu?: BU, category?: string): Promise<Manual[]> {
+  const params = new URLSearchParams();
+  if (bu) params.append('bu', bu);
+  if (category) params.append('category', category);
+  const url = `${API_BASE}/manuals${params.toString() ? `?${params}` : ''}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch manuals');
+  return res.json();
+}
+
+export async function createManual(data: {
+  bu_code: BU;
+  title: string;
+  category: string;
+  content: any;
+  author_id?: string;
+  author_name?: string;
+}): Promise<Manual> {
+  const res = await fetch(`${API_BASE}/manuals`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create manual');
+  return res.json();
+}
+
+export async function updateManual(id: number, data: Partial<Manual>): Promise<Manual> {
+  const res = await fetch(`${API_BASE}/manuals/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update manual');
+  return res.json();
+}
+
+export async function deleteManual(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/manuals/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete manual');
 }
 
 
