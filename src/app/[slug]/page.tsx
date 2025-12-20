@@ -1000,6 +1000,7 @@ export default function BusinessUnitPage() {
     try {
       const dbData = frontendFinancialToDb({
         ...payload,
+        amount: Number(payload.amount),
         bu,
       });
       await createFinancialMutation.mutateAsync(dbData);
@@ -1072,7 +1073,7 @@ export default function BusinessUnitPage() {
         status: payload.status,
       };
       await updateProjectMutation.mutateAsync({ id: Number(payload.id), data: dbData });
-      setEditProjectModalOpen(false);
+      setEditProjectModalOpen(null);
     } catch (error) {
       console.error('Failed to update project:', error);
     }
@@ -2428,5 +2429,6 @@ function EditFinanceModal({
     </ModalShell>
   );
 }
+
 
 
