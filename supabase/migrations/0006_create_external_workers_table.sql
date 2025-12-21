@@ -35,3 +35,4 @@ COMMENT ON COLUMN external_workers.company_name IS '외주회사명 (worker_type
 COMMENT ON COLUMN external_workers.specialties IS '전문 분야 배열 (예: ["영상편집", "디자인", "개발"])';
 
 
+

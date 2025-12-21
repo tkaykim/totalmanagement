@@ -51,3 +51,4 @@ CREATE POLICY "Artists are deletable by authenticated users"
 COMMENT ON TABLE artists IS '전속 아티스트 관리 테이블 (GRIGO 전용)';
 COMMENT ON COLUMN artists.visa_end IS '비자 종료일 (무기한은 9999-12-31)';
 
+

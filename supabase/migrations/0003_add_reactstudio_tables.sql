@@ -197,3 +197,4 @@ COMMENT ON COLUMN projects.client_id IS '연결된 클라이언트 ID (nullable)
 
 
 
+

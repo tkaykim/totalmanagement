@@ -2199,7 +2199,7 @@ export default function GrigoEntDashboard() {
                       <div className="flex items-center gap-3">
                         <StatusBadge type="default" text={m.category} />
                         <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                          <Clock size={10} /> {m.lastUpdated}
+                          <Clock size={10} /> {new Date(m.updated_at).toLocaleDateString('ko-KR')}
                         </span>
                       </div>
                     </div>
