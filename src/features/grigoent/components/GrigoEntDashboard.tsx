@@ -204,6 +204,8 @@ export default function GrigoEntDashboard() {
   const createFinancialEntryMutation = useCreateFinancialEntry();
   const updateFinancialEntryMutation = useUpdateFinancialEntry();
   const deleteFinancialEntryMutation = useDeleteFinancialEntry();
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
 
   // 데이터 변환
   const artists = useMemo(() => artistsData, [artistsData]);
