@@ -3775,6 +3775,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
       {isChannelModalOpen && (
         <CreateChannelModal
           bu={bu}
+          orgMembers={orgData}
           onClose={() => setChannelModalOpen(false)}
           onSubmit={async (data) => {
             try {
