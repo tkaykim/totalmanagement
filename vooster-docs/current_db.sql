@@ -13,6 +13,23 @@ CREATE TABLE public.app_users (
   CONSTRAINT app_users_pkey PRIMARY KEY (id),
   CONSTRAINT app_users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
+CREATE TABLE public.artists (
+  id bigint NOT NULL DEFAULT nextval('artists_id_seq'::regclass),
+  bu_code USER-DEFINED NOT NULL,
+  name text NOT NULL,
+  nationality text,
+  visa_type text,
+  contract_start date NOT NULL,
+  contract_end date NOT NULL,
+  visa_start date,
+  visa_end date,
+  role text,
+  status text NOT NULL DEFAULT 'Active'::text CHECK (status = ANY (ARRAY['Active'::text, 'Inactive'::text, 'Archived'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT artists_pkey PRIMARY KEY (id),
+  CONSTRAINT artists_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code)
+);
 CREATE TABLE public.business_units (
   id bigint NOT NULL DEFAULT nextval('business_units_id_seq'::regclass),
   code USER-DEFINED NOT NULL UNIQUE,
@@ -48,6 +65,9 @@ CREATE TABLE public.channels (
   recent_video text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  production_company text,
+  ad_status text DEFAULT 'none'::text CHECK (ad_status = ANY (ARRAY['active'::text, 'paused'::text, 'completed'::text, 'none'::text])),
+  upload_days ARRAY,
   CONSTRAINT channels_pkey PRIMARY KEY (id),
   CONSTRAINT channels_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code),
   CONSTRAINT channels_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES public.app_users(id)
@@ -67,6 +87,31 @@ CREATE TABLE public.clients (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT clients_pkey PRIMARY KEY (id),
   CONSTRAINT clients_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code)
+);
+CREATE TABLE public.creators (
+  id bigint NOT NULL DEFAULT nextval('creators_id_seq'::regclass),
+  bu_code USER-DEFINED NOT NULL,
+  name text NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['creator'::text, 'celebrity'::text, 'influencer'::text])),
+  platform text,
+  channel_id bigint,
+  subscribers_count text,
+  engagement_rate text,
+  contact_person text,
+  phone text,
+  email text,
+  agency text,
+  fee_range text,
+  specialties ARRAY,
+  status text NOT NULL DEFAULT 'active'::text CHECK (status = ANY (ARRAY['active'::text, 'inactive'::text, 'archived'::text])),
+  notes text,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT creators_pkey PRIMARY KEY (id),
+  CONSTRAINT creators_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code),
+  CONSTRAINT creators_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
+  CONSTRAINT creators_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_users(id)
 );
 CREATE TABLE public.equipment (
   id bigint NOT NULL DEFAULT nextval('equipment_id_seq'::regclass),
@@ -102,6 +147,22 @@ CREATE TABLE public.events (
   CONSTRAINT events_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id),
   CONSTRAINT events_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_users(id)
 );
+CREATE TABLE public.external_workers (
+  id bigint NOT NULL DEFAULT nextval('external_workers_id_seq'::regclass),
+  bu_code USER-DEFINED NOT NULL,
+  name text NOT NULL,
+  company_name text,
+  worker_type text NOT NULL DEFAULT 'freelancer'::text CHECK (worker_type = ANY (ARRAY['freelancer'::text, 'company'::text, 'contractor'::text])),
+  phone text,
+  email text,
+  specialties ARRAY,
+  notes text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT external_workers_pkey PRIMARY KEY (id),
+  CONSTRAINT external_workers_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code)
+);
 CREATE TABLE public.financial_entries (
   id bigint NOT NULL DEFAULT nextval('financial_entries_id_seq'::regclass),
   project_id bigint NOT NULL,
@@ -136,9 +197,9 @@ CREATE TABLE public.manuals (
 );
 CREATE TABLE public.org_members (
   id bigint NOT NULL DEFAULT nextval('org_members_id_seq'::regclass),
-  org_unit_id bigint NOT NULL,
+  org_unit_id bigint,
   name text NOT NULL,
-  title text NOT NULL,
+  title text,
   user_id uuid,
   is_leader boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -188,6 +249,8 @@ CREATE TABLE public.projects (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   client_id bigint,
+  creators jsonb DEFAULT '[]'::jsonb,
+  freelancers jsonb DEFAULT '[]'::jsonb,
   CONSTRAINT projects_pkey PRIMARY KEY (id),
   CONSTRAINT projects_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code),
   CONSTRAINT projects_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_users(id),

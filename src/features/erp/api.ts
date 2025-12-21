@@ -18,6 +18,13 @@ import type {
   ContentStage,
   EventType,
   ClientStatus,
+  Creator,
+  CreatorType,
+  CreatorStatus,
+  ExternalWorker,
+  ExternalWorkerType,
+  Artist,
+  ArtistStatus,
 } from '@/types/database';
 
 const API_BASE = '/api';
@@ -102,6 +109,13 @@ export async function updateTask(id: number, data: Partial<ProjectTask>): Promis
   });
   if (!res.ok) throw new Error('Failed to update task');
   return res.json();
+}
+
+export async function deleteTask(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/tasks/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete task');
 }
 
 export async function fetchFinancialEntries(params?: {
@@ -384,6 +398,8 @@ export async function createChannel(data: {
   subscribers_count?: string;
   total_views?: string;
   status?: ChannelStatus;
+  production_company?: string;
+  ad_status?: string;
   manager_id?: string;
   manager_name?: string;
   next_upload_date?: string;
@@ -552,6 +568,161 @@ export async function deleteManual(id: number): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete manual');
+}
+
+// ============================================
+// Creators API Functions
+// ============================================
+
+export async function fetchCreators(bu?: BU): Promise<Creator[]> {
+  const url = bu ? `${API_BASE}/creators?bu=${bu}` : `${API_BASE}/creators`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch creators');
+  return res.json();
+}
+
+export async function createCreator(data: {
+  bu_code: BU;
+  name: string;
+  type: CreatorType;
+  platform?: string;
+  channel_id?: number;
+  subscribers_count?: string;
+  engagement_rate?: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
+  agency?: string;
+  fee_range?: string;
+  specialties?: string[];
+  status?: CreatorStatus;
+  notes?: string;
+  created_by?: string;
+}): Promise<Creator> {
+  const res = await fetch(`${API_BASE}/creators`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create creator');
+  return res.json();
+}
+
+export async function updateCreator(id: number, data: Partial<Creator>): Promise<Creator> {
+  const res = await fetch(`${API_BASE}/creators/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update creator');
+  return res.json();
+}
+
+export async function deleteCreator(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/creators/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete creator');
+}
+
+// ============================================
+// External Workers API Functions
+// ============================================
+
+export async function fetchExternalWorkers(bu?: BU): Promise<ExternalWorker[]> {
+  const url = bu ? `${API_BASE}/external-workers?bu=${bu}` : `${API_BASE}/external-workers`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch external workers');
+  return res.json();
+}
+
+export async function createExternalWorker(data: {
+  bu_code: BU;
+  name: string;
+  company_name?: string;
+  worker_type?: ExternalWorkerType;
+  phone?: string;
+  email?: string;
+  specialties?: string[];
+  notes?: string;
+  is_active?: boolean;
+}): Promise<ExternalWorker> {
+  const res = await fetch(`${API_BASE}/external-workers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create external worker');
+  return res.json();
+}
+
+export async function updateExternalWorker(
+  id: number,
+  data: Partial<ExternalWorker>
+): Promise<ExternalWorker> {
+  const res = await fetch(`${API_BASE}/external-workers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update external worker');
+  return res.json();
+}
+
+export async function deleteExternalWorker(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/external-workers/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete external worker');
+}
+
+// ============================================
+// Artists API Functions
+// ============================================
+
+export async function fetchArtists(bu?: BU): Promise<Artist[]> {
+  const url = bu ? `${API_BASE}/artists?bu=${bu}` : `${API_BASE}/artists`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch artists');
+  return res.json();
+}
+
+export async function createArtist(data: {
+  bu_code: BU;
+  name: string;
+  nationality?: string;
+  visa_type?: string;
+  contract_start: string;
+  contract_end: string;
+  visa_start?: string;
+  visa_end?: string;
+  role?: string;
+  status?: ArtistStatus;
+}): Promise<Artist> {
+  const res = await fetch(`${API_BASE}/artists`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create artist');
+  return res.json();
+}
+
+export async function updateArtist(id: number, data: Partial<Artist>): Promise<Artist> {
+  const res = await fetch(`${API_BASE}/artists/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update artist');
+  return res.json();
+}
+
+export async function deleteArtist(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/artists/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete artist');
 }
 
 

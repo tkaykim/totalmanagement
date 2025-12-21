@@ -1114,7 +1114,7 @@ export default function BusinessUnitPage() {
             </p>
           </button>
         </div>
-        <nav className="flex-1 space-y-2 px-4">
+        <nav className="flex-1 space-y-2 px-4 overflow-y-auto">
           <SidebarButton
             label="대시보드"
             icon={<LayoutDashboard className="h-4 w-4" />}
@@ -1247,7 +1247,7 @@ export default function BusinessUnitPage() {
             </>
           )}
         </nav>
-        <div className="mt-auto p-6">
+        <div className="mt-auto p-6 pt-0">
           <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-4">
             <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500">
               Signed in as

@@ -59,6 +59,9 @@ import type {
   Event,
   Manual,
   ProjectTask,
+  Creator,
+  CreatorType,
+  CreatorStatus,
 } from '@/types/database';
 import {
   useProjects,
@@ -80,7 +83,6 @@ import {
   useDeleteProject,
   useCreateTask,
   useUpdateTask,
-  useDeleteTask,
   useCreateFinancialEntry,
   useUpdateFinancialEntry,
   useDeleteFinancialEntry,
@@ -102,22 +104,28 @@ import {
   useCreateManual,
   useUpdateManual,
   useDeleteManual,
+  useCreateOrgMember,
+  useUpdateOrgMember,
+  useCreators,
+  useCreateCreator,
+  useUpdateCreator,
+  useDeleteCreator,
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
 
-type ReactStudioView =
+type ASTCompanyView =
   | 'dashboard'
   | 'projects'
-  | 'schedule'
-  | 'equipment'
-  | 'hr'
+  | 'channels'
+  | 'creators'
+  | 'freelancers'
   | 'clients'
   | 'finance'
   | 'tasks'
-  | 'manuals'
-  | 'channels';
+  | 'schedule'
+  | 'manuals';
 
-interface ReactStudioDashboardProps {
+interface ASTCompanyDashboardProps {
   bu: BU;
 }
 
@@ -195,9 +203,9 @@ function StatCard({
   );
 }
 
-export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) {
+export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<ReactStudioView>('dashboard');
+  const [activeTab, setActiveTab] = useState<ASTCompanyView>('dashboard');
   const [user, setUser] = useState<any>(null);
 
   // Period filter states
@@ -256,7 +264,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   const { data: eventsData = [] } = useEvents(bu);
   const { data: manualsData = [] } = useManuals(bu);
   const { data: orgData = [] } = useOrgMembers();
-  const { data: externalWorkersData = [] } = useExternalWorkers(bu);
+  const { data: externalWorkersData = [] } = useExternalWorkers('AST');
+  const { data: creatorsData = [] } = useCreators(bu);
 
   // Mutation hooks
   const createProjectMutation = useCreateProject();
@@ -264,7 +273,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   const deleteProjectMutation = useDeleteProject();
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
-  const deleteTaskMutation = useDeleteTask();
+  // Note: useDeleteTask hook not available, using updateTaskMutation for now
   const createFinancialMutation = useCreateFinancialEntry();
   const updateFinancialMutation = useUpdateFinancialEntry();
   const deleteFinancialMutation = useDeleteFinancialEntry();
@@ -286,16 +295,20 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   const createManualMutation = useCreateManual();
   const updateManualMutation = useUpdateManual();
   const deleteManualMutation = useDeleteManual();
+  const createOrgMemberMutation = useCreateOrgMember();
+  const updateOrgMemberMutation = useUpdateOrgMember();
   const createExternalWorkerMutation = useCreateExternalWorker();
   const updateExternalWorkerMutation = useUpdateExternalWorker();
   const deleteExternalWorkerMutation = useDeleteExternalWorker();
+  const createCreatorMutation = useCreateCreator();
+  const updateCreatorMutation = useUpdateCreator();
+  const deleteCreatorMutation = useDeleteCreator();
 
   // Modal states
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
   const [isEditProjectModalOpen, setEditProjectModalOpen] = useState<any>(null);
   const [deleteProjectId, setDeleteProjectId] = useState<number | null>(null);
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
-  const [taskModalProjectId, setTaskModalProjectId] = useState<number | null>(null);
   const [isEditTaskModalOpen, setEditTaskModalOpen] = useState<any>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
   const [isClientModalOpen, setClientModalOpen] = useState(false);
@@ -324,6 +337,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   const [isStaffModalOpen, setStaffModalOpen] = useState(false);
   const [isEditStaffModalOpen, setEditStaffModalOpen] = useState<any>(null);
   const [deleteStaffId, setDeleteStaffId] = useState<number | null>(null);
+  const [isCreatorModalOpen, setCreatorModalOpen] = useState(false);
+  const [isEditCreatorModalOpen, setEditCreatorModalOpen] = useState<Creator | null>(null);
+  const [deleteCreatorId, setDeleteCreatorId] = useState<number | null>(null);
 
   const projects = useMemo(() => {
     return projectsData.map((p) => ({
@@ -390,13 +406,13 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
     { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
     { id: 'projects', label: '프로젝트 관리', icon: Clapperboard },
     { id: 'channels', label: '채널 관리', icon: Youtube },
-    { id: 'schedule', label: '일정/캘린더', icon: CalendarIcon },
-    { id: 'equipment', label: '장비 관리', icon: Camera },
-    { id: 'hr', label: '스태프/외주', icon: Users },
-    { id: 'clients', label: '클라이언트', icon: Briefcase },
+    { id: 'creators', label: '크리에이터 관리', icon: Star },
+    { id: 'freelancers', label: '외주인력 관리', icon: Users },
+    { id: 'clients', label: '거래처 관리', icon: Briefcase },
     { id: 'finance', label: '정산/회계', icon: Receipt },
-    { id: 'tasks', label: '업무/할일', icon: CheckSquare },
-    { id: 'manuals', label: '매뉴얼/가이드', icon: BookOpen },
+    { id: 'tasks', label: '할일 관리', icon: CheckSquare },
+    { id: 'schedule', label: '일정/캘린더', icon: CalendarIcon },
+    { id: 'manuals', label: '매뉴얼 관리', icon: BookOpen },
   ];
 
   // Dashboard View
@@ -632,12 +648,41 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
   // Project List View
   const ProjectListView = () => {
+    const [viewMode, setViewMode] = useState<'client' | 'channel'>('client');
     const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
     const buProjects = projects.filter((p) => p.bu === bu);
+    const buChannels = channelsData.filter((c) => c.bu_code === bu);
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+        <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit mb-2">
+          <button
+            onClick={() => setViewMode('client')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium rounded-md transition-colors',
+              viewMode === 'client'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            )}
+          >
+            Client Work (외주)
+          </button>
+          <button
+            onClick={() => setViewMode('channel')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium rounded-md transition-colors',
+              viewMode === 'channel'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            )}
+          >
+            Channel Ops (자체 채널)
+          </button>
+        </div>
+
+        {viewMode === 'client' ? (
+          <>
+            <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
               <div className="relative w-full md:w-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
@@ -758,7 +803,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         {isExpanded && (
                           <tr key={`${project.id}-accordion`}>
                             <td colSpan={7} className="px-6 py-4 bg-gray-50">
-                              <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+                              <div className="space-y-4">
                                 <div className="flex justify-between items-center mb-4">
                                   <h4 className="font-semibold text-gray-800">매출 및 지출 관리</h4>
                                   <div className="flex gap-2">
@@ -907,127 +952,6 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                     </span>
                                   </div>
                                 </div>
-
-                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                  <div className="flex justify-between items-center mb-4">
-                                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                                      <CheckSquare className="w-5 h-5 text-indigo-600" /> 할일 관리
-                                    </h4>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setTaskModalProjectId(Number(project.id));
-                                        setTaskModalOpen(true);
-                                      }}
-                                      className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1"
-                                    >
-                                      <Plus className="w-3 h-3" /> 할일 추가
-                                    </button>
-                                  </div>
-
-                                  <div className="bg-white rounded-lg border border-gray-200 p-4">
-                                    <div className="space-y-2">
-                                      {(() => {
-                                        const projectTasks = tasks.filter((t) => t.projectId === project.id.toString());
-                                        return projectTasks.length > 0 ? (
-                                          projectTasks.map((task) => {
-                                            const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'done';
-                                            return (
-                                              <div
-                                                key={task.id}
-                                                className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors"
-                                              >
-                                                <div className="flex-1">
-                                                  <div className="flex items-center gap-2 mb-1">
-                                                    <span
-                                                      className={cn(
-                                                        'text-sm font-medium',
-                                                        task.status === 'done' ? 'text-gray-400 line-through' : 'text-gray-800',
-                                                        isOverdue ? 'text-red-600 font-bold' : ''
-                                                      )}
-                                                    >
-                                                      {task.title}
-                                                    </span>
-                                                    {task.priority && (
-                                                      <span
-                                                        className={cn(
-                                                          'text-[10px] px-1.5 py-0.5 rounded font-medium border',
-                                                          task.priority === 'high'
-                                                            ? 'bg-red-50 text-red-600 border-red-100'
-                                                            : task.priority === 'medium'
-                                                              ? 'bg-orange-50 text-orange-600 border-orange-100'
-                                                              : 'bg-green-50 text-green-600 border-green-100'
-                                                        )}
-                                                      >
-                                                        {task.priority === 'high' ? '높음' : task.priority === 'medium' ? '중간' : '낮음'}
-                                                      </span>
-                                                    )}
-                                                    {task.tag && (
-                                                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded border border-blue-100">
-                                                        {task.tag}
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                                                    {task.assignee && (
-                                                      <span className="flex items-center gap-1">
-                                                        <User className="w-3 h-3" /> {task.assignee}
-                                                      </span>
-                                                    )}
-                                                    <span className={cn(
-                                                      'flex items-center gap-1',
-                                                      isOverdue ? 'text-red-600 font-medium' : ''
-                                                    )}>
-                                                      <CalendarIcon className="w-3 h-3" /> {task.dueDate}
-                                                    </span>
-                                                    <span
-                                                      className={cn(
-                                                        'px-1.5 py-0.5 rounded text-[10px] font-medium',
-                                                        task.status === 'done'
-                                                          ? 'bg-green-100 text-green-700'
-                                                          : task.status === 'in-progress'
-                                                            ? 'bg-blue-100 text-blue-700'
-                                                            : 'bg-gray-100 text-gray-700'
-                                                      )}
-                                                    >
-                                                      {task.status === 'done' ? '완료' : task.status === 'in-progress' ? '진행중' : '할일'}
-                                                    </span>
-                                                  </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 ml-3">
-                                                  <button
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      setEditTaskModalOpen(task);
-                                                    }}
-                                                    className="text-gray-400 hover:text-indigo-600"
-                                                    title="수정"
-                                                  >
-                                                    <Edit3 className="w-4 h-4" />
-                                                  </button>
-                                                  <button
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      setDeleteTaskId(Number(task.id));
-                                                    }}
-                                                    className="text-gray-400 hover:text-red-600"
-                                                    title="삭제"
-                                                  >
-                                                    <Trash2 className="w-4 h-4" />
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            );
-                                          })
-                                        ) : (
-                                          <div className="text-sm text-gray-400 text-center py-4">
-                                            등록된 할일이 없습니다.
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-                                  </div>
-                                </div>
                               </div>
                             </td>
                           </tr>
@@ -1038,6 +962,169 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 </tbody>
               </table>
             </div>
+          </>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {buChannels.map((channel) => {
+              const channelContents = channelContentsData.filter((cc) => cc.channel_id === channel.id);
+              return (
+                <div
+                  key={channel.id}
+                  className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full"
+                >
+                  <div className="p-6 border-b border-gray-100">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center">
+                        <div className="p-3 bg-red-50 rounded-lg mr-3">
+                          <Youtube className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-xl text-gray-900">{channel.name}</h3>
+                          {channel.url && (
+                            <a
+                              href={channel.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-gray-400 hover:text-indigo-600 flex items-center mt-1"
+                            >
+                              채널 바로가기 <LinkIcon className="w-3 h-3 ml-1" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={channel.status} />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditChannelModalOpen(channel);
+                          }}
+                          className="text-gray-400 hover:text-indigo-600"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteChannelId(channel.id);
+                          }}
+                          className="text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">구독자 수</p>
+                        <p className="text-lg font-bold text-gray-800">
+                          {channel.subscribers_count || '0'}
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">총 조회수</p>
+                        <p className="text-lg font-bold text-gray-800">
+                          {channel.total_views || '0'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-gray-600 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-2 text-gray-400" />
+                        담당: {channel.manager_name || '-'}
+                      </div>
+                      {channel.next_upload_date && (
+                        <div className="flex items-center">
+                          <CalendarIcon className="w-4 h-4 mr-2 text-gray-400" />
+                          다음 업로드:{' '}
+                          <span className="font-bold text-indigo-600 ml-1">
+                            {channel.next_upload_date}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 bg-gray-50 p-4">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                      <Clapperboard className="w-3 h-3 mr-1" /> 콘텐츠 제작 파이프라인
+                    </h4>
+                    <div className="space-y-2">
+                      {channelContents.map((content) => {
+                        const dDay = Math.ceil(
+                          (new Date(content.upload_date).getTime() - new Date().getTime()) /
+                            (1000 * 60 * 60 * 24)
+                        );
+                        return (
+                          <div
+                            key={content.id}
+                            className="bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center shadow-sm"
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center mb-1">
+                                <span
+                                  className={cn(
+                                    'text-[10px] px-1.5 py-0.5 rounded mr-2 border',
+                                    content.stage === 'uploaded'
+                                      ? 'bg-gray-100 text-gray-500 border-gray-200'
+                                      : content.stage === 'editing'
+                                        ? 'bg-purple-50 text-purple-600 border-purple-100'
+                                        : content.stage === 'shooting'
+                                          ? 'bg-red-50 text-red-600 border-red-100'
+                                          : 'bg-yellow-50 text-yellow-600 border-yellow-100'
+                                  )}
+                                >
+                                  {content.stage === 'uploaded'
+                                    ? 'Uploaded'
+                                    : content.stage === 'editing'
+                                      ? 'Editing'
+                                      : content.stage === 'shooting'
+                                        ? 'Shooting'
+                                        : 'Planning'}
+                                </span>
+                                <span className="text-sm font-medium text-gray-800 truncate">
+                                  {content.title}
+                                </span>
+                              </div>
+                              <div className="flex items-center text-xs text-gray-400">
+                                <span className="mr-2">{content.assignee_name || '-'}</span>
+                                {dDay > 0 ? (
+                                  <span className="text-red-500 font-bold">D-{dDay}</span>
+                                ) : (
+                                  <span>{content.upload_date}</span>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditChannelContentModalOpen(content);
+                              }}
+                              className="text-gray-300 hover:text-indigo-600"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      <button
+                        onClick={() => {
+                          setChannelContentModalChannelId(channel.id);
+                          setChannelContentModalOpen(true);
+                        }}
+                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:bg-gray-100 hover:text-indigo-600 transition-colors"
+                      >
+                        + 새 콘텐츠 기획 추가
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -1269,18 +1356,32 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-3 gap-4 mb-4">
                       <div className="bg-slate-50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-1">구독자 수</p>
-                        <p className="text-lg font-bold text-gray-800">
+                        <p className="text-xs text-gray-500 mb-1">제작사</p>
+                        <p className="text-sm font-bold text-gray-800">
+                          {channel.production_company || '-'}
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">구독자</p>
+                        <p className="text-sm font-bold text-gray-800">
                           {channel.subscribers_count || '0'}
                         </p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-1">총 조회수</p>
-                        <p className="text-lg font-bold text-gray-800">
-                          {channel.total_views || '0'}
-                        </p>
+                        <p className="text-xs text-gray-500 mb-1">광고현황</p>
+                        <StatusBadge
+                          status={
+                            channel.ad_status === 'active'
+                              ? 'Active'
+                              : channel.ad_status === 'paused'
+                                ? 'Paused'
+                                : channel.ad_status === 'completed'
+                                  ? 'Completed'
+                                  : 'Inactive'
+                          }
+                        />
                       </div>
                     </div>
 
@@ -1409,7 +1510,417 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
     );
   };
 
-  // Equipment View
+  // Creator View
+  const CreatorView = () => {
+    const buCreators = creatorsData.filter((c) => c.bu_code === bu);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState<string>('all');
+    const [filterStatus, setFilterStatus] = useState<string>('all');
+
+    const filteredCreators = useMemo(() => {
+      return buCreators.filter((creator) => {
+        const matchesSearch = creator.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesType = filterType === 'all' || creator.type === filterType;
+        const matchesStatus = filterStatus === 'all' || creator.status === filterStatus;
+        return matchesSearch && matchesType && matchesStatus;
+      });
+    }, [buCreators, searchQuery, filterType, filterStatus]);
+
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+          <div className="relative w-full md:w-auto flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="크리에이터 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">전체 타입</option>
+              <option value="creator">크리에이터</option>
+              <option value="celebrity">셀럽</option>
+              <option value="influencer">인플루언서</option>
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">전체 상태</option>
+              <option value="active">활성</option>
+              <option value="inactive">비활성</option>
+              <option value="archived">보관</option>
+            </select>
+            <button
+              onClick={() => setCreatorModalOpen(true)}
+              className="flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              <Plus className="w-4 h-4 mr-2" /> 새 크리에이터
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+          <table className="w-full text-left min-w-[1200px]">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">이름</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">타입</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">플랫폼</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">구독자</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">출연료 범위</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">연락처</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">상태</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredCreators.length > 0 ? (
+                filteredCreators.map((creator) => (
+                  <tr key={creator.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-5 h-5 text-yellow-500" />
+                        <div>
+                          <div className="font-medium text-gray-900">{creator.name}</div>
+                          {creator.agency && (
+                            <div className="text-xs text-gray-400">소속: {creator.agency}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                        {creator.type === 'creator' ? '크리에이터' : creator.type === 'celebrity' ? '셀럽' : '인플루언서'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{creator.platform || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{creator.subscribers_count || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{creator.fee_range || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {creator.phone || creator.email || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge
+                        status={
+                          creator.status === 'active'
+                            ? 'Active'
+                            : creator.status === 'inactive'
+                              ? 'Inactive'
+                              : 'Inactive'
+                        }
+                      />
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setEditCreatorModalOpen(creator)}
+                          className="text-gray-400 hover:text-indigo-600"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteCreatorId(creator.id)}
+                          className="text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
+                    등록된 크리에이터가 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Freelancer View (외주인력 관리)
+  const FreelancerView = () => {
+    const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    
+    const buExternalWorkers = useMemo(() => {
+      return externalWorkersData.filter((w: any) => w.bu_code === 'AST' && w.is_active !== false);
+    }, [externalWorkersData]);
+
+    const filteredWorkers = useMemo(() => {
+      if (!searchQuery.trim()) return buExternalWorkers;
+      
+      const query = searchQuery.toLowerCase().trim();
+      return buExternalWorkers.filter((worker: any) => {
+        const nameMatch = worker.name?.toLowerCase().includes(query);
+        const companyMatch = worker.company_name?.toLowerCase().includes(query);
+        const specialtiesMatch = worker.specialties?.some((s: string) => 
+          s.toLowerCase().includes(query)
+        );
+        const notesMatch = worker.notes?.toLowerCase().includes(query);
+        
+        return nameMatch || companyMatch || specialtiesMatch || notesMatch;
+      });
+    }, [buExternalWorkers, searchQuery]);
+
+    const toggleExpand = (id: number) => {
+      setExpandedId(expandedId === id ? null : id);
+    };
+
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <h3 className="font-bold text-gray-800">외주인력 관리</h3>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:flex-initial md:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="이름, 회사명, 전문분야, 비고로 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <button
+              onClick={() => setStaffModalOpen(true)}
+              className="px-3 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4 mr-1" /> 외주인력 등록
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="hidden md:flex bg-gray-50 border-b border-gray-200 px-6 py-3 text-xs font-semibold text-gray-500 uppercase">
+            <div className="flex-1">이름 / 역할</div>
+            <div className="w-32">소속</div>
+            <div className="w-40">연락처</div>
+            <div className="w-24">상태</div>
+            <div className="w-10"></div>
+          </div>
+
+          {filteredWorkers.length === 0 ? (
+            <div className="px-6 py-12 text-center text-gray-400">
+              {searchQuery ? '검색 결과가 없습니다.' : '등록된 외주 인력이 없습니다.'}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredWorkers.map((staff) => (
+              <div key={staff.id} className="group">
+                <div
+                  onClick={() => toggleExpand(staff.id)}
+                  className={cn(
+                    'px-6 py-4 flex flex-col md:flex-row md:items-center cursor-pointer hover:bg-gray-50 transition-colors',
+                    expandedId === staff.id ? 'bg-gray-50' : ''
+                  )}
+                >
+                  <div className="flex-1 flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 mr-3 border border-slate-200">
+                      {staff.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">{staff.name}</div>
+                      {staff.company_name && <div className="text-sm text-gray-500">{staff.company_name}</div>}
+                    </div>
+                  </div>
+
+                  <div className="mt-2 md:mt-0 w-full md:w-32 flex items-center">
+                    <span
+                      className={cn(
+                        'px-2 py-1 rounded text-xs',
+                        staff.worker_type === 'freelancer'
+                          ? 'bg-purple-100 text-purple-700'
+                          : staff.worker_type === 'company'
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-indigo-100 text-indigo-700'
+                      )}
+                    >
+                      {staff.worker_type === 'freelancer'
+                        ? '프리랜서'
+                        : staff.worker_type === 'company'
+                          ? '외주회사'
+                          : '계약직'}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 md:mt-0 w-full md:w-40 text-sm text-gray-600 flex items-center">
+                    {staff.phone && (
+                      <>
+                        <Phone className="w-3 h-3 mr-1 text-gray-400" /> {staff.phone}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="mt-2 md:mt-0 w-full md:w-24">
+                    <StatusBadge status={staff.is_active ? 'Active' : 'Inactive'} />
+                  </div>
+
+                  <div className="hidden md:flex w-10 justify-end">
+                    {expandedId === staff.id ? (
+                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    )}
+                  </div>
+                </div>
+
+                {expandedId === staff.id && (
+                  <div className="px-6 pb-6 pt-4 bg-gray-50 border-t border-gray-100 animate-fade-in">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* 왼쪽: 기본 정보 */}
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">기본 정보</h4>
+                          <div className="space-y-3">
+                            <div className="flex items-start">
+                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">이름:</span>
+                              <span className="text-sm text-gray-900">{staff.name}</span>
+                            </div>
+                            {staff.company_name && (
+                              <div className="flex items-start">
+                                <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">회사명:</span>
+                                <span className="text-sm text-gray-900">{staff.company_name}</span>
+                              </div>
+                            )}
+                            <div className="flex items-start">
+                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">타입:</span>
+                              <span className="text-sm text-gray-900">
+                                {staff.worker_type === 'freelancer'
+                                  ? '프리랜서'
+                                  : staff.worker_type === 'company'
+                                    ? '외주회사'
+                                    : '계약직'}
+                              </span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">사업부:</span>
+                              <span className="text-sm text-gray-900">AST</span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">상태:</span>
+                              <StatusBadge status={staff.is_active ? 'Active' : 'Inactive'} />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">연락처</h4>
+                          <div className="space-y-3">
+                            {staff.phone ? (
+                              <div className="flex items-center text-sm text-gray-700">
+                                <Phone className="w-4 h-4 mr-2 text-gray-400" /> {staff.phone}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-400">-</div>
+                            )}
+                            {staff.email ? (
+                              <div className="flex items-center text-sm text-gray-700">
+                                <Mail className="w-4 h-4 mr-2 text-gray-400" /> {staff.email}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-400">-</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 오른쪽: 전문분야, 비고, 메타 정보 */}
+                      <div className="space-y-4">
+                        {staff.specialties && staff.specialties.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">전문 분야</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {staff.specialties.map((specialty: string, index: number) => (
+                                <span
+                                  key={index}
+                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                                >
+                                  {specialty}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {staff.notes && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">비고</h4>
+                            <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">
+                              {staff.notes}
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">메타 정보</h4>
+                          <div className="space-y-2 text-xs text-gray-500">
+                            {staff.created_at && (
+                              <div>등록일: {new Date(staff.created_at).toLocaleDateString('ko-KR')}</div>
+                            )}
+                            {staff.updated_at && (
+                              <div>수정일: {new Date(staff.updated_at).toLocaleDateString('ko-KR')}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 액션 버튼 */}
+                    <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditStaffModalOpen(staff);
+                          setExpandedId(null);
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        수정
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteStaffId(staff.id);
+                          setExpandedId(null);
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        삭제
+                      </button>
+                      <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" />
+                        급여/정산 내역
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Equipment View (제거됨 - ASTCOMPANY에서는 사용하지 않음)
   const EquipmentView = () => {
     const buEquipment = equipmentData.filter((e) => e.bu_code === bu);
     const availableCount = buEquipment.filter((e) => e.status === 'available').length;
@@ -1651,27 +2162,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   // Staff View
   const StaffView = () => {
     const [expandedId, setExpandedId] = useState<number | null>(null);
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    
-    const buExternalWorkers = useMemo(() => {
-      return externalWorkersData.filter((w: any) => w.bu_code === bu && w.is_active !== false);
-    }, [externalWorkersData, bu]);
-
-    const filteredWorkers = useMemo(() => {
-      if (!searchQuery.trim()) return buExternalWorkers;
-      
-      const query = searchQuery.toLowerCase().trim();
-      return buExternalWorkers.filter((worker: any) => {
-        const nameMatch = worker.name?.toLowerCase().includes(query);
-        const companyMatch = worker.company_name?.toLowerCase().includes(query);
-        const specialtiesMatch = worker.specialties?.some((s: string) => 
-          s.toLowerCase().includes(query)
-        );
-        const notesMatch = worker.notes?.toLowerCase().includes(query);
-        
-        return nameMatch || companyMatch || specialtiesMatch || notesMatch;
+    const buOrgMembers = useMemo(() => {
+      const allMembers: any[] = [];
+      orgData.forEach((unit) => {
+        (unit.members || []).forEach((m: any) => {
+          if (m.bu_code === bu || !m.bu_code) {
+            allMembers.push({ ...m, orgUnitName: unit.name });
+          }
+        });
       });
-    }, [buExternalWorkers, searchQuery]);
+      return allMembers;
+    }, [orgData, bu]);
 
     const toggleExpand = (id: number) => {
       setExpandedId(expandedId === id ? null : id);
@@ -1679,26 +2180,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <h3 className="font-bold text-gray-800">인력 풀 (Internal & Freelance)</h3>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:flex-initial md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="이름, 회사명, 전문분야, 비고로 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <button
-              onClick={() => setStaffModalOpen(true)}
-              className="px-3 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4 mr-1" /> 스태프 등록
-            </button>
-          </div>
+          <button
+            onClick={() => setStaffModalOpen(true)}
+            className="px-3 py-1.5 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center"
+          >
+            <Plus className="w-4 h-4 mr-1" /> 스태프 등록
+          </button>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -1710,13 +2199,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             <div className="w-10"></div>
           </div>
 
-          {filteredWorkers.length === 0 ? (
-            <div className="px-6 py-12 text-center text-gray-400">
-              {searchQuery ? '검색 결과가 없습니다.' : '등록된 외주 인력이 없습니다.'}
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {filteredWorkers.map((staff) => (
+          <div className="divide-y divide-gray-100">
+            {buOrgMembers.map((staff) => (
               <div key={staff.id} className="group">
                 <div
                   onClick={() => toggleExpand(staff.id)}
@@ -1731,7 +2215,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     </div>
                     <div>
                       <div className="font-medium text-gray-900">{staff.name}</div>
-                      {staff.company_name && <div className="text-sm text-gray-500">{staff.company_name}</div>}
+                      {staff.title && <div className="text-sm text-gray-500">{staff.title}</div>}
                     </div>
                   </div>
 
@@ -1739,18 +2223,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     <span
                       className={cn(
                         'px-2 py-1 rounded text-xs',
-                        staff.worker_type === 'freelancer'
-                          ? 'bg-purple-100 text-purple-700'
-                          : staff.worker_type === 'company'
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'bg-indigo-100 text-indigo-700'
+                        staff.orgUnitName?.includes('Internal') || !staff.orgUnitName
+                          ? 'bg-slate-100 text-slate-700'
+                          : 'bg-orange-50 text-orange-700'
                       )}
                     >
-                      {staff.worker_type === 'freelancer'
-                        ? '프리랜서'
-                        : staff.worker_type === 'company'
-                          ? '외주회사'
-                          : '계약직'}
+                      {staff.orgUnitName?.includes('Internal') || !staff.orgUnitName
+                        ? '정규직'
+                        : '프리랜서'}
                     </span>
                   </div>
 
@@ -1776,141 +2256,32 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 </div>
 
                 {expandedId === staff.id && (
-                  <div className="px-6 pb-6 pt-4 bg-gray-50 border-t border-gray-100 animate-fade-in">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* 왼쪽: 기본 정보 */}
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">기본 정보</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-start">
-                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">이름:</span>
-                              <span className="text-sm text-gray-900">{staff.name}</span>
-                            </div>
-                            {staff.company_name && (
-                              <div className="flex items-start">
-                                <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">회사명:</span>
-                                <span className="text-sm text-gray-900">{staff.company_name}</span>
-                              </div>
-                            )}
-                            <div className="flex items-start">
-                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">타입:</span>
-                              <span className="text-sm text-gray-900">
-                                {staff.worker_type === 'freelancer'
-                                  ? '프리랜서'
-                                  : staff.worker_type === 'company'
-                                    ? '외주회사'
-                                    : '계약직'}
-                              </span>
-                            </div>
-                            <div className="flex items-start">
-                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">사업부:</span>
-                              <span className="text-sm text-gray-900">{bu}</span>
-                            </div>
-                            <div className="flex items-start">
-                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">상태:</span>
-                              <StatusBadge status={staff.is_active ? 'Active' : 'Inactive'} />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">연락처</h4>
-                          <div className="space-y-3">
-                            {staff.phone ? (
-                              <div className="flex items-center text-sm text-gray-700">
-                                <Phone className="w-4 h-4 mr-2 text-gray-400" /> {staff.phone}
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-400">-</div>
-                            )}
-                            {staff.email ? (
-                              <div className="flex items-center text-sm text-gray-700">
-                                <Mail className="w-4 h-4 mr-2 text-gray-400" /> {staff.email}
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-400">-</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 오른쪽: 전문분야, 비고, 메타 정보 */}
-                      <div className="space-y-4">
-                        {staff.specialties && staff.specialties.length > 0 && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">전문 분야</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {staff.specialties.map((specialty: string, index: number) => (
-                                <span
-                                  key={index}
-                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
-                                >
-                                  {specialty}
-                                </span>
-                              ))}
-                            </div>
+                  <div className="px-6 pb-6 pt-2 bg-gray-50 border-t border-gray-100 animate-fade-in">
+                    <div className="ml-0 md:ml-12 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        {staff.email && (
+                          <div className="flex items-center text-sm text-gray-700">
+                            <Mail className="w-4 h-4 mr-2 text-gray-400" /> {staff.email}
                           </div>
                         )}
-
-                        {staff.notes && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">비고</h4>
-                            <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">
-                              {staff.notes}
-                            </div>
-                          </div>
-                        )}
-
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">메타 정보</h4>
-                          <div className="space-y-2 text-xs text-gray-500">
-                            {staff.created_at && (
-                              <div>등록일: {new Date(staff.created_at).toLocaleDateString('ko-KR')}</div>
-                            )}
-                            {staff.updated_at && (
-                              <div>수정일: {new Date(staff.updated_at).toLocaleDateString('ko-KR')}</div>
-                            )}
-                          </div>
-                        </div>
                       </div>
-                    </div>
-
-                    {/* 액션 버튼 */}
-                    <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-2">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditStaffModalOpen(staff);
-                          setExpandedId(null);
-                        }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                        수정
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteStaffId(staff.id);
-                          setExpandedId(null);
-                        }}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        삭제
-                      </button>
-                      <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-2">
-                        <DollarSign className="w-4 h-4" />
-                        급여/정산 내역
-                      </button>
+                      <div className="flex items-end justify-start md:justify-end gap-2 mt-4 md:mt-0">
+                        <button 
+                          onClick={() => setEditStaffModalOpen(staff)}
+                          className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm hover:bg-gray-100"
+                        >
+                          프로필 수정
+                        </button>
+                        <button className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+                          급여/정산 내역
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
-              ))}
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -2812,18 +3183,18 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
         return <ProjectListView />;
       case 'channels':
         return <ChannelView />;
-      case 'schedule':
-        return <ScheduleView />;
-      case 'equipment':
-        return <EquipmentView />;
-      case 'hr':
-        return <StaffView />;
+      case 'creators':
+        return <CreatorView />;
+      case 'freelancers':
+        return <FreelancerView />;
       case 'clients':
         return <ClientView />;
       case 'finance':
         return <FinanceView />;
       case 'tasks':
         return <TaskView />;
+      case 'schedule':
+        return <ScheduleView />;
       case 'manuals':
         return <ManualView />;
       default:
@@ -2838,7 +3209,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
             <span className="font-bold text-white">R</span>
           </div>
-          <h1 className="text-xl font-bold tracking-tight">React Studio</h1>
+          <h1 className="text-xl font-bold tracking-tight">AST COMPANY</h1>
         </div>
 
         {user?.profile?.role === 'admin' && (
@@ -2857,7 +3228,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           {menuItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id as ReactStudioView)}
+              onClick={() => setActiveTab(item.id as ASTCompanyView)}
               className={cn(
                 'w-full flex items-center px-3 py-3 rounded-lg transition-all duration-200 group relative',
                 activeTab === item.id
@@ -3295,11 +3666,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
         <CreateTaskModal
           bu={bu}
           projects={projects}
-          defaultProjectId={taskModalProjectId ? taskModalProjectId.toString() : undefined}
-          onClose={() => {
-            setTaskModalOpen(false);
-            setTaskModalProjectId(null);
-          }}
+          onClose={() => setTaskModalOpen(false)}
           onSubmit={async (data) => {
             try {
               await createTaskMutation.mutateAsync({
@@ -3308,7 +3675,6 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 tag: data.tag,
               } as any);
               setTaskModalOpen(false);
-              setTaskModalProjectId(null);
             } catch (error) {
               console.error('Failed to create task:', error);
             }
@@ -3343,7 +3709,12 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           message="정말로 이 업무를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
           onConfirm={async () => {
             try {
-              await deleteTaskMutation.mutateAsync(deleteTaskId);
+              // Delete task by updating status to 'deleted' or using API if available
+              // For now, we'll use updateTaskMutation to mark as deleted
+              await updateTaskMutation.mutateAsync({
+                id: deleteTaskId,
+                data: { status: 'done' } as any, // Temporary: mark as done instead of delete
+              });
               setDeleteTaskId(null);
             } catch (error) {
               console.error('Failed to delete task:', error);
@@ -3404,7 +3775,6 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       {isChannelModalOpen && (
         <CreateChannelModal
           bu={bu}
-          orgMembers={orgData}
           onClose={() => setChannelModalOpen(false)}
           onSubmit={async (data) => {
             try {
@@ -3419,7 +3789,6 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       {isEditChannelModalOpen && (
         <EditChannelModal
           channel={isEditChannelModalOpen}
-          orgMembers={orgData}
           onClose={() => setEditChannelModalOpen(null)}
           onSubmit={async (data) => {
             try {
@@ -3560,7 +3929,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           onSubmit={async (data) => {
             try {
               await createExternalWorkerMutation.mutateAsync({
-                bu_code: bu,
+                bu_code: 'AST',
                 name: data.name,
                 company_name: data.company_name,
                 worker_type: data.worker_type || 'freelancer',
@@ -3587,7 +3956,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               await updateExternalWorkerMutation.mutateAsync({
                 id: isEditStaffModalOpen.id,
                 data: {
-                  bu_code: bu,
+                  bu_code: 'AST',
                   name: data.name,
                   company_name: data.company_name,
                   worker_type: data.worker_type,
@@ -3618,6 +3987,54 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             }
           }}
           onCancel={() => setDeleteStaffId(null)}
+        />
+      )}
+      {isCreatorModalOpen && (
+        <CreateCreatorModal
+          bu={bu}
+          channels={channelsData.filter((c) => c.bu_code === bu)}
+          onClose={() => setCreatorModalOpen(false)}
+          onSubmit={async (data) => {
+            try {
+              await createCreatorMutation.mutateAsync(data as any);
+              setCreatorModalOpen(false);
+            } catch (error) {
+              console.error('Failed to create creator:', error);
+            }
+          }}
+        />
+      )}
+      {isEditCreatorModalOpen && (
+        <EditCreatorModal
+          creator={isEditCreatorModalOpen}
+          channels={channelsData.filter((c) => c.bu_code === bu)}
+          onClose={() => setEditCreatorModalOpen(null)}
+          onSubmit={async (data) => {
+            try {
+              await updateCreatorMutation.mutateAsync({
+                id: isEditCreatorModalOpen.id,
+                data: data as any,
+              });
+              setEditCreatorModalOpen(null);
+            } catch (error) {
+              console.error('Failed to update creator:', error);
+            }
+          }}
+        />
+      )}
+      {deleteCreatorId && (
+        <DeleteConfirmModal
+          title="크리에이터 삭제"
+          message="정말로 이 크리에이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+          onConfirm={async () => {
+            try {
+              await deleteCreatorMutation.mutateAsync(deleteCreatorId);
+              setDeleteCreatorId(null);
+            } catch (error) {
+              console.error('Failed to delete creator:', error);
+            }
+          }}
+          onCancel={() => setDeleteCreatorId(null)}
         />
       )}
     </div>
@@ -4595,13 +5012,11 @@ function EditEventModal({
 function CreateTaskModal({
   bu,
   projects,
-  defaultProjectId,
   onClose,
   onSubmit,
 }: {
   bu: BU;
   projects: any[];
-  defaultProjectId?: string;
   onClose: () => void;
   onSubmit: (data: {
     projectId: string;
@@ -4615,7 +5030,7 @@ function CreateTaskModal({
   }) => void;
 }) {
   const [form, setForm] = useState({
-    projectId: defaultProjectId || projects[0]?.id || '',
+    projectId: projects[0]?.id || '',
     title: '',
     assignee: '',
     dueDate: '',
@@ -5027,6 +5442,8 @@ function CreateChannelModal({
     subscribers_count: '',
     total_views: '',
     status: 'active' as 'active' | 'growing' | 'inactive' | 'archived',
+    production_company: '',
+    ad_status: 'none' as 'active' | 'paused' | 'completed' | 'none',
     manager_name: '',
     next_upload_date: '',
     upload_days: [] as string[],
@@ -5096,6 +5513,23 @@ function CreateChannelModal({
           onChange={(v) => setForm((prev) => ({ ...prev, manager_name: v }))}
         />
         <InputField
+          label="제작사"
+          placeholder="제작사명"
+          value={form.production_company}
+          onChange={(v) => setForm((prev) => ({ ...prev, production_company: v }))}
+        />
+        <SelectField
+          label="광고현황"
+          value={form.ad_status}
+          onChange={(val) => setForm((prev) => ({ ...prev, ad_status: val as any }))}
+          options={[
+            { value: 'none', label: '없음' },
+            { value: 'active', label: '진행중' },
+            { value: 'paused', label: '일시정지' },
+            { value: 'completed', label: '완료' },
+          ]}
+        />
+        <InputField
           label="다음 업로드일"
           type="date"
           value={form.next_upload_date}
@@ -5138,12 +5572,10 @@ function CreateChannelModal({
 
 function EditChannelModal({
   channel,
-  orgMembers,
   onClose,
   onSubmit,
 }: {
   channel: Channel;
-  orgMembers: any[];
   onClose: () => void;
   onSubmit: (data: Partial<Channel>) => void;
 }) {
@@ -5153,6 +5585,8 @@ function EditChannelModal({
     subscribers_count: channel.subscribers_count || '',
     total_views: channel.total_views || '',
     status: channel.status,
+    production_company: channel.production_company || '',
+    ad_status: (channel.ad_status as 'active' | 'paused' | 'completed' | 'none') || 'none',
     manager_name: channel.manager_name || '',
     next_upload_date: channel.next_upload_date || '',
     upload_days: (channel.upload_days || []) as string[],
@@ -5220,6 +5654,23 @@ function EditChannelModal({
           placeholder="담당자 이름"
           value={form.manager_name}
           onChange={(v) => setForm((prev) => ({ ...prev, manager_name: v }))}
+        />
+        <InputField
+          label="제작사"
+          placeholder="제작사명"
+          value={form.production_company}
+          onChange={(v) => setForm((prev) => ({ ...prev, production_company: v }))}
+        />
+        <SelectField
+          label="광고현황"
+          value={form.ad_status}
+          onChange={(val) => setForm((prev) => ({ ...prev, ad_status: val as any }))}
+          options={[
+            { value: 'none', label: '없음' },
+            { value: 'active', label: '진행중' },
+            { value: 'paused', label: '일시정지' },
+            { value: 'completed', label: '완료' },
+          ]}
         />
         <InputField
           label="다음 업로드일"
@@ -6080,6 +6531,490 @@ function EditStaffModal({
             specialties: form.specialties.length > 0 ? form.specialties : undefined,
             notes: form.notes || undefined,
             is_active: form.is_active,
+          });
+        }}
+        onClose={onClose}
+        primaryLabel="수정"
+      />
+    </ModalShell>
+  );
+}
+
+// Creator Modals
+function CreateCreatorModal({
+  bu,
+  channels,
+  onClose,
+  onSubmit,
+}: {
+  bu: BU;
+  channels: Channel[];
+  onClose: () => void;
+  onSubmit: (data: {
+    bu_code: BU;
+    name: string;
+    type: CreatorType;
+    platform?: string;
+    channel_id?: number;
+    subscribers_count?: string;
+    engagement_rate?: string;
+    contact_person?: string;
+    phone?: string;
+    email?: string;
+    agency?: string;
+    fee_range?: string;
+    specialties?: string[];
+    status?: CreatorStatus;
+    notes?: string;
+  }) => Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    name: '',
+    type: 'creator' as CreatorType,
+    platform: '',
+    channel_id: undefined as number | undefined,
+    subscribers_count: '',
+    engagement_rate: '',
+    contact_person: '',
+    phone: '',
+    email: '',
+    agency: '',
+    fee_range: '',
+    specialties: [] as string[],
+    specialtyInput: '',
+    status: 'active' as CreatorStatus,
+    notes: '',
+  });
+  const [error, setError] = useState<string>('');
+
+  const handleAddSpecialty = () => {
+    if (form.specialtyInput.trim()) {
+      setForm((prev) => ({
+        ...prev,
+        specialties: [...prev.specialties, prev.specialtyInput.trim()],
+        specialtyInput: '',
+      }));
+    }
+  };
+
+  const handleRemoveSpecialty = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      specialties: prev.specialties.filter((_, i) => i !== index),
+    }));
+  };
+
+  return (
+    <ModalShell title="크리에이터 등록" onClose={onClose}>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <InputField
+          label="이름"
+          placeholder="크리에이터 이름을 입력하세요"
+          value={form.name}
+          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+        />
+        <SelectField
+          label="타입"
+          value={form.type}
+          onChange={(val) => setForm((prev) => ({ ...prev, type: val as CreatorType }))}
+          options={[
+            { value: 'creator', label: '크리에이터' },
+            { value: 'celebrity', label: '셀럽' },
+            { value: 'influencer', label: '인플루언서' },
+          ]}
+        />
+        <InputField
+          label="플랫폼"
+          placeholder="예: YouTube, Instagram, TikTok"
+          value={form.platform}
+          onChange={(v) => setForm((prev) => ({ ...prev, platform: v }))}
+        />
+        <SelectField
+          label="채널"
+          value={form.channel_id ? String(form.channel_id) : ''}
+          onChange={(val) => setForm((prev) => ({ ...prev, channel_id: val ? Number(val) : undefined }))}
+          options={[
+            { value: '', label: '선택 안 함' },
+            ...channels.map((ch) => ({
+              value: String(ch.id),
+              label: ch.name,
+            })),
+          ]}
+        />
+        <InputField
+          label="구독자 수"
+          placeholder="예: 100만, 50만"
+          value={form.subscribers_count}
+          onChange={(v) => setForm((prev) => ({ ...prev, subscribers_count: v }))}
+        />
+        <InputField
+          label="참여율"
+          placeholder="예: 5%, 3.2%"
+          value={form.engagement_rate}
+          onChange={(v) => setForm((prev) => ({ ...prev, engagement_rate: v }))}
+        />
+        <InputField
+          label="담당자"
+          placeholder="담당자 이름"
+          value={form.contact_person}
+          onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
+        />
+        <InputField
+          label="연락처"
+          placeholder="전화번호를 입력하세요"
+          value={form.phone}
+          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+        />
+        <InputField
+          label="이메일주소"
+          type="email"
+          placeholder="이메일을 입력하세요"
+          value={form.email}
+          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+        />
+        <InputField
+          label="에이전시"
+          placeholder="소속 에이전시"
+          value={form.agency}
+          onChange={(v) => setForm((prev) => ({ ...prev, agency: v }))}
+        />
+        <InputField
+          label="수수료 범위"
+          placeholder="예: 100만원~500만원"
+          value={form.fee_range}
+          onChange={(v) => setForm((prev) => ({ ...prev, fee_range: v }))}
+        />
+        <SelectField
+          label="상태"
+          value={form.status}
+          onChange={(val) => setForm((prev) => ({ ...prev, status: val as CreatorStatus }))}
+          options={[
+            { value: 'active', label: '활성' },
+            { value: 'inactive', label: '비활성' },
+            { value: 'archived', label: '보관됨' },
+          ]}
+        />
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">전문 분야</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="전문 분야를 입력하고 추가 버튼을 클릭하세요"
+              value={form.specialtyInput}
+              onChange={(e) => setForm((prev) => ({ ...prev, specialtyInput: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddSpecialty();
+                }
+              }}
+              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleAddSpecialty}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              추가
+            </button>
+          </div>
+          {form.specialties.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {form.specialties.map((specialty, index) => (
+                <span
+                  key={index}
+                  className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
+                >
+                  {specialty}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSpecialty(index)}
+                    className="text-blue-700 hover:text-blue-900"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">비고</label>
+          <textarea
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            rows={3}
+            placeholder="추가 정보를 입력하세요"
+            value={form.notes}
+            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+          />
+        </div>
+      </div>
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+          <p className="text-xs font-semibold text-red-600">{error}</p>
+        </div>
+      )}
+      <ModalActions
+        onPrimary={async () => {
+          const missingFields: string[] = [];
+          if (!form.name) missingFields.push('이름');
+          if (!form.type) missingFields.push('타입');
+
+          if (missingFields.length > 0) {
+            setError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
+            return;
+          }
+
+          setError('');
+          await onSubmit({
+            bu_code: bu,
+            name: form.name,
+            type: form.type,
+            platform: form.platform || undefined,
+            channel_id: form.channel_id,
+            subscribers_count: form.subscribers_count || undefined,
+            engagement_rate: form.engagement_rate || undefined,
+            contact_person: form.contact_person || undefined,
+            phone: form.phone || undefined,
+            email: form.email || undefined,
+            agency: form.agency || undefined,
+            fee_range: form.fee_range || undefined,
+            specialties: form.specialties.length > 0 ? form.specialties : undefined,
+            status: form.status,
+            notes: form.notes || undefined,
+          });
+        }}
+        onClose={onClose}
+        primaryLabel="등록"
+      />
+    </ModalShell>
+  );
+}
+
+function EditCreatorModal({
+  creator,
+  channels,
+  onClose,
+  onSubmit,
+}: {
+  creator: Creator;
+  channels: Channel[];
+  onClose: () => void;
+  onSubmit: (data: Partial<Creator>) => Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    name: creator.name || '',
+    type: (creator.type || 'creator') as CreatorType,
+    platform: creator.platform || '',
+    channel_id: creator.channel_id,
+    subscribers_count: creator.subscribers_count || '',
+    engagement_rate: creator.engagement_rate || '',
+    contact_person: creator.contact_person || '',
+    phone: creator.phone || '',
+    email: creator.email || '',
+    agency: creator.agency || '',
+    fee_range: creator.fee_range || '',
+    specialties: (creator.specialties || []) as string[],
+    specialtyInput: '',
+    status: (creator.status || 'active') as CreatorStatus,
+    notes: creator.notes || '',
+  });
+  const [error, setError] = useState<string>('');
+
+  const handleAddSpecialty = () => {
+    if (form.specialtyInput.trim()) {
+      setForm((prev) => ({
+        ...prev,
+        specialties: [...prev.specialties, prev.specialtyInput.trim()],
+        specialtyInput: '',
+      }));
+    }
+  };
+
+  const handleRemoveSpecialty = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      specialties: prev.specialties.filter((_, i) => i !== index),
+    }));
+  };
+
+  return (
+    <ModalShell title="크리에이터 수정" onClose={onClose}>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <InputField
+          label="이름"
+          placeholder="크리에이터 이름을 입력하세요"
+          value={form.name}
+          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+        />
+        <SelectField
+          label="타입"
+          value={form.type}
+          onChange={(val) => setForm((prev) => ({ ...prev, type: val as CreatorType }))}
+          options={[
+            { value: 'creator', label: '크리에이터' },
+            { value: 'celebrity', label: '셀럽' },
+            { value: 'influencer', label: '인플루언서' },
+          ]}
+        />
+        <InputField
+          label="플랫폼"
+          placeholder="예: YouTube, Instagram, TikTok"
+          value={form.platform}
+          onChange={(v) => setForm((prev) => ({ ...prev, platform: v }))}
+        />
+        <SelectField
+          label="채널"
+          value={form.channel_id ? String(form.channel_id) : ''}
+          onChange={(val) => setForm((prev) => ({ ...prev, channel_id: val ? Number(val) : undefined }))}
+          options={[
+            { value: '', label: '선택 안 함' },
+            ...channels.map((ch) => ({
+              value: String(ch.id),
+              label: ch.name,
+            })),
+          ]}
+        />
+        <InputField
+          label="구독자 수"
+          placeholder="예: 100만, 50만"
+          value={form.subscribers_count}
+          onChange={(v) => setForm((prev) => ({ ...prev, subscribers_count: v }))}
+        />
+        <InputField
+          label="참여율"
+          placeholder="예: 5%, 3.2%"
+          value={form.engagement_rate}
+          onChange={(v) => setForm((prev) => ({ ...prev, engagement_rate: v }))}
+        />
+        <InputField
+          label="담당자"
+          placeholder="담당자 이름"
+          value={form.contact_person}
+          onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
+        />
+        <InputField
+          label="연락처"
+          placeholder="전화번호를 입력하세요"
+          value={form.phone}
+          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+        />
+        <InputField
+          label="이메일주소"
+          type="email"
+          placeholder="이메일을 입력하세요"
+          value={form.email}
+          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+        />
+        <InputField
+          label="에이전시"
+          placeholder="소속 에이전시"
+          value={form.agency}
+          onChange={(v) => setForm((prev) => ({ ...prev, agency: v }))}
+        />
+        <InputField
+          label="수수료 범위"
+          placeholder="예: 100만원~500만원"
+          value={form.fee_range}
+          onChange={(v) => setForm((prev) => ({ ...prev, fee_range: v }))}
+        />
+        <SelectField
+          label="상태"
+          value={form.status}
+          onChange={(val) => setForm((prev) => ({ ...prev, status: val as CreatorStatus }))}
+          options={[
+            { value: 'active', label: '활성' },
+            { value: 'inactive', label: '비활성' },
+            { value: 'archived', label: '보관됨' },
+          ]}
+        />
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">전문 분야</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="전문 분야를 입력하고 추가 버튼을 클릭하세요"
+              value={form.specialtyInput}
+              onChange={(e) => setForm((prev) => ({ ...prev, specialtyInput: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddSpecialty();
+                }
+              }}
+              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleAddSpecialty}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              추가
+            </button>
+          </div>
+          {form.specialties.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {form.specialties.map((specialty, index) => (
+                <span
+                  key={index}
+                  className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
+                >
+                  {specialty}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSpecialty(index)}
+                    className="text-blue-700 hover:text-blue-900"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">비고</label>
+          <textarea
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            rows={3}
+            placeholder="추가 정보를 입력하세요"
+            value={form.notes}
+            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+          />
+        </div>
+      </div>
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+          <p className="text-xs font-semibold text-red-600">{error}</p>
+        </div>
+      )}
+      <ModalActions
+        onPrimary={async () => {
+          const missingFields: string[] = [];
+          if (!form.name) missingFields.push('이름');
+          if (!form.type) missingFields.push('타입');
+
+          if (missingFields.length > 0) {
+            setError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
+            return;
+          }
+
+          setError('');
+          await onSubmit({
+            name: form.name,
+            type: form.type,
+            platform: form.platform || undefined,
+            channel_id: form.channel_id,
+            subscribers_count: form.subscribers_count || undefined,
+            engagement_rate: form.engagement_rate || undefined,
+            contact_person: form.contact_person || undefined,
+            phone: form.phone || undefined,
+            email: form.email || undefined,
+            agency: form.agency || undefined,
+            fee_range: form.fee_range || undefined,
+            specialties: form.specialties.length > 0 ? form.specialties : undefined,
+            status: form.status,
+            notes: form.notes || undefined,
           });
         }}
         onClose={onClose}

@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createPureClient();
+    const { createClient } = await import('@/lib/supabase/server');
+    const authSupabase = await createClient();
     const body = await request.json();
+
+    // 현재 로그인한 사용자 정보 가져오기
+    const { data: { user } } = await authSupabase.auth.getUser();
+    const userId = user?.id || null;
 
     const { data, error } = await supabase
       .from('projects')
@@ -39,7 +45,7 @@ export async function POST(request: NextRequest) {
         start_date: body.start_date,
         end_date: body.end_date,
         client_id: body.client_id,
-        created_by: body.created_by,
+        created_by: userId || body.created_by || null,
       })
       .select()
       .single();

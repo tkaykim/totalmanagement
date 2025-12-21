@@ -75,6 +75,16 @@ export function useUpdateTask() {
   });
 }
 
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteTask(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
 export function useFinancialEntries(params?: {
   bu?: BU;
   projectId?: number;
@@ -417,6 +427,120 @@ export function useDeleteManual() {
     mutationFn: (id: number) => api.deleteManual(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manuals'] });
+    },
+  });
+}
+
+// Creators
+export function useCreators(bu?: BU) {
+  return useQuery({
+    queryKey: ['creators', bu],
+    queryFn: () => api.fetchCreators(bu),
+  });
+}
+
+export function useCreateCreator() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createCreator,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creators'] });
+    },
+  });
+}
+
+export function useUpdateCreator() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => api.updateCreator(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creators'] });
+    },
+  });
+}
+
+export function useDeleteCreator() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteCreator(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creators'] });
+    },
+  });
+}
+
+// External Workers
+export function useExternalWorkers(bu?: BU) {
+  return useQuery({
+    queryKey: ['external-workers', bu],
+    queryFn: () => api.fetchExternalWorkers(bu),
+  });
+}
+
+export function useCreateExternalWorker() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createExternalWorker,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['external-workers'] });
+    },
+  });
+}
+
+export function useUpdateExternalWorker() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => api.updateExternalWorker(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['external-workers'] });
+    },
+  });
+}
+
+export function useDeleteExternalWorker() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteExternalWorker(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['external-workers'] });
+    },
+  });
+}
+
+// Artists
+export function useArtists(bu?: BU) {
+  return useQuery({
+    queryKey: ['artists', bu],
+    queryFn: () => api.fetchArtists(bu),
+  });
+}
+
+export function useCreateArtist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createArtist,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
+  });
+}
+
+export function useUpdateArtist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => api.updateArtist(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
+  });
+}
+
+export function useDeleteArtist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteArtist(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
     },
   });
 }

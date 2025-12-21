@@ -39,6 +39,10 @@ import {
   useCreateOrgMember,
   useUpdateOrgMember,
   useDeleteOrgMember,
+  useExternalWorkers,
+  useCreateExternalWorker,
+  useUpdateExternalWorker,
+  useDeleteExternalWorker,
   useUsers,
   useCreateUser,
   useUpdateUser,
@@ -239,12 +243,11 @@ export default function HomePage() {
   const [view, setView] = useState<View>('dashboard');
   const [bu, setBu] = useState<BU>('GRIGO');
 
-  // REACT BU 선택 시 자동으로 ReactStudio 뷰로 전환
+  // BU 변경 핸들러 - 모든 BU 버튼은 동일하게 BU만 변경하고 뷰는 유지
   const handleBuChange = (newBu: BU) => {
     setBu(newBu);
-    if (newBu === 'REACT') {
-      setView('reactstudio');
-    } else if (view === 'reactstudio') {
+    // reactstudio 뷰에서 다른 BU로 변경 시 dashboard로 전환
+    if (view === 'reactstudio' && newBu !== 'REACT') {
       setView('dashboard');
     }
   };
@@ -259,8 +262,9 @@ export default function HomePage() {
 
   // API 데이터 로딩
   const { data: projectsData = [], isLoading: projectsLoading } = useProjects();
-  const { data: tasksData = [] } = useTasks(bu);
+  const { data: tasksData = [] } = useTasks(); // bu 필터 제거 - 모든 할일 가져오기
   const { data: orgData = [] } = useOrgMembers();
+  const { data: externalWorkersData = [] } = useExternalWorkers();
   const { data: usersData } = useUsers();
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
@@ -280,6 +284,9 @@ export default function HomePage() {
   const createOrgMemberMutation = useCreateOrgMember();
   const updateOrgMemberMutation = useUpdateOrgMember();
   const deleteOrgMemberMutation = useDeleteOrgMember();
+  const createExternalWorkerMutation = useCreateExternalWorker();
+  const updateExternalWorkerMutation = useUpdateExternalWorker();
+  const deleteExternalWorkerMutation = useDeleteExternalWorker();
 
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
@@ -294,9 +301,12 @@ export default function HomePage() {
   const [isEditOrgMemberModalOpen, setEditOrgMemberModalOpen] = useState<any | null>(null);
   const [deleteOrgMemberId, setDeleteOrgMemberId] = useState<number | null>(null);
   const [selectedOrgUnitId, setSelectedOrgUnitId] = useState<number | null>(null);
-  const [orgViewTab, setOrgViewTab] = useState<'org' | 'users'>('org');
+  const [orgViewTab, setOrgViewTab] = useState<'org' | 'external' | 'users'>('org');
   const [isEditUserModalOpen, setEditUserModalOpen] = useState<any | null>(null);
   const [isCreateUserModalOpen, setCreateUserModalOpen] = useState<boolean>(false);
+  const [isExternalWorkerModalOpen, setExternalWorkerModalOpen] = useState<boolean>(false);
+  const [isEditExternalWorkerModalOpen, setEditExternalWorkerModalOpen] = useState<any | null>(null);
+  const [deleteExternalWorkerId, setDeleteExternalWorkerId] = useState<number | null>(null);
   const [formState, setFormState] = useState<{
     type: 'revenue' | 'expense';
     cat: string;
@@ -792,7 +802,7 @@ export default function HomePage() {
             {(Object.keys(BU_TITLES) as BU[]).map((buKey) => (
               <Link
                 key={buKey}
-                href={`/${buToSlug(buKey)}`}
+                href={buKey === 'AST' ? '/astcompany' : `/${buToSlug(buKey)}`}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition',
                   'text-slate-300 hover:bg-slate-800 hover:text-white'
@@ -1085,7 +1095,7 @@ export default function HomePage() {
               bu={bu}
               onBuChange={handleBuChange}
               tasks={tasks}
-              projects={currentProjects}
+              projects={projects}
               onStatusChange={async (id, status) => {
                 try {
                   const dbStatus = status === 'in-progress' ? 'in_progress' : status;
@@ -1100,7 +1110,9 @@ export default function HomePage() {
 
           {view === 'organization' && (
             <OrganizationView
+              bu={bu}
               orgData={orgData}
+              externalWorkersData={externalWorkersData}
               usersData={usersData}
               currentUser={user}
               orgViewTab={orgViewTab}
@@ -1114,6 +1126,15 @@ export default function HomePage() {
               }}
               onDeleteMember={(id) => {
                 setDeleteOrgMemberId(id);
+              }}
+              onAddExternalWorker={() => {
+                setExternalWorkerModalOpen(true);
+              }}
+              onEditExternalWorker={(worker) => {
+                setEditExternalWorkerModalOpen(worker);
+              }}
+              onDeleteExternalWorker={(id) => {
+                setDeleteExternalWorkerId(id);
               }}
               onEditUser={(userData) => {
                 setEditUserModalOpen(userData);
@@ -1255,6 +1276,52 @@ export default function HomePage() {
             }
           }}
           onCancel={() => setDeleteOrgMemberId(null)}
+        />
+      )}
+      {isExternalWorkerModalOpen && (
+        <CreateExternalWorkerModal
+          onClose={() => setExternalWorkerModalOpen(false)}
+          onSubmit={async (payload) => {
+            try {
+              await createExternalWorkerMutation.mutateAsync(payload);
+              setExternalWorkerModalOpen(false);
+            } catch (error) {
+              console.error('Failed to create external worker:', error);
+            }
+          }}
+          defaultBu={bu}
+        />
+      )}
+      {isEditExternalWorkerModalOpen && (
+        <EditExternalWorkerModal
+          worker={isEditExternalWorkerModalOpen}
+          onClose={() => setEditExternalWorkerModalOpen(null)}
+          onSubmit={async (payload) => {
+            try {
+              await updateExternalWorkerMutation.mutateAsync({
+                id: isEditExternalWorkerModalOpen.id,
+                data: payload,
+              });
+              setEditExternalWorkerModalOpen(null);
+            } catch (error) {
+              console.error('Failed to update external worker:', error);
+            }
+          }}
+        />
+      )}
+      {deleteExternalWorkerId && (
+        <DeleteConfirmModal
+          title="외주 인력 삭제"
+          message="정말로 이 외주 인력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+          onConfirm={async () => {
+            try {
+              await deleteExternalWorkerMutation.mutateAsync(deleteExternalWorkerId);
+              setDeleteExternalWorkerId(null);
+            } catch (error) {
+              console.error('Failed to delete external worker:', error);
+            }
+          }}
+          onCancel={() => setDeleteExternalWorkerId(null)}
         />
       )}
       {isCreateUserModalOpen && (
@@ -1717,8 +1784,9 @@ function TasksView({
   onStatusChange: (id: string, status: TaskItem['status']) => void;
   onEditTask: (task: TaskItem) => void;
 }) {
-  // projects는 이미 currentProjects로 필터링되어 전달됨
-  const buProjectIds = projects.map((p) => p.id);
+  // 현재 선택된 bu에 해당하는 프로젝트만 필터링
+  const buProjects = projects.filter((p) => p.bu === bu);
+  const buProjectIds = buProjects.map((p) => p.id);
   const rows = tasks.filter((t) => buProjectIds.includes(t.projectId));
 
   const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
@@ -1928,7 +1996,9 @@ function SettlementView({
 }
 
 function OrganizationView({
+  bu,
   orgData,
+  externalWorkersData,
   usersData,
   currentUser,
   orgViewTab,
@@ -1936,17 +2006,25 @@ function OrganizationView({
   onAddMember,
   onEditMember,
   onDeleteMember,
+  onAddExternalWorker,
+  onEditExternalWorker,
+  onDeleteExternalWorker,
   onEditUser,
   onAddUser,
 }: {
+  bu: BU;
   orgData: any[];
+  externalWorkersData: any[];
   usersData?: { users: any[]; currentUser: any };
   currentUser?: any;
-  orgViewTab: 'org' | 'users';
-  onTabChange: (tab: 'org' | 'users') => void;
+  orgViewTab: 'org' | 'external' | 'users';
+  onTabChange: (tab: 'org' | 'external' | 'users') => void;
   onAddMember: (orgUnitId: number) => void;
   onEditMember: (member: any) => void;
   onDeleteMember: (id: number) => void;
+  onAddExternalWorker: () => void;
+  onEditExternalWorker: (worker: any) => void;
+  onDeleteExternalWorker: (id: number) => void;
   onEditUser: (user: any) => void;
   onAddUser: () => void;
 }) {
@@ -1966,7 +2044,18 @@ function OrganizationView({
               : 'text-slate-600 hover:text-slate-900',
           )}
         >
-          조직도
+          내부 직원
+        </button>
+        <button
+          onClick={() => onTabChange('external')}
+          className={cn(
+            'px-6 py-2.5 text-sm font-semibold transition',
+            orgViewTab === 'external'
+              ? 'tab-active rounded-xl bg-white text-blue-600 shadow'
+              : 'text-slate-600 hover:text-slate-900',
+          )}
+        >
+          외주 인력
         </button>
         <button
           onClick={() => onTabChange('users')}
@@ -2088,6 +2177,121 @@ function OrganizationView({
         </div>
         );
       })}
+        </div>
+      )}
+
+      {orgViewTab === 'external' && (
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">외주 인력 관리</h3>
+                <p className="text-[11px] text-slate-400">프리랜서, 외주회사, 계약직 등 외부 인력</p>
+              </div>
+              <button
+                onClick={onAddExternalWorker}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                외주 인력 추가
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[11px]">
+                <thead className="bg-slate-50 text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">이름</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">타입</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">회사명</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">소속사업부</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">전문분야</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">연락처</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">이메일</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">활성화</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">관리</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {externalWorkersData.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-4 py-6 text-center text-xs text-slate-400">
+                        등록된 외주 인력이 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    externalWorkersData
+                      .map((w: any) => (
+                        <tr key={w.id} className="transition hover:bg-slate-50">
+                          <td className="px-4 py-3">
+                            <span className="font-semibold text-slate-800">{w.name}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-[9px] font-semibold',
+                                w.worker_type === 'freelancer'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : w.worker_type === 'company'
+                                    ? 'bg-orange-100 text-orange-700'
+                                    : 'bg-indigo-100 text-indigo-700',
+                              )}
+                            >
+                              {w.worker_type === 'freelancer'
+                                ? '프리랜서'
+                                : w.worker_type === 'company'
+                                  ? '외주회사'
+                                  : '계약직'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">{w.company_name || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {w.bu_code ? BU_TITLES[w.bu_code] || w.bu_code : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {w.specialties && w.specialties.length > 0
+                              ? w.specialties.join(', ')
+                              : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-500">{w.phone || '-'}</td>
+                          <td className="px-4 py-3 text-slate-500">{w.email || '-'}</td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-[9px] font-semibold',
+                                w.is_active !== false
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-slate-100 text-slate-500',
+                              )}
+                            >
+                              {w.is_active !== false ? '활성' : '비활성'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => onEditExternalWorker(w)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
+                                title="수정"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => onDeleteExternalWorker(w.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-red-50 hover:text-red-600"
+                                title="삭제"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -3842,6 +4046,394 @@ function EditOrgMemberModal({
             email: form.email || undefined,
             is_active: form.is_active,
             is_leader: form.is_leader,
+          });
+        }}
+        onClose={onClose}
+        primaryLabel="수정"
+      />
+    </ModalShell>
+  );
+}
+
+function CreateExternalWorkerModal({
+  onClose,
+  onSubmit,
+  defaultBu,
+}: {
+  onClose: () => void;
+  onSubmit: (payload: {
+    bu_code: BU;
+    name: string;
+    company_name?: string;
+    worker_type?: 'freelancer' | 'company' | 'contractor';
+    phone?: string;
+    email?: string;
+    specialties?: string[];
+    notes?: string;
+    is_active?: boolean;
+  }) => Promise<void>;
+  defaultBu?: BU;
+}) {
+  const [form, setForm] = useState({
+    bu_code: defaultBu || 'GRIGO',
+    name: '',
+    company_name: '',
+    worker_type: 'freelancer' as 'freelancer' | 'company' | 'contractor',
+    phone: '',
+    email: '',
+    specialties: [] as string[],
+    specialtyInput: '',
+    notes: '',
+    is_active: true,
+  });
+  const [error, setError] = useState<string>('');
+
+  const handleAddSpecialty = () => {
+    if (form.specialtyInput.trim()) {
+      setForm((prev) => ({
+        ...prev,
+        specialties: [...prev.specialties, prev.specialtyInput.trim()],
+        specialtyInput: '',
+      }));
+    }
+  };
+
+  const handleRemoveSpecialty = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      specialties: prev.specialties.filter((_, i) => i !== index),
+    }));
+  };
+
+  return (
+    <ModalShell title="외주 인력 추가" onClose={onClose}>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <SelectField
+          label="소속사업부"
+          value={form.bu_code}
+          onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val as BU }))}
+          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
+            value: k,
+            label: BU_TITLES[k],
+          }))}
+        />
+        <InputField
+          label="이름"
+          placeholder="이름을 입력하세요"
+          value={form.name}
+          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+        />
+        <SelectField
+          label="인력 타입"
+          value={form.worker_type}
+          onChange={(val) =>
+            setForm((prev) => ({ ...prev, worker_type: val as typeof form.worker_type }))
+          }
+          options={[
+            { value: 'freelancer', label: '프리랜서' },
+            { value: 'company', label: '외주회사' },
+            { value: 'contractor', label: '계약직' },
+          ]}
+        />
+        {form.worker_type === 'company' && (
+          <InputField
+            label="회사명"
+            placeholder="외주회사명을 입력하세요"
+            value={form.company_name}
+            onChange={(v) => setForm((prev) => ({ ...prev, company_name: v }))}
+          />
+        )}
+        <InputField
+          label="연락처"
+          placeholder="전화번호를 입력하세요"
+          value={form.phone}
+          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+        />
+        <InputField
+          label="이메일주소"
+          type="email"
+          placeholder="이메일을 입력하세요"
+          value={form.email}
+          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+        />
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">전문 분야</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="전문 분야를 입력하고 추가 버튼을 클릭하세요"
+              value={form.specialtyInput}
+              onChange={(e) => setForm((prev) => ({ ...prev, specialtyInput: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddSpecialty();
+                }
+              }}
+              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleAddSpecialty}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              추가
+            </button>
+          </div>
+          {form.specialties.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {form.specialties.map((specialty, index) => (
+                <span
+                  key={index}
+                  className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
+                >
+                  {specialty}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSpecialty(index)}
+                    className="text-blue-700 hover:text-blue-900"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">비고</label>
+          <textarea
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            rows={3}
+            placeholder="추가 정보를 입력하세요"
+            value={form.notes}
+            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <SelectField
+            label="활성화 상태"
+            value={form.is_active ? 'active' : 'inactive'}
+            onChange={(val) => setForm((prev) => ({ ...prev, is_active: val === 'active' }))}
+            options={[
+              { value: 'active', label: '활성' },
+              { value: 'inactive', label: '비활성' },
+            ]}
+          />
+        </div>
+      </div>
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      <ModalActions
+        onPrimary={async () => {
+          if (!form.name.trim()) {
+            setError('이름을 입력해주세요.');
+            return;
+          }
+          setError('');
+          await onSubmit({
+            bu_code: form.bu_code,
+            name: form.name,
+            company_name: form.company_name || undefined,
+            worker_type: form.worker_type,
+            phone: form.phone || undefined,
+            email: form.email || undefined,
+            specialties: form.specialties.length > 0 ? form.specialties : undefined,
+            notes: form.notes || undefined,
+            is_active: form.is_active,
+          });
+        }}
+        onClose={onClose}
+        primaryLabel="등록"
+      />
+    </ModalShell>
+  );
+}
+
+function EditExternalWorkerModal({
+  worker,
+  onClose,
+  onSubmit,
+}: {
+  worker: any;
+  onClose: () => void;
+  onSubmit: (payload: {
+    bu_code?: BU;
+    name?: string;
+    company_name?: string;
+    worker_type?: 'freelancer' | 'company' | 'contractor';
+    phone?: string;
+    email?: string;
+    specialties?: string[];
+    notes?: string;
+    is_active?: boolean;
+  }) => Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    bu_code: worker.bu_code || 'GRIGO',
+    name: worker.name || '',
+    company_name: worker.company_name || '',
+    worker_type: (worker.worker_type || 'freelancer') as 'freelancer' | 'company' | 'contractor',
+    phone: worker.phone || '',
+    email: worker.email || '',
+    specialties: (worker.specialties || []) as string[],
+    specialtyInput: '',
+    notes: worker.notes || '',
+    is_active: worker.is_active !== undefined ? worker.is_active : true,
+  });
+  const [error, setError] = useState<string>('');
+
+  const handleAddSpecialty = () => {
+    if (form.specialtyInput.trim()) {
+      setForm((prev) => ({
+        ...prev,
+        specialties: [...prev.specialties, prev.specialtyInput.trim()],
+        specialtyInput: '',
+      }));
+    }
+  };
+
+  const handleRemoveSpecialty = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      specialties: prev.specialties.filter((_, i) => i !== index),
+    }));
+  };
+
+  return (
+    <ModalShell title="외주 인력 수정" onClose={onClose}>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <SelectField
+          label="소속사업부"
+          value={form.bu_code}
+          onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val as BU }))}
+          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
+            value: k,
+            label: BU_TITLES[k],
+          }))}
+        />
+        <InputField
+          label="이름"
+          placeholder="이름을 입력하세요"
+          value={form.name}
+          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+        />
+        <SelectField
+          label="인력 타입"
+          value={form.worker_type}
+          onChange={(val) =>
+            setForm((prev) => ({ ...prev, worker_type: val as typeof form.worker_type }))
+          }
+          options={[
+            { value: 'freelancer', label: '프리랜서' },
+            { value: 'company', label: '외주회사' },
+            { value: 'contractor', label: '계약직' },
+          ]}
+        />
+        {form.worker_type === 'company' && (
+          <InputField
+            label="회사명"
+            placeholder="외주회사명을 입력하세요"
+            value={form.company_name}
+            onChange={(v) => setForm((prev) => ({ ...prev, company_name: v }))}
+          />
+        )}
+        <InputField
+          label="연락처"
+          placeholder="전화번호를 입력하세요"
+          value={form.phone}
+          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+        />
+        <InputField
+          label="이메일주소"
+          type="email"
+          placeholder="이메일을 입력하세요"
+          value={form.email}
+          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+        />
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">전문 분야</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="전문 분야를 입력하고 추가 버튼을 클릭하세요"
+              value={form.specialtyInput}
+              onChange={(e) => setForm((prev) => ({ ...prev, specialtyInput: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddSpecialty();
+                }
+              }}
+              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleAddSpecialty}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              추가
+            </button>
+          </div>
+          {form.specialties.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {form.specialties.map((specialty, index) => (
+                <span
+                  key={index}
+                  className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
+                >
+                  {specialty}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSpecialty(index)}
+                    className="text-blue-700 hover:text-blue-900"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">비고</label>
+          <textarea
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            rows={3}
+            placeholder="추가 정보를 입력하세요"
+            value={form.notes}
+            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <SelectField
+            label="활성화 상태"
+            value={form.is_active ? 'active' : 'inactive'}
+            onChange={(val) => setForm((prev) => ({ ...prev, is_active: val === 'active' }))}
+            options={[
+              { value: 'active', label: '활성' },
+              { value: 'inactive', label: '비활성' },
+            ]}
+          />
+        </div>
+      </div>
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      <ModalActions
+        onPrimary={async () => {
+          if (!form.name.trim()) {
+            setError('이름을 입력해주세요.');
+            return;
+          }
+          setError('');
+          await onSubmit({
+            bu_code: form.bu_code,
+            name: form.name,
+            company_name: form.company_name || undefined,
+            worker_type: form.worker_type,
+            phone: form.phone || undefined,
+            email: form.email || undefined,
+            specialties: form.specialties.length > 0 ? form.specialties : undefined,
+            notes: form.notes || undefined,
+            is_active: form.is_active,
           });
         }}
         onClose={onClose}

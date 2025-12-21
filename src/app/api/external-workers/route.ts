@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
-import type { BU } from '@/types/database';
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
-    const bu = searchParams.get('bu') as BU | null;
+    const bu = searchParams.get('bu');
 
-    let query = supabase.from('clients').select('*').order('created_at', { ascending: false });
+    let query = supabase
+      .from('external_workers')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (bu) {
       query = query.eq('bu_code', bu);
@@ -29,21 +31,18 @@ export async function POST(request: NextRequest) {
     const supabase = await createPureClient();
     const body = await request.json();
 
-    // 빈 문자열을 null로 변환하는 헬퍼 함수
-    const toNullIfEmpty = (value: any) => (value === '' || value === null || value === undefined ? null : value);
-
     const { data, error } = await supabase
-      .from('clients')
+      .from('external_workers')
       .insert({
         bu_code: body.bu_code,
         name: body.name,
-        industry: toNullIfEmpty(body.industry),
-        contact_person: toNullIfEmpty(body.contact_person),
-        phone: toNullIfEmpty(body.phone),
-        email: toNullIfEmpty(body.email),
-        address: toNullIfEmpty(body.address),
-        status: body.status || 'active',
-        last_meeting_date: toNullIfEmpty(body.last_meeting_date),
+        company_name: body.company_name || null,
+        worker_type: body.worker_type || 'freelancer',
+        phone: body.phone || null,
+        email: body.email || null,
+        specialties: body.specialties || [],
+        notes: body.notes || null,
+        is_active: body.is_active !== undefined ? body.is_active : true,
       })
       .select()
       .single();
@@ -55,7 +54,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
-
-
 
 
