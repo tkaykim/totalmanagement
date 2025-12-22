@@ -62,6 +62,7 @@ import type {
   Creator,
   CreatorType,
   CreatorStatus,
+  ClientType,
 } from '@/types/database';
 import {
   useProjects,
@@ -83,6 +84,7 @@ import {
   useDeleteProject,
   useCreateTask,
   useUpdateTask,
+  useDeleteTask,
   useCreateFinancialEntry,
   useUpdateFinancialEntry,
   useDeleteFinancialEntry,
@@ -110,6 +112,7 @@ import {
   useCreateCreator,
   useUpdateCreator,
   useDeleteCreator,
+  useUsers,
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
 
@@ -266,6 +269,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
   const { data: orgData = [] } = useOrgMembers();
   const { data: externalWorkersData = [] } = useExternalWorkers('AST');
   const { data: creatorsData = [] } = useCreators(bu);
+  const { data: usersData } = useUsers();
 
   // Mutation hooks
   const createProjectMutation = useCreateProject();
@@ -273,7 +277,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
   const deleteProjectMutation = useDeleteProject();
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
-  // Note: useDeleteTask hook not available, using updateTaskMutation for now
+  const deleteTaskMutation = useDeleteTask();
   const createFinancialMutation = useCreateFinancialEntry();
   const updateFinancialMutation = useUpdateFinancialEntry();
   const deleteFinancialMutation = useDeleteFinancialEntry();
@@ -309,9 +313,14 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
   const [isEditProjectModalOpen, setEditProjectModalOpen] = useState<any>(null);
   const [deleteProjectId, setDeleteProjectId] = useState<number | null>(null);
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskModalProjectId, setTaskModalProjectId] = useState<string | null>(null);
   const [isEditTaskModalOpen, setEditTaskModalOpen] = useState<any>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
   const [isClientModalOpen, setClientModalOpen] = useState(false);
+  const [clientCreateInitial, setClientCreateInitial] = useState<{
+    client_type?: ClientType;
+    team_id?: number;
+  } | null>(null);
   const [isEditClientModalOpen, setEditClientModalOpen] = useState<Client | null>(null);
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null);
   const [isEquipmentModalOpen, setEquipmentModalOpen] = useState(false);
@@ -444,7 +453,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
     const netProfit = totalRevenue - totalExpense;
 
     const inProgressProjects = activeProjects.filter((p) => 
-      p.status === '기획중' || p.status === '진행중' || p.status === '운영중'
+      p.status === '준비중' || p.status === '기획중' || p.status === '진행중' || p.status === '운영중'
     );
 
     const upcomingEvents = [...buEvents]
@@ -473,9 +482,9 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
             trend={netProfit >= 0 ? "up" : "down"}
           />
           <StatCard
-            title="진행 중 프로젝트"
+            title="진행 예정/진행중인 프로젝트"
             value={`${inProgressProjects.length} 건`}
-            subtext={`기획: ${activeProjects.filter((p) => p.status === '기획중').length} / 진행: ${activeProjects.filter((p) => p.status === '진행중').length} / 운영: ${activeProjects.filter((p) => p.status === '운영중').length}`}
+            subtext={`준비: ${activeProjects.filter((p) => p.status === '준비중').length} / 기획: ${activeProjects.filter((p) => p.status === '기획중').length} / 진행: ${activeProjects.filter((p) => p.status === '진행중').length} / 운영: ${activeProjects.filter((p) => p.status === '운영중').length}`}
             icon={Clapperboard}
           />
         </div>
@@ -484,7 +493,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-gray-800">진행 중인 프로젝트</h3>
+                <h3 className="text-lg font-bold text-gray-800">진행 예정/진행중인 프로젝트</h3>
                 <button
                   onClick={() => setActiveTab('projects')}
                   className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
@@ -514,6 +523,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                             <h4 className="font-semibold text-gray-800 text-sm">{project.name}</h4>
                             <span className={cn(
                               'text-xs px-2 py-0.5 rounded-full',
+                              project.status === '준비중' ? 'bg-purple-100 text-purple-700' :
                               project.status === '기획중' ? 'bg-yellow-100 text-yellow-700' :
                               project.status === '진행중' ? 'bg-blue-100 text-blue-700' :
                               project.status === '운영중' ? 'bg-green-100 text-green-700' :
@@ -523,6 +533,9 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                             </span>
                           </div>
                           <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                            {(project as any).pm_name && (
+                              <span>PM: {(project as any).pm_name}</span>
+                            )}
                             <span>매출: {formatCurrency(projectRevenue)}</span>
                             <span>지출: {formatCurrency(projectExpense)}</span>
                             <span className={cn(
@@ -539,7 +552,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                   })
                 ) : (
                   <div className="text-center py-8 text-gray-400 text-sm">
-                    진행 중인 프로젝트가 없습니다.
+                    진행 예정/진행중인 프로젝트가 없습니다.
                   </div>
                 )}
               </div>
@@ -663,41 +676,54 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
 
   // Project List View
   const ProjectListView = () => {
-    const [viewMode, setViewMode] = useState<'client' | 'channel'>('client');
+    const [viewMode, setViewMode] = useState<'active' | 'completed'>('active');
     const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
     const buProjects = projects.filter((p) => p.bu === bu);
-    const buChannels = channelsData.filter((c) => c.bu_code === bu);
+    
+    const activeProjects = useMemo(() => {
+      return buProjects.filter((p) => 
+        p.status === '준비중' || 
+        p.status === '진행중' || 
+        p.status === '기획중' || 
+        p.status === '운영중'
+      );
+    }, [buProjects]);
+    
+    const completedProjects = useMemo(() => {
+      return buProjects.filter((p) => p.status === '완료');
+    }, [buProjects]);
+    
+    const displayedProjects = viewMode === 'active' ? activeProjects : completedProjects;
 
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit mb-2">
           <button
-            onClick={() => setViewMode('client')}
+            onClick={() => setViewMode('active')}
             className={cn(
               'px-4 py-2 text-sm font-medium rounded-md transition-colors',
-              viewMode === 'client'
+              viewMode === 'active'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             )}
           >
-            Client Work (외주)
+            진행중
           </button>
           <button
-            onClick={() => setViewMode('channel')}
+            onClick={() => setViewMode('completed')}
             className={cn(
               'px-4 py-2 text-sm font-medium rounded-md transition-colors',
-              viewMode === 'channel'
+              viewMode === 'completed'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             )}
           >
-            Channel Ops (자체 채널)
+            완료
           </button>
         </div>
 
-        {viewMode === 'client' ? (
-          <>
-            <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+        <>
+          <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
               <div className="relative w-full md:w-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
@@ -742,7 +768,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {buProjects.map((project) => {
+                  {displayedProjects.map((project) => {
                     const projectClient = clientsData.find((c) => c.id === project.client_id);
                     const projectRevenues = financials.filter(
                       (f) => f.projectId === project.id && f.type === 'revenue'
@@ -778,11 +804,8 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                           <td className="px-6 py-4 text-sm text-gray-600">
                             {projectClient?.name || '-'}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600 flex items-center">
-                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 mr-2 border border-slate-200">
-                              {project.name.charAt(0)}
-                            </div>
-                            PM
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {(project as any).pm_name || '-'}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600 font-mono">
                             {formatCurrency(budget)}
@@ -815,10 +838,109 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                             </button>
                           </td>
                         </tr>
-                        {isExpanded && (
+                        {isExpanded && (() => {
+                          const projectTasks = tasks.filter((t) => t.projectId === project.id);
+                          return (
                           <tr key={`${project.id}-accordion`}>
                             <td colSpan={7} className="px-6 py-4 bg-gray-50">
                               <div className="space-y-4">
+                                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                  <div className="flex justify-between items-center mb-3">
+                                    <h5 className="font-semibold text-blue-700 flex items-center gap-2">
+                                      <CheckSquare className="w-4 h-4" /> 할일
+                                    </h5>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setTaskModalProjectId(project.id);
+                                        setTaskModalOpen(true);
+                                      }}
+                                      className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                                    >
+                                      <Plus className="w-3 h-3" /> 할일 추가
+                                    </button>
+                                  </div>
+                                  <div className="space-y-2">
+                                    {projectTasks.length > 0 ? (
+                                      projectTasks.map((task) => (
+                                        <div
+                                          key={task.id}
+                                          className="flex justify-between items-center p-2 bg-blue-50 rounded border border-blue-100"
+                                        >
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <span
+                                                className={cn(
+                                                  'text-[10px] px-1.5 py-0.5 rounded font-medium border',
+                                                  task.status === 'done'
+                                                    ? 'bg-gray-100 text-gray-600 border-gray-200'
+                                                    : task.status === 'in-progress'
+                                                      ? 'bg-yellow-50 text-yellow-600 border-yellow-100'
+                                                      : 'bg-blue-50 text-blue-600 border-blue-100'
+                                                )}
+                                              >
+                                                {task.status === 'done'
+                                                  ? '완료'
+                                                  : task.status === 'in-progress'
+                                                    ? '진행중'
+                                                    : '할일'}
+                                              </span>
+                                              {task.priority && (
+                                                <span
+                                                  className={cn(
+                                                    'text-[10px] px-1.5 py-0.5 rounded font-medium border',
+                                                    task.priority === 'high'
+                                                      ? 'bg-red-50 text-red-600 border-red-100'
+                                                      : task.priority === 'medium'
+                                                        ? 'bg-orange-50 text-orange-600 border-orange-100'
+                                                        : 'bg-green-50 text-green-600 border-green-100'
+                                                  )}
+                                                >
+                                                  {task.priority === 'high'
+                                                    ? '높음'
+                                                    : task.priority === 'medium'
+                                                      ? '보통'
+                                                      : '낮음'}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="text-sm font-medium text-gray-800">
+                                              {task.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              담당: {task.assignee || '-'} • 마감: {task.dueDate || '-'}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditTaskModalOpen(task);
+                                              }}
+                                              className="text-gray-400 hover:text-indigo-600"
+                                            >
+                                              <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDeleteTaskId(Number(task.id));
+                                              }}
+                                              className="text-gray-400 hover:text-red-600"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="text-sm text-gray-400 text-center py-4">
+                                        등록된 할일이 없습니다.
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
                                 <div className="flex justify-between items-center mb-4">
                                   <h4 className="font-semibold text-gray-800">매출 및 지출 관리</h4>
                                   <div className="flex gap-2">
@@ -970,176 +1092,15 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                               </div>
                             </td>
                           </tr>
-                        )}
+                          );
+                        })()}
                       </>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-          </>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {buChannels.map((channel) => {
-              const channelContents = channelContentsData.filter((cc) => cc.channel_id === channel.id);
-              return (
-                <div
-                  key={channel.id}
-                  className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full"
-                >
-                  <div className="p-6 border-b border-gray-100">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center">
-                        <div className="p-3 bg-red-50 rounded-lg mr-3">
-                          <Youtube className="w-6 h-6 text-red-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-xl text-gray-900">{channel.name}</h3>
-                          {channel.url && (
-                            <a
-                              href={channel.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-gray-400 hover:text-indigo-600 flex items-center mt-1"
-                            >
-                              채널 바로가기 <LinkIcon className="w-3 h-3 ml-1" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={channel.status} />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditChannelModalOpen(channel);
-                          }}
-                          className="text-gray-400 hover:text-indigo-600"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteChannelId(channel.id);
-                          }}
-                          className="text-gray-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="bg-slate-50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-1">구독자 수</p>
-                        <p className="text-lg font-bold text-gray-800">
-                          {channel.subscribers_count || '0'}
-                        </p>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-1">총 조회수</p>
-                        <p className="text-lg font-bold text-gray-800">
-                          {channel.total_views || '0'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-sm text-gray-600 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2 text-gray-400" />
-                        담당: {channel.manager_name || '-'}
-                      </div>
-                      {channel.next_upload_date && (
-                        <div className="flex items-center">
-                          <CalendarIcon className="w-4 h-4 mr-2 text-gray-400" />
-                          다음 업로드:{' '}
-                          <span className="font-bold text-indigo-600 ml-1">
-                            {channel.next_upload_date}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex-1 bg-gray-50 p-4">
-                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
-                      <Clapperboard className="w-3 h-3 mr-1" /> 콘텐츠 제작 파이프라인
-                    </h4>
-                    <div className="space-y-2">
-                      {channelContents.map((content) => {
-                        const dDay = Math.ceil(
-                          (new Date(content.upload_date).getTime() - new Date().getTime()) /
-                            (1000 * 60 * 60 * 24)
-                        );
-                        return (
-                          <div
-                            key={content.id}
-                            className="bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center shadow-sm"
-                          >
-                            <div className="flex-1">
-                              <div className="flex items-center mb-1">
-                                <span
-                                  className={cn(
-                                    'text-[10px] px-1.5 py-0.5 rounded mr-2 border',
-                                    content.stage === 'uploaded'
-                                      ? 'bg-gray-100 text-gray-500 border-gray-200'
-                                      : content.stage === 'editing'
-                                        ? 'bg-purple-50 text-purple-600 border-purple-100'
-                                        : content.stage === 'shooting'
-                                          ? 'bg-red-50 text-red-600 border-red-100'
-                                          : 'bg-yellow-50 text-yellow-600 border-yellow-100'
-                                  )}
-                                >
-                                  {content.stage === 'uploaded'
-                                    ? 'Uploaded'
-                                    : content.stage === 'editing'
-                                      ? 'Editing'
-                                      : content.stage === 'shooting'
-                                        ? 'Shooting'
-                                        : 'Planning'}
-                                </span>
-                                <span className="text-sm font-medium text-gray-800 truncate">
-                                  {content.title}
-                                </span>
-                              </div>
-                              <div className="flex items-center text-xs text-gray-400">
-                                <span className="mr-2">{content.assignee_name || '-'}</span>
-                                {dDay > 0 ? (
-                                  <span className="text-red-500 font-bold">D-{dDay}</span>
-                                ) : (
-                                  <span>{content.upload_date}</span>
-                                )}
-                              </div>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditChannelContentModalOpen(content);
-                              }}
-                              className="text-gray-300 hover:text-indigo-600"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                      <button
-                        onClick={() => {
-                          setChannelContentModalChannelId(channel.id);
-                          setChannelContentModalOpen(true);
-                        }}
-                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:bg-gray-100 hover:text-indigo-600 transition-colors"
-                      >
-                        + 새 콘텐츠 기획 추가
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        </>
       </div>
     );
   };
@@ -2569,7 +2530,10 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
             />
           </div>
           <button
-            onClick={() => setClientModalOpen(true)}
+            onClick={() => {
+              setClientCreateInitial(null);
+              setClientModalOpen(true);
+            }}
             className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center"
           >
             <Plus className="w-4 h-4 mr-2" /> 클라이언트 등록
@@ -2587,6 +2551,12 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
           <div className="divide-y divide-gray-100">
             {buClients.length > 0 ? (
               buClients.map((client) => {
+                const isTeam = client.client_type === 'team';
+                const teamMembers = isTeam
+                  ? buClients.filter(
+                      (c) => c.team_id === client.id && (c.client_type || 'individual') !== 'team',
+                    )
+                  : [];
                 const clientProjects = projects.filter((p) => (p as any).client_id === client.id);
                 const clientRevenues = financials.filter(
                   (f) => clientProjects.some((p) => p.id === f.projectId) && f.type === 'revenue'
@@ -2607,14 +2577,23 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                           {client.name.substring(0, 1)}
                         </div>
                         <div>
-                          <h3 className="font-bold text-gray-900">{client.name}</h3>
-                          <p className="text-xs text-gray-500">{client.industry || '-'}</p>
+                          <h3 className="font-bold text-gray-900">
+                            {client.name}
+                            {isTeam && teamMembers.length > 0 && (
+                              <span className="ml-2 text-[11px] font-semibold text-indigo-500">
+                                ({teamMembers.length}명)
+                              </span>
+                            )}
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            {client.industry || (isTeam ? '팀 계정' : '-')}
+                          </p>
                         </div>
                       </div>
 
                       <div className="mt-2 md:mt-0 w-full md:w-40 text-sm text-gray-600 flex items-center">
                         <User className="w-3 h-3 mr-2 text-gray-400" />{' '}
-                        {client.contact_person || '-'}
+                        {client.contact_person || (isTeam ? '담당자 미등록' : '-')}
                       </div>
 
                       <div className="mt-2 md:mt-0 w-full md:w-32">
@@ -2677,6 +2656,60 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                           </div>
 
                           <div className="flex flex-col justify-end items-start md:items-end gap-2">
+                            {isTeam && (
+                              <div className="w-full md:w-72 rounded-2xl border border-gray-200 bg-white p-3">
+                                <div className="mb-2 flex items-center justify-between">
+                                  <p className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400">
+                                    소속 직원 / 담당자 ({teamMembers.length})
+                                  </p>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setClientCreateInitial({
+                                        client_type: 'individual',
+                                        team_id: client.id,
+                                      });
+                                      setClientModalOpen(true);
+                                    }}
+                                    className="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600 hover:bg-indigo-100"
+                                  >
+                                    개인 추가
+                                  </button>
+                                </div>
+                                {teamMembers.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    {teamMembers.map((member) => (
+                                      <div
+                                        key={member.id}
+                                        className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
+                                      >
+                                        <div>
+                                          <p className="font-bold text-gray-800">
+                                            {member.contact_person || member.name}
+                                          </p>
+                                          <p className="font-mono text-[11px] text-gray-500">
+                                            {member.email || member.phone || '-'}
+                                          </p>
+                                        </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditClientModalOpen(member);
+                                          }}
+                                          className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
+                                        >
+                                          수정
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="py-4 text-center text-[11px] text-gray-400">
+                                    등록된 멤버가 없습니다. 상단의 &quot;개인 추가&quot; 버튼으로 팀원을 등록하세요.
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -3468,6 +3501,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
         <CreateProjectModal
           bu={bu}
           clients={clientsData}
+          users={(usersData as any)?.users || []}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
             try {
@@ -3496,6 +3530,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
           project={isEditProjectModalOpen}
           bu={bu}
           clients={clientsData}
+          users={(usersData as any)?.users || []}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
             try {
@@ -3540,6 +3575,9 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
       {isClientModalOpen && (
         <CreateClientModal
           bu={bu}
+          teams={clientsData.filter((c) => c.bu_code === bu && c.client_type === 'team')}
+          initialClientType={clientCreateInitial?.client_type}
+          initialTeamId={clientCreateInitial?.team_id}
           onClose={() => setClientModalOpen(false)}
           onSubmit={async (data) => {
             try {
@@ -3554,6 +3592,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
       {isEditClientModalOpen && (
         <EditClientModal
           client={isEditClientModalOpen}
+          teams={clientsData.filter((c) => c.bu_code === bu && c.client_type === 'team')}
           onClose={() => setEditClientModalOpen(null)}
           onSubmit={async (data) => {
             try {
@@ -3681,7 +3720,11 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
         <CreateTaskModal
           bu={bu}
           projects={projects}
-          onClose={() => setTaskModalOpen(false)}
+          defaultProjectId={taskModalProjectId}
+          onClose={() => {
+            setTaskModalOpen(false);
+            setTaskModalProjectId(null);
+          }}
           onSubmit={async (data) => {
             try {
               await createTaskMutation.mutateAsync({
@@ -3690,6 +3733,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                 tag: data.tag,
               } as any);
               setTaskModalOpen(false);
+              setTaskModalProjectId(null);
             } catch (error) {
               console.error('Failed to create task:', error);
             }
@@ -3724,12 +3768,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
           message="정말로 이 업무를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
           onConfirm={async () => {
             try {
-              // Delete task by updating status to 'deleted' or using API if available
-              // For now, we'll use updateTaskMutation to mark as deleted
-              await updateTaskMutation.mutateAsync({
-                id: deleteTaskId,
-                data: { status: 'done' } as any, // Temporary: mark as done instead of delete
-              });
+              await deleteTaskMutation.mutateAsync(deleteTaskId);
               setDeleteTaskId(null);
             } catch (error) {
               console.error('Failed to delete task:', error);
@@ -4255,6 +4294,7 @@ function DeleteConfirmModal({
 function CreateProjectModal({
   bu,
   clients,
+  users,
   onClose,
   onSubmit,
   onOpenClientModal,
@@ -4263,6 +4303,7 @@ function CreateProjectModal({
 }: {
   bu: BU;
   clients: Client[];
+  users: any[];
   onClose: () => void;
   onSubmit: (data: {
     bu: BU;
@@ -4272,6 +4313,7 @@ function CreateProjectModal({
     endDate: string;
     status: string;
     client_id?: number;
+    pm_name?: string | null;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
@@ -4284,6 +4326,7 @@ function CreateProjectModal({
     endDate: '',
     status: '준비중',
     client_id: '',
+    pm_name: '',
   });
 
   const selectedClient = form.client_id ? clients.find((c) => c.id === Number(form.client_id)) : null;
@@ -4329,6 +4372,15 @@ function CreateProjectModal({
             { value: '완료', label: '완료' },
           ]}
         />
+        <SelectField
+          label="PM"
+          value={form.pm_name}
+          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
+          options={[
+            { value: '', label: '선택 안함' },
+            ...users.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value),
+          ]}
+        />
         <div className="md:col-span-2">
           <div className="flex items-end gap-2">
             <div className="flex-1">
@@ -4385,6 +4437,7 @@ function CreateProjectModal({
             endDate: form.endDate,
             status: form.status,
             client_id: form.client_id ? Number(form.client_id) : undefined,
+            pm_name: form.pm_name || null,
           })
         }
         onClose={onClose}
@@ -4398,6 +4451,7 @@ function EditProjectModal({
   project,
   bu,
   clients,
+  users,
   onClose,
   onSubmit,
   onOpenClientModal,
@@ -4407,6 +4461,7 @@ function EditProjectModal({
   project: any;
   bu: BU;
   clients: Client[];
+  users: any[];
   onClose: () => void;
   onSubmit: (data: {
     bu: BU;
@@ -4416,6 +4471,7 @@ function EditProjectModal({
     endDate: string;
     status: string;
     client_id?: number;
+    pm_name?: string | null;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
@@ -4428,6 +4484,7 @@ function EditProjectModal({
     endDate: project.endDate,
     status: project.status,
     client_id: String((project as any).client_id || ''),
+    pm_name: (project as any).pm_name || '',
   });
 
   const selectedClient = form.client_id ? clients.find((c) => c.id === Number(form.client_id)) : null;
@@ -4473,6 +4530,15 @@ function EditProjectModal({
             { value: '완료', label: '완료' },
           ]}
         />
+        <SelectField
+          label="PM"
+          value={form.pm_name}
+          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
+          options={[
+            { value: '', label: '선택 안함' },
+            ...users.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value),
+          ]}
+        />
         <div className="md:col-span-2">
           <div className="flex items-end gap-2">
             <div className="flex-1">
@@ -4529,6 +4595,7 @@ function EditProjectModal({
             endDate: form.endDate,
             status: form.status,
             client_id: form.client_id ? Number(form.client_id) : undefined,
+            pm_name: form.pm_name || null,
           })
         }
         onClose={onClose}
@@ -4541,10 +4608,16 @@ function EditProjectModal({
 // Client Modals
 function CreateClientModal({
   bu,
+  teams,
+  initialClientType,
+  initialTeamId,
   onClose,
   onSubmit,
 }: {
   bu: BU;
+  teams: Client[];
+  initialClientType?: ClientType;
+  initialTeamId?: number;
   onClose: () => void;
   onSubmit: (data: Partial<Client>) => void;
 }) {
@@ -4557,14 +4630,46 @@ function CreateClientModal({
     address: '',
     status: 'active' as 'active' | 'growing' | 'inactive' | 'archived',
     last_meeting_date: '',
+    client_type: (initialClientType || 'individual') as ClientType,
+    team_id: initialTeamId ? String(initialTeamId) : '',
   });
 
   return (
     <ModalShell title="클라이언트 등록" onClose={onClose}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <SelectField
+          label="계정 타입"
+          value={form.client_type}
+          onChange={(v) =>
+            setForm((prev) => ({
+              ...prev,
+              client_type: v as ClientType,
+              team_id: v === 'team' ? '' : prev.team_id,
+              contact_person: v === 'individual' ? '' : prev.contact_person,
+            }))
+          }
+          options={[
+            { value: 'individual', label: '개인 계정 (직원/담당자)' },
+            { value: 'team', label: '팀 계정 (회사/조직)' },
+          ]}
+        />
+        {form.client_type === 'individual' && (
+          <SelectField
+            label="소속 팀 (선택)"
+            value={form.team_id}
+            onChange={(v) => setForm((prev) => ({ ...prev, team_id: v }))}
+            options={[
+              { value: '', label: '소속 팀 없음' },
+              ...teams.map((t) => ({
+                value: String(t.id),
+                label: t.name,
+              })),
+            ]}
+          />
+        )}
         <InputField
-          label="클라이언트명"
-          placeholder="클라이언트 이름"
+          label={form.client_type === 'individual' ? '이름 *' : '회사/팀명 *'}
+          placeholder={form.client_type === 'individual' ? '개인 이름' : '회사 또는 팀 이름'}
           value={form.name}
           onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
         />
@@ -4574,12 +4679,14 @@ function CreateClientModal({
           value={form.industry}
           onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
         />
-        <InputField
-          label="담당자"
-          placeholder="담당자 이름"
-          value={form.contact_person}
-          onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
-        />
+        {form.client_type === 'team' && (
+          <InputField
+            label="담당자"
+            placeholder="담당자 이름"
+            value={form.contact_person}
+            onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
+          />
+        )}
         <InputField
           label="전화번호"
           placeholder="010-0000-0000"
@@ -4617,7 +4724,14 @@ function CreateClientModal({
         />
       </div>
       <ModalActions
-        onPrimary={() => onSubmit({ ...form, bu_code: bu } as any)}
+        onPrimary={() =>
+          onSubmit({
+            ...form,
+            bu_code: bu,
+            client_type: form.client_type,
+            team_id: form.team_id ? Number(form.team_id) : null,
+          } as any)
+        }
         onClose={onClose}
         primaryLabel="등록"
       />
@@ -4627,10 +4741,12 @@ function CreateClientModal({
 
 function EditClientModal({
   client,
+  teams,
   onClose,
   onSubmit,
 }: {
   client: Client;
+  teams: Client[];
   onClose: () => void;
   onSubmit: (data: Partial<Client>) => void;
 }) {
@@ -4643,14 +4759,46 @@ function EditClientModal({
     address: client.address || '',
     status: client.status,
     last_meeting_date: client.last_meeting_date || '',
+    client_type: (client.client_type || 'team') as ClientType,
+    team_id: client.team_id ? String(client.team_id) : '',
   });
 
   return (
     <ModalShell title="클라이언트 수정" onClose={onClose}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <SelectField
+          label="계정 타입"
+          value={form.client_type}
+          onChange={(v) =>
+            setForm((prev) => ({
+              ...prev,
+              client_type: v as ClientType,
+              team_id: v === 'team' ? '' : prev.team_id,
+              contact_person: v === 'individual' ? '' : prev.contact_person,
+            }))
+          }
+          options={[
+            { value: 'individual', label: '개인 계정 (직원/담당자)' },
+            { value: 'team', label: '팀 계정 (회사/조직)' },
+          ]}
+        />
+        {form.client_type === 'individual' && (
+          <SelectField
+            label="소속 팀 (선택)"
+            value={form.team_id}
+            onChange={(v) => setForm((prev) => ({ ...prev, team_id: v }))}
+            options={[
+              { value: '', label: '소속 팀 없음' },
+              ...teams.map((t) => ({
+                value: String(t.id),
+                label: t.name,
+              })),
+            ]}
+          />
+        )}
         <InputField
-          label="클라이언트명"
-          placeholder="클라이언트 이름"
+          label={form.client_type === 'individual' ? '이름 *' : '회사/팀명 *'}
+          placeholder={form.client_type === 'individual' ? '개인 이름' : '회사 또는 팀 이름'}
           value={form.name}
           onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
         />
@@ -4660,12 +4808,14 @@ function EditClientModal({
           value={form.industry}
           onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
         />
-        <InputField
-          label="담당자"
-          placeholder="담당자 이름"
-          value={form.contact_person}
-          onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
-        />
+        {form.client_type === 'team' && (
+          <InputField
+            label="담당자"
+            placeholder="담당자 이름"
+            value={form.contact_person}
+            onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
+          />
+        )}
         <InputField
           label="전화번호"
           placeholder="010-0000-0000"
@@ -5028,11 +5178,13 @@ function EditEventModal({
 function CreateTaskModal({
   bu,
   projects,
+  defaultProjectId,
   onClose,
   onSubmit,
 }: {
   bu: BU;
   projects: any[];
+  defaultProjectId?: string | null;
   onClose: () => void;
   onSubmit: (data: {
     projectId: string;
@@ -5046,7 +5198,7 @@ function CreateTaskModal({
   }) => void;
 }) {
   const [form, setForm] = useState({
-    projectId: projects[0]?.id || '',
+    projectId: defaultProjectId || projects[0]?.id || '',
     title: '',
     assignee: '',
     dueDate: '',
@@ -5054,6 +5206,12 @@ function CreateTaskModal({
     priority: 'medium' as 'high' | 'medium' | 'low',
     tag: '',
   });
+
+  useEffect(() => {
+    if (defaultProjectId) {
+      setForm((prev) => ({ ...prev, projectId: defaultProjectId }));
+    }
+  }, [defaultProjectId]);
 
   return (
     <ModalShell title="업무 등록" onClose={onClose}>

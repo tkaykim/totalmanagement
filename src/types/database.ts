@@ -62,6 +62,7 @@ export interface Project {
   end_date: string;
   client_id?: number;
   artist_id?: number;
+  pm_name?: string;
   creators?: ProjectCreator[]; // JSONB
   freelancers?: ProjectFreelancer[]; // JSONB
   created_by?: string;
@@ -133,6 +134,8 @@ export interface AppUser {
   updated_at: string;
 }
 
+export type ClientType = 'individual' | 'team';
+
 export interface Client {
   id: number;
   bu_code: BU;
@@ -144,6 +147,9 @@ export interface Client {
   address?: string;
   status: ClientStatus;
   last_meeting_date?: string;
+  // 팀/개인 구분 및 소속 팀 연결
+  client_type?: ClientType;
+  team_id?: number | null;
   created_at: string;
   updated_at: string;
 }

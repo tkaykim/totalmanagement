@@ -45,7 +45,7 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { BU, Artist, Project, ProjectTask, Client, ClientStatus, Event, Manual, ExternalWorker, ExternalWorkerType, FinancialEntry, ArtistStatus, ArtistType } from '@/types/database';
+import type { BU, Artist, Project, ProjectTask, Client, ClientStatus, Event, Manual, ExternalWorker, ExternalWorkerType, FinancialEntry, ArtistStatus, ArtistType, ClientType } from '@/types/database';
 import {
   useArtists,
   useCreateArtist,
@@ -294,7 +294,15 @@ export default function GrigoEntDashboard() {
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* 통계 카드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all">
+          <div
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActiveTab('projects')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('projects');
+            }}
+          >
             <div className="flex justify-between mb-2">
               <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
                 <Briefcase size={22} />
@@ -307,7 +315,15 @@ export default function GrigoEntDashboard() {
               <p className="text-xs text-gray-500 mt-1">진행중: {inProgressProjects.length}건</p>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all">
+          <div
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActiveTab('artists')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('artists');
+            }}
+          >
             <div className="flex justify-between mb-2">
               <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
                 <Users size={22} />
@@ -319,7 +335,15 @@ export default function GrigoEntDashboard() {
               <p className="text-xs text-gray-500 mt-1">활성: {artists.filter((a) => a.status === 'Active').length}명</p>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between border-red-100 hover:shadow-lg transition-all">
+          <div
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between border-red-100 hover:shadow-lg transition-all cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActiveTab('artists')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('artists');
+            }}
+          >
             <div className="flex justify-between mb-2">
               <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
                 <ShieldCheck size={22} />
@@ -332,7 +356,15 @@ export default function GrigoEntDashboard() {
               <p className="text-xs text-gray-500 mt-1">60일 이내 만료</p>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all">
+          <div
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActiveTab('settlements')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('settlements');
+            }}
+          >
             <div className="flex justify-between mb-2">
               <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
                 <DollarSign size={22} />
@@ -348,7 +380,15 @@ export default function GrigoEntDashboard() {
 
         {/* 추가 통계 카드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all">
+          <div
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActiveTab('freelancers')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('freelancers');
+            }}
+          >
             <div className="flex justify-between mb-2">
               <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
                 <UserPlus size={22} />
@@ -360,7 +400,15 @@ export default function GrigoEntDashboard() {
               <p className="text-xs text-gray-500 mt-1">활성: {freelancers.filter((f) => f.is_active).length}명</p>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all">
+          <div
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActiveTab('partners')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('partners');
+            }}
+          >
             <div className="flex justify-between mb-2">
               <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
                 <Building2 size={22} />
@@ -372,7 +420,15 @@ export default function GrigoEntDashboard() {
               <p className="text-xs text-gray-500 mt-1">활성: {activeClients.length}개</p>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all">
+          <div
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActiveTab('tasks')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('tasks');
+            }}
+          >
             <div className="flex justify-between mb-2">
               <div className="p-3 bg-yellow-50 text-yellow-600 rounded-2xl">
                 <CheckSquare size={22} />
@@ -384,7 +440,15 @@ export default function GrigoEntDashboard() {
               <p className="text-xs text-gray-500 mt-1">완료: {tasks.filter((t) => t.status === 'done').length}건</p>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all">
+          <div
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActiveTab('settlements')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('settlements');
+            }}
+          >
             <div className="flex justify-between mb-2">
               <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl">
                 <Receipt size={22} />
@@ -2494,6 +2558,29 @@ export default function GrigoEntDashboard() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editClient, setEditClient] = useState<Client | null>(null);
     const [deleteClientId, setDeleteClientId] = useState<number | null>(null);
+    const [createInitial, setCreateInitial] = useState<{
+      client_type?: ClientType;
+      team_id?: number;
+    } | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState<string>('');
+    const [filterType, setFilterType] = useState<string>('');
+    const [filterIndustry, setFilterIndustry] = useState<string>('');
+    const [showFilter, setShowFilter] = useState(false);
+    const filterRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+          setShowFilter(false);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
 
     const toggleExpand = (id: string) => {
       if (expandedId === id) setExpandedId(null);
@@ -2512,6 +2599,8 @@ export default function GrigoEntDashboard() {
           address: data.address,
           status: data.status || 'active',
           last_meeting_date: data.last_meeting_date,
+          client_type: data.client_type,
+          team_id: data.team_id ?? null,
         });
         setIsCreateModalOpen(false);
       } catch (error) {
@@ -2533,6 +2622,8 @@ export default function GrigoEntDashboard() {
             address: data.address,
             status: data.status,
             last_meeting_date: data.last_meeting_date,
+            client_type: data.client_type,
+            team_id: data.team_id ?? null,
           },
         });
         setEditClient(null);
@@ -2552,6 +2643,60 @@ export default function GrigoEntDashboard() {
       }
     };
 
+    const uniqueIndustries = useMemo(
+      () =>
+        Array.from(
+          new Set(
+            partners
+              .map((p) => p.industry)
+              .filter((v): v is string => Boolean(v && v.trim())),
+          ),
+        ),
+      [partners],
+    );
+
+    const filteredPartners = useMemo(() => {
+      const query = searchQuery.trim().toLowerCase();
+
+      return partners.filter((p) => {
+        if (filterStatus && p.status !== filterStatus) return false;
+        if (filterType && (p.client_type || 'individual') !== filterType) return false;
+        if (filterIndustry && p.industry !== filterIndustry) return false;
+
+        if (!query) return true;
+
+        const name = p.name?.toLowerCase() || '';
+        const industry = p.industry?.toLowerCase() || '';
+        const contact = p.contact_person?.toLowerCase() || '';
+
+        return (
+          name.includes(query) ||
+          industry.includes(query) ||
+          contact.includes(query)
+        );
+      });
+    }, [partners, searchQuery, filterStatus, filterType, filterIndustry]);
+
+    const { teamsOnly, teamsWithMembers, topLevelIndividuals } = useMemo(() => {
+      const allTeams = filteredPartners.filter((p) => p.client_type === 'team');
+      const allIndividuals = filteredPartners.filter(
+        (p) => p.client_type !== 'team' || !p.client_type,
+      );
+
+      const grouped = allTeams.map((team) => ({
+        team,
+        members: allIndividuals.filter((m) => m.team_id === team.id),
+      }));
+
+      const individualsWithoutTeam = allIndividuals.filter((m) => !m.team_id);
+
+      return {
+        teamsOnly: allTeams,
+        teamsWithMembers: grouped,
+        topLevelIndividuals: individualsWithoutTeam,
+      };
+    }, [filteredPartners]);
+
     return (
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
@@ -2560,7 +2705,10 @@ export default function GrigoEntDashboard() {
             <p className="text-sm text-gray-500 font-medium">협력사 및 클라이언트 연락망을 리스트로 관리합니다.</p>
           </div>
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => {
+              setCreateInitial(null);
+              setIsCreateModalOpen(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition-colors"
           >
             <Plus size={16} />
@@ -2569,34 +2717,283 @@ export default function GrigoEntDashboard() {
         </div>
 
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-4">Company</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Manager</th>
-                <th className="px-6 py-4">Contact (Main)</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 w-10"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {partners.map((p) => (
-                <>
-                  <tr onClick={() => toggleExpand(String(p.id))} className={cn('cursor-pointer transition-colors', expandedId === String(p.id) ? 'bg-indigo-50/30' : 'hover:bg-gray-50')}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center font-black text-xs">{p.name[0]}</div>
-                        <span className="font-black text-sm text-gray-900">{p.name}</span>
+          <div className="p-4 border-b border-gray-100 bg-gray-50/30 flex gap-4">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                placeholder="회사명, 업종, 담당자 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="relative" ref={filterRef}>
+              <button
+                onClick={() => setShowFilter(!showFilter)}
+                className={cn(
+                  'p-3 bg-white border rounded-2xl transition-colors',
+                  (filterStatus || filterType || filterIndustry) || showFilter
+                    ? 'border-indigo-300 text-indigo-600 bg-indigo-50'
+                    : 'border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-200',
+                )}
+              >
+                <Filter size={20} />
+              </button>
+              {showFilter && (
+                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-50 min-w-[280px] space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 mb-1 block">상태</label>
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
+                    >
+                      <option value="">전체</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 mb-1 block">계정 타입</label>
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
+                    >
+                      <option value="">전체</option>
+                      <option value="team">팀 계정</option>
+                      <option value="individual">개인 계정</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 mb-1 block">업종</label>
+                    <select
+                      value={filterIndustry}
+                      onChange={(e) => setFilterIndustry(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
+                    >
+                      <option value="">전체</option>
+                      {uniqueIndustries.map((ind) => (
+                        <option key={ind} value={ind}>
+                          {ind}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {(filterStatus || filterType || filterIndustry) && (
+                    <button
+                      onClick={() => {
+                        setFilterStatus('');
+                        setFilterType('');
+                        setFilterIndustry('');
+                      }}
+                      className="w-full px-3 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    >
+                      필터 초기화
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[1000px]">
+              <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-5">Client / Type</th>
+                  <th className="px-6 py-5">Industry</th>
+                  <th className="px-6 py-5">Manager / Contact</th>
+                  <th className="px-6 py-5">Last Meeting</th>
+                  <th className="px-6 py-5 text-right">Status</th>
+                  <th className="px-6 py-5 w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+              {/* 팀 계정 + 소속 개인 계정 */}
+              {teamsWithMembers.map(({ team, members }) => (
+                <React.Fragment key={`team-${team.id}`}>
+                  <tr
+                    onClick={() => toggleExpand(String(team.id))}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      expandedId === String(team.id) ? 'bg-indigo-50/30' : 'hover:bg-gray-50'
+                    )}
+                  >
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <ChevronDown
+                          className={cn(
+                            'w-4 h-4 text-gray-400 transition-transform',
+                            expandedId === String(team.id) && 'rotate-180',
+                          )}
+                        />
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-sm bg-gray-900">
+                          {team.name[0]}
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-900 text-sm">{team.name}</p>
+                          <span className="text-[10px] font-bold text-gray-500">
+                            팀 계정
+                            {members.length > 0 && ` (${members.length}명)`}
+                          </span>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-xs font-bold text-gray-500">{p.industry || 'N/A'}</td>
-                    <td className="px-6 py-4 text-xs font-bold text-gray-900">{p.contact_person || 'N/A'}</td>
-                    <td className="px-6 py-4 text-xs text-gray-500 font-mono">{p.phone || 'N/A'}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5 text-xs font-bold text-gray-500">{team.industry || 'N/A'}</td>
+                    <td className="px-6 py-5 text-xs font-bold text-gray-900">{team.contact_person || 'N/A'}</td>
+                    <td className="px-6 py-5 text-xs text-gray-500 font-mono">{team.last_meeting_date || '-'}</td>
+                    <td className="px-6 py-5 text-right">
+                      <StatusBadge type={team.status === 'active' ? 'active' : 'default'} text={team.status} />
+                    </td>
+                    <td className="px-6 py-5 text-gray-400">
+                      {expandedId === String(team.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </td>
+                  </tr>
+                  {expandedId === String(team.id) && (
+                    <tr className="bg-gray-50/50">
+                      <td colSpan={6} className="px-6 py-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm animate-in slide-in-from-top-2 duration-200">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Mail size={14} />
+                              <span className="font-bold">Email:</span>
+                              <span className="font-mono text-gray-900">{team.email || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Phone size={14} />
+                              <span className="font-bold">Direct:</span>
+                              <span className="font-mono text-gray-900">{team.phone || 'N/A'}</span>
+                            </div>
+                            {team.address && (
+                              <div className="flex items-center gap-2 text-gray-500">
+                                <span className="font-bold">Address:</span>
+                                <span className="text-gray-900">{team.address}</span>
+                              </div>
+                            )}
+                            {team.last_meeting_date && (
+                              <div className="flex items-center gap-2 text-gray-500">
+                                <span className="font-bold">최근 미팅:</span>
+                                <span className="text-gray-900">{team.last_meeting_date}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-3">
+                            <div className="rounded-2xl border border-gray-200 bg-white p-3">
+                              <div className="mb-2 flex items-center justify-between">
+                                <p className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400">
+                                  소속 직원 / 담당자 ({members.length})
+                                </p>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCreateInitial({ client_type: 'individual', team_id: team.id });
+                                    setIsCreateModalOpen(true);
+                                  }}
+                                  className="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600 hover:bg-indigo-100"
+                                >
+                                  개인 추가
+                                </button>
+                              </div>
+                              {members.length > 0 ? (
+                                <div className="space-y-1.5">
+                                  {members.map((m) => (
+                                    <div
+                                      key={m.id}
+                                      className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
+                                    >
+                                      <div>
+                                        <p className="font-bold text-gray-800">
+                                          {m.contact_person || m.name}
+                                        </p>
+                                        <p className="font-mono text-[11px] text-gray-500">
+                                          {m.email || m.phone || '-'}
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditClient(m);
+                                        }}
+                                        className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
+                                      >
+                                        수정
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="py-6 text-center">
+                                  <p className="text-xs text-gray-400 font-medium">등록된 멤버가 없습니다.</p>
+                                  <p className="text-[10px] text-gray-400 mt-1">위의 "개인 추가" 버튼을 눌러 멤버를 추가하세요.</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex justify-end items-center gap-4">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditClient(team);
+                                }}
+                                className="px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors text-gray-700"
+                              >
+                                정보 수정
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteClientId(team.id);
+                                }}
+                                className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+
+              {/* 팀에 속하지 않은 개인 계정 */}
+              {topLevelIndividuals.map((p) => (
+                <React.Fragment key={`client-${p.id}`}>
+                  <tr
+                    onClick={() => toggleExpand(String(p.id))}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      expandedId === String(p.id) ? 'bg-indigo-50/30' : 'hover:bg-gray-50'
+                    )}
+                  >
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <ChevronDown
+                          className={cn(
+                            'w-4 h-4 text-gray-400 transition-transform',
+                            expandedId === String(p.id) && 'rotate-180',
+                          )}
+                        />
+                        <div className="w-12 h-12 rounded-2xl bg-gray-900 text-white flex items-center justify-center font-black text-sm shadow-sm">
+                          {p.name[0]}
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-900 text-sm">{p.name}</p>
+                          <span className="text-[10px] font-bold text-gray-500">개인 계정</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-xs font-bold text-gray-500">{p.industry || 'N/A'}</td>
+                    <td className="px-6 py-5 text-xs font-bold text-gray-900">{p.contact_person || 'N/A'}</td>
+                    <td className="px-6 py-5 text-xs text-gray-500 font-mono">{p.last_meeting_date || '-'}</td>
+                    <td className="px-6 py-5 text-right">
                       <StatusBadge type={p.status === 'active' ? 'active' : 'default'} text={p.status} />
                     </td>
-                    <td className="px-6 py-4 text-gray-400">{expandedId === String(p.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</td>
+                    <td className="px-6 py-5 text-gray-400">
+                      {expandedId === String(p.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </td>
                   </tr>
                   {expandedId === String(p.id) && (
                     <tr className="bg-gray-50/50">
@@ -2650,9 +3047,9 @@ export default function GrigoEntDashboard() {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               ))}
-              {partners.length === 0 && (
+              {filteredPartners.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">
                     No Partners Found
@@ -2662,10 +3059,17 @@ export default function GrigoEntDashboard() {
             </tbody>
           </table>
         </div>
+      </div>
 
         {isCreateModalOpen && (
           <ClientModal
-            onClose={() => setIsCreateModalOpen(false)}
+            teams={teamsOnly}
+            initialClientType={createInitial?.client_type}
+            initialTeamId={createInitial?.team_id}
+            onClose={() => {
+              setIsCreateModalOpen(false);
+              setCreateInitial(null);
+            }}
             onSubmit={handleCreate}
           />
         )}
@@ -2673,6 +3077,7 @@ export default function GrigoEntDashboard() {
         {editClient && (
           <ClientModal
             client={editClient}
+            teams={teamsOnly}
             onClose={() => setEditClient(null)}
             onSubmit={(data) => handleUpdate(editClient.id, data)}
           />
@@ -2746,7 +3151,7 @@ export default function GrigoEntDashboard() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
       </div>
     );
   };
@@ -3465,10 +3870,16 @@ function FreelancerModal({
 // Client Modal
 function ClientModal({
   client,
+  teams,
+  initialClientType,
+  initialTeamId,
   onClose,
   onSubmit,
 }: {
   client?: Client | null;
+  teams: Client[];
+  initialClientType?: ClientType;
+  initialTeamId?: number;
   onClose: () => void;
   onSubmit: (data: Partial<Client>) => void;
 }) {
@@ -3481,6 +3892,12 @@ function ClientModal({
     address: client?.address || '',
     status: (client?.status || 'active') as ClientStatus,
     last_meeting_date: client?.last_meeting_date || '',
+    client_type: (client?.client_type || initialClientType || 'individual') as ClientType,
+    team_id: client?.team_id
+      ? String(client.team_id)
+      : initialTeamId
+      ? String(initialTeamId)
+      : '',
   });
 
   const handleSubmit = () => {
@@ -3488,57 +3905,128 @@ function ClientModal({
       alert('거래처명은 필수 항목입니다.');
       return;
     }
-    onSubmit(form);
+    onSubmit({
+      ...form,
+      team_id: form.team_id ? Number(form.team_id) : undefined,
+    });
   };
 
   return (
     <ModalShell title={client ? '거래처 수정' : '거래처 추가'} onClose={onClose}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
+          <SelectField
+            label="계정 타입"
+            value={form.client_type}
+            onChange={(v) =>
+              setForm((prev) => ({
+                ...prev,
+                client_type: v as ClientType,
+                team_id: v === 'team' ? '' : prev.team_id,
+                contact_person: v === 'individual' ? '' : prev.contact_person,
+              }))
+            }
+            options={[
+              { value: 'individual', label: '개인 계정 (직원/담당자)' },
+              { value: 'team', label: '팀 계정 (회사/조직)' },
+            ]}
+          />
+          {form.client_type === 'individual' && (
+            <SelectField
+              label="소속 팀 (선택)"
+              value={form.team_id}
+              onChange={(v) => setForm((prev) => ({ ...prev, team_id: v }))}
+              options={[
+                { value: '', label: '소속 팀 없음' },
+                ...teams.map((t) => ({
+                  value: String(t.id),
+                  label: t.name,
+                })),
+              ]}
+            />
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <InputField
-            label="거래처명 *"
+            label={form.client_type === 'individual' ? '이름 *' : '회사/팀명 *'}
             value={form.name}
             onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-            placeholder="거래처 이름"
+            placeholder={form.client_type === 'individual' ? '개인 이름을 입력하세요' : '회사 또는 팀 이름을 입력하세요'}
           />
-          <InputField
-            label="업종"
-            value={form.industry}
-            onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
-            placeholder="예: 엔터테인먼트"
-          />
+          {form.client_type === 'team' && (
+            <InputField
+              label="업종"
+              value={form.industry}
+              onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
+              placeholder="예: 엔터테인먼트"
+            />
+          )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <InputField
-            label="담당자"
-            value={form.contact_person}
-            onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
-            placeholder="담당자 이름"
-          />
-          <InputField
-            label="전화번호"
-            value={form.phone}
-            onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
-            placeholder="010-0000-0000"
-          />
-        </div>
+        {form.client_type === 'team' && (
+          <div className="grid grid-cols-2 gap-4">
+            <InputField
+              label="담당자"
+              value={form.contact_person}
+              onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
+              placeholder="담당자 이름"
+            />
+            <InputField
+              label="전화번호"
+              value={form.phone}
+              onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+              placeholder="010-0000-0000"
+            />
+          </div>
+        )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <InputField
-            label="이메일"
-            type="email"
-            value={form.email}
-            onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-            placeholder="email@example.com"
-          />
-          <InputField
-            label="최근 미팅일"
-            type="date"
-            value={form.last_meeting_date}
-            onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
-          />
-        </div>
+        {form.client_type === 'individual' && (
+          <div className="grid grid-cols-2 gap-4">
+            <InputField
+              label="전화번호"
+              value={form.phone}
+              onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+              placeholder="010-0000-0000"
+            />
+            <InputField
+              label="이메일"
+              type="email"
+              value={form.email}
+              onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+              placeholder="email@example.com"
+            />
+          </div>
+        )}
+
+        {form.client_type === 'team' && (
+          <div className="grid grid-cols-2 gap-4">
+            <InputField
+              label="이메일"
+              type="email"
+              value={form.email}
+              onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+              placeholder="email@example.com"
+            />
+            <InputField
+              label="최근 미팅일"
+              type="date"
+              value={form.last_meeting_date}
+              onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
+            />
+          </div>
+        )}
+
+        {form.client_type === 'individual' && (
+          <div className="grid grid-cols-2 gap-4">
+            <InputField
+              label="최근 미팅일"
+              type="date"
+              value={form.last_meeting_date}
+              onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
+            />
+          </div>
+        )}
 
         <InputField
           label="주소"

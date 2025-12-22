@@ -799,6 +799,20 @@ export default function BusinessUnitPage() {
     );
   }
 
+  // 인증 및 사업부 검증 완료 전에는 화면을 노출하지 않음
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-700 border-t-transparent" />
+          <p className="text-xs font-black tracking-[0.2em] text-slate-400 uppercase">
+            ERP Loading
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { data: projectsData = [], isLoading: projectsLoading } = useProjects();
   const { data: tasksData = [] } = useTasks(bu);
   const { data: orgData = [] } = useOrgMembers();

@@ -26,6 +26,7 @@ import type {
   Artist,
   ArtistStatus,
   ArtistType,
+  ClientType,
 } from '@/types/database';
 
 const API_BASE = '/api';
@@ -312,6 +313,8 @@ export async function createClient(data: {
   address?: string;
   status?: ClientStatus;
   last_meeting_date?: string;
+  client_type?: ClientType;
+  team_id?: number | null;
 }): Promise<Client> {
   const res = await fetch(`${API_BASE}/clients`, {
     method: 'POST',

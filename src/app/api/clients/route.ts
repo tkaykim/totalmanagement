@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
         address: toNullIfEmpty(body.address),
         status: body.status || 'active',
         last_meeting_date: toNullIfEmpty(body.last_meeting_date),
+        client_type: body.client_type || 'individual',
+        team_id: toNullIfEmpty(body.team_id),
       })
       .select()
       .single();
@@ -55,6 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
+
 
 
 

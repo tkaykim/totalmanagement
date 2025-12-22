@@ -12,6 +12,7 @@ export function dbProjectToFrontend(p: Project): {
   status: string;
   client_id?: number;
   artist_id?: number;
+  pm_name?: string;
 } {
   return {
     id: String(p.id),
@@ -23,6 +24,7 @@ export function dbProjectToFrontend(p: Project): {
     status: p.status,
     client_id: p.client_id,
     artist_id: p.artist_id,
+    pm_name: p.pm_name,
   };
 }
 
@@ -83,6 +85,7 @@ export function frontendProjectToDb(p: {
   endDate: string;
   status?: string;
   artist_id?: number;
+  pm_name?: string | null;
 }): {
   bu_code: BU;
   name: string;
@@ -91,17 +94,36 @@ export function frontendProjectToDb(p: {
   start_date: string;
   end_date: string;
   artist_id?: number;
+  pm_name?: string | null;
 } {
   const today = new Date().toISOString().split('T')[0];
-  return {
+  const result: {
+    bu_code: BU;
+    name: string;
+    category: string;
+    status: string;
+    start_date: string;
+    end_date: string;
+    artist_id?: number;
+    pm_name?: string | null;
+  } = {
     bu_code: p.bu,
     name: p.name,
     category: p.cat,
     status: p.status || '준비중',
     start_date: p.startDate || today,
     end_date: p.endDate || today,
-    artist_id: p.artist_id,
   };
+  
+  if (p.artist_id !== undefined) {
+    result.artist_id = p.artist_id;
+  }
+  
+  if (p.pm_name !== undefined) {
+    result.pm_name = p.pm_name || null;
+  }
+  
+  return result;
 }
 
 export function frontendTaskToDb(t: {

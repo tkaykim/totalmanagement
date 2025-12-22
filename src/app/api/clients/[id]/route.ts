@@ -21,6 +21,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         address: toNullIfEmpty(body.address),
         status: body.status,
         last_meeting_date: toNullIfEmpty(body.last_meeting_date),
+        client_type: body.client_type,
+        team_id: toNullIfEmpty(body.team_id),
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -49,6 +51,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
+
 
 
 

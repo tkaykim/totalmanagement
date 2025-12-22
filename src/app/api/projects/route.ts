@@ -56,6 +56,11 @@ export async function POST(request: NextRequest) {
       insertData.artist_id = body.artist_id;
     }
 
+    // pm_name이 있으면 추가
+    if (body.pm_name !== undefined) {
+      insertData.pm_name = body.pm_name || null;
+    }
+
     const { data, error } = await supabase
       .from('projects')
       .insert(insertData)
