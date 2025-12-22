@@ -275,7 +275,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   const createClientMutation = useCreateClient();
   const createClientWorkerMutation = useCreateClientWorker();
   const updateClientMutation = useUpdateClient();
+  const updateClientWorkerMutation = useUpdateClientWorker();
   const deleteClientMutation = useDeleteClient();
+  const deleteClientWorkerMutation = useDeleteClientWorker();
   const createEquipmentMutation = useCreateEquipment();
   const updateEquipmentMutation = useUpdateEquipment();
   const deleteEquipmentMutation = useDeleteEquipment();
