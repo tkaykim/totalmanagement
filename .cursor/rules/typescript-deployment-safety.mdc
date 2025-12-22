@@ -25,11 +25,21 @@ Type error: Module '"@/types/database"' has no exported member 'ClientType'.
 3. **타입 이름 오타**
    - 타입 이름이 잘못 입력되었을 때 (예: `ClientType` vs `ClientStatus`)
 
+4. **변수 선언 누락**
+   - Hook을 import했지만 실제로 변수로 선언하지 않았을 때
+   - 예: `useUpdateClientWorker`를 import했지만 `updateClientWorkerMutation` 변수를 선언하지 않은 경우
+
 ### 이번 사례
 
+#### 사례 1: 존재하지 않는 타입 import
 - `ASTCompanyDashboard.tsx`에서 `ClientType`을 `@/types/database`에서 import하려고 했으나, 실제로는 해당 타입이 정의되어 있지 않음
 - `clientCreateInitial` 상태에서 `client_type?: ClientType`을 사용하려 했으나, 데이터베이스 스키마에도 해당 필드가 없음
 - 실제로 `clientCreateInitial`이 사용되지 않았음에도 타입 정의가 남아있었음
+
+#### 사례 2: 변수 선언 누락
+- `ReactStudioDashboard.tsx`에서 `useUpdateClientWorker`, `useDeleteClientWorker` hook을 import했지만
+- 실제로 `updateClientWorkerMutation`, `deleteClientWorkerMutation` 변수를 선언하지 않아 사용 시 오류 발생
+- 오류: `Cannot find name 'updateClientWorkerMutation'. Did you mean 'createClientWorkerMutation'?`
 
 ## 해결 방법
 
@@ -54,6 +64,26 @@ Type error: Module '"@/types/database"' has no exported member 'ClientType'.
 4. **수정 방법 선택**
    - **타입이 필요하지 않은 경우**: import 및 사용 부분 제거
    - **타입이 필요한 경우**: 타입 정의 추가 및 export
+   - **변수 선언 누락**: Hook을 사용하여 변수 선언 추가
+
+#### 변수 선언 누락 해결 예시
+
+```typescript
+// ❌ 잘못된 예: Hook을 import만 하고 변수 선언 누락
+import { useUpdateClientWorker, useDeleteClientWorker } from '@/features/erp/hooks';
+
+// 코드에서 사용 시도
+await updateClientWorkerMutation.mutateAsync({ ... }); // 오류!
+
+// ✅ 올바른 예: Hook을 사용하여 변수 선언
+import { useUpdateClientWorker, useDeleteClientWorker } from '@/features/erp/hooks';
+
+const updateClientWorkerMutation = useUpdateClientWorker();
+const deleteClientWorkerMutation = useDeleteClientWorker();
+
+// 이제 사용 가능
+await updateClientWorkerMutation.mutateAsync({ ... });
+```
 
 ### 2. 예방 방법
 
@@ -87,6 +117,8 @@ Type error: Module '"@/types/database"' has no exported member 'ClientType'.
 - [ ] 타입 정의가 실제 데이터베이스 스키마와 일치하는가?
 - [ ] 사용되지 않는 타입 import가 있는가?
 - [ ] 모든 타입이 올바르게 export되는가?
+- [ ] Hook을 import한 경우, 실제로 변수로 선언되어 있는가?
+- [ ] 코드에서 사용하는 모든 변수가 선언되어 있는가?
 
 ## 모범 사례
 
@@ -117,7 +149,21 @@ import { ClientType } from '@/types/database'; // ClientType이 정의되지 않
 2. 사용처를 제거하거나 대체 타입으로 변경
 3. 마지막으로 import 문 제거
 
-### 4. 타입 검증 워크플로우
+### 4. Hook 사용 패턴
+
+```typescript
+// ✅ 좋은 예: Hook import와 변수 선언이 일관되게 유지됨
+import { useUpdateClientWorker, useDeleteClientWorker } from '@/features/erp/hooks';
+
+const updateClientWorkerMutation = useUpdateClientWorker();
+const deleteClientWorkerMutation = useDeleteClientWorker();
+
+// ❌ 나쁜 예: Hook을 import만 하고 변수 선언 누락
+import { useUpdateClientWorker } from '@/features/erp/hooks';
+// 변수 선언 없이 바로 사용 시도하면 오류 발생
+```
+
+### 5. 타입 검증 워크플로우
 
 ```
 코드 작성 → 타입 체크 → 로컬 빌드 → 커밋 → 배포
@@ -134,6 +180,8 @@ import { ClientType } from '@/types/database'; // ClientType이 정의되지 않
 - [ ] 사용되지 않는 import가 없는가?
 - [ ] 타입 정의와 실제 데이터베이스 스키마가 일치하는가?
 - [ ] IDE에서 타입 오류가 없는가?
+- [ ] Hook을 import한 경우, 해당 Hook을 사용한 변수 선언이 있는가?
+- [ ] 코드에서 사용하는 모든 변수(mutation, query 등)가 선언되어 있는가?
 
 ## 관련 파일
 

@@ -8,19 +8,16 @@ export function cn(...inputs: ClassValue[]) {
 
 const SLUG_TO_BU: Record<string, BU> = {
   reactstudio: 'REACT',
-  react: 'REACT',
-  grigo: 'GRIGO',
   flow: 'FLOW',
   flowmaker: 'FLOW',
-  ast: 'AST',
   modoo: 'MODOO',
 };
 
 const BU_TO_SLUG: Record<BU, string> = {
   REACT: 'reactstudio',
-  GRIGO: 'grigo',
+  GRIGO: 'grigoent',
   FLOW: 'flow',
-  AST: 'ast',
+  AST: 'astcompany',
   MODOO: 'modoo',
   HEAD: '',
 };
