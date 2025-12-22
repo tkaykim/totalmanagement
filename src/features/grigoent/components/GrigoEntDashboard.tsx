@@ -73,6 +73,7 @@ import {
   useDeleteFinancialEntry,
   useCreateTask,
   useUpdateTask,
+  useUsers,
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendFinancialToDb, frontendTaskToDb } from '@/features/erp/utils';
 
@@ -201,6 +202,7 @@ export default function GrigoEntDashboard() {
   const { data: manualsData = [] } = useManuals(bu);
   const { data: financialData = [] } = useFinancialEntries({ bu });
   const { data: orgData = [] } = useOrgMembers();
+  const { data: usersData } = useUsers();
 
   // Mutation hooks
   const createArtistMutation = useCreateArtist();
@@ -497,6 +499,7 @@ export default function GrigoEntDashboard() {
                             <StatusBadge type={project.status.toLowerCase()} text={project.status} />
                           </div>
                           <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                            {(project as any).pm_name && <span>PM: {(project as any).pm_name}</span>}
                             {projectClient && <span>클라이언트: {projectClient.name}</span>}
                             <span>매출: ₩{(projectRevenue / 10000).toLocaleString()}만</span>
                             <span>지출: ₩{(projectExpense / 10000).toLocaleString()}만</span>
@@ -1502,6 +1505,7 @@ export default function GrigoEntDashboard() {
       status: string;
       client_id?: number;
       artist_id?: number;
+      pm_name?: string | null;
     }) => {
       try {
         const payload: any = {
@@ -1519,6 +1523,10 @@ export default function GrigoEntDashboard() {
 
         if (data.artist_id !== undefined && data.artist_id !== null) {
           payload.artist_id = data.artist_id;
+        }
+
+        if (data.pm_name !== undefined) {
+          payload.pm_name = data.pm_name || null;
         }
 
         await createProjectMutation.mutateAsync(payload);
@@ -1539,6 +1547,7 @@ export default function GrigoEntDashboard() {
       status: string;
       client_id?: number;
       artist_id?: number;
+      pm_name?: string | null;
     }) => {
       try {
         await updateProjectMutation.mutateAsync({
@@ -1552,6 +1561,7 @@ export default function GrigoEntDashboard() {
             end_date: data.endDate,
             client_id: data.client_id,
             ...(data.artist_id !== undefined && { artist_id: data.artist_id || null }),
+            ...(data.pm_name !== undefined && { pm_name: data.pm_name || null }),
           },
         });
         setEditProject(null);
@@ -1705,6 +1715,7 @@ export default function GrigoEntDashboard() {
               <tr>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">프로젝트명</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">클라이언트</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">PM</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">카테고리</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">예산</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">마감일</th>
@@ -1748,6 +1759,9 @@ export default function GrigoEntDashboard() {
                         {projectClient?.name || '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
+                        {(project as any).pm_name || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {project.cat}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 font-mono">
@@ -1784,7 +1798,7 @@ export default function GrigoEntDashboard() {
                     </tr>
                     {isExpanded && (
                       <tr key={`${project.id}-accordion`}>
-                        <td colSpan={7} className="px-6 py-4 bg-gray-50">
+                        <td colSpan={8} className="px-6 py-4 bg-gray-50">
                           <div className="space-y-4">
                             <div className="flex justify-between items-center mb-4">
                               <h4 className="font-semibold text-gray-800">매출 및 지출 관리</h4>
@@ -2022,6 +2036,7 @@ export default function GrigoEntDashboard() {
             bu={bu}
             clients={partners}
             artists={artists}
+            users={(usersData as any)?.users || []}
             onClose={() => setProjectModalOpen(false)}
             onSubmit={handleCreateProject}
           />
@@ -2033,6 +2048,7 @@ export default function GrigoEntDashboard() {
             bu={bu}
             clients={partners}
             artists={artists}
+            users={(usersData as any)?.users || []}
             onClose={() => setEditProject(null)}
             onSubmit={(data) => handleUpdateProject(Number(editProject.id), data)}
           />
@@ -2117,6 +2133,7 @@ export default function GrigoEntDashboard() {
     bu,
     clients,
     artists,
+    users,
     onClose,
     onSubmit,
   }: {
@@ -2124,6 +2141,7 @@ export default function GrigoEntDashboard() {
     bu: BU;
     clients: Client[];
     artists: Artist[];
+    users: any[];
     onClose: () => void;
     onSubmit: (data: {
       bu: BU;
@@ -2134,6 +2152,7 @@ export default function GrigoEntDashboard() {
       status: string;
       client_id?: number;
       artist_id?: number;
+      pm_name?: string | null;
     }) => void;
   }) => {
     const [form, setForm] = useState({
@@ -2144,6 +2163,7 @@ export default function GrigoEntDashboard() {
       status: project?.status || '기획중',
       client_id: project?.client_id ? String(project.client_id) : '',
       artist_id: project?.artist_id ? String(project.artist_id) : '',
+      pm_name: (project as any)?.pm_name || '',
     });
 
     return (
@@ -2186,6 +2206,15 @@ export default function GrigoEntDashboard() {
               { value: '완료', label: '완료' },
             ]}
           />
+          <SelectField
+            label="PM"
+            value={form.pm_name}
+            onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
+            options={[
+              { value: '', label: '선택 안함' },
+              ...users.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value),
+            ]}
+          />
           <div className="md:col-span-2">
             <SelectField
               label="클라이언트"
@@ -2220,6 +2249,7 @@ export default function GrigoEntDashboard() {
               status: form.status,
               client_id: form.client_id ? Number(form.client_id) : undefined,
               artist_id: form.artist_id ? Number(form.artist_id) : undefined,
+              pm_name: form.pm_name || null,
             })
           }
           onClose={onClose}
