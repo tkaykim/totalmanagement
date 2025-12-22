@@ -1507,8 +1507,8 @@ export default function GrigoEntDashboard() {
       bu: BU;
       name: string;
       cat: string;
-      startDate: string;
-      endDate: string;
+      startDate?: string;
+      endDate?: string;
       status: string;
       client_id?: number;
       artist_id?: number;
@@ -1520,8 +1520,8 @@ export default function GrigoEntDashboard() {
           name: data.name,
           category: data.cat,
           status: data.status,
-          start_date: data.startDate,
-          end_date: data.endDate,
+          start_date: data.startDate || null,
+          end_date: data.endDate || null,
         };
 
         if (data.client_id !== undefined) {
@@ -1549,8 +1549,8 @@ export default function GrigoEntDashboard() {
       bu: BU;
       name: string;
       cat: string;
-      startDate: string;
-      endDate: string;
+      startDate?: string;
+      endDate?: string;
       status: string;
       client_id?: number;
       artist_id?: number;
@@ -1564,8 +1564,8 @@ export default function GrigoEntDashboard() {
             name: data.name,
             category: data.cat,
             status: data.status,
-            start_date: data.startDate,
-            end_date: data.endDate,
+            start_date: data.startDate || null,
+            end_date: data.endDate || null,
             client_id: data.client_id,
             ...(data.artist_id !== undefined && { artist_id: data.artist_id || null }),
             ...(data.pm_name !== undefined && { pm_name: data.pm_name || null }),
@@ -2156,8 +2156,8 @@ export default function GrigoEntDashboard() {
       bu: BU;
       name: string;
       cat: string;
-      startDate: string;
-      endDate: string;
+      startDate?: string;
+      endDate?: string;
       status: string;
       client_id?: number;
       artist_id?: number;

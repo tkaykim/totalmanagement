@@ -44,8 +44,8 @@ export async function createProject(data: {
   name: string;
   category: string;
   status?: string;
-  start_date: string;
-  end_date: string;
+  start_date?: string | null;
+  end_date?: string | null;
   created_by?: string;
   client_id?: number;
   artist_id?: number;
@@ -55,7 +55,19 @@ export async function createProject(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create project');
+  if (!res.ok) {
+    // 서버에서 전달한 에러 메시지를 그대로 노출해 디버깅 및 UX 개선
+    let message = 'Failed to create project';
+    try {
+      const errorBody = await res.json();
+      if (errorBody?.error) {
+        message = errorBody.error;
+      }
+    } catch {
+      // JSON 파싱 실패 시 기본 메시지 유지
+    }
+    throw new Error(message);
+  }
   return res.json();
 }
 

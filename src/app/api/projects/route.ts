@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
       name: body.name,
       category: body.category,
       status: body.status || '준비중',
-      start_date: body.start_date,
-      end_date: body.end_date,
+      start_date: body.start_date || null,
+      end_date: body.end_date || null,
       created_by: userId || body.created_by || null,
     };
 
