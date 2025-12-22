@@ -144,7 +144,6 @@ export default function GrigoEntDashboard() {
   const queryClient = useQueryClient();
   const bu: BU = 'GRIGO';
   const [activeTab, setActiveTab] = useState<GrigoEntView>('dashboard');
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeManual, setActiveManual] = useState<Manual | null>(null);
   const [user, setUser] = useState<any>(null);
 
@@ -163,6 +162,21 @@ export default function GrigoEntDashboard() {
         .select('*')
         .eq('id', authUser.id)
         .single();
+
+      // GRIGO 사업부가 아니고 본사도 아닌 경우 접근 불가
+      if (appUser?.bu_code && appUser.bu_code !== 'GRIGO' && appUser.bu_code !== 'HEAD') {
+        // 본인 사업부 ERP로 리디렉션
+        if (appUser.bu_code === 'AST') {
+          router.push('/astcompany');
+        } else if (appUser.bu_code === 'REACT') {
+          router.push('/reactstudio');
+        } else if (appUser.bu_code === 'FLOW') {
+          router.push('/flow');
+        } else if (appUser.bu_code === 'MODOO') {
+          router.push('/modoo');
+        }
+        return;
+      }
 
       setUser({ ...authUser, profile: appUser });
     };
@@ -2259,6 +2273,74 @@ export default function GrigoEntDashboard() {
   };
 
   const TasksView = () => {
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [editTask, setEditTask] = useState<any | null>(null);
+    const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
+
+    const handleCreateTask = async (data: {
+      projectId: string;
+      bu: BU;
+      title: string;
+      assignee: string;
+      dueDate: string;
+      status?: 'todo' | 'in-progress' | 'done';
+    }) => {
+      try {
+        await createTaskMutation.mutateAsync(frontendTaskToDb(data));
+        setIsCreateModalOpen(false);
+      } catch (error) {
+        console.error('Failed to create task:', error);
+        alert('할 일 등록 중 오류가 발생했습니다.');
+      }
+    };
+
+    const handleUpdateTask = async (id: number, data: {
+      projectId: string;
+      bu: BU;
+      title: string;
+      assignee: string;
+      dueDate: string;
+      status?: 'todo' | 'in-progress' | 'done';
+    }) => {
+      try {
+        await updateTaskMutation.mutateAsync({
+          id,
+          data: frontendTaskToDb(data),
+        });
+        setEditTask(null);
+      } catch (error) {
+        console.error('Failed to update task:', error);
+        alert('할 일 수정 중 오류가 발생했습니다.');
+      }
+    };
+
+    const handleDeleteTask = async (id: number) => {
+      try {
+        const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete task');
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        setDeleteTaskId(null);
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+        alert('할 일 삭제 중 오류가 발생했습니다.');
+      }
+    };
+
+    const handleToggleStatus = async (task: any) => {
+      const nextStatus =
+        task.status === 'todo' ? 'in-progress' : task.status === 'in-progress' ? 'done' : 'done';
+
+      try {
+        await updateTaskMutation.mutateAsync({
+          id: Number(task.id),
+          data: { status: nextStatus },
+        });
+      } catch (error) {
+        console.error('Failed to update task status:', error);
+        alert('상태 변경 중 오류가 발생했습니다.');
+      }
+    };
+
     return (
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
@@ -2266,6 +2348,13 @@ export default function GrigoEntDashboard() {
             <h2 className="text-3xl font-black text-gray-900 tracking-tighter">업무 및 할일</h2>
             <p className="text-sm text-gray-500 font-medium">실시간 칸반 보드로 업무 진척도를 통제합니다.</p>
           </div>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition-colors"
+          >
+            <Plus size={16} />
+            할 일 추가
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -2285,20 +2374,43 @@ export default function GrigoEntDashboard() {
                 {tasks
                   .filter((t) => t.status === value)
                   .map((t) => {
-                    // 매뉴얼 연동은 tag 필드나 별도 로직으로 처리 (현재는 제외)
                     const assigneeName = t.assignee || '미지정';
 
                     return (
                       <div key={t.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 group transition-all">
                         <div className="flex justify-between mb-3">
-                          <span className={cn('text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter', t.priority === 'high' ? 'bg-red-100 text-red-600' : t.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600')}>
+                          <span
+                            className={cn(
+                              'text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter',
+                              t.priority === 'high'
+                                ? 'bg-red-100 text-red-600'
+                                : t.priority === 'medium'
+                                ? 'bg-yellow-100 text-yellow-600'
+                                : 'bg-blue-100 text-blue-600',
+                            )}
+                          >
                             {t.priority || 'medium'}
                           </span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="text-indigo-400 hover:text-indigo-600">
+                            <button
+                              onClick={() => setEditTask(t)}
+                              className="text-gray-300 hover:text-indigo-600"
+                              title="수정"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleToggleStatus(t)}
+                              className="text-indigo-400 hover:text-indigo-600"
+                              title="상태 변경"
+                            >
                               <CheckCircle2 size={16} />
                             </button>
-                            <button className="text-red-300 hover:text-red-500">
+                            <button
+                              onClick={() => setDeleteTaskId(Number(t.id))}
+                              className="text-red-300 hover:text-red-500"
+                              title="삭제"
+                            >
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -2328,6 +2440,35 @@ export default function GrigoEntDashboard() {
             </div>
           ))}
         </div>
+
+        {/* 할 일 모달들 */}
+        {isCreateModalOpen && (
+          <TaskModal
+            bu={bu}
+            projects={projects}
+            onClose={() => setIsCreateModalOpen(false)}
+            onSubmit={handleCreateTask}
+          />
+        )}
+
+        {editTask && (
+          <TaskModal
+            task={editTask}
+            bu={bu}
+            projects={projects}
+            onClose={() => setEditTask(null)}
+            onSubmit={(data) => handleUpdateTask(Number(editTask.id), data)}
+          />
+        )}
+
+        {deleteTaskId !== null && (
+          <DeleteConfirmModal
+            title="할 일 삭제"
+            message="정말 이 할 일을 삭제하시겠습니까?"
+            onConfirm={() => handleDeleteTask(deleteTaskId)}
+            onCancel={() => setDeleteTaskId(null)}
+          />
+        )}
       </div>
     );
   };
@@ -2816,14 +2957,18 @@ export default function GrigoEntDashboard() {
           </div>
 
           <nav className="space-y-1">
-            <button
-              onClick={() => router.push('/')}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[13px] font-black transition-all text-gray-500 hover:text-gray-200 hover:bg-white/5 border border-white/10"
-            >
-              <Home size={18} />
-              통합 ERP로 이동
-            </button>
-            <div className="h-px bg-white/10 my-2"></div>
+            {user?.profile?.bu_code === 'HEAD' && (
+              <>
+                <button
+                  onClick={() => router.push('/')}
+                  className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[13px] font-black transition-all text-gray-500 hover:text-gray-200 hover:bg-white/5 border border-white/10"
+                >
+                  <Home size={18} />
+                  통합 ERP로 이동
+                </button>
+                <div className="h-px bg-white/10 my-2"></div>
+              </>
+            )}
             {[
               { id: 'dashboard', icon: LayoutDashboard, label: '통합 대시보드' },
               { id: 'artists', icon: Users, label: '전속 아티스트 관리' },
@@ -2882,14 +3027,6 @@ export default function GrigoEntDashboard() {
               <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
               SYSTEM ONLINE
             </div>
-            {activeTab !== 'dashboard' && activeTab !== 'settlements' && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100 cursor-pointer hover:scale-105 transition-transform"
-              >
-                <Plus size={20} />
-              </button>
-            )}
           </div>
         </header>
 

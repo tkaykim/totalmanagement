@@ -373,6 +373,21 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
         .eq('id', user.id)
         .single();
 
+      // REACT 사업부가 아니고 본사도 아닌 경우 접근 불가
+      if (appUser?.bu_code && appUser.bu_code !== 'REACT' && appUser.bu_code !== 'HEAD') {
+        // 본인 사업부 ERP로 리디렉션
+        if (appUser.bu_code === 'AST') {
+          router.push('/astcompany');
+        } else if (appUser.bu_code === 'GRIGO') {
+          router.push('/grigoent');
+        } else if (appUser.bu_code === 'FLOW') {
+          router.push('/flow');
+        } else if (appUser.bu_code === 'MODOO') {
+          router.push('/modoo');
+        }
+        return;
+      }
+
       setUser({ ...user, profile: appUser });
     };
 
@@ -2841,14 +2856,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           <h1 className="text-xl font-bold tracking-tight">React Studio</h1>
         </div>
 
-        {user?.profile?.role === 'admin' && (
+        {user?.profile?.bu_code === 'HEAD' && (
           <div className="px-3 pt-4 pb-2 border-b border-slate-800">
             <button
               onClick={() => router.push('/')}
               className="w-full flex items-center px-3 py-3 rounded-lg transition-all duration-200 bg-slate-800/60 hover:bg-slate-700/60 text-slate-300 hover:text-white border border-slate-700"
             >
               <LayoutDashboard className="w-5 h-5 flex-shrink-0 mr-3" />
-              <span className="text-sm font-medium whitespace-nowrap">통합관리 ERP</span>
+              <span className="text-sm font-medium whitespace-nowrap">통합 ERP로 이동</span>
             </button>
           </div>
         )}

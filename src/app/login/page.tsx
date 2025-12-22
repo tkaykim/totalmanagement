@@ -33,7 +33,35 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        router.push('/');
+        // 사용자 프로필에서 사업부 정보 가져오기
+        const { data: appUser } = await supabase
+          .from('app_users')
+          .select('bu_code')
+          .eq('id', data.user.id)
+          .single();
+
+        const buCode = appUser?.bu_code;
+        
+        // 사업부별 리디렉션
+        if (buCode === 'HEAD') {
+          router.push('/');
+        } else if (buCode === 'AST') {
+          router.push('/astcompany');
+        } else if (buCode === 'GRIGO') {
+          router.push('/grigoent');
+        } else if (buCode === 'REACT') {
+          router.push('/reactstudio');
+        } else if (buCode === 'FLOW') {
+          router.push('/flow');
+        } else if (buCode === 'MODOO') {
+          router.push('/modoo');
+        } else {
+          // 사업부 정보가 없으면 로그인 페이지에 머무름
+          setError('사업부 정보가 없습니다. 관리자에게 문의하세요.');
+          setLoading(false);
+          return;
+        }
+        
         router.refresh();
       }
     } catch (err) {

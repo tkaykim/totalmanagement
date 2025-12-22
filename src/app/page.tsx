@@ -57,7 +57,7 @@ import {
 } from '@/features/erp/utils';
 import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
 
-type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO';
+type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio';
 
 type Project = {
@@ -106,6 +106,7 @@ const BU_TITLES: Record<BU, string> = {
   FLOW: '플로우메이커',
   AST: '아스트 컴퍼니',
   MODOO: '모두굿즈',
+  HEAD: '본사',
 };
 
 const BU_LABELS: Record<BU, string> = {
@@ -114,6 +115,7 @@ const BU_LABELS: Record<BU, string> = {
   FLOW: 'FLOWMAKER',
   AST: 'AST',
   MODOO: 'MODOO',
+  HEAD: 'HEAD',
 };
 
 const INITIAL_PROJECTS: Project[] = [
@@ -339,6 +341,22 @@ export default function HomePage() {
         .select('*')
         .eq('id', user.id)
         .single();
+
+      // 본사(HEAD)가 아닌 경우 해당 사업부 ERP로 리디렉션
+      if (appUser?.bu_code && appUser.bu_code !== 'HEAD') {
+        if (appUser.bu_code === 'AST') {
+          router.push('/astcompany');
+        } else if (appUser.bu_code === 'GRIGO') {
+          router.push('/grigoent');
+        } else if (appUser.bu_code === 'REACT') {
+          router.push('/reactstudio');
+        } else if (appUser.bu_code === 'FLOW') {
+          router.push('/flow');
+        } else if (appUser.bu_code === 'MODOO') {
+          router.push('/modoo');
+        }
+        return;
+      }
 
       setUser({ ...user, profile: appUser });
       setLoading(false);

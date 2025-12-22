@@ -853,12 +853,29 @@ export default function BusinessUnitPage() {
         .eq('id', user.id)
         .single();
 
+      // 해당 사업부가 아니고 본사도 아닌 경우 접근 불가
+      if (bu && appUser?.bu_code && appUser.bu_code !== bu && appUser.bu_code !== 'HEAD') {
+        // 본인 사업부 ERP로 리디렉션
+        if (appUser.bu_code === 'AST') {
+          router.push('/astcompany');
+        } else if (appUser.bu_code === 'GRIGO') {
+          router.push('/grigoent');
+        } else if (appUser.bu_code === 'REACT') {
+          router.push('/reactstudio');
+        } else if (appUser.bu_code === 'FLOW') {
+          router.push('/flow');
+        } else if (appUser.bu_code === 'MODOO') {
+          router.push('/modoo');
+        }
+        return;
+      }
+
       setUser({ ...user, profile: appUser });
       setLoading(false);
     };
 
     checkUser();
-  }, [router]);
+  }, [router, bu]);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -1104,15 +1121,21 @@ export default function BusinessUnitPage() {
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <aside className="hidden h-screen w-64 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-900 text-white lg:flex">
         <div className="p-8">
-          <button
-            onClick={() => router.push('/')}
-            className="text-left"
-          >
+          <div className="text-left">
             <p className="text-xl font-bold tracking-tighter text-blue-300">{BU_TITLES[bu]}</p>
             <p className="mt-1 text-[10px] uppercase tracking-widest text-slate-500">
               Business Unit Dashboard
             </p>
-          </button>
+          </div>
+          {user?.profile?.bu_code === 'HEAD' && (
+            <button
+              onClick={() => router.push('/')}
+              className="mt-4 w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 text-slate-300 hover:text-white border border-slate-700 transition-all"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="text-sm font-medium">통합 ERP로 이동</span>
+            </button>
+          )}
         </div>
         <nav className="flex-1 space-y-2 px-4 overflow-y-auto">
           <SidebarButton
@@ -1273,12 +1296,14 @@ export default function BusinessUnitPage() {
         <header className="sticky top-0 z-20 flex h-24 items-center justify-between border-b border-slate-200 bg-white/90 px-6 backdrop-blur">
           <div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push('/')}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
+              {user?.profile?.bu_code === 'HEAD' && (
+                <button
+                  onClick={() => router.push('/')}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+              )}
               <h2 className="text-lg font-bold text-slate-800">
                 {view === 'dashboard'
                   ? '대시보드'
