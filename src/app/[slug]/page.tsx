@@ -109,6 +109,7 @@ const BU_TITLES: Record<BU, string> = {
   FLOW: '플로우메이커',
   AST: '아스트 컴퍼니',
   MODOO: '모두굿즈',
+  HEAD: '본사',
 };
 
 const BU_LABELS: Record<BU, string> = {
@@ -117,6 +118,7 @@ const BU_LABELS: Record<BU, string> = {
   FLOW: 'FLOW',
   AST: 'AST',
   MODOO: 'MODOO',
+  HEAD: 'HEAD',
 };
 
 function formatCurrency(amount: number): string {
