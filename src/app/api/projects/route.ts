@@ -35,26 +35,45 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await authSupabase.auth.getUser();
     const userId = user?.id || null;
 
+    // insert 객체 생성 (undefined인 필드는 제외)
+    const insertData: any = {
+      bu_code: body.bu_code,
+      name: body.name,
+      category: body.category,
+      status: body.status || '준비중',
+      start_date: body.start_date,
+      end_date: body.end_date,
+      created_by: userId || body.created_by || null,
+    };
+
+    // client_id가 있으면 추가
+    if (body.client_id !== undefined && body.client_id !== null) {
+      insertData.client_id = body.client_id;
+    }
+
+    // artist_id가 있으면 추가
+    if (body.artist_id !== undefined && body.artist_id !== null) {
+      insertData.artist_id = body.artist_id;
+    }
+
     const { data, error } = await supabase
       .from('projects')
-      .insert({
-        bu_code: body.bu_code,
-        name: body.name,
-        category: body.category,
-        status: body.status || '준비중',
-        start_date: body.start_date,
-        end_date: body.end_date,
-        client_id: body.client_id,
-        created_by: userId || body.created_by || null,
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Project creation error:', error);
+      throw error;
+    }
 
     return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+  } catch (error: any) {
+    console.error('Failed to create project:', error);
+    return NextResponse.json(
+      { error: error?.message || String(error) },
+      { status: 500 }
+    );
   }
 }
 

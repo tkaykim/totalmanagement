@@ -25,6 +25,7 @@ import type {
   ExternalWorkerType,
   Artist,
   ArtistStatus,
+  ArtistType,
 } from '@/types/database';
 
 const API_BASE = '/api';
@@ -45,6 +46,7 @@ export async function createProject(data: {
   end_date: string;
   created_by?: string;
   client_id?: number;
+  artist_id?: number;
 }): Promise<Project> {
   const res = await fetch(`${API_BASE}/projects`, {
     method: 'POST',
@@ -690,6 +692,8 @@ export async function fetchArtists(bu?: BU): Promise<Artist[]> {
 export async function createArtist(data: {
   bu_code: BU;
   name: string;
+  type?: ArtistType;
+  team_id?: number;
   nationality?: string;
   visa_type?: string;
   contract_start: string;
@@ -704,7 +708,10 @@ export async function createArtist(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create artist');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(errorData.error || 'Failed to create artist');
+  }
   return res.json();
 }
 

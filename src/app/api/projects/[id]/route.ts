@@ -10,21 +10,36 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
+    // undefined 필드는 제외하고 update 객체 생성
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    Object.keys(body).forEach((key) => {
+      if (body[key] !== undefined) {
+        updateData[key] = body[key];
+      }
+    });
+
     const { data, error } = await supabase
       .from('projects')
-      .update({
-        ...body,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Project update error:', error);
+      throw error;
+    }
 
     return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+  } catch (error: any) {
+    console.error('Failed to update project:', error);
+    return NextResponse.json(
+      { error: error?.message || String(error) },
+      { status: 500 }
+    );
   }
 }
 

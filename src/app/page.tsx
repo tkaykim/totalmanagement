@@ -802,7 +802,13 @@ export default function HomePage() {
             {(Object.keys(BU_TITLES) as BU[]).map((buKey) => (
               <Link
                 key={buKey}
-                href={buKey === 'AST' ? '/astcompany' : `/${buToSlug(buKey)}`}
+                href={
+                  buKey === 'AST' 
+                    ? '/astcompany' 
+                    : buKey === 'GRIGO' 
+                    ? '/grigoent' 
+                    : `/${buToSlug(buKey)}`
+                }
                 className={cn(
                   'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition',
                   'text-slate-300 hover:bg-slate-800 hover:text-white'

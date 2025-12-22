@@ -11,7 +11,33 @@ export async function PATCH(
     const body = await request.json();
 
     const updateData: any = {};
+    
+    // 먼저 기존 데이터를 조회하여 타입 확인
+    const { data: existingData } = await supabase
+      .from('artists')
+      .select('type')
+      .eq('id', id)
+      .single();
+    
+    const currentType = body.type !== undefined ? body.type : existingData?.type;
+    
     if (body.name !== undefined) updateData.name = body.name;
+    if (body.type !== undefined) {
+      updateData.type = body.type;
+      // 타입이 'team'으로 변경되면 team_id를 null로 설정
+      if (body.type === 'team') {
+        updateData.team_id = null;
+      }
+    }
+    if (body.team_id !== undefined) {
+      // 개인 아티스트만 팀에 소속 가능
+      if (currentType === 'individual') {
+        updateData.team_id = body.team_id || null;
+      } else {
+        // 타입이 'team'인 경우 team_id를 null로 설정
+        updateData.team_id = null;
+      }
+    }
     if (body.nationality !== undefined) updateData.nationality = body.nationality;
     if (body.visa_type !== undefined) updateData.visa_type = body.visa_type;
     if (body.contract_start !== undefined) updateData.contract_start = body.contract_start;

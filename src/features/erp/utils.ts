@@ -11,6 +11,7 @@ export function dbProjectToFrontend(p: Project): {
   endDate: string;
   status: string;
   client_id?: number;
+  artist_id?: number;
 } {
   return {
     id: String(p.id),
@@ -21,6 +22,7 @@ export function dbProjectToFrontend(p: Project): {
     endDate: p.end_date,
     status: p.status,
     client_id: p.client_id,
+    artist_id: p.artist_id,
   };
 }
 
@@ -80,6 +82,7 @@ export function frontendProjectToDb(p: {
   startDate: string;
   endDate: string;
   status?: string;
+  artist_id?: number;
 }): {
   bu_code: BU;
   name: string;
@@ -87,6 +90,7 @@ export function frontendProjectToDb(p: {
   status: string;
   start_date: string;
   end_date: string;
+  artist_id?: number;
 } {
   const today = new Date().toISOString().split('T')[0];
   return {
@@ -96,6 +100,7 @@ export function frontendProjectToDb(p: {
     status: p.status || '준비중',
     start_date: p.startDate || today,
     end_date: p.endDate || today,
+    artist_id: p.artist_id,
   };
 }
 

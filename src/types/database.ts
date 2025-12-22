@@ -15,6 +15,7 @@ export type CreatorStatus = 'active' | 'inactive' | 'archived';
 export type AdStatus = 'active' | 'paused' | 'completed' | 'none';
 export type ExternalWorkerType = 'freelancer' | 'company' | 'contractor';
 export type ArtistStatus = 'Active' | 'Inactive' | 'Archived';
+export type ArtistType = 'individual' | 'team';
 
 export interface BusinessUnit {
   id: number;
@@ -60,6 +61,7 @@ export interface Project {
   start_date: string;
   end_date: string;
   client_id?: number;
+  artist_id?: number;
   creators?: ProjectCreator[]; // JSONB
   freelancers?: ProjectFreelancer[]; // JSONB
   created_by?: string;
@@ -259,6 +261,8 @@ export interface Artist {
   id: number;
   bu_code: BU;
   name: string;
+  type: ArtistType;
+  team_id?: number;
   nationality?: string;
   visa_type?: string;
   contract_start: string;
