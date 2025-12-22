@@ -68,6 +68,7 @@ type Project = {
   startDate: string;
   endDate: string;
   status: string;
+  pm_name?: string;
 };
 
 type FinancialEntryStatus = 'planned' | 'paid' | 'canceled';
@@ -577,6 +578,7 @@ export default function HomePage() {
     cat: string;
     startDate: string;
     endDate: string;
+    pm_name?: string | null;
   }) => {
     if (!payload.name || !payload.cat) return;
     try {
@@ -596,6 +598,7 @@ export default function HomePage() {
     startDate: string;
     endDate: string;
     status?: string;
+    pm_name?: string | null;
   }) => {
     if (!payload.name || !payload.cat) return;
     try {
@@ -606,6 +609,7 @@ export default function HomePage() {
         startDate: payload.startDate,
         endDate: payload.endDate,
         status: payload.status,
+        pm_name: payload.pm_name,
       });
       await updateProjectMutation.mutateAsync({ id: Number(payload.id), data: dbData });
       setEditProjectModalOpen(null);
@@ -1193,6 +1197,7 @@ export default function HomePage() {
           onClose={() => setProjectModalOpen(false)}
           onSubmit={handleCreateProject}
           defaultBu={bu}
+          usersData={usersData}
         />
       )}
       {isTaskModalOpen && (
@@ -1240,6 +1245,7 @@ export default function HomePage() {
           project={isEditProjectModalOpen}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={handleUpdateProject}
+          usersData={usersData}
         />
       )}
       {deleteProjectId && (
@@ -2703,10 +2709,12 @@ function CreateProjectModal({
   onClose,
   onSubmit,
   defaultBu,
+  usersData,
 }: {
   onClose: () => void;
-  onSubmit: (payload: { name: string; bu: BU; cat: string; startDate: string; endDate: string }) => void;
+  onSubmit: (payload: { name: string; bu: BU; cat: string; startDate: string; endDate: string; pm_name?: string | null }) => void;
   defaultBu: BU;
+  usersData?: { users: any[]; currentUser: any };
 }) {
   const [form, setForm] = useState({
     name: '',
@@ -2714,6 +2722,7 @@ function CreateProjectModal({
     cat: '',
     startDate: '',
     endDate: '',
+    pm_name: '',
   });
 
   return (
@@ -2737,6 +2746,17 @@ function CreateProjectModal({
           value={form.name}
           onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
         />
+        <SelectField
+          label="PM"
+          value={form.pm_name}
+          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
+          options={[
+            { value: '', label: '선택 안함' },
+            ...((usersData?.users ?? [])
+              .map((u: any) => ({ value: u.name || '', label: u.name || '' }))
+              .filter((o: any) => o.value)),
+          ]}
+        />
         <div className="grid grid-cols-2 gap-2">
           <InputField
             label="시작일"
@@ -2753,7 +2773,7 @@ function CreateProjectModal({
         </div>
       </div>
       <ModalActions
-        onPrimary={() => onSubmit(form)}
+        onPrimary={() => onSubmit({ ...form, pm_name: form.pm_name || null })}
         onClose={onClose}
         primaryLabel="등록"
       />
@@ -3358,6 +3378,7 @@ function EditProjectModal({
   project,
   onClose,
   onSubmit,
+  usersData,
 }: {
   project: Project;
   onClose: () => void;
@@ -3369,7 +3390,9 @@ function EditProjectModal({
     startDate: string;
     endDate: string;
     status?: string;
+    pm_name?: string | null;
   }) => void;
+  usersData?: { users: any[]; currentUser: any };
 }) {
   const [form, setForm] = useState({
     name: project.name,
@@ -3378,6 +3401,7 @@ function EditProjectModal({
     startDate: project.startDate,
     endDate: project.endDate,
     status: project.status,
+    pm_name: (project as any).pm_name || '',
   });
   const [error, setError] = useState<string>('');
 
@@ -3428,6 +3452,17 @@ function EditProjectModal({
             { value: '완료', label: '완료' },
           ]}
         />
+        <SelectField
+          label="PM"
+          value={form.pm_name}
+          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
+          options={[
+            { value: '', label: '선택 안함' },
+            ...((usersData?.users ?? [])
+              .map((u: any) => ({ value: u.name || '', label: u.name || '' }))
+              .filter((o: any) => o.value)),
+          ]}
+        />
       </div>
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
@@ -3446,7 +3481,7 @@ function EditProjectModal({
           }
           
           setError('');
-          onSubmit({ ...form, id: project.id });
+          onSubmit({ ...form, id: project.id, pm_name: form.pm_name || null });
         }}
         onClose={onClose}
         primaryLabel="수정"

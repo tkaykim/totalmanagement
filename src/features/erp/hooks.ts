@@ -241,6 +241,44 @@ export function useDeleteClient() {
   });
 }
 
+// Client Workers
+export function useClientWorkers(clientCompanyId?: number) {
+  return useQuery({
+    queryKey: ['client-workers', clientCompanyId],
+    queryFn: () => api.fetchClientWorkers(clientCompanyId),
+  });
+}
+
+export function useCreateClientWorker() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createClientWorker,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-workers'] });
+    },
+  });
+}
+
+export function useUpdateClientWorker() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => api.updateClientWorker(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-workers'] });
+    },
+  });
+}
+
+export function useDeleteClientWorker() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteClientWorker,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-workers'] });
+    },
+  });
+}
+
 // Equipment
 export function useEquipment(bu?: BU) {
   return useQuery({

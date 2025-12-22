@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
-import type { BU } from '@/types/database';
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
-    const bu = searchParams.get('bu') as BU | null;
+    const clientCompanyId = searchParams.get('client_company_id');
 
-    let query = supabase.from('client_company').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('client_worker').select('*').order('created_at', { ascending: false });
 
-    if (bu) {
-      query = query.eq('bu_code', bu);
+    if (clientCompanyId) {
+      query = query.eq('client_company_id', clientCompanyId);
     }
 
     const { data, error } = await query;
@@ -29,21 +28,17 @@ export async function POST(request: NextRequest) {
     const supabase = await createPureClient();
     const body = await request.json();
 
-    // 빈 문자열을 null로 변환하는 헬퍼 함수
     const toNullIfEmpty = (value: any) => (value === '' || value === null || value === undefined ? null : value);
 
     const { data, error } = await supabase
-      .from('client_company')
+      .from('client_worker')
       .insert({
-        bu_code: body.bu_code,
-        company_name_en: toNullIfEmpty(body.company_name_en),
-        company_name_ko: toNullIfEmpty(body.company_name_ko),
-        industry: toNullIfEmpty(body.industry),
-        business_registration_number: toNullIfEmpty(body.business_registration_number),
-        representative_name: toNullIfEmpty(body.representative_name),
-        status: body.status || 'active',
-        last_meeting_date: toNullIfEmpty(body.last_meeting_date),
-        business_registration_file: toNullIfEmpty(body.business_registration_file),
+        client_company_id: toNullIfEmpty(body.client_company_id),
+        name_en: toNullIfEmpty(body.name_en),
+        name_ko: toNullIfEmpty(body.name_ko),
+        phone: toNullIfEmpty(body.phone),
+        email: toNullIfEmpty(body.email),
+        business_card_file: toNullIfEmpty(body.business_card_file),
       })
       .select()
       .single();
@@ -55,9 +50,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
-
-
-
-
-
 

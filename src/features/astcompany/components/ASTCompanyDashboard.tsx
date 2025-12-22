@@ -89,8 +89,12 @@ import {
   useUpdateFinancialEntry,
   useDeleteFinancialEntry,
   useCreateClient,
+  useCreateClientWorker,
   useUpdateClient,
+  useUpdateClientWorker,
   useDeleteClient,
+  useDeleteClientWorker,
+  useClientWorkers,
   useCreateEquipment,
   useUpdateEquipment,
   useDeleteEquipment,
@@ -282,8 +286,11 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
   const updateFinancialMutation = useUpdateFinancialEntry();
   const deleteFinancialMutation = useDeleteFinancialEntry();
   const createClientMutation = useCreateClient();
+  const createClientWorkerMutation = useCreateClientWorker();
   const updateClientMutation = useUpdateClient();
+  const updateClientWorkerMutation = useUpdateClientWorker();
   const deleteClientMutation = useDeleteClient();
+  const deleteClientWorkerMutation = useDeleteClientWorker();
   const createEquipmentMutation = useCreateEquipment();
   const updateEquipmentMutation = useUpdateEquipment();
   const deleteEquipmentMutation = useDeleteEquipment();
@@ -323,6 +330,10 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
   } | null>(null);
   const [isEditClientModalOpen, setEditClientModalOpen] = useState<Client | null>(null);
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null);
+  const [isClientWorkerModalOpen, setClientWorkerModalOpen] = useState<number | null>(null);
+  const [isGlobalClientWorkerModalOpen, setGlobalClientWorkerModalOpen] = useState(false);
+  const [isEditClientWorkerModalOpen, setEditClientWorkerModalOpen] = useState<{ companyId: number; workerId: number } | null>(null);
+  const [deleteClientWorkerId, setDeleteClientWorkerId] = useState<number | null>(null);
   const [isEquipmentModalOpen, setEquipmentModalOpen] = useState(false);
   const [isEditEquipmentModalOpen, setEditEquipmentModalOpen] = useState<Equipment | null>(null);
   const [deleteEquipmentId, setDeleteEquipmentId] = useState<number | null>(null);
@@ -802,7 +813,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
-                            {projectClient?.name || '-'}
+                            {projectClient?.company_name_ko || '-'}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
                             {(project as any).pm_name || '-'}
@@ -2512,7 +2523,29 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
   // Client View
   const ClientView = () => {
     const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [clientSearchQuery, setClientSearchQuery] = useState<string>('');
     const buClients = clientsData.filter((c) => c.bu_code === bu);
+
+    const filteredClients = useMemo(() => {
+      if (!clientSearchQuery.trim()) return buClients;
+
+      const query = clientSearchQuery.toLowerCase().trim();
+      return buClients.filter((client) => {
+        const companyNameKo = ((client as any).company_name_ko || '').toLowerCase();
+        const companyNameEn = ((client as any).company_name_en || '').toLowerCase();
+        const industry = (client.industry || '').toLowerCase();
+        const representativeName = ((client as any).representative_name || '').toLowerCase();
+        const businessRegNumber = ((client as any).business_registration_number || '').toLowerCase();
+
+        return (
+          companyNameKo.includes(query) ||
+          companyNameEn.includes(query) ||
+          industry.includes(query) ||
+          representativeName.includes(query) ||
+          businessRegNumber.includes(query)
+        );
+      });
+    }, [buClients, clientSearchQuery]);
 
     const toggleExpand = (id: number) => {
       setExpandedId(expandedId === id ? null : id);
@@ -2526,18 +2559,28 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
             <input
               type="text"
               placeholder="클라이언트 검색..."
+              value={clientSearchQuery}
+              onChange={(e) => setClientSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64"
             />
           </div>
-          <button
-            onClick={() => {
-              setClientCreateInitial(null);
-              setClientModalOpen(true);
-            }}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-2" /> 클라이언트 등록
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setClientCreateInitial(null);
+                setClientModalOpen(true);
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" /> 클라이언트 등록
+            </button>
+            <button
+              onClick={() => setGlobalClientWorkerModalOpen(true)}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" /> 담당자 추가
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -2549,19 +2592,108 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
           </div>
 
           <div className="divide-y divide-gray-100">
-            {buClients.length > 0 ? (
-              buClients.map((client) => {
-                const isTeam = client.client_type === 'team';
-                const teamMembers = isTeam
-                  ? buClients.filter(
-                      (c) => c.team_id === client.id && (c.client_type || 'individual') !== 'team',
-                    )
-                  : [];
+            {filteredClients.length > 0 ? (
+              filteredClients.map((client) => {
                 const clientProjects = projects.filter((p) => (p as any).client_id === client.id);
                 const clientRevenues = financials.filter(
                   (f) => clientProjects.some((p) => p.id === f.projectId) && f.type === 'revenue'
                 );
                 const totalSpent = clientRevenues.reduce((sum, r) => sum + r.amount, 0);
+                const ClientWorkersList = () => {
+                  const { data: workers = [] } = useClientWorkers(client.id);
+                  const [workerSearchQuery, setWorkerSearchQuery] = useState<string>('');
+
+                  const filteredWorkers = useMemo(() => {
+                    if (!workerSearchQuery.trim()) return workers;
+
+                    const query = workerSearchQuery.toLowerCase().trim();
+                    return workers.filter((worker: any) => {
+                      const nameKo = (worker.name_ko || '').toLowerCase();
+                      const nameEn = (worker.name_en || '').toLowerCase();
+                      const phone = (worker.phone || '').toLowerCase();
+                      const email = (worker.email || '').toLowerCase();
+
+                      return (
+                        nameKo.includes(query) ||
+                        nameEn.includes(query) ||
+                        phone.includes(query) ||
+                        email.includes(query)
+                      );
+                    });
+                  }, [workers, workerSearchQuery]);
+
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-xs font-bold text-gray-400 uppercase">담당자</h4>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setClientWorkerModalOpen(client.id);
+                          }}
+                          className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center"
+                        >
+                          <Plus className="w-3 h-3 mr-1" /> 추가
+                        </button>
+                      </div>
+                      {workers.length > 0 && (
+                        <div className="mb-2">
+                          <input
+                            type="text"
+                            placeholder="담당자 검색..."
+                            value={workerSearchQuery}
+                            onChange={(e) => setWorkerSearchQuery(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                        </div>
+                      )}
+                      {filteredWorkers.length > 0 ? (
+                        filteredWorkers.map((worker: any) => (
+                          <div
+                            key={worker.id}
+                            className="flex items-center justify-between p-2 bg-white rounded border border-gray-200"
+                          >
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-gray-900">
+                                {worker.name_ko}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {worker.phone && <span>{worker.phone}</span>}
+                                {worker.phone && worker.email && <span className="mx-1">•</span>}
+                                {worker.email && <span>{worker.email}</span>}
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditClientWorkerModalOpen({ companyId: client.id, workerId: worker.id });
+                                }}
+                                className="p-1 text-gray-400 hover:text-indigo-600"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteClientWorkerId(worker.id);
+                                }}
+                                className="p-1 text-gray-400 hover:text-red-600"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-gray-400 py-2">
+                          {workerSearchQuery ? '검색 결과가 없습니다.' : '등록된 담당자가 없습니다.'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                };
 
                 return (
                   <div key={client.id} className="group">
@@ -2574,26 +2706,19 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                     >
                       <div className="flex-1 flex items-center">
                         <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-lg font-bold text-indigo-600 border border-indigo-100 mr-4">
-                          {client.name.substring(0, 1)}
+                          {(client as any).company_name_ko?.substring(0, 1) || client.name?.substring(0, 1) || '-'}
                         </div>
                         <div>
                           <h3 className="font-bold text-gray-900">
-                            {client.name}
-                            {isTeam && teamMembers.length > 0 && (
-                              <span className="ml-2 text-[11px] font-semibold text-indigo-500">
-                                ({teamMembers.length}명)
-                              </span>
-                            )}
+                            {(client as any).company_name_ko || client.name}
                           </h3>
-                          <p className="text-xs text-gray-500">
-                            {client.industry || (isTeam ? '팀 계정' : '-')}
-                          </p>
+                          <p className="text-xs text-gray-500">{client.industry || '-'}</p>
                         </div>
                       </div>
 
                       <div className="mt-2 md:mt-0 w-full md:w-40 text-sm text-gray-600 flex items-center">
                         <User className="w-3 h-3 mr-2 text-gray-400" />{' '}
-                        {client.contact_person || (isTeam ? '담당자 미등록' : '-')}
+                        {(client as any).representative_name || '-'}
                       </div>
 
                       <div className="mt-2 md:mt-0 w-full md:w-32">
@@ -2614,23 +2739,27 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                         <div className="ml-0 md:ml-14 grid grid-cols-1 md:grid-cols-3 gap-6">
                           <div className="space-y-2">
                             <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">
-                              연락처 정보
+                              회사 정보
                             </h4>
-                            {client.phone && (
+                            {(client as any).business_registration_number && (
                               <div className="flex items-center text-sm text-gray-700">
-                                <Phone className="w-4 h-4 mr-2 text-gray-400" /> {client.phone}
+                                <span className="text-gray-500 mr-2">사업자등록번호:</span>
+                                {(client as any).business_registration_number}
                               </div>
                             )}
-                            {client.email && (
+                            {(client as any).representative_name && (
                               <div className="flex items-center text-sm text-gray-700">
-                                <Mail className="w-4 h-4 mr-2 text-gray-400" /> {client.email}
+                                <span className="text-gray-500 mr-2">대표자:</span>
+                                {(client as any).representative_name}
                               </div>
                             )}
-                            {client.address && (
+                            {client.last_meeting_date && (
                               <div className="flex items-center text-sm text-gray-700">
-                                <MapPin className="w-4 h-4 mr-2 text-gray-400" /> {client.address}
+                                <span className="text-gray-500 mr-2">최근 미팅:</span>
+                                {client.last_meeting_date}
                               </div>
                             )}
+                            <ClientWorkersList />
                           </div>
 
                           <div className="space-y-2">
@@ -2647,69 +2776,9 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                                 {formatCurrency(totalSpent)}
                               </span>
                             </div>
-                            {client.last_meeting_date && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">최근 미팅</span>
-                                <span>{client.last_meeting_date}</span>
-                              </div>
-                            )}
                           </div>
 
                           <div className="flex flex-col justify-end items-start md:items-end gap-2">
-                            {isTeam && (
-                              <div className="w-full md:w-72 rounded-2xl border border-gray-200 bg-white p-3">
-                                <div className="mb-2 flex items-center justify-between">
-                                  <p className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400">
-                                    소속 직원 / 담당자 ({teamMembers.length})
-                                  </p>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setClientCreateInitial({
-                                        client_type: 'individual',
-                                        team_id: client.id,
-                                      });
-                                      setClientModalOpen(true);
-                                    }}
-                                    className="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600 hover:bg-indigo-100"
-                                  >
-                                    개인 추가
-                                  </button>
-                                </div>
-                                {teamMembers.length > 0 ? (
-                                  <div className="space-y-1.5">
-                                    {teamMembers.map((member) => (
-                                      <div
-                                        key={member.id}
-                                        className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
-                                      >
-                                        <div>
-                                          <p className="font-bold text-gray-800">
-                                            {member.contact_person || member.name}
-                                          </p>
-                                          <p className="font-mono text-[11px] text-gray-500">
-                                            {member.email || member.phone || '-'}
-                                          </p>
-                                        </div>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditClientModalOpen(member);
-                                          }}
-                                          className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
-                                        >
-                                          수정
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="py-4 text-center text-[11px] text-gray-400">
-                                    등록된 멤버가 없습니다. 상단의 &quot;개인 추가&quot; 버튼으로 팀원을 등록하세요.
-                                  </div>
-                                )}
-                              </div>
-                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -2746,7 +2815,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
               })
             ) : (
               <div className="px-6 py-12 text-center text-gray-400">
-                등록된 클라이언트가 없습니다.
+                {clientSearchQuery ? '검색 결과가 없습니다.' : '등록된 클라이언트가 없습니다.'}
               </div>
             )}
           </div>
@@ -3575,9 +3644,6 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
       {isClientModalOpen && (
         <CreateClientModal
           bu={bu}
-          teams={clientsData.filter((c) => c.bu_code === bu && c.client_type === 'team')}
-          initialClientType={clientCreateInitial?.client_type}
-          initialTeamId={clientCreateInitial?.team_id}
           onClose={() => setClientModalOpen(false)}
           onSubmit={async (data) => {
             try {
@@ -3592,7 +3658,6 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
       {isEditClientModalOpen && (
         <EditClientModal
           client={isEditClientModalOpen}
-          teams={clientsData.filter((c) => c.bu_code === bu && c.client_type === 'team')}
           onClose={() => setEditClientModalOpen(null)}
           onSubmit={async (data) => {
             try {
@@ -3605,6 +3670,71 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
               console.error('Failed to update client:', error);
             }
           }}
+        />
+      )}
+      {isClientWorkerModalOpen && (
+        <CreateClientWorkerModal
+          clientCompanyId={isClientWorkerModalOpen}
+          onClose={() => setClientWorkerModalOpen(null)}
+          onSubmit={async (data) => {
+            try {
+              await createClientWorkerMutation.mutateAsync(data);
+              setClientWorkerModalOpen(null);
+            } catch (error) {
+              console.error('Failed to create client worker:', error);
+            }
+          }}
+        />
+      )}
+      {isGlobalClientWorkerModalOpen && (
+        <CreateClientWorkerModal
+          clients={clientsData as Client[]}
+          onClose={() => setGlobalClientWorkerModalOpen(false)}
+          onSubmit={async (data) => {
+            try {
+              await createClientWorkerMutation.mutateAsync(data);
+              setGlobalClientWorkerModalOpen(false);
+            } catch (error) {
+              console.error('Failed to create client worker:', error);
+            }
+          }}
+        />
+      )}
+      {isEditClientWorkerModalOpen && (() => {
+        const { data: workers = [] } = useClientWorkers(isEditClientWorkerModalOpen.companyId);
+        const worker = workers.find((w: any) => w.id === isEditClientWorkerModalOpen.workerId);
+        return worker ? (
+          <EditClientWorkerModal
+            clientCompanyId={isEditClientWorkerModalOpen.companyId}
+            worker={worker}
+            onClose={() => setEditClientWorkerModalOpen(null)}
+            onSubmit={async (data) => {
+              try {
+                await updateClientWorkerMutation.mutateAsync({
+                  id: isEditClientWorkerModalOpen.workerId,
+                  data,
+                });
+                setEditClientWorkerModalOpen(null);
+              } catch (error) {
+                console.error('Failed to update client worker:', error);
+              }
+            }}
+          />
+        ) : null;
+      })()}
+      {deleteClientWorkerId && (
+        <DeleteConfirmModal
+          title="담당자 삭제"
+          message="정말로 이 담당자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+          onConfirm={async () => {
+            try {
+              await deleteClientWorkerMutation.mutateAsync(deleteClientWorkerId);
+              setDeleteClientWorkerId(null);
+            } catch (error) {
+              console.error('Failed to delete client worker:', error);
+            }
+          }}
+          onCancel={() => setDeleteClientWorkerId(null)}
         />
       )}
       {deleteClientId && (
@@ -4390,7 +4520,7 @@ function CreateProjectModal({
                 onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
                 options={[
                   { value: '', label: '선택 안함' },
-                  ...clients.map((c) => ({ value: String(c.id), label: c.name })),
+                  ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko })),
                 ]}
               />
             </div>
@@ -4548,7 +4678,7 @@ function EditProjectModal({
                 onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
                 options={[
                   { value: '', label: '선택 안함' },
-                  ...clients.map((c) => ({ value: String(c.id), label: c.name })),
+                  ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko })),
                 ]}
               />
             </div>
@@ -4608,70 +4738,38 @@ function EditProjectModal({
 // Client Modals
 function CreateClientModal({
   bu,
-  teams,
-  initialClientType,
-  initialTeamId,
   onClose,
   onSubmit,
 }: {
   bu: BU;
-  teams: Client[];
-  initialClientType?: ClientType;
-  initialTeamId?: number;
   onClose: () => void;
   onSubmit: (data: Partial<Client>) => void;
 }) {
   const [form, setForm] = useState({
-    name: '',
+    company_name_en: '',
+    company_name_ko: '',
     industry: '',
-    contact_person: '',
-    phone: '',
-    email: '',
-    address: '',
-    status: 'active' as 'active' | 'growing' | 'inactive' | 'archived',
+    business_registration_number: '',
+    representative_name: '',
+    status: 'active' as 'active' | 'inactive' | 'archived',
     last_meeting_date: '',
-    client_type: (initialClientType || 'individual') as ClientType,
-    team_id: initialTeamId ? String(initialTeamId) : '',
+    business_registration_file: '',
   });
 
   return (
-    <ModalShell title="클라이언트 등록" onClose={onClose}>
+    <ModalShell title="클라이언트 회사 등록" onClose={onClose}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="계정 타입"
-          value={form.client_type}
-          onChange={(v) =>
-            setForm((prev) => ({
-              ...prev,
-              client_type: v as ClientType,
-              team_id: v === 'team' ? '' : prev.team_id,
-              contact_person: v === 'individual' ? '' : prev.contact_person,
-            }))
-          }
-          options={[
-            { value: 'individual', label: '개인 계정 (직원/담당자)' },
-            { value: 'team', label: '팀 계정 (회사/조직)' },
-          ]}
-        />
-        {form.client_type === 'individual' && (
-          <SelectField
-            label="소속 팀 (선택)"
-            value={form.team_id}
-            onChange={(v) => setForm((prev) => ({ ...prev, team_id: v }))}
-            options={[
-              { value: '', label: '소속 팀 없음' },
-              ...teams.map((t) => ({
-                value: String(t.id),
-                label: t.name,
-              })),
-            ]}
-          />
-        )}
         <InputField
-          label={form.client_type === 'individual' ? '이름 *' : '회사/팀명 *'}
-          placeholder={form.client_type === 'individual' ? '개인 이름' : '회사 또는 팀 이름'}
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+          label="회사명 (영어) *"
+          placeholder="Company Name (English)"
+          value={form.company_name_en}
+          onChange={(v) => setForm((prev) => ({ ...prev, company_name_en: v }))}
+        />
+        <InputField
+          label="회사명 (한글) *"
+          placeholder="회사명 (한글)"
+          value={form.company_name_ko}
+          onChange={(v) => setForm((prev) => ({ ...prev, company_name_ko: v }))}
         />
         <InputField
           label="업종"
@@ -4679,38 +4777,29 @@ function CreateClientModal({
           value={form.industry}
           onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
         />
-        {form.client_type === 'team' && (
-          <InputField
-            label="담당자"
-            placeholder="담당자 이름"
-            value={form.contact_person}
-            onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
-          />
-        )}
         <InputField
-          label="전화번호"
-          placeholder="010-0000-0000"
-          value={form.phone}
-          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+          label="사업자등록번호"
+          placeholder="123-45-67890"
+          value={form.business_registration_number}
+          onChange={(v) => setForm((prev) => ({ ...prev, business_registration_number: v }))}
         />
         <InputField
-          label="이메일"
-          type="email"
-          placeholder="email@example.com"
-          value={form.email}
-          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-        />
-        <InputField
-          label="주소"
-          placeholder="주소"
-          value={form.address}
-          onChange={(v) => setForm((prev) => ({ ...prev, address: v }))}
+          label="대표자명"
+          placeholder="대표자 이름"
+          value={form.representative_name}
+          onChange={(v) => setForm((prev) => ({ ...prev, representative_name: v }))}
         />
         <InputField
           label="최근 미팅일"
           type="date"
           value={form.last_meeting_date}
           onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
+        />
+        <InputField
+          label="사업자등록증 첨부"
+          placeholder="파일 URL 또는 경로"
+          value={form.business_registration_file}
+          onChange={(v) => setForm((prev) => ({ ...prev, business_registration_file: v }))}
         />
         <SelectField
           label="상태"
@@ -4726,10 +4815,15 @@ function CreateClientModal({
       <ModalActions
         onPrimary={() =>
           onSubmit({
-            ...form,
             bu_code: bu,
-            client_type: form.client_type,
-            team_id: form.team_id ? Number(form.team_id) : null,
+            company_name_en: form.company_name_en,
+            company_name_ko: form.company_name_ko,
+            industry: form.industry || undefined,
+            business_registration_number: form.business_registration_number || undefined,
+            representative_name: form.representative_name || undefined,
+            status: form.status,
+            last_meeting_date: form.last_meeting_date || undefined,
+            business_registration_file: form.business_registration_file || undefined,
           } as any)
         }
         onClose={onClose}
@@ -4741,66 +4835,38 @@ function CreateClientModal({
 
 function EditClientModal({
   client,
-  teams,
   onClose,
   onSubmit,
 }: {
   client: Client;
-  teams: Client[];
   onClose: () => void;
   onSubmit: (data: Partial<Client>) => void;
 }) {
   const [form, setForm] = useState({
-    name: client.name,
+    company_name_en: (client as any).company_name_en || '',
+    company_name_ko: (client as any).company_name_ko || '',
     industry: client.industry || '',
-    contact_person: client.contact_person || '',
-    phone: client.phone || '',
-    email: client.email || '',
-    address: client.address || '',
+    business_registration_number: (client as any).business_registration_number || '',
+    representative_name: (client as any).representative_name || '',
     status: client.status,
     last_meeting_date: client.last_meeting_date || '',
-    client_type: (client.client_type || 'team') as ClientType,
-    team_id: client.team_id ? String(client.team_id) : '',
+    business_registration_file: (client as any).business_registration_file || '',
   });
 
   return (
-    <ModalShell title="클라이언트 수정" onClose={onClose}>
+    <ModalShell title="클라이언트 회사 수정" onClose={onClose}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="계정 타입"
-          value={form.client_type}
-          onChange={(v) =>
-            setForm((prev) => ({
-              ...prev,
-              client_type: v as ClientType,
-              team_id: v === 'team' ? '' : prev.team_id,
-              contact_person: v === 'individual' ? '' : prev.contact_person,
-            }))
-          }
-          options={[
-            { value: 'individual', label: '개인 계정 (직원/담당자)' },
-            { value: 'team', label: '팀 계정 (회사/조직)' },
-          ]}
-        />
-        {form.client_type === 'individual' && (
-          <SelectField
-            label="소속 팀 (선택)"
-            value={form.team_id}
-            onChange={(v) => setForm((prev) => ({ ...prev, team_id: v }))}
-            options={[
-              { value: '', label: '소속 팀 없음' },
-              ...teams.map((t) => ({
-                value: String(t.id),
-                label: t.name,
-              })),
-            ]}
-          />
-        )}
         <InputField
-          label={form.client_type === 'individual' ? '이름 *' : '회사/팀명 *'}
-          placeholder={form.client_type === 'individual' ? '개인 이름' : '회사 또는 팀 이름'}
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+          label="회사명 (영어) *"
+          placeholder="Company Name (English)"
+          value={form.company_name_en}
+          onChange={(v) => setForm((prev) => ({ ...prev, company_name_en: v }))}
+        />
+        <InputField
+          label="회사명 (한글) *"
+          placeholder="회사명 (한글)"
+          value={form.company_name_ko}
+          onChange={(v) => setForm((prev) => ({ ...prev, company_name_ko: v }))}
         />
         <InputField
           label="업종"
@@ -4808,38 +4874,29 @@ function EditClientModal({
           value={form.industry}
           onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
         />
-        {form.client_type === 'team' && (
-          <InputField
-            label="담당자"
-            placeholder="담당자 이름"
-            value={form.contact_person}
-            onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
-          />
-        )}
         <InputField
-          label="전화번호"
-          placeholder="010-0000-0000"
-          value={form.phone}
-          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+          label="사업자등록번호"
+          placeholder="123-45-67890"
+          value={form.business_registration_number}
+          onChange={(v) => setForm((prev) => ({ ...prev, business_registration_number: v }))}
         />
         <InputField
-          label="이메일"
-          type="email"
-          placeholder="email@example.com"
-          value={form.email}
-          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-        />
-        <InputField
-          label="주소"
-          placeholder="주소"
-          value={form.address}
-          onChange={(v) => setForm((prev) => ({ ...prev, address: v }))}
+          label="대표자명"
+          placeholder="대표자 이름"
+          value={form.representative_name}
+          onChange={(v) => setForm((prev) => ({ ...prev, representative_name: v }))}
         />
         <InputField
           label="최근 미팅일"
           type="date"
           value={form.last_meeting_date}
           onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
+        />
+        <InputField
+          label="사업자등록증 첨부"
+          placeholder="파일 URL 또는 경로"
+          value={form.business_registration_file}
+          onChange={(v) => setForm((prev) => ({ ...prev, business_registration_file: v }))}
         />
         <SelectField
           label="상태"
@@ -4852,7 +4909,202 @@ function EditClientModal({
           ]}
         />
       </div>
-      <ModalActions onPrimary={() => onSubmit(form as any)} onClose={onClose} primaryLabel="수정" />
+      <ModalActions
+        onPrimary={() =>
+          onSubmit({
+            company_name_en: form.company_name_en,
+            company_name_ko: form.company_name_ko,
+            industry: form.industry || undefined,
+            business_registration_number: form.business_registration_number || undefined,
+            representative_name: form.representative_name || undefined,
+            status: form.status,
+            last_meeting_date: form.last_meeting_date || undefined,
+            business_registration_file: form.business_registration_file || undefined,
+          } as any)
+        }
+        onClose={onClose}
+        primaryLabel="수정"
+      />
+    </ModalShell>
+  );
+}
+
+// Client Worker Modals
+function CreateClientWorkerModal({
+  clientCompanyId,
+  clients,
+  onClose,
+  onSubmit,
+}: {
+  clientCompanyId?: number;
+  clients?: Client[];
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+}) {
+  const [form, setForm] = useState({
+    name_en: '',
+    name_ko: '',
+    phone: '',
+    email: '',
+    business_card_file: '',
+  });
+  const [selectedClientId, setSelectedClientId] = useState<string>(clientCompanyId ? String(clientCompanyId) : '');
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    setError('');
+
+    const nameEnTrimmed = form.name_en.trim();
+    const nameKoTrimmed = form.name_ko.trim();
+
+    if (!nameEnTrimmed && !nameKoTrimmed) {
+      setError('이름 (영어) 또는 이름 (한글) 중 하나는 입력해주세요.');
+      return;
+    }
+
+    const toNullIfEmpty = (value: string) => (value.trim() === '' ? null : value.trim());
+    const effectiveCompanyId = clientCompanyId ?? (selectedClientId ? Number(selectedClientId) : null);
+
+    onSubmit({
+      client_company_id: effectiveCompanyId,
+      name_en: nameEnTrimmed || null,
+      name_ko: nameKoTrimmed || null,
+      phone: toNullIfEmpty(form.phone),
+      email: toNullIfEmpty(form.email),
+      business_card_file: toNullIfEmpty(form.business_card_file),
+    });
+  };
+
+  return (
+    <ModalShell title="담당자 등록" onClose={onClose}>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {!clientCompanyId && (
+          <SelectField
+            label="소속"
+            value={selectedClientId}
+            onChange={(val) => setSelectedClientId(val)}
+            options={[
+              { value: '', label: '소속 선택 안함' },
+              ...(clients ?? []).map((c) => ({
+                value: String(c.id),
+                label: (c as any).company_name_ko || (c as any).company_name_en || '-',
+              })),
+            ]}
+          />
+        )}
+        <InputField
+          label="이름 (한글)"
+          placeholder="이름 (한글)"
+          value={form.name_ko}
+          onChange={(v) => setForm((prev) => ({ ...prev, name_ko: v }))}
+        />
+        <InputField
+          label="이름 (영어)"
+          placeholder="Name (English)"
+          value={form.name_en}
+          onChange={(v) => setForm((prev) => ({ ...prev, name_en: v }))}
+        />
+        <InputField
+          label="연락처"
+          placeholder="010-0000-0000"
+          value={form.phone}
+          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+        />
+        <InputField
+          label="이메일주소"
+          type="email"
+          placeholder="email@example.com"
+          value={form.email}
+          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+        />
+        <InputField
+          label="명함 첨부"
+          placeholder="파일 URL 또는 경로"
+          value={form.business_card_file}
+          onChange={(v) => setForm((prev) => ({ ...prev, business_card_file: v }))}
+        />
+      </div>
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+          <p className="text-xs font-semibold text-red-600">{error}</p>
+        </div>
+      )}
+      <ModalActions
+        onPrimary={handleSubmit}
+        onClose={onClose}
+        primaryLabel="등록"
+      />
+    </ModalShell>
+  );
+}
+
+function EditClientWorkerModal({
+  clientCompanyId,
+  worker,
+  onClose,
+  onSubmit,
+}: {
+  clientCompanyId: number;
+  worker: any;
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+}) {
+  const [form, setForm] = useState({
+    name_en: worker.name_en || '',
+    name_ko: worker.name_ko || '',
+    phone: worker.phone || '',
+    email: worker.email || '',
+    business_card_file: worker.business_card_file || '',
+  });
+
+  return (
+    <ModalShell title="담당자 수정" onClose={onClose}>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <InputField
+          label="이름 (영어) *"
+          placeholder="Name (English)"
+          value={form.name_en}
+          onChange={(v) => setForm((prev) => ({ ...prev, name_en: v }))}
+        />
+        <InputField
+          label="이름 (한글) *"
+          placeholder="이름 (한글)"
+          value={form.name_ko}
+          onChange={(v) => setForm((prev) => ({ ...prev, name_ko: v }))}
+        />
+        <InputField
+          label="연락처"
+          placeholder="010-0000-0000"
+          value={form.phone}
+          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+        />
+        <InputField
+          label="이메일주소"
+          type="email"
+          placeholder="email@example.com"
+          value={form.email}
+          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+        />
+        <InputField
+          label="명함 첨부"
+          placeholder="파일 URL 또는 경로"
+          value={form.business_card_file}
+          onChange={(v) => setForm((prev) => ({ ...prev, business_card_file: v }))}
+        />
+      </div>
+      <ModalActions
+        onPrimary={() =>
+          onSubmit({
+            name_en: form.name_en,
+            name_ko: form.name_ko,
+            phone: form.phone || undefined,
+            email: form.email || undefined,
+            business_card_file: form.business_card_file || undefined,
+          })
+        }
+        onClose={onClose}
+        primaryLabel="수정"
+      />
     </ModalShell>
   );
 }

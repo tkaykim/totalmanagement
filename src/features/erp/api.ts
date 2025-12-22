@@ -7,6 +7,8 @@ import type {
   FinancialKind,
   TaskStatus,
   Client,
+  ClientCompany,
+  ClientWorker,
   Equipment,
   Channel,
   ChannelContent,
@@ -26,7 +28,6 @@ import type {
   Artist,
   ArtistStatus,
   ArtistType,
-  ClientType,
 } from '@/types/database';
 
 const API_BASE = '/api';
@@ -295,8 +296,8 @@ export async function updateUser(
 // ReactStudio & Multi-BU API Functions
 // ============================================
 
-// Clients
-export async function fetchClients(bu?: BU): Promise<Client[]> {
+// Client Companies
+export async function fetchClients(bu?: BU): Promise<ClientCompany[]> {
   const url = bu ? `${API_BASE}/clients?bu=${bu}` : `${API_BASE}/clients`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch clients');
@@ -305,17 +306,15 @@ export async function fetchClients(bu?: BU): Promise<Client[]> {
 
 export async function createClient(data: {
   bu_code: BU;
-  name: string;
+  company_name_en: string;
+  company_name_ko: string;
   industry?: string;
-  contact_person?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
+  business_registration_number?: string;
+  representative_name?: string;
   status?: ClientStatus;
   last_meeting_date?: string;
-  client_type?: ClientType;
-  team_id?: number | null;
-}): Promise<Client> {
+  business_registration_file?: string;
+}): Promise<ClientCompany> {
   const res = await fetch(`${API_BASE}/clients`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -325,7 +324,7 @@ export async function createClient(data: {
   return res.json();
 }
 
-export async function updateClient(id: number, data: Partial<Client>): Promise<Client> {
+export async function updateClient(id: number, data: Partial<ClientCompany>): Promise<ClientCompany> {
   const res = await fetch(`${API_BASE}/clients/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -340,6 +339,50 @@ export async function deleteClient(id: number): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete client');
+}
+
+// Client Workers
+export async function fetchClientWorkers(clientCompanyId?: number): Promise<ClientWorker[]> {
+  const url = clientCompanyId
+    ? `${API_BASE}/client-workers?client_company_id=${clientCompanyId}`
+    : `${API_BASE}/client-workers`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch client workers');
+  return res.json();
+}
+
+export async function createClientWorker(data: {
+  client_company_id: number;
+  name_en: string;
+  name_ko: string;
+  phone?: string;
+  email?: string;
+  business_card_file?: string;
+}): Promise<ClientWorker> {
+  const res = await fetch(`${API_BASE}/client-workers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create client worker');
+  return res.json();
+}
+
+export async function updateClientWorker(id: number, data: Partial<ClientWorker>): Promise<ClientWorker> {
+  const res = await fetch(`${API_BASE}/client-workers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update client worker');
+  return res.json();
+}
+
+export async function deleteClientWorker(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/client-workers/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete client worker');
 }
 
 // Equipment

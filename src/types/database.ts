@@ -134,25 +134,35 @@ export interface AppUser {
   updated_at: string;
 }
 
-export type ClientType = 'individual' | 'team';
-
-export interface Client {
+export interface ClientCompany {
   id: number;
   bu_code: BU;
-  name: string;
-  industry?: string;
-  contact_person?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
+  company_name_en: string | null;
+  company_name_ko: string | null;
+  industry?: string | null;
+  business_registration_number?: string | null;
+  representative_name?: string | null;
   status: ClientStatus;
-  last_meeting_date?: string;
-  // 팀/개인 구분 및 소속 팀 연결
-  client_type?: ClientType;
-  team_id?: number | null;
+  last_meeting_date?: string | null;
+  business_registration_file?: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export interface ClientWorker {
+  id: number;
+  client_company_id: number | null;
+  name_en: string | null;
+  name_ko: string | null;
+  phone?: string | null;
+  email?: string | null;
+  business_card_file?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// 하위 호환성을 위한 타입 별칭 (기존 코드 호환)
+export type Client = ClientCompany;
 
 export interface Equipment {
   id: number;

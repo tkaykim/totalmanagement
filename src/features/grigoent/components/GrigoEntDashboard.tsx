@@ -45,7 +45,7 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { BU, Artist, Project, ProjectTask, Client, ClientStatus, Event, Manual, ExternalWorker, ExternalWorkerType, FinancialEntry, ArtistStatus, ArtistType, ClientType } from '@/types/database';
+import type { BU, Artist, Project, ProjectTask, Client, ClientStatus, Event, Manual, ExternalWorker, ExternalWorkerType, FinancialEntry, ArtistStatus, ArtistType } from '@/types/database';
 import {
   useArtists,
   useCreateArtist,
@@ -58,6 +58,10 @@ import {
   useCreateClient,
   useUpdateClient,
   useDeleteClient,
+  useCreateClientWorker,
+  useUpdateClientWorker,
+  useDeleteClientWorker,
+  useClientWorkers,
   useEvents,
   useManuals,
   useExternalWorkers,
@@ -214,6 +218,9 @@ export default function GrigoEntDashboard() {
   const createClientMutation = useCreateClient();
   const updateClientMutation = useUpdateClient();
   const deleteClientMutation = useDeleteClient();
+  const createClientWorkerMutation = useCreateClientWorker();
+  const updateClientWorkerMutation = useUpdateClientWorker();
+  const deleteClientWorkerMutation = useDeleteClientWorker();
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
@@ -500,7 +507,7 @@ export default function GrigoEntDashboard() {
                           </div>
                           <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
                             {(project as any).pm_name && <span>PM: {(project as any).pm_name}</span>}
-                            {projectClient && <span>클라이언트: {projectClient.name}</span>}
+                            {projectClient && <span>클라이언트: {(projectClient as any).company_name_ko || (projectClient as any).company_name_en || '-'}</span>}
                             <span>매출: ₩{(projectRevenue / 10000).toLocaleString()}만</span>
                             <span>지출: ₩{(projectExpense / 10000).toLocaleString()}만</span>
                           </div>
@@ -1492,7 +1499,7 @@ export default function GrigoEntDashboard() {
       return projects.filter((p) => 
         p.name.toLowerCase().includes(query) ||
         p.cat.toLowerCase().includes(query) ||
-        (p.client_id && partners.find((c) => c.id === p.client_id)?.name.toLowerCase().includes(query))
+        (p.client_id && partners.find((c) => c.id === p.client_id)?.company_name_ko.toLowerCase().includes(query))
       );
     }, [projects, searchQuery, partners]);
 
@@ -1756,7 +1763,7 @@ export default function GrigoEntDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {projectClient?.name || '-'}
+                        {projectClient?.company_name_ko || '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {(project as any).pm_name || '-'}
@@ -1800,6 +1807,70 @@ export default function GrigoEntDashboard() {
                       <tr key={`${project.id}-accordion`}>
                         <td colSpan={8} className="px-6 py-4 bg-gray-50">
                           <div className="space-y-4">
+                            <div className="bg-white rounded-lg border border-gray-200 p-4">
+                              <div className="flex justify-between items-center mb-3">
+                                <h5 className="font-semibold text-gray-800 flex items-center gap-2">
+                                  <CheckSquare className="w-4 h-4" /> 할 일 ({projectTasks.length}건)
+                                </h5>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTaskModalOpen({ projectId: project.id });
+                                  }}
+                                  className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1"
+                                >
+                                  <Plus className="w-3 h-3" /> 할 일 추가
+                                </button>
+                              </div>
+                              <div className="space-y-2">
+                                {projectTasks.length > 0 ? (
+                                  projectTasks.map((task) => (
+                                    <div
+                                      key={task.id}
+                                      className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-100 group"
+                                    >
+                                      <div className="flex-1">
+                                        <div className="text-sm font-medium text-gray-800">{task.title}</div>
+                                        <div className="text-xs text-gray-500">
+                                          {task.assignee} • {task.dueDate}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <StatusBadge
+                                          type={task.status === 'done' ? 'completed' : task.status === 'in-progress' ? 'ongoing' : 'planning'}
+                                          text={task.status === 'done' ? '완료' : task.status === 'in-progress' ? '진행중' : '할 일'}
+                                        />
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditTask(task);
+                                          }}
+                                          className="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          title="수정"
+                                        >
+                                          <Edit3 className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeleteTaskId(task.id);
+                                          }}
+                                          className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          title="삭제"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="text-sm text-gray-400 text-center py-4">
+                                    등록된 할 일이 없습니다.
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
                             <div className="flex justify-between items-center mb-4">
                               <h4 className="font-semibold text-gray-800">매출 및 지출 관리</h4>
                               <div className="flex gap-2">
@@ -1948,70 +2019,6 @@ export default function GrigoEntDashboard() {
                                 </span>
                               </div>
                             </div>
-
-                            <div className="bg-white rounded-lg border border-gray-200 p-4">
-                              <div className="flex justify-between items-center mb-3">
-                                <h5 className="font-semibold text-gray-800 flex items-center gap-2">
-                                  <CheckSquare className="w-4 h-4" /> 할 일 ({projectTasks.length}건)
-                                </h5>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setTaskModalOpen({ projectId: project.id });
-                                  }}
-                                  className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1"
-                                >
-                                  <Plus className="w-3 h-3" /> 할 일 추가
-                                </button>
-                              </div>
-                              <div className="space-y-2">
-                                {projectTasks.length > 0 ? (
-                                  projectTasks.map((task) => (
-                                    <div
-                                      key={task.id}
-                                      className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-100 group"
-                                    >
-                                      <div className="flex-1">
-                                        <div className="text-sm font-medium text-gray-800">{task.title}</div>
-                                        <div className="text-xs text-gray-500">
-                                          {task.assignee} • {task.dueDate}
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <StatusBadge
-                                          type={task.status === 'done' ? 'completed' : task.status === 'in-progress' ? 'ongoing' : 'planning'}
-                                          text={task.status === 'done' ? '완료' : task.status === 'in-progress' ? '진행중' : '할 일'}
-                                        />
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditTask(task);
-                                          }}
-                                          className="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                          title="수정"
-                                        >
-                                          <Edit3 className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDeleteTaskId(task.id);
-                                          }}
-                                          className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                          title="삭제"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <div className="text-sm text-gray-400 text-center py-4">
-                                    등록된 할 일이 없습니다.
-                                  </div>
-                                )}
-                              </div>
-                            </div>
                           </div>
                         </td>
                       </tr>
@@ -2100,6 +2107,7 @@ export default function GrigoEntDashboard() {
             projectId={taskModalOpen.projectId}
             bu={bu}
             projects={projects}
+            users={(usersData as any)?.users || []}
             onClose={() => setTaskModalOpen(null)}
             onSubmit={handleCreateTask}
           />
@@ -2110,6 +2118,7 @@ export default function GrigoEntDashboard() {
             task={editTask}
             bu={bu}
             projects={projects}
+            users={(usersData as any)?.users || []}
             onClose={() => setEditTask(null)}
             onSubmit={(data) => handleUpdateTask(Number(editTask.id), data)}
           />
@@ -2222,7 +2231,7 @@ export default function GrigoEntDashboard() {
               onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
               options={[
                 { value: '', label: '선택 안함' },
-                ...clients.map((c) => ({ value: String(c.id), label: c.name })),
+                ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko })),
               ]}
             />
           </div>
@@ -2540,6 +2549,7 @@ export default function GrigoEntDashboard() {
           <TaskModal
             bu={bu}
             projects={projects}
+            users={(usersData as any)?.users || []}
             onClose={() => setIsCreateModalOpen(false)}
             onSubmit={handleCreateTask}
           />
@@ -2550,6 +2560,7 @@ export default function GrigoEntDashboard() {
             task={editTask}
             bu={bu}
             projects={projects}
+            users={(usersData as any)?.users || []}
             onClose={() => setEditTask(null)}
             onSubmit={(data) => handleUpdateTask(Number(editTask.id), data)}
           />
@@ -2584,148 +2595,41 @@ export default function GrigoEntDashboard() {
   };
 
   const PartnersView = () => {
-    const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [editClient, setEditClient] = useState<Client | null>(null);
+    const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [isClientModalOpen, setClientModalOpen] = useState(false);
+    const [isEditClientModalOpen, setEditClientModalOpen] = useState<Client | null>(null);
     const [deleteClientId, setDeleteClientId] = useState<number | null>(null);
-    const [createInitial, setCreateInitial] = useState<{
-      client_type?: ClientType;
-      team_id?: number;
-    } | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filterStatus, setFilterStatus] = useState<string>('');
-    const [filterType, setFilterType] = useState<string>('');
-    const [filterIndustry, setFilterIndustry] = useState<string>('');
-    const [showFilter, setShowFilter] = useState(false);
-    const filterRef = useRef<HTMLDivElement | null>(null);
+    const [isClientWorkerModalOpen, setClientWorkerModalOpen] = useState<number | null>(null);
+    const [isGlobalClientWorkerModalOpen, setGlobalClientWorkerModalOpen] = useState(false);
+    const [isEditClientWorkerModalOpen, setEditClientWorkerModalOpen] = useState<{ companyId: number; workerId: number } | null>(null);
+    const [deleteClientWorkerId, setDeleteClientWorkerId] = useState<number | null>(null);
+    const [clientSearchQuery, setClientSearchQuery] = useState<string>('');
+    const buClients = clientsData.filter((c) => c.bu_code === bu);
 
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
-          setShowFilter(false);
-        }
-      };
+    const filteredClients = useMemo(() => {
+      if (!clientSearchQuery.trim()) return buClients;
 
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
-
-    const toggleExpand = (id: string) => {
-      if (expandedId === id) setExpandedId(null);
-      else setExpandedId(id);
-    };
-
-    const handleCreate = async (data: Partial<Client>) => {
-      try {
-        await createClientMutation.mutateAsync({
-          bu_code: bu,
-          name: data.name || '',
-          industry: data.industry,
-          contact_person: data.contact_person,
-          phone: data.phone,
-          email: data.email,
-          address: data.address,
-          status: data.status || 'active',
-          last_meeting_date: data.last_meeting_date,
-          client_type: data.client_type,
-          team_id: data.team_id ?? null,
-        });
-        setIsCreateModalOpen(false);
-      } catch (error) {
-        console.error('Failed to create client:', error);
-        alert('등록 중 오류가 발생했습니다.');
-      }
-    };
-
-    const handleUpdate = async (id: number, data: Partial<Client>) => {
-      try {
-        await updateClientMutation.mutateAsync({
-          id,
-          data: {
-            name: data.name,
-            industry: data.industry,
-            contact_person: data.contact_person,
-            phone: data.phone,
-            email: data.email,
-            address: data.address,
-            status: data.status,
-            last_meeting_date: data.last_meeting_date,
-            client_type: data.client_type,
-            team_id: data.team_id ?? null,
-          },
-        });
-        setEditClient(null);
-      } catch (error) {
-        console.error('Failed to update client:', error);
-        alert('수정 중 오류가 발생했습니다.');
-      }
-    };
-
-    const handleDelete = async (id: number) => {
-      try {
-        await deleteClientMutation.mutateAsync(id);
-        setDeleteClientId(null);
-      } catch (error) {
-        console.error('Failed to delete client:', error);
-        alert('삭제 중 오류가 발생했습니다.');
-      }
-    };
-
-    const uniqueIndustries = useMemo(
-      () =>
-        Array.from(
-          new Set(
-            partners
-              .map((p) => p.industry)
-              .filter((v): v is string => Boolean(v && v.trim())),
-          ),
-        ),
-      [partners],
-    );
-
-    const filteredPartners = useMemo(() => {
-      const query = searchQuery.trim().toLowerCase();
-
-      return partners.filter((p) => {
-        if (filterStatus && p.status !== filterStatus) return false;
-        if (filterType && (p.client_type || 'individual') !== filterType) return false;
-        if (filterIndustry && p.industry !== filterIndustry) return false;
-
-        if (!query) return true;
-
-        const name = p.name?.toLowerCase() || '';
-        const industry = p.industry?.toLowerCase() || '';
-        const contact = p.contact_person?.toLowerCase() || '';
+      const query = clientSearchQuery.toLowerCase().trim();
+      return buClients.filter((client) => {
+        const companyNameKo = ((client as any).company_name_ko || '').toLowerCase();
+        const companyNameEn = ((client as any).company_name_en || '').toLowerCase();
+        const industry = (client.industry || '').toLowerCase();
+        const representativeName = ((client as any).representative_name || '').toLowerCase();
+        const businessRegNumber = ((client as any).business_registration_number || '').toLowerCase();
 
         return (
-          name.includes(query) ||
+          companyNameKo.includes(query) ||
+          companyNameEn.includes(query) ||
           industry.includes(query) ||
-          contact.includes(query)
+          representativeName.includes(query) ||
+          businessRegNumber.includes(query)
         );
       });
-    }, [partners, searchQuery, filterStatus, filterType, filterIndustry]);
+    }, [buClients, clientSearchQuery]);
 
-    const { teamsOnly, teamsWithMembers, topLevelIndividuals } = useMemo(() => {
-      const allTeams = filteredPartners.filter((p) => p.client_type === 'team');
-      const allIndividuals = filteredPartners.filter(
-        (p) => p.client_type !== 'team' || !p.client_type,
-      );
-
-      const grouped = allTeams.map((team) => ({
-        team,
-        members: allIndividuals.filter((m) => m.team_id === team.id),
-      }));
-
-      const individualsWithoutTeam = allIndividuals.filter((m) => !m.team_id);
-
-      return {
-        teamsOnly: allTeams,
-        teamsWithMembers: grouped,
-        topLevelIndividuals: individualsWithoutTeam,
-      };
-    }, [filteredPartners]);
+    const toggleExpand = (id: number) => {
+      setExpandedId(expandedId === id ? null : id);
+    };
 
     return (
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
@@ -2734,97 +2638,34 @@ export default function GrigoEntDashboard() {
             <h2 className="text-3xl font-black text-gray-900 tracking-tighter">거래처/파트너 DB</h2>
             <p className="text-sm text-gray-500 font-medium">협력사 및 클라이언트 연락망을 리스트로 관리합니다.</p>
           </div>
-          <button
-            onClick={() => {
-              setCreateInitial(null);
-              setIsCreateModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition-colors"
-          >
-            <Plus size={16} />
-            거래처 추가
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setClientModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition-colors"
+            >
+              <Plus size={16} />
+              클라이언트 등록
+            </button>
+            <button
+              onClick={() => setGlobalClientWorkerModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition-colors"
+            >
+              <Plus size={16} />
+              담당자 추가
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-gray-50/30 flex gap-4">
-            <div className="relative flex-1">
+          <div className="p-4 border-b border-gray-100 bg-gray-50/30">
+            <div className="relative">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                placeholder="회사명, 업종, 담당자 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="클라이언트 검색..."
+                value={clientSearchQuery}
+                onChange={(e) => setClientSearchQuery(e.target.value)}
               />
-            </div>
-            <div className="relative" ref={filterRef}>
-              <button
-                onClick={() => setShowFilter(!showFilter)}
-                className={cn(
-                  'p-3 bg-white border rounded-2xl transition-colors',
-                  (filterStatus || filterType || filterIndustry) || showFilter
-                    ? 'border-indigo-300 text-indigo-600 bg-indigo-50'
-                    : 'border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-200',
-                )}
-              >
-                <Filter size={20} />
-              </button>
-              {showFilter && (
-                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-50 min-w-[280px] space-y-3">
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">상태</label>
-                    <select
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
-                    >
-                      <option value="">전체</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">계정 타입</label>
-                    <select
-                      value={filterType}
-                      onChange={(e) => setFilterType(e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
-                    >
-                      <option value="">전체</option>
-                      <option value="team">팀 계정</option>
-                      <option value="individual">개인 계정</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">업종</label>
-                    <select
-                      value={filterIndustry}
-                      onChange={(e) => setFilterIndustry(e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
-                    >
-                      <option value="">전체</option>
-                      {uniqueIndustries.map((ind) => (
-                        <option key={ind} value={ind}>
-                          {ind}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {(filterStatus || filterType || filterIndustry) && (
-                    <button
-                      onClick={() => {
-                        setFilterStatus('');
-                        setFilterType('');
-                        setFilterIndustry('');
-                      }}
-                      className="w-full px-3 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    >
-                      필터 초기화
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
@@ -2832,293 +2673,383 @@ export default function GrigoEntDashboard() {
             <table className="w-full text-left min-w-[1000px]">
               <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-5">Client / Type</th>
-                  <th className="px-6 py-5">Industry</th>
-                  <th className="px-6 py-5">Manager / Contact</th>
-                  <th className="px-6 py-5">Last Meeting</th>
-                  <th className="px-6 py-5 text-right">Status</th>
+                  <th className="px-6 py-5">클라이언트 / 업종</th>
+                  <th className="px-6 py-5">담당자</th>
+                  <th className="px-6 py-5">대표자</th>
+                  <th className="px-6 py-5">최근 미팅</th>
+                  <th className="px-6 py-5 text-right">상태</th>
                   <th className="px-6 py-5 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-              {/* 팀 계정 + 소속 개인 계정 */}
-              {teamsWithMembers.map(({ team, members }) => (
-                <React.Fragment key={`team-${team.id}`}>
-                  <tr
-                    onClick={() => toggleExpand(String(team.id))}
-                    className={cn(
-                      'cursor-pointer transition-colors',
-                      expandedId === String(team.id) ? 'bg-indigo-50/30' : 'hover:bg-gray-50'
-                    )}
-                  >
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-4">
-                        <ChevronDown
-                          className={cn(
-                            'w-4 h-4 text-gray-400 transition-transform',
-                            expandedId === String(team.id) && 'rotate-180',
-                          )}
-                        />
-                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-sm bg-gray-900">
-                          {team.name[0]}
-                        </div>
-                        <div>
-                          <p className="font-black text-gray-900 text-sm">{team.name}</p>
-                          <span className="text-[10px] font-bold text-gray-500">
-                            팀 계정
-                            {members.length > 0 && ` (${members.length}명)`}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-500">{team.industry || 'N/A'}</td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-900">{team.contact_person || 'N/A'}</td>
-                    <td className="px-6 py-5 text-xs text-gray-500 font-mono">{team.last_meeting_date || '-'}</td>
-                    <td className="px-6 py-5 text-right">
-                      <StatusBadge type={team.status === 'active' ? 'active' : 'default'} text={team.status} />
-                    </td>
-                    <td className="px-6 py-5 text-gray-400">
-                      {expandedId === String(team.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </td>
-                  </tr>
-                  {expandedId === String(team.id) && (
-                    <tr className="bg-gray-50/50">
-                      <td colSpan={6} className="px-6 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm animate-in slide-in-from-top-2 duration-200">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <Mail size={14} />
-                              <span className="font-bold">Email:</span>
-                              <span className="font-mono text-gray-900">{team.email || 'N/A'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <Phone size={14} />
-                              <span className="font-bold">Direct:</span>
-                              <span className="font-mono text-gray-900">{team.phone || 'N/A'}</span>
-                            </div>
-                            {team.address && (
-                              <div className="flex items-center gap-2 text-gray-500">
-                                <span className="font-bold">Address:</span>
-                                <span className="text-gray-900">{team.address}</span>
-                              </div>
-                            )}
-                            {team.last_meeting_date && (
-                              <div className="flex items-center gap-2 text-gray-500">
-                                <span className="font-bold">최근 미팅:</span>
-                                <span className="text-gray-900">{team.last_meeting_date}</span>
-                              </div>
-                            )}
+                {filteredClients.length > 0 ? (
+                  filteredClients.map((client) => {
+                    const clientProjects = projects.filter((p) => (p as any).client_id === client.id);
+                    const clientRevenues = financials.filter(
+                      (f) => clientProjects.some((p) => p.id === f.projectId) && f.type === 'revenue'
+                    );
+                    const totalSpent = clientRevenues.reduce((sum, r) => sum + r.amount, 0);
+
+                    const ClientWorkersList = () => {
+                      const { data: workers = [] } = useClientWorkers(client.id);
+                      const [workerSearchQuery, setWorkerSearchQuery] = useState<string>('');
+
+                      const filteredWorkers = useMemo(() => {
+                        if (!workerSearchQuery.trim()) return workers;
+
+                        const query = workerSearchQuery.toLowerCase().trim();
+                        return workers.filter((worker: any) => {
+                          const nameKo = (worker.name_ko || '').toLowerCase();
+                          const nameEn = (worker.name_en || '').toLowerCase();
+                          const phone = (worker.phone || '').toLowerCase();
+                          const email = (worker.email || '').toLowerCase();
+
+                          return (
+                            nameKo.includes(query) ||
+                            nameEn.includes(query) ||
+                            phone.includes(query) ||
+                            email.includes(query)
+                          );
+                        });
+                      }, [workers, workerSearchQuery]);
+
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400">담당자</h4>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setClientWorkerModalOpen(client.id);
+                              }}
+                              className="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600 hover:bg-indigo-100 flex items-center gap-1"
+                            >
+                              <Plus size={10} />
+                              담당자 추가
+                            </button>
                           </div>
-                          <div className="space-y-3">
-                            <div className="rounded-2xl border border-gray-200 bg-white p-3">
-                              <div className="mb-2 flex items-center justify-between">
-                                <p className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400">
-                                  소속 직원 / 담당자 ({members.length})
-                                </p>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCreateInitial({ client_type: 'individual', team_id: team.id });
-                                    setIsCreateModalOpen(true);
-                                  }}
-                                  className="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600 hover:bg-indigo-100"
+                          {workers.length > 0 && (
+                            <div className="mb-2">
+                              <input
+                                type="text"
+                                placeholder="담당자 검색..."
+                                value={workerSearchQuery}
+                                onChange={(e) => setWorkerSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              />
+                            </div>
+                          )}
+                          {filteredWorkers.length > 0 ? (
+                            <div className="space-y-1.5">
+                              {filteredWorkers.map((worker: any) => (
+                                <div
+                                  key={worker.id}
+                                  className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
                                 >
-                                  개인 추가
-                                </button>
-                              </div>
-                              {members.length > 0 ? (
-                                <div className="space-y-1.5">
-                                  {members.map((m) => (
-                                    <div
-                                      key={m.id}
-                                      className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
+                                  <div>
+                                    <p className="font-bold text-gray-800">
+                                      {worker.name_ko || worker.name_en || '-'}
+                                    </p>
+                                    <p className="font-mono text-[11px] text-gray-500">
+                                      {worker.phone || ''}
+                                      {worker.phone && worker.email && ' • '}
+                                      {worker.email || ''}
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditClientWorkerModalOpen({ companyId: client.id, workerId: worker.id });
+                                      }}
+                                      className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
                                     >
-                                      <div>
-                                        <p className="font-bold text-gray-800">
-                                          {m.contact_person || m.name}
-                                        </p>
-                                        <p className="font-mono text-[11px] text-gray-500">
-                                          {m.email || m.phone || '-'}
-                                        </p>
-                                      </div>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditClient(m);
-                                        }}
-                                        className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
-                                      >
-                                        수정
-                                      </button>
-                                    </div>
-                                  ))}
+                                      수정
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteClientWorkerId(worker.id);
+                                      }}
+                                      className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-red-500 hover:border-red-300 hover:text-red-600"
+                                    >
+                                      삭제
+                                    </button>
+                                  </div>
                                 </div>
-                              ) : (
-                                <div className="py-6 text-center">
-                                  <p className="text-xs text-gray-400 font-medium">등록된 멤버가 없습니다.</p>
-                                  <p className="text-[10px] text-gray-400 mt-1">위의 "개인 추가" 버튼을 눌러 멤버를 추가하세요.</p>
-                                </div>
-                              )}
+                              ))}
                             </div>
-                            <div className="flex justify-end items-center gap-4">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditClient(team);
-                                }}
-                                className="px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors text-gray-700"
-                              >
-                                정보 수정
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteClientId(team.id);
-                                }}
-                                className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
-                              >
-                                삭제
-                              </button>
+                          ) : (
+                            <div className="py-4 text-center">
+                              <p className="text-xs text-gray-400 font-medium">
+                                {workerSearchQuery ? '검색 결과가 없습니다.' : '등록된 담당자가 없습니다.'}
+                              </p>
                             </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-
-              {/* 팀에 속하지 않은 개인 계정 */}
-              {topLevelIndividuals.map((p) => (
-                <React.Fragment key={`client-${p.id}`}>
-                  <tr
-                    onClick={() => toggleExpand(String(p.id))}
-                    className={cn(
-                      'cursor-pointer transition-colors',
-                      expandedId === String(p.id) ? 'bg-indigo-50/30' : 'hover:bg-gray-50'
-                    )}
-                  >
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-4">
-                        <ChevronDown
-                          className={cn(
-                            'w-4 h-4 text-gray-400 transition-transform',
-                            expandedId === String(p.id) && 'rotate-180',
                           )}
-                        />
-                        <div className="w-12 h-12 rounded-2xl bg-gray-900 text-white flex items-center justify-center font-black text-sm shadow-sm">
-                          {p.name[0]}
                         </div>
-                        <div>
-                          <p className="font-black text-gray-900 text-sm">{p.name}</p>
-                          <span className="text-[10px] font-bold text-gray-500">개인 계정</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-500">{p.industry || 'N/A'}</td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-900">{p.contact_person || 'N/A'}</td>
-                    <td className="px-6 py-5 text-xs text-gray-500 font-mono">{p.last_meeting_date || '-'}</td>
-                    <td className="px-6 py-5 text-right">
-                      <StatusBadge type={p.status === 'active' ? 'active' : 'default'} text={p.status} />
-                    </td>
-                    <td className="px-6 py-5 text-gray-400">
-                      {expandedId === String(p.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      );
+                    };
+
+                    const ClientWorkersCount = () => {
+                      const { data: workers = [] } = useClientWorkers(client.id);
+                      const count = workers.length;
+
+                      if (count === 0) {
+                        return <span className="text-xs text-gray-400 font-medium">담당자 없음</span>;
+                      }
+
+                      return (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-[11px] font-bold text-gray-700">
+                          <Users size={10} />
+                          담당자 {count}명
+                        </span>
+                      );
+                    };
+
+                    return (
+                      <React.Fragment key={client.id}>
+                        <tr
+                          onClick={() => toggleExpand(client.id)}
+                          className={cn(
+                            'cursor-pointer transition-colors',
+                            expandedId === client.id ? 'bg-indigo-50/30' : 'hover:bg-gray-50'
+                          )}
+                        >
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-4">
+                              <ChevronDown
+                                className={cn(
+                                  'w-4 h-4 text-gray-400 transition-transform',
+                                  expandedId === client.id && 'rotate-180',
+                                )}
+                              />
+                              <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-sm bg-gray-900">
+                                {((client as any).company_name_ko || (client as any).company_name_en || '-').substring(0, 1)}
+                              </div>
+                              <div>
+                                <p className="font-black text-gray-900 text-sm">
+                                  {(client as any).company_name_ko || (client as any).company_name_en || '-'}
+                                </p>
+                                <p className="text-[10px] font-bold text-gray-500">{client.industry || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <ClientWorkersCount />
+                          </td>
+                          <td className="px-6 py-5 text-xs font-bold text-gray-900">
+                            {(client as any).representative_name || 'N/A'}
+                          </td>
+                          <td className="px-6 py-5 text-xs text-gray-500 font-mono">
+                            {client.last_meeting_date || '-'}
+                          </td>
+                          <td className="px-6 py-5 text-right">
+                            <StatusBadge type={client.status === 'active' ? 'active' : 'default'} text={client.status} />
+                          </td>
+                          <td className="px-6 py-5 text-gray-400">
+                            {expandedId === client.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </td>
+                        </tr>
+                        {expandedId === client.id && (
+                          <tr className="bg-gray-50/50">
+                            <td colSpan={6} className="px-6 py-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm animate-in slide-in-from-top-2 duration-200">
+                                <div className="space-y-2">
+                                  <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2">
+                                    회사 정보
+                                  </h4>
+                                  {(client as any).business_registration_number && (
+                                    <div className="flex items-center text-xs text-gray-700">
+                                      <span className="text-gray-500 mr-2">사업자등록번호:</span>
+                                      {(client as any).business_registration_number}
+                                    </div>
+                                  )}
+                                  {(client as any).representative_name && (
+                                    <div className="flex items-center text-xs text-gray-700">
+                                      <span className="text-gray-500 mr-2">대표자:</span>
+                                      {(client as any).representative_name}
+                                    </div>
+                                  )}
+                                  {client.last_meeting_date && (
+                                    <div className="flex items-center text-xs text-gray-700">
+                                      <span className="text-gray-500 mr-2">최근 미팅:</span>
+                                      {client.last_meeting_date}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2">
+                                    거래 현황
+                                  </h4>
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500">진행 프로젝트</span>
+                                    <span className="font-bold">{clientProjects.length} 건</span>
+                                  </div>
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500">총 매출액</span>
+                                    <span className="font-bold text-indigo-600">
+                                      {formatCurrency(totalSpent)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col justify-end items-start md:items-end gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditClientModalOpen(client);
+                                    }}
+                                    className="px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors text-gray-700"
+                                  >
+                                    정보 수정
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteClientId(client.id);
+                                    }}
+                                    className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                                  >
+                                    삭제
+                                  </button>
+                                </div>
+                                <div className="md:col-span-3 mt-4">
+                                  <ClientWorkersList />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                      {clientSearchQuery ? '검색 결과가 없습니다.' : '등록된 클라이언트가 없습니다.'}
                     </td>
                   </tr>
-                  {expandedId === String(p.id) && (
-                    <tr className="bg-gray-50/50">
-                      <td colSpan={6} className="px-6 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm animate-in slide-in-from-top-2 duration-200">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <Mail size={14} />
-                              <span className="font-bold">Email:</span>
-                              <span className="font-mono text-gray-900">{p.email || 'N/A'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <Phone size={14} />
-                              <span className="font-bold">Direct:</span>
-                              <span className="font-mono text-gray-900">{p.phone || 'N/A'}</span>
-                            </div>
-                            {p.address && (
-                              <div className="flex items-center gap-2 text-gray-500">
-                                <span className="font-bold">Address:</span>
-                                <span className="text-gray-900">{p.address}</span>
-                              </div>
-                            )}
-                            {p.last_meeting_date && (
-                              <div className="flex items-center gap-2 text-gray-500">
-                                <span className="font-bold">최근 미팅:</span>
-                                <span className="text-gray-900">{p.last_meeting_date}</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex flex-col justify-end items-start md:items-end gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditClient(p);
-                              }}
-                              className="px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors text-gray-700"
-                            >
-                              정보 수정
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteClientId(p.id);
-                              }}
-                              className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
-                            >
-                              삭제
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {filteredPartners.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">
-                    No Partners Found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-        {isCreateModalOpen && (
-          <ClientModal
-            teams={teamsOnly}
-            initialClientType={createInitial?.client_type}
-            initialTeamId={createInitial?.team_id}
-            onClose={() => {
-              setIsCreateModalOpen(false);
-              setCreateInitial(null);
+        {isClientModalOpen && (
+          <CreateClientModal
+            bu={bu}
+            onClose={() => setClientModalOpen(false)}
+            onSubmit={async (data) => {
+              try {
+                await createClientMutation.mutateAsync(data as any);
+                setClientModalOpen(false);
+              } catch (error) {
+                console.error('Failed to create client:', error);
+              }
             }}
-            onSubmit={handleCreate}
           />
         )}
 
-        {editClient && (
-          <ClientModal
-            client={editClient}
-            teams={teamsOnly}
-            onClose={() => setEditClient(null)}
-            onSubmit={(data) => handleUpdate(editClient.id, data)}
+        {isEditClientModalOpen && (
+          <EditClientModal
+            client={isEditClientModalOpen}
+            onClose={() => setEditClientModalOpen(null)}
+            onSubmit={async (data) => {
+              try {
+                await updateClientMutation.mutateAsync({
+                  id: isEditClientModalOpen.id,
+                  data: data as any,
+                });
+                setEditClientModalOpen(null);
+              } catch (error) {
+                console.error('Failed to update client:', error);
+              }
+            }}
           />
         )}
 
         {deleteClientId && (
           <DeleteConfirmModal
-            title="거래처 삭제"
-            message="정말 이 거래처를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
-            onConfirm={() => handleDelete(deleteClientId)}
+            title="클라이언트 삭제"
+            message="정말로 이 클라이언트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+            onConfirm={async () => {
+              try {
+                await deleteClientMutation.mutateAsync(deleteClientId);
+                setDeleteClientId(null);
+              } catch (error) {
+                console.error('Failed to delete client:', error);
+              }
+            }}
             onCancel={() => setDeleteClientId(null)}
+          />
+        )}
+
+        {isClientWorkerModalOpen && (
+          <CreateClientWorkerModal
+            clientCompanyId={isClientWorkerModalOpen}
+            onClose={() => setClientWorkerModalOpen(null)}
+            onSubmit={async (data) => {
+              try {
+                await createClientWorkerMutation.mutateAsync(data);
+                setClientWorkerModalOpen(null);
+              } catch (error) {
+                console.error('Failed to create client worker:', error);
+              }
+            }}
+          />
+        )}
+
+        {isGlobalClientWorkerModalOpen && (
+          <CreateClientWorkerModal
+            clients={clientsData as Client[]}
+            onClose={() => setGlobalClientWorkerModalOpen(false)}
+            onSubmit={async (data) => {
+              try {
+                await createClientWorkerMutation.mutateAsync(data);
+                setGlobalClientWorkerModalOpen(false);
+              } catch (error) {
+                console.error('Failed to create client worker:', error);
+              }
+            }}
+          />
+        )}
+
+        {isEditClientWorkerModalOpen && (() => {
+          const { data: workers = [] } = useClientWorkers(isEditClientWorkerModalOpen.companyId);
+          const worker = workers.find((w: any) => w.id === isEditClientWorkerModalOpen.workerId);
+          return worker ? (
+            <EditClientWorkerModal
+              clientCompanyId={isEditClientWorkerModalOpen.companyId}
+              worker={worker}
+              onClose={() => setEditClientWorkerModalOpen(null)}
+              onSubmit={async (data) => {
+                try {
+                  await updateClientWorkerMutation.mutateAsync({
+                    id: isEditClientWorkerModalOpen.workerId,
+                    data,
+                  });
+                  setEditClientWorkerModalOpen(null);
+                } catch (error) {
+                  console.error('Failed to update client worker:', error);
+                }
+              }}
+            />
+          ) : null;
+        })()}
+
+        {deleteClientWorkerId && (
+          <DeleteConfirmModal
+            title="담당자 삭제"
+            message="정말로 이 담당자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+            onConfirm={async () => {
+              try {
+                await deleteClientWorkerMutation.mutateAsync(deleteClientWorkerId);
+                setDeleteClientWorkerId(null);
+              } catch (error) {
+                console.error('Failed to delete client worker:', error);
+              }
+            }}
+            onCancel={() => setDeleteClientWorkerId(null)}
           />
         )}
       </div>
@@ -3897,186 +3828,443 @@ function FreelancerModal({
   );
 }
 
-// Client Modal
-function ClientModal({
-  client,
-  teams,
-  initialClientType,
-  initialTeamId,
+// Client Modals
+function CreateClientModal({
+  bu,
   onClose,
   onSubmit,
 }: {
-  client?: Client | null;
-  teams: Client[];
-  initialClientType?: ClientType;
-  initialTeamId?: number;
+  bu: BU;
   onClose: () => void;
   onSubmit: (data: Partial<Client>) => void;
 }) {
   const [form, setForm] = useState({
-    name: client?.name || '',
-    industry: client?.industry || '',
-    contact_person: client?.contact_person || '',
-    phone: client?.phone || '',
-    email: client?.email || '',
-    address: client?.address || '',
-    status: (client?.status || 'active') as ClientStatus,
-    last_meeting_date: client?.last_meeting_date || '',
-    client_type: (client?.client_type || initialClientType || 'individual') as ClientType,
-    team_id: client?.team_id
-      ? String(client.team_id)
-      : initialTeamId
-      ? String(initialTeamId)
-      : '',
+    company_name_en: '',
+    company_name_ko: '',
+    industry: '',
+    business_registration_number: '',
+    representative_name: '',
+    status: 'active' as 'active' | 'inactive' | 'archived',
+    last_meeting_date: '',
+    business_registration_file: '',
   });
+  const [error, setError] = useState('');
 
   const handleSubmit = () => {
-    if (!form.name) {
-      alert('거래처명은 필수 항목입니다.');
+    setError('');
+
+    const nameEnTrimmed = form.company_name_en.trim();
+    const nameKoTrimmed = form.company_name_ko.trim();
+
+    if (!nameEnTrimmed && !nameKoTrimmed) {
+      setError('회사명 (영어) 또는 회사명 (한글) 중 하나는 입력해주세요.');
       return;
     }
+
+    const toNullIfEmpty = (value: string) => (value.trim() === '' ? null : value.trim());
+
     onSubmit({
-      ...form,
-      team_id: form.team_id ? Number(form.team_id) : undefined,
+      bu_code: bu,
+      company_name_en: nameEnTrimmed || null,
+      company_name_ko: nameKoTrimmed || null,
+      industry: toNullIfEmpty(form.industry),
+      business_registration_number: toNullIfEmpty(form.business_registration_number),
+      representative_name: toNullIfEmpty(form.representative_name),
+      status: form.status,
+      last_meeting_date: toNullIfEmpty(form.last_meeting_date),
+      business_registration_file: toNullIfEmpty(form.business_registration_file),
+    } as any);
+  };
+
+  return (
+    <ModalShell title="클라이언트 회사 등록" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <InputField
+            label="회사명 (한글)"
+            placeholder="회사명 (한글)"
+            value={form.company_name_ko}
+            onChange={(v) => setForm((prev) => ({ ...prev, company_name_ko: v }))}
+          />
+          <InputField
+            label="회사명 (영어)"
+            placeholder="Company Name (English)"
+            value={form.company_name_en}
+            onChange={(v) => setForm((prev) => ({ ...prev, company_name_en: v }))}
+          />
+          <InputField
+            label="업종"
+            placeholder="예: 엔터테인먼트"
+            value={form.industry}
+            onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
+          />
+          <InputField
+            label="사업자등록번호"
+            placeholder="123-45-67890"
+            value={form.business_registration_number}
+            onChange={(v) => setForm((prev) => ({ ...prev, business_registration_number: v }))}
+          />
+          <InputField
+            label="대표자명"
+            placeholder="대표자 이름"
+            value={form.representative_name}
+            onChange={(v) => setForm((prev) => ({ ...prev, representative_name: v }))}
+          />
+          <InputField
+            label="최근 미팅일"
+            type="date"
+            value={form.last_meeting_date}
+            onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
+          />
+          <InputField
+            label="사업자등록증 첨부"
+            placeholder="파일 URL 또는 경로"
+            value={form.business_registration_file}
+            onChange={(v) => setForm((prev) => ({ ...prev, business_registration_file: v }))}
+          />
+          <SelectField
+            label="상태"
+            value={form.status}
+            onChange={(val) => setForm((prev) => ({ ...prev, status: val as any }))}
+            options={[
+              { value: 'active', label: '활성' },
+              { value: 'inactive', label: '비활성' },
+              { value: 'archived', label: '보관됨' },
+            ]}
+          />
+        </div>
+        {error && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+            <p className="text-xs font-semibold text-red-600">{error}</p>
+          </div>
+        )}
+        <ModalActions
+          onPrimary={handleSubmit}
+          onClose={onClose}
+          primaryLabel="등록"
+        />
+      </div>
+    </ModalShell>
+  );
+}
+
+function EditClientModal({
+  client,
+  onClose,
+  onSubmit,
+}: {
+  client: Client;
+  onClose: () => void;
+  onSubmit: (data: Partial<Client>) => void;
+}) {
+  const [form, setForm] = useState({
+    company_name_en: (client as any).company_name_en || '',
+    company_name_ko: (client as any).company_name_ko || '',
+    industry: client.industry || '',
+    business_registration_number: (client as any).business_registration_number || '',
+    representative_name: (client as any).representative_name || '',
+    status: client.status,
+    last_meeting_date: client.last_meeting_date || '',
+    business_registration_file: (client as any).business_registration_file || '',
+  });
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    setError('');
+
+    const nameEnTrimmed = form.company_name_en.trim();
+    const nameKoTrimmed = form.company_name_ko.trim();
+
+    if (!nameEnTrimmed && !nameKoTrimmed) {
+      setError('회사명 (영어) 또는 회사명 (한글) 중 하나는 입력해주세요.');
+      return;
+    }
+
+    const toNullIfEmpty = (value: string) => (value.trim() === '' ? null : value.trim());
+
+    onSubmit({
+      company_name_en: nameEnTrimmed || null,
+      company_name_ko: nameKoTrimmed || null,
+      industry: toNullIfEmpty(form.industry),
+      business_registration_number: toNullIfEmpty(form.business_registration_number),
+      representative_name: toNullIfEmpty(form.representative_name),
+      status: form.status,
+      last_meeting_date: toNullIfEmpty(form.last_meeting_date),
+      business_registration_file: toNullIfEmpty(form.business_registration_file),
+    } as any);
+  };
+
+  return (
+    <ModalShell title="클라이언트 회사 수정" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <InputField
+            label="회사명 (한글)"
+            placeholder="회사명 (한글)"
+            value={form.company_name_ko}
+            onChange={(v) => setForm((prev) => ({ ...prev, company_name_ko: v }))}
+          />
+          <InputField
+            label="회사명 (영어)"
+            placeholder="Company Name (English)"
+            value={form.company_name_en}
+            onChange={(v) => setForm((prev) => ({ ...prev, company_name_en: v }))}
+          />
+          <InputField
+            label="업종"
+            placeholder="예: 엔터테인먼트"
+            value={form.industry}
+            onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
+          />
+          <InputField
+            label="사업자등록번호"
+            placeholder="123-45-67890"
+            value={form.business_registration_number}
+            onChange={(v) => setForm((prev) => ({ ...prev, business_registration_number: v }))}
+          />
+          <InputField
+            label="대표자명"
+            placeholder="대표자 이름"
+            value={form.representative_name}
+            onChange={(v) => setForm((prev) => ({ ...prev, representative_name: v }))}
+          />
+          <InputField
+            label="최근 미팅일"
+            type="date"
+            value={form.last_meeting_date}
+            onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
+          />
+          <InputField
+            label="사업자등록증 첨부"
+            placeholder="파일 URL 또는 경로"
+            value={form.business_registration_file}
+            onChange={(v) => setForm((prev) => ({ ...prev, business_registration_file: v }))}
+          />
+          <SelectField
+            label="상태"
+            value={form.status}
+            onChange={(val) => setForm((prev) => ({ ...prev, status: val as any }))}
+            options={[
+              { value: 'active', label: '활성' },
+              { value: 'inactive', label: '비활성' },
+              { value: 'archived', label: '보관됨' },
+            ]}
+          />
+        </div>
+        {error && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+            <p className="text-xs font-semibold text-red-600">{error}</p>
+          </div>
+        )}
+        <ModalActions
+          onPrimary={handleSubmit}
+          onClose={onClose}
+          primaryLabel="수정"
+        />
+      </div>
+    </ModalShell>
+  );
+}
+
+// Client Worker Modals
+function CreateClientWorkerModal({
+  clientCompanyId,
+  clients,
+  onClose,
+  onSubmit,
+}: {
+  clientCompanyId?: number;
+  clients?: Client[];
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+}) {
+  const [form, setForm] = useState({
+    name_en: '',
+    name_ko: '',
+    phone: '',
+    email: '',
+    business_card_file: '',
+  });
+  const [selectedClientId, setSelectedClientId] = useState<string>(clientCompanyId ? String(clientCompanyId) : '');
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    setError('');
+
+    const nameEnTrimmed = form.name_en.trim();
+    const nameKoTrimmed = form.name_ko.trim();
+
+    if (!nameEnTrimmed && !nameKoTrimmed) {
+      setError('이름 (영어) 또는 이름 (한글) 중 하나는 입력해주세요.');
+      return;
+    }
+
+    const toNullIfEmpty = (value: string) => (value.trim() === '' ? null : value.trim());
+    const effectiveCompanyId = clientCompanyId ?? (selectedClientId ? Number(selectedClientId) : null);
+
+    onSubmit({
+      client_company_id: effectiveCompanyId,
+      name_en: nameEnTrimmed || null,
+      name_ko: nameKoTrimmed || null,
+      phone: toNullIfEmpty(form.phone),
+      email: toNullIfEmpty(form.email),
+      business_card_file: toNullIfEmpty(form.business_card_file),
     });
   };
 
   return (
-    <ModalShell title={client ? '거래처 수정' : '거래처 추가'} onClose={onClose}>
+    <ModalShell title="담당자 등록" onClose={onClose}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <SelectField
-            label="계정 타입"
-            value={form.client_type}
-            onChange={(v) =>
-              setForm((prev) => ({
-                ...prev,
-                client_type: v as ClientType,
-                team_id: v === 'team' ? '' : prev.team_id,
-                contact_person: v === 'individual' ? '' : prev.contact_person,
-              }))
-            }
-            options={[
-              { value: 'individual', label: '개인 계정 (직원/담당자)' },
-              { value: 'team', label: '팀 계정 (회사/조직)' },
-            ]}
-          />
-          {form.client_type === 'individual' && (
+          {!clientCompanyId && (
             <SelectField
-              label="소속 팀 (선택)"
-              value={form.team_id}
-              onChange={(v) => setForm((prev) => ({ ...prev, team_id: v }))}
+              label="소속"
+              value={selectedClientId}
+              onChange={(val) => setSelectedClientId(val)}
               options={[
-                { value: '', label: '소속 팀 없음' },
-                ...teams.map((t) => ({
-                  value: String(t.id),
-                  label: t.name,
+                { value: '', label: '소속 선택 안함' },
+                ...(clients ?? []).map((c) => ({
+                  value: String(c.id),
+                  label: (c as any).company_name_ko || (c as any).company_name_en || '-',
                 })),
               ]}
             />
           )}
+          <InputField
+            label="이름 (한글)"
+            placeholder="이름 (한글)"
+            value={form.name_ko}
+            onChange={(v) => setForm((prev) => ({ ...prev, name_ko: v }))}
+          />
+          <InputField
+            label="이름 (영어)"
+            placeholder="Name (English)"
+            value={form.name_en}
+            onChange={(v) => setForm((prev) => ({ ...prev, name_en: v }))}
+          />
+          <InputField
+            label="연락처"
+            placeholder="010-0000-0000"
+            value={form.phone}
+            onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+          />
+          <InputField
+            label="이메일주소"
+            type="email"
+            placeholder="email@example.com"
+            value={form.email}
+            onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+          />
+          <InputField
+            label="명함 첨부"
+            placeholder="파일 URL 또는 경로"
+            value={form.business_card_file}
+            onChange={(v) => setForm((prev) => ({ ...prev, business_card_file: v }))}
+          />
         </div>
+        {error && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+            <p className="text-xs font-semibold text-red-600">{error}</p>
+          </div>
+        )}
+        <ModalActions
+          onPrimary={handleSubmit}
+          onClose={onClose}
+          primaryLabel="등록"
+        />
+      </div>
+    </ModalShell>
+  );
+}
 
+function EditClientWorkerModal({
+  clientCompanyId,
+  worker,
+  onClose,
+  onSubmit,
+}: {
+  clientCompanyId: number;
+  worker: any;
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+}) {
+  const [form, setForm] = useState({
+    name_en: worker.name_en || '',
+    name_ko: worker.name_ko || '',
+    phone: worker.phone || '',
+    email: worker.email || '',
+    business_card_file: worker.business_card_file || '',
+  });
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    setError('');
+
+    const nameEnTrimmed = form.name_en.trim();
+    const nameKoTrimmed = form.name_ko.trim();
+
+    if (!nameEnTrimmed && !nameKoTrimmed) {
+      setError('이름 (영어) 또는 이름 (한글) 중 하나는 입력해주세요.');
+      return;
+    }
+
+    const toNullIfEmpty = (value: string) => (value.trim() === '' ? null : value.trim());
+
+    onSubmit({
+      name_en: nameEnTrimmed || null,
+      name_ko: nameKoTrimmed || null,
+      phone: toNullIfEmpty(form.phone),
+      email: toNullIfEmpty(form.email),
+      business_card_file: toNullIfEmpty(form.business_card_file),
+    });
+  };
+
+  return (
+    <ModalShell title="담당자 수정" onClose={onClose}>
+      <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <InputField
-            label={form.client_type === 'individual' ? '이름 *' : '회사/팀명 *'}
-            value={form.name}
-            onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-            placeholder={form.client_type === 'individual' ? '개인 이름을 입력하세요' : '회사 또는 팀 이름을 입력하세요'}
+            label="이름 (한글)"
+            placeholder="이름 (한글)"
+            value={form.name_ko}
+            onChange={(v) => setForm((prev) => ({ ...prev, name_ko: v }))}
           />
-          {form.client_type === 'team' && (
-            <InputField
-              label="업종"
-              value={form.industry}
-              onChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
-              placeholder="예: 엔터테인먼트"
-            />
-          )}
+          <InputField
+            label="이름 (영어)"
+            placeholder="Name (English)"
+            value={form.name_en}
+            onChange={(v) => setForm((prev) => ({ ...prev, name_en: v }))}
+          />
+          <InputField
+            label="연락처"
+            placeholder="010-0000-0000"
+            value={form.phone}
+            onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+          />
+          <InputField
+            label="이메일주소"
+            type="email"
+            placeholder="email@example.com"
+            value={form.email}
+            onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
+          />
+          <InputField
+            label="명함 첨부"
+            placeholder="파일 URL 또는 경로"
+            value={form.business_card_file}
+            onChange={(v) => setForm((prev) => ({ ...prev, business_card_file: v }))}
+          />
         </div>
-
-        {form.client_type === 'team' && (
-          <div className="grid grid-cols-2 gap-4">
-            <InputField
-              label="담당자"
-              value={form.contact_person}
-              onChange={(v) => setForm((prev) => ({ ...prev, contact_person: v }))}
-              placeholder="담당자 이름"
-            />
-            <InputField
-              label="전화번호"
-              value={form.phone}
-              onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
-              placeholder="010-0000-0000"
-            />
+        {error && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+            <p className="text-xs font-semibold text-red-600">{error}</p>
           </div>
         )}
-
-        {form.client_type === 'individual' && (
-          <div className="grid grid-cols-2 gap-4">
-            <InputField
-              label="전화번호"
-              value={form.phone}
-              onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
-              placeholder="010-0000-0000"
-            />
-            <InputField
-              label="이메일"
-              type="email"
-              value={form.email}
-              onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-              placeholder="email@example.com"
-            />
-          </div>
-        )}
-
-        {form.client_type === 'team' && (
-          <div className="grid grid-cols-2 gap-4">
-            <InputField
-              label="이메일"
-              type="email"
-              value={form.email}
-              onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-              placeholder="email@example.com"
-            />
-            <InputField
-              label="최근 미팅일"
-              type="date"
-              value={form.last_meeting_date}
-              onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
-            />
-          </div>
-        )}
-
-        {form.client_type === 'individual' && (
-          <div className="grid grid-cols-2 gap-4">
-            <InputField
-              label="최근 미팅일"
-              type="date"
-              value={form.last_meeting_date}
-              onChange={(v) => setForm((prev) => ({ ...prev, last_meeting_date: v }))}
-            />
-          </div>
-        )}
-
-        <InputField
-          label="주소"
-          value={form.address}
-          onChange={(v) => setForm((prev) => ({ ...prev, address: v }))}
-          placeholder="주소"
+        <ModalActions
+          onPrimary={handleSubmit}
+          onClose={onClose}
+          primaryLabel="수정"
         />
-
-        <SelectField
-          label="상태"
-          value={form.status}
-          onChange={(v) => setForm((prev) => ({ ...prev, status: v as ClientStatus }))}
-          options={[
-            { value: 'active', label: '활성' },
-            { value: 'inactive', label: '비활성' },
-            { value: 'archived', label: '보관됨' },
-          ]}
-        />
-
-        <ModalActions onPrimary={handleSubmit} onClose={onClose} primaryLabel={client ? '수정' : '등록'} />
       </div>
     </ModalShell>
   );
@@ -4088,6 +4276,7 @@ function TaskModal({
   projectId,
   bu,
   projects,
+  users,
   onClose,
   onSubmit,
 }: {
@@ -4095,6 +4284,7 @@ function TaskModal({
   projectId?: string;
   bu: BU;
   projects: any[];
+  users: any[];
   onClose: () => void;
   onSubmit: (data: {
     projectId: string;
@@ -4105,10 +4295,15 @@ function TaskModal({
     status?: 'todo' | 'in-progress' | 'done';
   }) => void;
 }) {
+  const userOptions = (users || []).filter((u) => u && u.name).map((u) => u.name as string);
+  const initialAssignee = task?.assignee || '';
+  const isInitialFromUser = !!initialAssignee && userOptions.includes(initialAssignee);
+
   const [form, setForm] = useState({
     projectId: task?.projectId || projectId || projects[0]?.id || '',
     title: task?.title || '',
-    assignee: task?.assignee || '',
+    assigneeUser: isInitialFromUser ? initialAssignee : '',
+    assigneeCustom: isInitialFromUser ? '' : initialAssignee,
     dueDate: task?.dueDate || '',
     status: task?.status || 'todo',
   });
@@ -4128,11 +4323,20 @@ function TaskModal({
           value={form.title}
           onChange={(v) => setForm((prev) => ({ ...prev, title: v }))}
         />
+        <SelectField
+          label="담당자 (사내 사용자)"
+          value={form.assigneeUser}
+          onChange={(val) => setForm((prev) => ({ ...prev, assigneeUser: val }))}
+          options={[
+            { value: '', label: '선택 안함' },
+            ...userOptions.map((name) => ({ value: name, label: name })),
+          ]}
+        />
         <InputField
-          label="담당자"
-          placeholder="담당자 이름"
-          value={form.assignee}
-          onChange={(v) => setForm((prev) => ({ ...prev, assignee: v }))}
+          label="담당자 (직접 입력)"
+          placeholder="담당자 이름을 직접 입력"
+          value={form.assigneeCustom}
+          onChange={(v) => setForm((prev) => ({ ...prev, assigneeCustom: v }))}
         />
         <div className="grid grid-cols-2 gap-2">
           <InputField
@@ -4154,16 +4358,17 @@ function TaskModal({
         </div>
       </div>
       <ModalActions
-        onPrimary={() =>
+        onPrimary={() => {
+          const assignee = form.assigneeCustom || form.assigneeUser || '';
           onSubmit({
             projectId: form.projectId,
             bu,
             title: form.title,
-            assignee: form.assignee,
+            assignee,
             dueDate: form.dueDate,
             status: form.status as 'todo' | 'in-progress' | 'done',
-          })
-        }
+          });
+        }}
         onClose={onClose}
         primaryLabel={task ? '수정' : '등록'}
       />
