@@ -2369,10 +2369,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     >
                       <div className="flex-1 flex items-center">
                         <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-lg font-bold text-indigo-600 border border-indigo-100 mr-4">
-                          {(client as any).company_name_ko?.substring(0, 1) || client.name?.substring(0, 1) || '-'}
+                          {(client as any).company_name_ko?.substring(0, 1) || (client as any).company_name_en?.substring(0, 1) || '-'}
                         </div>
                         <div>
-                          <h3 className="font-bold text-gray-900">{(client as any).company_name_ko || client.name}</h3>
+                          <h3 className="font-bold text-gray-900">{(client as any).company_name_ko || (client as any).company_name_en || '-'}</h3>
                           <p className="text-xs text-gray-500">{client.industry || '-'}</p>
                         </div>
                       </div>
