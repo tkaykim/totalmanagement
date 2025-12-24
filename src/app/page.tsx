@@ -840,6 +840,8 @@ export default function HomePage() {
                     ? '/astcompany' 
                     : buKey === 'GRIGO' 
                     ? '/grigoent' 
+                    : buKey === 'FLOW'
+                    ? '/flowmaker'
                     : `/${buToSlug(buKey)}`
                 }
                 className={cn(
@@ -1918,22 +1920,63 @@ function ProjectsView({
   tasks: TaskItem[];
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
+
+  // 프로젝트 상태 필터링
+  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
+  const completedProjectStatuses = ['완료'];
+  
+  const filteredProjects = useMemo(() => {
+    if (projectFilter === 'active') {
+      return projects.filter((p) => activeProjectStatuses.includes(p.status));
+    } else {
+      return projects.filter((p) => completedProjectStatuses.includes(p.status));
+    }
+  }, [projects, projectFilter]);
 
   return (
     <section className="space-y-6">
       <BuTabs bu={bu} onChange={onBuChange} prefix="BU" />
 
+      {/* 프로젝트 필터 토글 */}
+      <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+        <button
+          onClick={() => setProjectFilter('active')}
+          className={cn(
+            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+            projectFilter === 'active'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          )}
+        >
+          진행예정/진행중
+        </button>
+        <button
+          onClick={() => setProjectFilter('completed')}
+          className={cn(
+            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+            projectFilter === 'completed'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          )}
+        >
+          완료
+        </button>
+      </div>
+
       <div className="space-y-3">
-        {projects.length === 0 ? (
+        {filteredProjects.length === 0 ? (
           <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
             <div className="px-4 sm:px-6 py-8 sm:py-12 text-center">
               <p className="text-xs sm:text-sm font-semibold text-slate-400">
-                현재 진행중인 프로젝트가 없습니다.
+                {projectFilter === 'active'
+                  ? '현재 진행중인 프로젝트가 없습니다.'
+                  : '완료된 프로젝트가 없습니다.'}
               </p>
             </div>
           </div>
         ) : (
-          projects.map((p) => {
+          filteredProjects.map((p) => {
             const projectTasks = tasks.filter((t) => t.projectId === p.id);
             const projectRevenues = revenues.filter((r) => r.projectId === p.id);
             const projectExpenses = expenses.filter((e) => e.projectId === p.id);
@@ -2131,10 +2174,21 @@ function TasksView({
   onStatusChange: (id: string, status: TaskItem['status']) => void;
   onEditTask: (task: TaskItem) => void;
 }) {
+  const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
+
   // 현재 선택된 bu에 해당하는 프로젝트만 필터링
   const buProjects = projects.filter((p) => p.bu === bu);
   const buProjectIds = buProjects.map((p) => p.id);
-  const rows = tasks.filter((t) => buProjectIds.includes(t.projectId));
+  const buTasks = tasks.filter((t) => buProjectIds.includes(t.projectId));
+
+  // 할일 상태 필터링
+  const rows = useMemo(() => {
+    if (taskFilter === 'active') {
+      return buTasks.filter((t) => t.status === 'todo' || t.status === 'in-progress');
+    } else {
+      return buTasks.filter((t) => t.status === 'done');
+    }
+  }, [buTasks, taskFilter]);
 
   const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
 
@@ -2142,10 +2196,36 @@ function TasksView({
     <section className="space-y-6">
       <BuTabs bu={bu} onChange={onBuChange} prefix="TASK" />
 
+      {/* 할일 필터 토글 */}
+      <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+        <button
+          onClick={() => setTaskFilter('active')}
+          className={cn(
+            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+            taskFilter === 'active'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          )}
+        >
+          진행예정/진행중
+        </button>
+        <button
+          onClick={() => setTaskFilter('completed')}
+          className={cn(
+            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+            taskFilter === 'completed'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          )}
+        >
+          완료
+        </button>
+      </div>
+
       <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-bold text-slate-800">{BU_TITLES[bu]} 할일 관리</h3>
-          <span className="text-[10px] sm:text-xs font-semibold text-slate-400 whitespace-nowrap">총 {rows.length}건</span>
+          <span className="text-[10px] sm:text-xs font-semibold text-slate-400 whitespace-nowrap">{rows.length}건</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[10px] sm:text-[11px]">
@@ -2187,7 +2267,9 @@ function TasksView({
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-6 text-center text-xs text-slate-400">
-                    현재 선택한 사업부에 등록된 할 일이 없습니다.
+                    {taskFilter === 'active'
+                      ? '현재 선택한 사업부에 진행 예정이거나 진행 중인 할일이 없습니다.'
+                      : '현재 선택한 사업부에 완료된 할일이 없습니다.'}
                   </td>
                 </tr>
               )}

@@ -694,7 +694,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       PM / 감독
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      예산
+                      순이익
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       마감일
@@ -737,21 +737,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                 <div className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
                                   {project.name}
                                 </div>
-                                <div className="text-xs text-gray-400 mt-1">CODE: {project.id}</div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
                             {projectClient?.company_name_ko || '-'}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600 flex items-center">
-                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 mr-2 border border-slate-200">
-                              {project.name.charAt(0)}
-                            </div>
-                            PM
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {(project as any).pm_name || '-'}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600 font-mono">
-                            {formatCurrency(budget)}
+                            {formatCurrency(budget - totalExpenses)}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">{project.endDate}</td>
                           <td className="px-6 py-4">
@@ -3233,6 +3229,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
         <CreateProjectModal
           bu={bu}
           clients={clientsData}
+          orgMembers={orgData}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
             try {
@@ -3261,6 +3258,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           project={isEditProjectModalOpen}
           bu={bu}
           clients={clientsData}
+          orgMembers={orgData}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
             try {
@@ -4038,6 +4036,7 @@ function DeleteConfirmModal({
 function CreateProjectModal({
   bu,
   clients,
+  orgMembers,
   onClose,
   onSubmit,
   onOpenClientModal,
@@ -4046,6 +4045,7 @@ function CreateProjectModal({
 }: {
   bu: BU;
   clients: Client[];
+  orgMembers: any[];
   onClose: () => void;
   onSubmit: (data: {
     bu: BU;
@@ -4055,6 +4055,7 @@ function CreateProjectModal({
     endDate: string;
     status: string;
     client_id?: number;
+    pm_name?: string | null;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
@@ -4067,6 +4068,7 @@ function CreateProjectModal({
     endDate: '',
     status: '준비중',
     client_id: '',
+    pm_name: '',
   });
 
   const selectedClient = form.client_id ? clients.find((c) => c.id === Number(form.client_id)) : null;
@@ -4168,6 +4170,7 @@ function CreateProjectModal({
             endDate: form.endDate,
             status: form.status,
             client_id: form.client_id ? Number(form.client_id) : undefined,
+            pm_name: form.pm_name || null,
           })
         }
         onClose={onClose}
@@ -4181,6 +4184,7 @@ function EditProjectModal({
   project,
   bu,
   clients,
+  orgMembers,
   onClose,
   onSubmit,
   onOpenClientModal,
@@ -4190,6 +4194,7 @@ function EditProjectModal({
   project: any;
   bu: BU;
   clients: Client[];
+  orgMembers: any[];
   onClose: () => void;
   onSubmit: (data: {
     bu: BU;
@@ -4199,6 +4204,7 @@ function EditProjectModal({
     endDate: string;
     status: string;
     client_id?: number;
+    pm_name?: string | null;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
@@ -4211,6 +4217,7 @@ function EditProjectModal({
     endDate: project.endDate,
     status: project.status,
     client_id: String((project as any).client_id || ''),
+    pm_name: (project as any).pm_name || '',
   });
 
   const selectedClient = form.client_id ? clients.find((c) => c.id === Number(form.client_id)) : null;
@@ -4254,6 +4261,15 @@ function EditProjectModal({
             { value: '운영중', label: '운영중' },
             { value: '기획중', label: '기획중' },
             { value: '완료', label: '완료' },
+          ]}
+        />
+        <SelectField
+          label="PM"
+          value={form.pm_name}
+          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
+          options={[
+            { value: '', label: '선택 안함' },
+            ...orgMembers.map((m) => ({ value: m.name || '', label: m.name || '' })).filter((o) => o.value),
           ]}
         />
         <div className="md:col-span-2">
@@ -4312,6 +4328,7 @@ function EditProjectModal({
             endDate: form.endDate,
             status: form.status,
             client_id: form.client_id ? Number(form.client_id) : undefined,
+            pm_name: form.pm_name || null,
           })
         }
         onClose={onClose}

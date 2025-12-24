@@ -1724,7 +1724,7 @@ export default function GrigoEntDashboard() {
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">클라이언트</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">PM</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">카테고리</th>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">예산</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">순이익</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">마감일</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">상태</th>
                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">관리</th>
@@ -1758,7 +1758,6 @@ export default function GrigoEntDashboard() {
                             <div className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
                               {project.name}
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">CODE: {project.id}</div>
                           </div>
                         </div>
                       </td>
@@ -1772,7 +1771,7 @@ export default function GrigoEntDashboard() {
                         {project.cat}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 font-mono">
-                        {formatCurrency(budget)}
+                        {formatCurrency(budget - totalExpenses)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">{project.endDate}</td>
                       <td className="px-6 py-4">
