@@ -188,3 +188,4 @@ ALTER TABLE project_tasks ADD CONSTRAINT project_tasks_related_manual_id_fkey
 선택사항은 향후 확장을 위해 제안한 것이며, 현재는 필수 항목만으로도 구현 가능합니다.
 
 
+

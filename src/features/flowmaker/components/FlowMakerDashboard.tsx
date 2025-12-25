@@ -52,6 +52,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import type {
   BU,
+  Channel,
   Client,
   Equipment,
   Artist,
