@@ -66,7 +66,7 @@ export function MentionedCommentsSection() {
       parts.push(result.substring(lastIndex));
     }
 
-    return parts.length > 0 ? parts : result;
+    return parts.length > 0 ? parts : [result];
   };
 
   if (isLoading) {
