@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CommentInput } from './CommentInput';
@@ -78,7 +78,7 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
 
   const renderContent = (content: string, mentionedUserIds: string[]) => {
     let result = content;
-    const parts: (string | JSX.Element)[] = [];
+    const parts: (string | ReactElement)[] = [];
     let lastIndex = 0;
 
     mentionedUserIds.forEach((userId) => {
