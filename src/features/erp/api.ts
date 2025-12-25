@@ -28,6 +28,8 @@ import type {
   Artist,
   ArtistStatus,
   ArtistType,
+  Comment,
+  CommentEntityType,
 } from '@/types/database';
 
 const API_BASE = '/api';
@@ -788,6 +790,91 @@ export async function deleteArtist(id: number): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete artist');
+}
+
+// ============================================
+// Comments API Functions
+// ============================================
+
+export async function fetchComments(
+  entityType: CommentEntityType,
+  entityId: number
+): Promise<Comment[]> {
+  const params = new URLSearchParams();
+  params.append('entity_type', entityType);
+  params.append('entity_id', String(entityId));
+  const url = `${API_BASE}/comments?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch comments');
+  return res.json();
+}
+
+export async function createComment(data: {
+  entity_type: CommentEntityType;
+  entity_id: number;
+  content: string;
+  mentioned_user_ids?: string[];
+}): Promise<Comment> {
+  const res = await fetch(`${API_BASE}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to create comment');
+  }
+  return res.json();
+}
+
+export async function updateComment(
+  id: number,
+  data: { content?: string; mentioned_user_ids?: string[] }
+): Promise<Comment> {
+  const res = await fetch(`${API_BASE}/comments/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to update comment');
+  }
+  return res.json();
+}
+
+export async function deleteComment(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/comments/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to delete comment');
+  }
+}
+
+export async function fetchMentionedComments(): Promise<(Comment & { is_read: boolean; read_at: string | null })[]> {
+  const res = await fetch(`${API_BASE}/comments/mentions`);
+  if (!res.ok) throw new Error('Failed to fetch mentioned comments');
+  return res.json();
+}
+
+export async function markCommentAsRead(commentId: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/comments/${commentId}/read`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to mark comment as read');
+  }
+  return res.json();
+}
+
+export async function fetchCommentReads(commentId: number): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/comments/${commentId}/reads`);
+  if (!res.ok) throw new Error('Failed to fetch comment reads');
+  return res.json();
 }
 
 

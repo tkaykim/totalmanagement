@@ -16,6 +16,20 @@ export type AdStatus = 'active' | 'paused' | 'completed' | 'none';
 export type ExternalWorkerType = 'freelancer' | 'company' | 'contractor';
 export type ArtistStatus = 'Active' | 'Inactive' | 'Archived';
 export type ArtistType = 'individual' | 'team';
+export type ProjectStep = 'plan' | 'script' | 'shoot' | 'edit';
+export type AssetStatus = 'completed' | 'in-progress' | 'pending' | 'none';
+
+export interface ProjectAsset {
+  status: AssetStatus;
+  version?: string;
+  link?: string;
+}
+
+export interface ProjectAssets {
+  script?: ProjectAsset;
+  video?: ProjectAsset;
+  thumbnail?: ProjectAsset;
+}
 
 export interface BusinessUnit {
   id: number;
@@ -65,6 +79,14 @@ export interface Project {
   pm_name?: string;
   creators?: ProjectCreator[]; // JSONB
   freelancers?: ProjectFreelancer[]; // JSONB
+  active_steps?: ProjectStep[]; // JSONB: 활성화된 단계 배열
+  plan_date?: string | null; // 기획 확정일 (D-11)
+  script_date?: string | null; // 대본 확정일 (D-9)
+  shoot_date?: string | null; // 촬영 확정일 (D-7)
+  edit1_date?: string | null; // 1차 편집 확정일 (D-3)
+  edit_final_date?: string | null; // 최종 편집 확정일 (D-1)
+  release_date?: string | null; // 업로드/납품일 (D-Day)
+  assets?: ProjectAssets; // JSONB: 제작 자산 정보
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -287,6 +309,20 @@ export interface Artist {
   visa_end?: string;
   role?: string;
   status: ArtistStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CommentEntityType = 'task' | 'project';
+
+export interface Comment {
+  id: number;
+  entity_type: CommentEntityType;
+  entity_id: number;
+  content: string;
+  author_id: string;
+  author_name: string;
+  mentioned_user_ids: string[];
   created_at: string;
   updated_at: string;
 }

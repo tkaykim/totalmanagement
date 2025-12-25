@@ -78,8 +78,13 @@ import {
   useCreateTask,
   useUpdateTask,
   useUsers,
+  useMentionedComments,
+  useMarkCommentAsRead,
+  useCommentReads,
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendFinancialToDb, frontendTaskToDb } from '@/features/erp/utils';
+import { CommentSection } from '@/features/comments/components/CommentSection';
+import { MentionedCommentsSection } from '@/features/comments/components/MentionedCommentsSection';
 
 type GrigoEntView =
   | 'dashboard'
@@ -299,6 +304,16 @@ export default function GrigoEntDashboard() {
 
   // Views
   const DashboardView = () => {
+    const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my'>('all');
+    
+    const filteredActiveTasks = useMemo(() => {
+      let filtered = activeTasks;
+      if (taskAssigneeFilter === 'my' && user?.profile?.name) {
+        filtered = filtered.filter((t) => t.assignee === user.profile.name);
+      }
+      return filtered;
+    }, [activeTasks, taskAssigneeFilter, user]);
+    
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* 통계 카드 */}
@@ -577,7 +592,7 @@ export default function GrigoEntDashboard() {
           <div className="space-y-6">
             {/* 할 일 */}
             <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-black text-gray-900">할 일</h3>
                 <button
                   onClick={() => setActiveTab('tasks')}
@@ -586,9 +601,34 @@ export default function GrigoEntDashboard() {
                   전체 보기 →
                 </button>
               </div>
+              {/* 할일 필터 */}
+              <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+                <button
+                  onClick={() => setTaskAssigneeFilter('all')}
+                  className={cn(
+                    'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                    taskAssigneeFilter === 'all'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  )}
+                >
+                  전체 할일 보기
+                </button>
+                <button
+                  onClick={() => setTaskAssigneeFilter('my')}
+                  className={cn(
+                    'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                    taskAssigneeFilter === 'my'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  )}
+                >
+                  내 할일만 보기
+                </button>
+              </div>
               <div className="space-y-3">
-                {activeTasks.length > 0 ? (
-                  activeTasks.slice(0, 5).map((task) => (
+                {filteredActiveTasks.length > 0 ? (
+                  filteredActiveTasks.slice(0, 5).map((task) => (
                     <div
                       key={task.id}
                       className="flex items-start p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer"
@@ -673,6 +713,9 @@ export default function GrigoEntDashboard() {
                 )}
               </div>
             )}
+
+            {/* 멘션된 댓글 */}
+            <MentionedCommentsSection />
           </div>
         </div>
       </div>
@@ -2263,6 +2306,11 @@ export default function GrigoEntDashboard() {
           onClose={onClose}
           primaryLabel={project ? '수정' : '등록'}
         />
+        {project?.id && (
+          <div className="border-t border-slate-200 pt-4 mt-4">
+            <CommentSection entityType="project" entityId={Number(project.id)} />
+          </div>
+        )}
       </ModalShell>
     );
   };
@@ -2378,6 +2426,7 @@ export default function GrigoEntDashboard() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editTask, setEditTask] = useState<any | null>(null);
     const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
+    const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my'>('all');
 
     const handleCreateTask = async (data: {
       projectId: string;
@@ -2459,6 +2508,32 @@ export default function GrigoEntDashboard() {
           </button>
         </div>
 
+        {/* 할일 필터 */}
+        <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+          <button
+            onClick={() => setTaskAssigneeFilter('all')}
+            className={cn(
+              'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+              taskAssigneeFilter === 'all'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            )}
+          >
+            전체 할일 보기
+          </button>
+          <button
+            onClick={() => setTaskAssigneeFilter('my')}
+            className={cn(
+              'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+              taskAssigneeFilter === 'my'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            )}
+          >
+            내 할일만 보기
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
             { label: 'To Do', value: 'todo' },
@@ -2474,7 +2549,15 @@ export default function GrigoEntDashboard() {
               </div>
               <div className="space-y-4">
                 {tasks
-                  .filter((t) => t.status === value)
+                  .filter((t) => {
+                    // 상태 필터
+                    if (t.status !== value) return false;
+                    // 담당자 필터
+                    if (taskAssigneeFilter === 'my' && user?.profile?.name) {
+                      return t.assignee === user.profile.name;
+                    }
+                    return true;
+                  })
                   .map((t) => {
                     const assigneeName = t.assignee || '미지정';
 
@@ -4371,6 +4454,11 @@ function TaskModal({
         onClose={onClose}
         primaryLabel={task ? '수정' : '등록'}
       />
+      {task?.id && (
+        <div className="border-t border-slate-200 pt-4 mt-4">
+          <CommentSection entityType="task" entityId={Number(task.id)} />
+        </div>
+      )}
     </ModalShell>
   );
 }

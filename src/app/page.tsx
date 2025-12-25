@@ -56,6 +56,7 @@ import {
   frontendFinancialToDb,
 } from '@/features/erp/utils';
 import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
+import { CommentSection } from '@/features/comments/components/CommentSection';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio';
@@ -264,7 +265,7 @@ export default function HomePage() {
       setView('dashboard');
     }
   };
-  const [periodType, setPeriodType] = useState<'all' | 'year' | 'quarter' | 'month' | 'custom'>('all');
+  const [periodType, setPeriodType] = useState<'all' | 'year' | 'quarter' | 'month' | 'custom'>('month');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedQuarter, setSelectedQuarter] = useState<number>(1);
   const [selectedQuarterYear, setSelectedQuarterYear] = useState<number>(new Date().getFullYear());
@@ -526,10 +527,11 @@ export default function HomePage() {
     setCustomRange((prev) => ({ ...prev, [key]: value }));
   };
 
-  // 연도 옵션 생성 (2021년부터 현재 연도까지)
+  // 연도 옵션 생성 (2021년부터 2027년까지)
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    return Array.from({ length: currentYear - 2021 + 1 }, (_, i) => 2021 + i).reverse();
+    const maxYear = Math.max(currentYear, 2027);
+    return Array.from({ length: maxYear - 2021 + 1 }, (_, i) => 2021 + i).reverse();
   }, []);
 
   const handleProjectDateChange = async (key: 'startDate' | 'endDate', value: string) => {
@@ -897,39 +899,6 @@ export default function HomePage() {
               {/* 토글 버튼 */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handlePeriodTypeChange('all')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'all'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  )}
-                >
-                  전체 기간
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('year')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'year'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  )}
-                >
-                  연도
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('quarter')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'quarter'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  )}
-                >
-                  분기
-                </button>
-                <button
                   onClick={() => handlePeriodTypeChange('month')}
                   className={cn(
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
@@ -941,6 +910,28 @@ export default function HomePage() {
                   월별
                 </button>
                 <button
+                  onClick={() => handlePeriodTypeChange('quarter')}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
+                    periodType === 'quarter'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  )}
+                >
+                  분기별
+                </button>
+                <button
+                  onClick={() => handlePeriodTypeChange('year')}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
+                    periodType === 'year'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  )}
+                >
+                  연도별
+                </button>
+                <button
                   onClick={() => handlePeriodTypeChange('custom')}
                   className={cn(
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
@@ -950,6 +941,17 @@ export default function HomePage() {
                   )}
                 >
                   직접선택
+                </button>
+                <button
+                  onClick={() => handlePeriodTypeChange('all')}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
+                    periodType === 'all'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  )}
+                >
+                  전체 기간
                 </button>
               </div>
 
@@ -1100,6 +1102,7 @@ export default function HomePage() {
               projects={projects}
               revenues={revenues}
               expenses={expenses}
+              currentUser={user}
               onProjectClick={(project) => {
                 setModalProjectId(String(project.id));
               }}
@@ -1453,6 +1456,7 @@ function DashboardView({
   projects,
   revenues,
   expenses,
+  currentUser,
   onProjectClick,
   onTaskClick,
 }: {
@@ -1463,12 +1467,14 @@ function DashboardView({
   projects: Project[];
   revenues: FinancialEntry[];
   expenses: FinancialEntry[];
+  currentUser?: any;
   onProjectClick: (project: Project) => void;
   onTaskClick: (task: TaskItem) => void;
 }) {
   const [selectedBu, setSelectedBu] = useState<BU | 'ALL'>('ALL');
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
   const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
+  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
 
   // 진행 예정 또는 진행 중인 프로젝트 필터링 (준비중, 기획중, 진행중, 운영중)
   const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
@@ -1498,14 +1504,27 @@ function DashboardView({
     return tasks.filter((t) => projectIds.has(t.projectId));
   }, [tasks, filteredProjects]);
 
-  // 할일 상태 필터링
+  // 할일 상태 및 담당자 필터링
   const filteredTasks = useMemo(() => {
+    let filtered = filteredTasksByProject;
+    
+    // 상태 필터링
     if (taskFilter === 'active') {
-      return filteredTasksByProject.filter((t) => t.status === 'todo' || t.status === 'in-progress');
+      filtered = filtered.filter((t) => t.status === 'todo' || t.status === 'in-progress');
     } else {
-      return filteredTasksByProject.filter((t) => t.status === 'done');
+      filtered = filtered.filter((t) => t.status === 'done');
     }
-  }, [filteredTasksByProject, taskFilter]);
+    
+    // 담당자 필터링
+    if (taskAssigneeFilter === 'my' && currentUser?.profile?.name) {
+      filtered = filtered.filter((t) => t.assignee === currentUser.profile.name);
+    }
+    if (taskAssigneeFilter === 'unassigned') {
+      filtered = filtered.filter((t) => !t.assignee || t.assignee.trim() === '');
+    }
+    
+    return filtered;
+  }, [filteredTasksByProject, taskFilter, taskAssigneeFilter, currentUser]);
 
   // 선택된 사업부에 따른 매출/지출/순이익 계산
   const filteredTotals = useMemo(() => {
@@ -1730,29 +1749,68 @@ function DashboardView({
             </span>
           </div>
           {/* 할일 필터 토글 */}
-          <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
-            <button
-              onClick={() => setTaskFilter('active')}
-              className={cn(
-                'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                taskFilter === 'active'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              진행예정/진행중
-            </button>
-            <button
-              onClick={() => setTaskFilter('completed')}
-              className={cn(
-                'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                taskFilter === 'completed'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              완료
-            </button>
+          <div className="mb-4 space-y-2">
+            {/* 상태 필터 */}
+            <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+              <button
+                onClick={() => setTaskFilter('active')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskFilter === 'active'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                진행예정/진행중
+              </button>
+              <button
+                onClick={() => setTaskFilter('completed')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskFilter === 'completed'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                완료
+              </button>
+            </div>
+            {/* 담당자 필터 */}
+            <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+              <button
+                onClick={() => setTaskAssigneeFilter('all')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskAssigneeFilter === 'all'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                전체 할일 보기
+              </button>
+              <button
+                onClick={() => setTaskAssigneeFilter('my')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskAssigneeFilter === 'my'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                내 할일만 보기
+              </button>
+              <button
+                onClick={() => setTaskAssigneeFilter('unassigned')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskAssigneeFilter === 'unassigned'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                담당자 미지정 할일 보기
+              </button>
+            </div>
           </div>
           <div className="space-y-3 max-h-[600px] overflow-y-auto">
             {filteredTasks.length === 0 ? (
@@ -4052,6 +4110,9 @@ function EditProjectModal({
         onClose={onClose}
         primaryLabel="수정"
       />
+      <div className="border-t border-slate-200 pt-4 mt-4">
+        <CommentSection entityType="project" entityId={Number(project.id)} />
+      </div>
     </ModalShell>
   );
 }
@@ -4400,6 +4461,9 @@ function EditTaskModal({
         onClose={onClose}
         primaryLabel="수정"
       />
+      <div className="border-t border-slate-200 pt-4 mt-4">
+        <CommentSection entityType="task" entityId={Number(task.id)} />
+      </div>
     </ModalShell>
   );
 }

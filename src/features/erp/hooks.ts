@@ -8,6 +8,7 @@ import type {
   ChannelStatus,
   ContentStage,
   EventType,
+  CommentEntityType,
 } from '@/types/database';
 import * as api from './api';
 
@@ -580,6 +581,76 @@ export function useDeleteArtist() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['artists'] });
     },
+  });
+}
+
+// ============================================
+// Comments Hooks
+// ============================================
+
+export function useComments(entityType: CommentEntityType, entityId: number) {
+  return useQuery({
+    queryKey: ['comments', entityType, entityId],
+    queryFn: () => api.fetchComments(entityType, entityId),
+  });
+}
+
+export function useCreateComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createComment,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['comments', variables.entity_type, variables.entity_id],
+      });
+    },
+  });
+}
+
+export function useUpdateComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { content?: string; mentioned_user_ids?: string[] } }) =>
+      api.updateComment(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
+    },
+  });
+}
+
+export function useDeleteComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteComment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
+    },
+  });
+}
+
+export function useMentionedComments() {
+  return useQuery({
+    queryKey: ['comments', 'mentions'],
+    queryFn: api.fetchMentionedComments,
+  });
+}
+
+export function useMarkCommentAsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.markCommentAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', 'mentions'] });
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
+    },
+  });
+}
+
+export function useCommentReads(commentId: number) {
+  return useQuery({
+    queryKey: ['comments', commentId, 'reads'],
+    queryFn: () => api.fetchCommentReads(commentId),
+    enabled: !!commentId,
   });
 }
 

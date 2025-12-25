@@ -450,6 +450,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
 
   // Dashboard View
   const DashboardView = () => {
+    const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my'>('all');
     const activeProjects = projects.filter((p) => p.bu === bu);
     const activeTasks = tasks.filter((t) => t.bu === bu);
     const buFinancials = financials.filter((f) => f.bu === bu);
@@ -625,7 +626,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-800">할 일</h3>
               <button
                 onClick={() => setTaskModalOpen(true)}
@@ -634,10 +635,47 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
                 <Plus className="w-4 h-4 text-gray-600" />
               </button>
             </div>
+            {/* 할일 필터 */}
+            <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+              <button
+                onClick={() => setTaskAssigneeFilter('all')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskAssigneeFilter === 'all'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                전체 할일 보기
+              </button>
+              <button
+                onClick={() => setTaskAssigneeFilter('my')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskAssigneeFilter === 'my'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                내 할일만 보기
+              </button>
+            </div>
             <div className="space-y-3">
-              {activeTasks.filter((t) => t.status !== 'done').length > 0 ? (
+              {activeTasks.filter((t) => {
+                if (t.status === 'done') return false;
+                if (taskAssigneeFilter === 'my' && user?.profile?.name) {
+                  return t.assignee === user.profile.name;
+                }
+                return true;
+              }).length > 0 ? (
                 activeTasks
-                  .filter((t) => t.status !== 'done')
+                  .filter((t) => {
+                    if (t.status === 'done') return false;
+                    if (taskAssigneeFilter === 'my' && user?.profile?.name) {
+                      return t.assignee === user.profile.name;
+                    }
+                    return true;
+                  })
                   .slice(0, 5)
                   .map((task) => (
                     <div

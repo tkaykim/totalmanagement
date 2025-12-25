@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import {
   LayoutDashboard,
+  Layout,
   Clapperboard,
   Camera,
   Users,
@@ -47,6 +48,7 @@ import {
   FolderOpen,
   Trash2,
   LogOut,
+  List,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -59,6 +61,8 @@ import type {
   Event,
   Manual,
   ProjectTask,
+  ProjectStep,
+  ProjectAssets,
 } from '@/types/database';
 import {
   useProjects,
@@ -71,6 +75,7 @@ import {
   useEvents,
   useManuals,
   useOrgMembers,
+  useUsers,
   useExternalWorkers,
   useCreateExternalWorker,
   useUpdateExternalWorker,
@@ -128,6 +133,132 @@ interface ReactStudioDashboardProps {
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
 }
+
+// 유틸리티 함수: D-Day 기준으로 일정 계산
+function calculateDatesFromRelease(releaseDate: string) {
+  const date = new Date(releaseDate);
+  const formatDate = (d: Date) => d.toISOString().split('T')[0];
+  const addDays = (d: Date, days: number) => {
+    const newDate = new Date(d);
+    newDate.setDate(d.getDate() + days);
+    return newDate;
+  };
+
+  return {
+    release_date: releaseDate, // D-Day
+    edit_final_date: formatDate(addDays(date, -1)), // D-1
+    edit1_date: formatDate(addDays(date, -3)),     // D-3
+    shoot_date: formatDate(addDays(date, -7)),     // D-7
+    script_date: formatDate(addDays(date, -9)),    // D-9
+    plan_date: formatDate(addDays(date, -11)),     // D-11
+  };
+}
+
+// 할일 제목에 따라 마감일 자동 계산
+function calculateTaskDueDate(
+  taskTitle: string,
+  step: ProjectStep,
+  schedule: {
+    plan_date?: string | null;
+    script_date?: string | null;
+    shoot_date?: string | null;
+    edit1_date?: string | null;
+    edit_final_date?: string | null;
+    release_date?: string | null;
+  }
+): string {
+  const formatDate = (d: Date) => d.toISOString().split('T')[0];
+  const addDays = (dateStr: string, days: number) => {
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() + days);
+    return formatDate(date);
+  };
+
+  // 기획 단계
+  if (step === 'plan' && schedule.plan_date) {
+    if (taskTitle.includes('아이템') || taskTitle.includes('주제')) {
+      return addDays(schedule.plan_date, -2); // 기획 확정일 2일 전
+    }
+    if (taskTitle.includes('기획안')) {
+      return schedule.plan_date; // 기획 확정일
+    }
+  }
+
+  // 대본 단계
+  if (step === 'script' && schedule.script_date) {
+    if (taskTitle.includes('초안')) {
+      return addDays(schedule.script_date, -2); // 대본 확정일 2일 전
+    }
+    if (taskTitle.includes('피드백') || taskTitle.includes('수정')) {
+      return schedule.script_date; // 대본 확정일
+    }
+  }
+
+  // 촬영 단계
+  if (step === 'shoot' && schedule.shoot_date) {
+    if (taskTitle.includes('장소') || taskTitle.includes('스튜디오') || taskTitle.includes('섭외')) {
+      return addDays(schedule.shoot_date, -5); // 촬영일 5일 전
+    }
+    if (taskTitle.includes('장비') || taskTitle.includes('체크')) {
+      return addDays(schedule.shoot_date, -1); // 촬영일 1일 전
+    }
+    if (taskTitle.includes('출연진') || taskTitle.includes('스케줄')) {
+      return addDays(schedule.shoot_date, -3); // 촬영일 3일 전
+    }
+  }
+
+  // 편집 단계
+  if (step === 'edit') {
+    if (taskTitle.includes('컷 편집') || taskTitle.includes('1차')) {
+      if (schedule.edit1_date) {
+        return schedule.edit1_date; // 1차 편집 확정일
+      }
+    }
+    if (taskTitle.includes('자막') || taskTitle.includes('효과')) {
+      if (schedule.edit_final_date) {
+        return addDays(schedule.edit_final_date, -2); // 최종 편집 확정일 2일 전
+      }
+    }
+    if (taskTitle.includes('썸네일')) {
+      if (schedule.edit_final_date) {
+        return addDays(schedule.edit_final_date, -1); // 최종 편집 확정일 1일 전
+      }
+    }
+    if (taskTitle.includes('최종') || taskTitle.includes('렌더링') || taskTitle.includes('검수')) {
+      if (schedule.edit_final_date) {
+        return schedule.edit_final_date; // 최종 편집 확정일
+      }
+      if (schedule.release_date) {
+        return schedule.release_date; // 업로드일
+      }
+    }
+  }
+
+  return '';
+}
+
+// 단계별 기본 할일 템플릿
+const DEFAULT_TASKS_BY_STEP: Record<ProjectStep, Array<{ title: string; priority: 'high' | 'medium' | 'low'; description: string }>> = {
+  plan: [
+    { title: '아이템/주제 선정', priority: 'high', description: '트렌드 분석 및 주제 확정' },
+    { title: '기획안 작성', priority: 'medium', description: '구성안 및 소구 포인트 정리' }
+  ],
+  script: [
+    { title: '대본 초안 작성', priority: 'high', description: '오프닝/클로징 멘트 포함' },
+    { title: '대본 피드백 및 수정', priority: 'medium', description: '팀 내 피드백 반영' }
+  ],
+  shoot: [
+    { title: '촬영 장소/스튜디오 섭외', priority: 'high', description: '' },
+    { title: '장비 체크 (카메라/조명/오디오)', priority: 'high', description: '배터리 및 메모리 확인' },
+    { title: '출연진 스케줄 확인', priority: 'medium', description: '' }
+  ],
+  edit: [
+    { title: '컷 편집 (1차)', priority: 'high', description: 'NG컷 삭제 및 순서 배열' },
+    { title: '자막 및 효과 작업', priority: 'medium', description: '' },
+    { title: '썸네일 제작', priority: 'high', description: '클릭률 높은 이미지 제작' },
+    { title: '최종 렌더링 및 검수', priority: 'high', description: '오디오 레벨 및 오타 확인' }
+  ]
+};
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -205,7 +336,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   const [user, setUser] = useState<any>(null);
 
   // Period filter states
-  const [periodType, setPeriodType] = useState<'all' | 'year' | 'quarter' | 'month' | 'custom'>('all');
+  const [periodType, setPeriodType] = useState<'all' | 'year' | 'quarter' | 'month' | 'custom'>('month');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedQuarter, setSelectedQuarter] = useState<number>(1);
   const [selectedQuarterYear, setSelectedQuarterYear] = useState<number>(new Date().getFullYear());
@@ -260,6 +391,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   const { data: eventsData = [] } = useEvents(bu);
   const { data: manualsData = [] } = useManuals(bu);
   const { data: orgData = [] } = useOrgMembers();
+  const { data: usersData } = useUsers();
   const { data: externalWorkersData = [] } = useExternalWorkers(bu);
 
   // Mutation hooks
@@ -300,10 +432,12 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   // Modal states
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
   const [isEditProjectModalOpen, setEditProjectModalOpen] = useState<any>(null);
+  const [selectedProjectDetail, setSelectedProjectDetail] = useState<any>(null);
   const [deleteProjectId, setDeleteProjectId] = useState<number | null>(null);
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
   const [taskModalProjectId, setTaskModalProjectId] = useState<number | null>(null);
   const [isEditTaskModalOpen, setEditTaskModalOpen] = useState<any>(null);
+  const [isTaskDetailModalOpen, setTaskDetailModalOpen] = useState<any>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
   const [isClientModalOpen, setClientModalOpen] = useState(false);
   const [isEditClientModalOpen, setEditClientModalOpen] = useState<Client | null>(null);
@@ -354,7 +488,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   // Year options for period selection
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    return Array.from({ length: currentYear - 2021 + 1 }, (_, i) => 2021 + i).reverse();
+    const maxYear = Math.max(currentYear, 2027);
+    return Array.from({ length: maxYear - 2021 + 1 }, (_, i) => 2021 + i).reverse();
   }, []);
 
   const handlePeriodTypeChange = (type: 'all' | 'year' | 'quarter' | 'month' | 'custom') => {
@@ -427,6 +562,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
   // Dashboard View
   const DashboardView = () => {
+    const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
     const activeProjects = projects.filter((p) => p.bu === bu);
     const activeTasks = tasks.filter((t) => t.bu === bu);
     const buFinancials = financials.filter((f) => f.bu === bu);
@@ -475,8 +611,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3 space-y-6">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-gray-800">진행 중인 프로젝트</h3>
@@ -597,8 +733,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-800">할 일</h3>
               <button
                 onClick={() => setTaskModalOpen(true)}
@@ -607,43 +743,108 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 <Plus className="w-4 h-4 text-gray-600" />
               </button>
             </div>
+            {/* 할일 필터 */}
+            <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+              <button
+                onClick={() => setTaskAssigneeFilter('all')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskAssigneeFilter === 'all'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                전체 할일 보기
+              </button>
+              <button
+                onClick={() => setTaskAssigneeFilter('my')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskAssigneeFilter === 'my'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                내 할일만 보기
+              </button>
+              <button
+                onClick={() => setTaskAssigneeFilter('unassigned')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskAssigneeFilter === 'unassigned'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                담당자 미지정 할일 보기
+              </button>
+            </div>
             <div className="space-y-3">
-              {activeTasks.filter((t) => t.status !== 'done').length > 0 ? (
+              {activeTasks.filter((t) => {
+                if (t.status === 'done') return false;
+                if (taskAssigneeFilter === 'my' && user?.profile?.name) {
+                  return t.assignee === user.profile.name;
+                }
+                if (taskAssigneeFilter === 'unassigned') {
+                  return !t.assignee || t.assignee.trim() === '';
+                }
+                return true;
+              }).length > 0 ? (
                 activeTasks
-                  .filter((t) => t.status !== 'done')
+                  .filter((t) => {
+                    if (t.status === 'done') return false;
+                    if (taskAssigneeFilter === 'my' && user?.profile?.name) {
+                      return t.assignee === user.profile.name;
+                    }
+                    if (taskAssigneeFilter === 'unassigned') {
+                      return !t.assignee || t.assignee.trim() === '';
+                    }
+                    return true;
+                  })
                   .slice(0, 5)
-                  .map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className={cn(
-                            'text-xs px-2 py-0.5 rounded-full',
-                            task.status === 'todo' ? 'bg-gray-100 text-gray-600' :
-                            task.status === 'in-progress' ? 'bg-blue-100 text-blue-600' :
-                            'bg-green-100 text-green-600'
-                          )}>
-                            {task.status === 'todo' ? '할 일' : task.status === 'in-progress' ? '진행 중' : '완료'}
-                          </span>
+                  .map((task) => {
+                    const relatedProject = activeProjects.find((p) => p.id === task.projectId);
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={() => setTaskDetailModalOpen(task)}
+                        className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-2 flex-wrap">
+                            <span className={cn(
+                              'text-xs px-2 py-0.5 rounded-full',
+                              task.status === 'todo' ? 'bg-gray-100 text-gray-600' :
+                              task.status === 'in-progress' ? 'bg-blue-100 text-blue-600' :
+                              'bg-green-100 text-green-600'
+                            )}>
+                              {task.status === 'todo' ? '할 일' : task.status === 'in-progress' ? '진행 중' : '완료'}
+                            </span>
+                            {relatedProject && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+                                {relatedProject.name}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-gray-800 mb-2">{task.title}</p>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                            {task.assignee && (
+                              <div className="flex items-center">
+                                <User className="w-3 h-3 mr-1" />
+                                <span className="font-medium">{task.assignee}</span>
+                              </div>
+                            )}
+                            {task.dueDate && (
+                              <div className="flex items-center text-gray-400">
+                                <Clock className="w-3 h-3 mr-1" />
+                                <span>{new Date(task.dueDate).toLocaleDateString('ko-KR')}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm font-medium text-gray-800 mb-2">{task.title}</p>
-                        {task.assignee && (
-                          <div className="flex items-center text-xs text-gray-500">
-                            <User className="w-3 h-3 mr-1" />
-                            <span className="font-medium">{task.assignee}</span>
-                          </div>
-                        )}
-                        {task.dueDate && (
-                          <div className="flex items-center text-xs text-gray-400 mt-1">
-                            <Clock className="w-3 h-3 mr-1" />
-                            <span>{new Date(task.dueDate).toLocaleDateString('ko-KR')}</span>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
               ) : (
                 <div className="text-center py-8 text-gray-400 text-sm">
                   등록된 할 일이 없습니다.
@@ -659,11 +860,316 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   // Project List View
   const ProjectListView = () => {
     const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
-    const buProjects = projects.filter((p) => p.bu === bu);
+    const [selectedChannelFilter, setSelectedChannelFilter] = useState<string>('all');
+    const [projectViewMode, setProjectViewMode] = useState<'kanban' | 'calendar' | 'list'>('list');
+    
+    // 채널별 필터링된 프로젝트
+    const filteredProjects = useMemo(() => {
+      const buProjects = projects.filter((p) => p.bu === bu);
+      if (selectedChannelFilter === 'all') return buProjects;
+      if (selectedChannelFilter === 'external') {
+        // 외주 프로젝트는 client_id가 있는 것으로 판단
+        return buProjects.filter((p) => p.client_id);
+      }
+      // 특정 채널의 프로젝트 필터링 - category로 매칭
+      const channel = channelsData.find((c) => c.id === Number(selectedChannelFilter));
+      if (channel) {
+        return buProjects.filter((p) => p.cat === channel.name || p.cat?.includes(channel.name));
+      }
+      return buProjects;
+    }, [projects, bu, selectedChannelFilter, channelsData]);
+    
+    const buChannels = channelsData.filter((c) => c.bu_code === bu);
+
+    // 프로젝트 상태별 분류
+    const projectStatusGroups = useMemo(() => {
+      const groups: Record<string, typeof filteredProjects> = {
+        '기획': filteredProjects.filter((p) => p.status === '기획중' || p.status === '준비중'),
+        '촬영': filteredProjects.filter((p) => p.status === '진행중' && (p as any).shoot_date),
+        '편집': filteredProjects.filter((p) => p.status === '편집중' || p.status === '운영중'),
+        '완료': filteredProjects.filter((p) => p.status === '완료'),
+      };
+      return groups;
+    }, [filteredProjects]);
+
+    // 칸반보드 뷰
+    const KanbanBoardView = () => {
+      const columns = [
+        { id: '기획', title: '기획 & 대본', statuses: ['기획중', '준비중'] },
+        { id: '촬영', title: '촬영 일정', statuses: ['진행중'] },
+        { id: '후반', title: '편집 & 승인', statuses: ['편집중', '운영중'] },
+        { id: '완료', title: '업로드 완료', statuses: ['완료'] },
+      ];
+
+      return (
+        <div className="flex gap-4 overflow-x-auto pb-4 h-full">
+          {columns.map((col) => (
+            <div key={col.id} className="min-w-[320px] flex-1 bg-gray-50 rounded-xl p-3 h-fit max-h-full overflow-y-auto">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                  {col.id === '기획' && <FileText size={18} />}
+                  {col.id === '촬영' && <Camera size={18} />}
+                  {col.id === '후반' && <Edit3 size={18} />}
+                  {col.id === '완료' && <CheckCircle2 size={18} />}
+                  {col.title}
+                </h3>
+                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full text-gray-600">
+                  {filteredProjects.filter((p) => col.statuses.includes(p.status)).length}
+                </span>
+              </div>
+              
+              <div className="space-y-3">
+                {filteredProjects
+                  .filter((p) => col.statuses.includes(p.status))
+                  .map((project) => {
+                    const projectClient = clientsData.find((c) => c.id === project.client_id);
+                    return (
+                      <div
+                        key={project.id}
+                        onClick={() => setSelectedProjectDetail(project)}
+                        className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer group"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          {project.client_id ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium text-white bg-indigo-600 flex items-center gap-1">
+                              <Briefcase size={8} /> 외주
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium text-white bg-red-600">
+                              {project.cat || '채널'}
+                            </span>
+                          )}
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditProjectModalOpen(project);
+                              }}
+                              className="text-gray-400 hover:text-gray-600"
+                              title="수정"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteProjectId(Number(project.id));
+                              }}
+                              className="text-red-400 hover:text-red-600"
+                              title="삭제"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <h4 className="font-semibold text-gray-800 mb-1 line-clamp-2">{project.name}</h4>
+                        {projectClient && (
+                          <p className="text-xs text-indigo-600 mb-2 font-medium">Client: {projectClient.company_name_ko}</p>
+                        )}
+                        
+                        <div className="space-y-1 mb-3 mt-2">
+                          {(project as any).shoot_date && (
+                            <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+                              <Camera size={12} />
+                              <span>촬영: {(project as any).shoot_date}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Clock size={12} />
+                            <span>{project.client_id ? '납품' : '업로드'}: {(project as any).release_date || project.endDate}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
+                          <div className="flex -space-x-1 overflow-hidden max-w-[50%]">
+                            {(project as any).pm_name && (
+                              <div className="w-6 h-6 rounded-full bg-slate-100 border border-white flex items-center justify-center text-[9px] font-bold text-slate-600 shrink-0" title={(project as any).pm_name}>
+                                {(project as any).pm_name[0]}
+                              </div>
+                            )}
+                          </div>
+                          <StatusBadge status={project.status} />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    // 캘린더 뷰
+    const CalendarView = () => {
+      const [currentMonth, setCurrentMonth] = useState(new Date());
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
+      const startDate = startOfMonth(monthStart);
+      const endDate = endOfMonth(monthEnd);
+      
+      const days = [];
+      let day = startDate;
+      while (day <= endDate) {
+        days.push(new Date(day));
+        day = new Date(day.setDate(day.getDate() + 1));
+      }
+
+      return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
+          <div className="p-4 border-b flex justify-between items-center">
+            <h3 className="font-bold text-lg">{format(currentMonth, 'yyyy년 M월')}</h3>
+            <div className="flex gap-2">
+              <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-1 hover:bg-gray-100 rounded">
+                <ChevronLeft size={20}/>
+              </button>
+              <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-1 hover:bg-gray-100 rounded">
+                <ChevronRight size={20}/>
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-px bg-gray-200 flex-1">
+            {['일','월','화','수','목','금','토'].map(d => (
+              <div key={d} className="bg-gray-50 p-2 text-center text-sm font-bold text-gray-500">{d}</div>
+            ))}
+            {days.map((day, idx) => {
+              const dayStr = format(day, 'yyyy-MM-dd');
+              const dayProjects = filteredProjects.filter(p => {
+                const releaseDate = (p as any).release_date || p.endDate;
+                const shootDate = (p as any).shoot_date;
+                return releaseDate === dayStr || shootDate === dayStr;
+              });
+              const isCurrentMonth = format(day, 'M') === format(currentMonth, 'M');
+              
+              return (
+                <div key={idx} className={`bg-white p-2 min-h-[100px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
+                  <span className={`text-sm font-medium ${isCurrentMonth ? 'text-gray-700' : 'text-gray-300'}`}>
+                    {format(day, 'd')}
+                  </span>
+                  <div className="mt-1 space-y-1">
+                    {dayProjects.map(p => {
+                      const releaseDate = (p as any).release_date || p.endDate;
+                      const shootDate = (p as any).shoot_date;
+                      const isExternal = !!p.client_id;
+                      const isShoot = shootDate === dayStr;
+                      
+                      if (releaseDate === dayStr) {
+                        return (
+                          <div
+                            key={`rel-${p.id}`}
+                            className={`text-[10px] px-1 py-0.5 rounded truncate cursor-pointer ${isExternal ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700'}`}
+                            onClick={() => setSelectedProjectDetail(p)}
+                          >
+                            {isExternal ? '📦' : '🚀'} {p.name}
+                          </div>
+                        );
+                      }
+                      if (isShoot) {
+                        return (
+                          <div
+                            key={`sht-${p.id}`}
+                            className="text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-700 truncate cursor-pointer"
+                            onClick={() => setSelectedProjectDetail(p)}
+                          >
+                            🎥 {p.name}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
 
     return (
-      <div className="space-y-4 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+      <div className="space-y-4 animate-fade-in h-full flex flex-col">
+        <div className="flex flex-col gap-4">
+          {/* 채널 필터링 UI */}
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">프로젝트 필터</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setProjectViewMode('kanban')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    projectViewMode === 'kanban'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Layout className="w-3 h-3 inline mr-1" /> 칸반
+                </button>
+                <button
+                  onClick={() => setProjectViewMode('calendar')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    projectViewMode === 'calendar'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <CalendarIcon className="w-3 h-3 inline mr-1" /> 캘린더
+                </button>
+                <button
+                  onClick={() => setProjectViewMode('list')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    projectViewMode === 'list'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <List className="w-3 h-3 inline mr-1" /> 리스트
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedChannelFilter('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedChannelFilter === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                전체 보기
+              </button>
+              <button
+                onClick={() => setSelectedChannelFilter('external')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  selectedChannelFilter === 'external'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Briefcase className="w-4 h-4" />
+                외주 프로젝트
+              </button>
+              {buChannels.map((channel) => (
+                <button
+                  key={channel.id}
+                  onClick={() => setSelectedChannelFilter(String(channel.id))}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedChannelFilter === String(channel.id)
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {channel.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 검색 및 새 프로젝트 버튼 */}
+          <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
               <div className="relative w-full md:w-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
@@ -679,7 +1185,13 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 <Plus className="w-4 h-4 mr-2" /> 새 프로젝트
               </button>
             </div>
+        </div>
 
+        {/* 뷰 모드에 따른 컨텐츠 */}
+        <div className="flex-1 overflow-hidden">
+          {projectViewMode === 'kanban' && <KanbanBoardView />}
+          {projectViewMode === 'calendar' && <CalendarView />}
+          {projectViewMode === 'list' && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
               <table className="w-full text-left min-w-[800px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -708,7 +1220,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {buProjects.map((project) => {
+                  {filteredProjects.map((project) => {
                     const projectClient = clientsData.find((c) => c.id === project.client_id);
                     const projectRevenues = financials.filter(
                       (f) => f.projectId === project.id && f.type === 'revenue'
@@ -720,11 +1232,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     const totalExpenses = projectExpenses.reduce((sum, e) => sum + e.amount, 0);
                     const isExpanded = expandedProjectId === project.id;
                     return (
-                      <>
+                      <React.Fragment key={project.id}>
                         <tr
-                          key={project.id}
                           className="hover:bg-gray-50 transition-colors cursor-pointer group"
-                          onClick={() => setExpandedProjectId(isExpanded ? null : project.id)}
+                          onClick={() => setSelectedProjectDetail(project)}
                         >
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
@@ -766,15 +1277,28 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             />
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditProjectModalOpen(project);
-                              }}
-                              className="text-gray-400 hover:text-gray-600"
-                            >
-                              <MoreVertical className="w-4 h-4 ml-auto" />
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditProjectModalOpen(project);
+                                }}
+                                className="text-gray-400 hover:text-gray-600"
+                                title="수정"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteProjectId(Number(project.id));
+                                }}
+                                className="text-red-400 hover:text-red-600"
+                                title="삭제"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                         {isExpanded && (
@@ -1054,12 +1578,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -1941,7 +2467,27 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   // Schedule View
   const ScheduleView = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [selectedChannelFilter, setSelectedChannelFilter] = useState<string>('all');
     const buEvents = eventsData.filter((e) => e.bu_code === bu);
+    const buProjects = projects.filter((p) => p.bu === bu);
+    
+    // 채널별 필터링된 프로젝트
+    const filteredProjects = useMemo(() => {
+      if (selectedChannelFilter === 'all') return buProjects;
+      if (selectedChannelFilter === 'external') {
+        // 외주 프로젝트는 client_id가 있는 것으로 판단
+        return buProjects.filter((p) => p.client_id);
+      }
+      // 특정 채널의 프로젝트 필터링 - category로 매칭
+      const channel = channelsData.find((c) => c.id === Number(selectedChannelFilter));
+      if (channel) {
+        return buProjects.filter((p) => p.cat === channel.name || p.cat?.includes(channel.name));
+      }
+      return buProjects;
+    }, [buProjects, selectedChannelFilter, channelsData]);
+    
+    const buChannels = channelsData.filter((c) => c.bu_code === bu);
+    
     const monthStart = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
@@ -1955,6 +2501,86 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
     const daysInMonth = monthEnd.getDate();
     const startDay = monthStart.getDay();
 
+    // 프로젝트 일정을 이벤트 형태로 변환
+    const projectSchedules = useMemo(() => {
+      const schedules: Array<{
+        id: string;
+        date: string;
+        type: 'plan' | 'script' | 'shoot' | 'edit1' | 'edit_final' | 'release';
+        projectId: string;
+        projectName: string;
+        isExternal: boolean;
+      }> = [];
+      
+      filteredProjects.forEach((project) => {
+        const p = project as any;
+        const isExternal = !!p.client_id;
+        
+        if (p.plan_date) {
+          schedules.push({
+            id: `project-${p.id}-plan`,
+            date: p.plan_date,
+            type: 'plan',
+            projectId: p.id,
+            projectName: p.name,
+            isExternal,
+          });
+        }
+        if (p.script_date) {
+          schedules.push({
+            id: `project-${p.id}-script`,
+            date: p.script_date,
+            type: 'script',
+            projectId: p.id,
+            projectName: p.name,
+            isExternal,
+          });
+        }
+        if (p.shoot_date) {
+          schedules.push({
+            id: `project-${p.id}-shoot`,
+            date: p.shoot_date,
+            type: 'shoot',
+            projectId: p.id,
+            projectName: p.name,
+            isExternal,
+          });
+        }
+        if (p.edit1_date) {
+          schedules.push({
+            id: `project-${p.id}-edit1`,
+            date: p.edit1_date,
+            type: 'edit1',
+            projectId: p.id,
+            projectName: p.name,
+            isExternal,
+          });
+        }
+        if (p.edit_final_date) {
+          schedules.push({
+            id: `project-${p.id}-edit_final`,
+            date: p.edit_final_date,
+            type: 'edit_final',
+            projectId: p.id,
+            projectName: p.name,
+            isExternal,
+          });
+        }
+        if (p.release_date) {
+          schedules.push({
+            id: `project-${p.id}-release`,
+            date: p.release_date,
+            type: 'release',
+            projectId: p.id,
+            projectName: p.name,
+            isExternal,
+          });
+        }
+      });
+      
+      return schedules;
+    }, [filteredProjects]);
+
     const monthEvents = buEvents.filter((event) => {
       const eventDate = new Date(event.event_date);
       return (
@@ -1963,11 +2589,60 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       );
     });
 
+    const monthProjectSchedules = projectSchedules.filter((schedule) => {
+      const scheduleDate = new Date(schedule.date);
+      return (
+        scheduleDate.getMonth() === currentMonth.getMonth() &&
+        scheduleDate.getFullYear() === currentMonth.getFullYear()
+      );
+    });
+
+    const allMonthItems = [
+      ...monthEvents.map((e) => ({ ...e, itemType: 'event' as const })),
+      ...monthProjectSchedules.map((s) => ({ ...s, itemType: 'project' as const })),
+    ];
+
     const upcomingEvents = [...buEvents]
       .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
       .slice(0, 10);
 
-    const getEventTypeColor = (type: string) => {
+    // 프로젝트별 색상 팔레트
+    const projectColorPalette = [
+      'bg-blue-100 text-blue-700 border-blue-200',
+      'bg-purple-100 text-purple-700 border-purple-200',
+      'bg-pink-100 text-pink-700 border-pink-200',
+      'bg-indigo-100 text-indigo-700 border-indigo-200',
+      'bg-cyan-100 text-cyan-700 border-cyan-200',
+      'bg-teal-100 text-teal-700 border-teal-200',
+      'bg-green-100 text-green-700 border-green-200',
+      'bg-yellow-100 text-yellow-700 border-yellow-200',
+      'bg-orange-100 text-orange-700 border-orange-200',
+      'bg-red-100 text-red-700 border-red-200',
+      'bg-rose-100 text-rose-700 border-rose-200',
+      'bg-amber-100 text-amber-700 border-amber-200',
+      'bg-lime-100 text-lime-700 border-lime-200',
+      'bg-emerald-100 text-emerald-700 border-emerald-200',
+      'bg-sky-100 text-sky-700 border-sky-200',
+      'bg-violet-100 text-violet-700 border-violet-200',
+    ];
+
+    // 프로젝트 ID를 기반으로 색상 결정
+    const getProjectColor = (projectId: string): string => {
+      // 프로젝트 ID를 숫자로 변환하여 색상 인덱스 결정
+      let hash = 0;
+      for (let i = 0; i < projectId.length; i++) {
+        hash = projectId.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const index = Math.abs(hash) % projectColorPalette.length;
+      return projectColorPalette[index];
+    };
+
+    const getEventTypeColor = (type: string, itemType?: 'event' | 'project', projectId?: string) => {
+      if (itemType === 'project' && projectId) {
+        // 프로젝트별로 통일된 색상 사용
+        return getProjectColor(projectId);
+      }
+      // 이벤트 타입별 색상 (기존 로직 유지)
       switch (type) {
         case 'shoot':
           return 'bg-red-100 text-red-700 border-red-200';
@@ -1980,7 +2655,25 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       }
     };
 
-    const getEventTypeLabel = (type: string) => {
+    const getEventTypeLabel = (type: string, itemType?: 'event' | 'project') => {
+      if (itemType === 'project') {
+        switch (type) {
+          case 'plan':
+            return '기획';
+          case 'script':
+            return '대본';
+          case 'shoot':
+            return '촬영';
+          case 'edit1':
+            return '1차편집';
+          case 'edit_final':
+            return '최종편집';
+          case 'release':
+            return '릴리즈';
+          default:
+            return '일정';
+        }
+      }
       switch (type) {
         case 'shoot':
           return '촬영';
@@ -1995,6 +2688,53 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
     return (
       <div className="space-y-4 animate-fade-in h-full flex flex-col">
+        {/* 필터 UI */}
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">프로젝트 필터</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedChannelFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedChannelFilter === 'all'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              전체 보기
+            </button>
+            <button
+              onClick={() => setSelectedChannelFilter('external')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                selectedChannelFilter === 'external'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Briefcase className="w-4 h-4" />
+              외주 프로젝트
+            </button>
+            {buChannels.map((channel) => (
+              <button
+                key={channel.id}
+                onClick={() => setSelectedChannelFilter(String(channel.id))}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  selectedChannelFilter === String(channel.id)
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Youtube className="w-4 h-4" />
+                {channel.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <div className="flex items-center space-x-4">
             <h2 className="text-xl font-bold text-gray-800">
@@ -2059,9 +2799,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 <div key={`empty-${i}`} className="bg-gray-50/50 rounded-lg"></div>
               ))}
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-                const dayEvents = monthEvents.filter((event) => {
-                  const eventDate = new Date(event.event_date);
-                  return eventDate.getDate() === day;
+                const dayItems = allMonthItems.filter((item) => {
+                  const itemDate = new Date(
+                    item.itemType === 'event' ? item.event_date : item.date
+                  );
+                  return itemDate.getDate() === day;
                 });
                 const isToday =
                   day === new Date().getDate() &&
@@ -2084,21 +2826,43 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       {day}
                     </span>
                     <div className="mt-1 space-y-1 overflow-y-auto custom-scrollbar flex-1">
-                      {dayEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditEventModalOpen(event);
-                          }}
-                          className={cn(
-                            'text-[10px] px-1.5 py-1 rounded truncate font-medium border cursor-pointer hover:opacity-80',
-                            getEventTypeColor(event.event_type)
-                          )}
-                        >
-                          {event.title}
-                        </div>
-                      ))}
+                      {dayItems.map((item) => {
+                        if (item.itemType === 'event') {
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditEventModalOpen(item);
+                              }}
+                              className={cn(
+                                'text-[10px] px-1.5 py-1 rounded truncate font-medium border cursor-pointer hover:opacity-80',
+                                getEventTypeColor(item.event_type, 'event')
+                              )}
+                            >
+                              {item.title}
+                            </div>
+                          );
+                        } else {
+                          const project = filteredProjects.find((p) => p.id === item.projectId);
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProjectDetail(project);
+                              }}
+                              className={cn(
+                                'text-[10px] px-1.5 py-1 rounded truncate font-medium border cursor-pointer hover:opacity-80',
+                                getEventTypeColor(item.type, 'project', item.projectId)
+                              )}
+                              title={`${item.projectName} - ${getEventTypeLabel(item.type, 'project')}`}
+                            >
+                              {getEventTypeLabel(item.type, 'project')}: {item.projectName}
+                            </div>
+                          );
+                        }
+                      })}
                     </div>
                         {isToday && (
                           <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -2485,7 +3249,43 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
   // Task View (Kanban)
   const TaskView = () => {
-    const buTasks = tasks.filter((t) => t.bu === bu);
+    const [taskChannelFilter, setTaskChannelFilter] = useState<string>('all');
+    const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
+    
+    const buTasks = useMemo(() => {
+      let filtered = tasks.filter((t) => t.bu === bu);
+      
+      // 채널별 필터링
+      if (taskChannelFilter !== 'all') {
+        if (taskChannelFilter === 'external') {
+          // 외주 프로젝트의 할일만 필터링
+          filtered = filtered.filter((t) => {
+            const project = projects.find((p) => p.id === t.projectId);
+            return project?.client_id;
+          });
+        } else {
+          // 특정 채널의 할일만 필터링
+          const channel = channelsData.find((c) => c.id === Number(taskChannelFilter));
+          if (channel) {
+            filtered = filtered.filter((t) => {
+              const project = projects.find((p) => p.id === t.projectId);
+              return project?.cat === channel.name || project?.cat?.includes(channel.name);
+            });
+          }
+        }
+      }
+      
+      // 담당자별 필터링
+      if (taskAssigneeFilter === 'my' && user?.profile?.name) {
+        filtered = filtered.filter((t) => t.assignee === user.profile.name);
+      }
+      if (taskAssigneeFilter === 'unassigned') {
+        filtered = filtered.filter((t) => !t.assignee || t.assignee.trim() === '');
+      }
+      
+      return filtered;
+    }, [tasks, bu, taskChannelFilter, taskAssigneeFilter, projects, channelsData, user]);
+    
     const todoTasks = buTasks.filter((t) => t.status === 'todo');
     const inProgressTasks = buTasks.filter((t) => t.status === 'in-progress');
     const doneTasks = buTasks.filter((t) => t.status === 'done');
@@ -2497,29 +3297,104 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       { id: 'done', title: 'Done (완료)', items: doneTasks },
     ];
 
+    const buChannels = channelsData.filter((c) => c.bu_code === bu);
+
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
-          <h2 className="text-lg font-bold text-gray-800">업무 현황 (Kanban)</h2>
-          <div className="flex space-x-2">
-            <button className="flex items-center px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
-              <Filter className="w-4 h-4 mr-2" /> 내 업무만 보기
+        <div className="flex flex-col gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-gray-800">업무 현황 (Kanban)</h2>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setTaskModalOpen(true)}
+                className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                <Plus className="w-4 h-4 inline mr-1" /> 새 업무
+              </button>
+            </div>
+          </div>
+          
+          {/* 필터 UI */}
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <span className="text-xs font-medium text-gray-600">채널:</span>
+            </div>
+            <button
+              onClick={() => setTaskChannelFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                taskChannelFilter === 'all'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              전체
             </button>
             <button
-              onClick={() => setTaskModalOpen(true)}
-              className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              onClick={() => setTaskChannelFilter('external')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
+                taskChannelFilter === 'external'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
-              <Plus className="w-4 h-4 inline mr-1" /> 새 업무
+              <Briefcase className="w-3 h-3" /> 외주
             </button>
+            {buChannels.map((channel) => (
+              <button
+                key={channel.id}
+                onClick={() => setTaskChannelFilter(String(channel.id))}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  taskChannelFilter === String(channel.id)
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {channel.name}
+              </button>
+            ))}
+            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+              <span className="text-xs font-medium text-gray-600">담당자:</span>
+              <button
+                onClick={() => setTaskAssigneeFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  taskAssigneeFilter === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                전체
+              </button>
+              <button
+                onClick={() => setTaskAssigneeFilter('my')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  taskAssigneeFilter === 'my'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                내 업무만
+              </button>
+              <button
+                onClick={() => setTaskAssigneeFilter('unassigned')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  taskAssigneeFilter === 'unassigned'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                담당자 미지정
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="flex h-full space-x-4 min-w-[1000px] pb-4">
+          <div className="flex h-full space-x-4 min-w-[1400px] pb-4">
             {kanbanColumns.map((column) => (
               <div
                 key={column.id}
-                className="flex-1 flex flex-col bg-slate-100 rounded-xl max-w-xs sm:max-w-sm shrink-0"
+                className="flex-1 flex flex-col bg-slate-100 rounded-xl min-w-[320px] max-w-md shrink-0"
               >
                 <div className="p-3 font-semibold text-gray-700 flex justify-between items-center border-b border-slate-200/50">
                   {column.title}
@@ -2592,11 +3467,23 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           </div>
                         </div>
                       </div>
-                      <h4 className="text-sm font-semibold text-gray-800 mb-3 leading-snug">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-2 leading-snug">
                         {item.title}
                       </h4>
+                      
+                      {/* 프로젝트 이름 표시 */}
+                      {(() => {
+                        const relatedProject = projects.find((p) => p.id === item.projectId);
+                        return relatedProject ? (
+                          <div className="mb-2">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+                              {relatedProject.name}
+                            </span>
+                          </div>
+                        ) : null;
+                      })()}
 
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center mt-2">
                         <div className="flex items-center space-x-1.5">
                           <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] font-bold text-indigo-700">
                             {item.assignee?.charAt(0) || '?'}
@@ -2609,6 +3496,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           </span>
                         )}
                       </div>
+                      
+                      {/* 마감일 표시 */}
+                      {item.dueDate && (
+                        <div className="flex items-center text-xs text-gray-400 mt-2">
+                          <Clock className="w-3 h-3 mr-1" />
+                          <span>{new Date(item.dueDate).toLocaleDateString('ko-KR')}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                   <button className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-slate-200/50 rounded-lg dashed border border-transparent hover:border-slate-300 transition-all flex items-center justify-center">
@@ -3063,39 +3958,6 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               {/* Period type buttons */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handlePeriodTypeChange('all')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'all'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  )}
-                >
-                  전체 기간
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('year')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'year'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  )}
-                >
-                  연도
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('quarter')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'quarter'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  )}
-                >
-                  분기
-                </button>
-                <button
                   onClick={() => handlePeriodTypeChange('month')}
                   className={cn(
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
@@ -3107,6 +3969,28 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   월별
                 </button>
                 <button
+                  onClick={() => handlePeriodTypeChange('quarter')}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
+                    periodType === 'quarter'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  )}
+                >
+                  분기별
+                </button>
+                <button
+                  onClick={() => handlePeriodTypeChange('year')}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
+                    periodType === 'year'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  )}
+                >
+                  연도별
+                </button>
+                <button
                   onClick={() => handlePeriodTypeChange('custom')}
                   className={cn(
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
@@ -3116,6 +4000,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   )}
                 >
                   직접선택
+                </button>
+                <button
+                  onClick={() => handlePeriodTypeChange('all')}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
+                    periodType === 'all'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  )}
+                >
+                  전체 기간
                 </button>
               </div>
 
@@ -3230,13 +4125,59 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           bu={bu}
           clients={clientsData}
           orgMembers={orgData}
+          appUsers={usersData?.users || []}
+          channels={channelsData}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
             try {
-              await createProjectMutation.mutateAsync({
+              const createdProject = await createProjectMutation.mutateAsync({
                 ...frontendProjectToDb(data),
                 client_id: data.client_id,
+                active_steps: data.active_steps || [],
+                release_date: data.release_date || null,
+                plan_date: data.plan_date || null,
+                script_date: data.script_date || null,
+                shoot_date: data.shoot_date || null,
+                edit1_date: data.edit1_date || null,
+                edit_final_date: data.edit_final_date || null,
               } as any);
+              
+              // 프로젝트 생성 후 active_steps에 따라 할일 목록 생성 (저장 시점에 생성)
+              if (data.active_steps && data.active_steps.length > 0) {
+                const projectId = createdProject.id.toString();
+                const schedule = {
+                  plan_date: data.plan_date || null,
+                  script_date: data.script_date || null,
+                  shoot_date: data.shoot_date || null,
+                  edit1_date: data.edit1_date || null,
+                  edit_final_date: data.edit_final_date || null,
+                  release_date: data.release_date || null,
+                };
+                
+                for (const step of data.active_steps) {
+                  const templates = DEFAULT_TASKS_BY_STEP[step] || [];
+                  for (const tmpl of templates) {
+                    try {
+                      // 마감일이 없으면 일정에 맞춰 자동 계산
+                      const dueDate = calculateTaskDueDate(tmpl.title, step, schedule);
+                      
+                      await createTaskMutation.mutateAsync({
+                        project_id: Number(projectId),
+                        bu_code: bu,
+                        title: tmpl.title,
+                        assignee: '',
+                        due_date: dueDate,
+                        status: 'todo',
+                        priority: tmpl.priority,
+                        tag: '',
+                      } as any);
+                    } catch (error) {
+                      console.error(`Failed to create task for step ${step}:`, error);
+                    }
+                  }
+                }
+              }
+              
               setProjectModalOpen(false);
             } catch (error) {
               console.error('Failed to create project:', error);
@@ -3259,16 +4200,67 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           bu={bu}
           clients={clientsData}
           orgMembers={orgData}
+          appUsers={usersData?.users || []}
+          channels={channelsData}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
             try {
+              const previousProject = isEditProjectModalOpen;
+              const previousSteps = (previousProject as any).active_steps || [];
+              const newSteps = data.active_steps || [];
+              
               await updateProjectMutation.mutateAsync({
                 id: Number(isEditProjectModalOpen.id),
                 data: {
                   ...frontendProjectToDb(data),
                   client_id: data.client_id,
+                  active_steps: data.active_steps || [],
+                  release_date: data.release_date || null,
+                  plan_date: data.plan_date || null,
+                  script_date: data.script_date || null,
+                  shoot_date: data.shoot_date || null,
+                  edit1_date: data.edit1_date || null,
+                  edit_final_date: data.edit_final_date || null,
                 } as any,
               });
+              
+              // 저장 시점에 새로 추가된 단계에 대한 할일 목록 생성
+              const addedSteps = newSteps.filter((step) => !previousSteps.includes(step));
+              if (addedSteps.length > 0) {
+                const projectId = isEditProjectModalOpen.id.toString();
+                const schedule = {
+                  plan_date: data.plan_date || null,
+                  script_date: data.script_date || null,
+                  shoot_date: data.shoot_date || null,
+                  edit1_date: data.edit1_date || null,
+                  edit_final_date: data.edit_final_date || null,
+                  release_date: data.release_date || null,
+                };
+                
+                for (const step of addedSteps) {
+                  const templates = DEFAULT_TASKS_BY_STEP[step] || [];
+                  for (const tmpl of templates) {
+                    try {
+                      // 마감일이 없으면 일정에 맞춰 자동 계산
+                      const dueDate = calculateTaskDueDate(tmpl.title, step, schedule);
+                      
+                      await createTaskMutation.mutateAsync({
+                        project_id: Number(projectId),
+                        bu_code: bu,
+                        title: tmpl.title,
+                        assignee: '',
+                        due_date: dueDate,
+                        status: 'todo',
+                        priority: tmpl.priority,
+                        tag: '',
+                      } as any);
+                    } catch (error) {
+                      console.error(`Failed to create task for step ${step}:`, error);
+                    }
+                  }
+                }
+              }
+              
               setEditProjectModalOpen(null);
             } catch (error) {
               console.error('Failed to update project:', error);
@@ -3288,9 +4280,37 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       {deleteProjectId && (
         <DeleteConfirmModal
           title="프로젝트 삭제"
-          message="정말로 이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+          message="정말로 이 프로젝트를 삭제하시겠습니까? 이 프로젝트와 관련된 모든 할일과 일정도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
           onConfirm={async () => {
             try {
+              // 프로젝트와 관련된 모든 할일 삭제
+              const projectTasks = tasksData.filter(
+                (t) => {
+                  const taskProjectId = (t as any).project_id;
+                  return taskProjectId === deleteProjectId || taskProjectId === String(deleteProjectId) || String(taskProjectId) === String(deleteProjectId);
+                }
+              );
+              for (const task of projectTasks) {
+                try {
+                  await deleteTaskMutation.mutateAsync(Number(task.id));
+                } catch (error) {
+                  console.error('Failed to delete task:', error);
+                }
+              }
+
+              // 프로젝트와 관련된 모든 일정 삭제
+              const projectEvents = eventsData.filter(
+                (e) => (e as any).project_id === deleteProjectId || (e as any).project_id === String(deleteProjectId)
+              );
+              for (const event of projectEvents) {
+                try {
+                  await deleteEventMutation.mutateAsync(event.id);
+                } catch (error) {
+                  console.error('Failed to delete event:', error);
+                }
+              }
+
+              // 프로젝트 삭제
               await deleteProjectMutation.mutateAsync(deleteProjectId);
               setDeleteProjectId(null);
             } catch (error) {
@@ -3526,6 +4546,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             } catch (error) {
               console.error('Failed to create task:', error);
             }
+          }}
+        />
+      )}
+      {isTaskDetailModalOpen && (
+        <TaskDetailModal
+          task={isTaskDetailModalOpen}
+          projects={projects}
+          onClose={() => setTaskDetailModalOpen(null)}
+          onEdit={(task) => {
+            setTaskDetailModalOpen(null);
+            setEditTaskModalOpen(task);
           }}
         />
       )}
@@ -3837,6 +4868,78 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           onCancel={() => setDeleteStaffId(null)}
         />
       )}
+      {selectedProjectDetail && (
+        <ProjectDetailModal
+          project={selectedProjectDetail}
+          bu={bu}
+          clients={clientsData}
+          channels={channelsData}
+          orgMembers={orgData}
+          externalWorkers={externalWorkersData}
+          tasks={tasks.filter((t) => t.projectId === selectedProjectDetail.id.toString())}
+          onClose={() => setSelectedProjectDetail(null)}
+          onEdit={() => {
+            setEditProjectModalOpen(selectedProjectDetail);
+            setSelectedProjectDetail(null);
+          }}
+          onDelete={(projectId) => {
+            setSelectedProjectDetail(null);
+            setDeleteProjectId(projectId);
+          }}
+          onUpdate={async (data) => {
+            try {
+              await updateProjectMutation.mutateAsync({
+                id: Number(selectedProjectDetail.id),
+                data: {
+                  ...frontendProjectToDb(data),
+                  client_id: data.client_id,
+                  active_steps: data.active_steps || [],
+                  release_date: data.release_date || null,
+                  plan_date: data.plan_date || null,
+                  script_date: data.script_date || null,
+                  shoot_date: data.shoot_date || null,
+                  edit1_date: data.edit1_date || null,
+                  edit_final_date: data.edit_final_date || null,
+                } as any,
+              });
+            } catch (error) {
+              console.error('Failed to update project:', error);
+            }
+          }}
+          onCreateTask={async (taskData) => {
+            try {
+              await createTaskMutation.mutateAsync({
+                ...frontendTaskToDb(taskData),
+                priority: taskData.priority || 'medium',
+                tag: taskData.tag,
+              } as any);
+            } catch (error) {
+              console.error('Failed to create task:', error);
+            }
+          }}
+          onUpdateTask={async (taskId, taskData) => {
+            try {
+              await updateTaskMutation.mutateAsync({
+                id: Number(taskId),
+                data: {
+                  ...frontendTaskToDb(taskData),
+                  priority: taskData.priority,
+                  tag: taskData.tag,
+                } as any,
+              });
+            } catch (error) {
+              console.error('Failed to update task:', error);
+            }
+          }}
+          onDeleteTask={async (taskId) => {
+            try {
+              await deleteTaskMutation.mutateAsync(Number(taskId));
+            } catch (error) {
+              console.error('Failed to delete task:', error);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -3846,15 +4949,17 @@ function ModalShell({
   title,
   onClose,
   children,
+  actions,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  actions?: React.ReactNode;
 }) {
   return (
     <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <div className="w-full max-w-2xl max-h-[90vh] rounded-2xl bg-white shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 flex-shrink-0">
           <h3 className="text-lg font-bold text-slate-800">{title}</h3>
           <button
             onClick={onClose}
@@ -3863,7 +4968,14 @@ function ModalShell({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="space-y-4 px-6 py-5">{children}</div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-4 px-6 py-5">{children}</div>
+        </div>
+        {actions && (
+          <div className="flex-shrink-0 border-t border-slate-100 bg-white">
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3875,37 +4987,42 @@ function InputField({
   onChange,
   placeholder,
   type = 'text',
+  disabled = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  disabled?: boolean;
 }) {
   if (type === 'date') {
     return (
       <label className="space-y-1 text-sm font-semibold text-slate-700">
         <div className="flex items-center justify-between">
           <span className="text-xs text-slate-500">{label}</span>
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className={cn(
-              'text-[10px] font-semibold px-2 py-0.5 rounded transition',
-              value === ''
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-            )}
-          >
-            미정
-          </button>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              className={cn(
+                'text-[10px] font-semibold px-2 py-0.5 rounded transition',
+                value === ''
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+              )}
+            >
+              미정
+            </button>
+          )}
         </div>
         <input
           type="date"
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+          disabled={disabled}
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
       </label>
     );
@@ -3919,8 +5036,9 @@ function InputField({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
           rows={4}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
       </label>
     );
@@ -3934,7 +5052,8 @@ function InputField({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+        disabled={disabled}
+        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
       />
     </label>
   );
@@ -3979,7 +5098,7 @@ function ModalActions({
   primaryLabel: string;
 }) {
   return (
-    <div className="flex items-center justify-end gap-2 pt-2">
+    <div className="flex items-center justify-end gap-2 px-6 py-4">
       <button
         onClick={onClose}
         className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
@@ -4040,6 +5159,8 @@ function CreateProjectModal({
   bu,
   clients,
   orgMembers,
+  appUsers,
+  channels,
   onClose,
   onSubmit,
   onOpenClientModal,
@@ -4049,6 +5170,8 @@ function CreateProjectModal({
   bu: BU;
   clients: Client[];
   orgMembers: any[];
+  appUsers: any[];
+  channels: Channel[];
   onClose: () => void;
   onSubmit: (data: {
     bu: BU;
@@ -4059,74 +5182,148 @@ function CreateProjectModal({
     status: string;
     client_id?: number;
     pm_name?: string | null;
+    active_steps?: ProjectStep[];
+    release_date?: string | null;
+    plan_date?: string | null;
+    script_date?: string | null;
+    shoot_date?: string | null;
+    edit1_date?: string | null;
+    edit_final_date?: string | null;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
   onDeleteClient: (clientId: number) => void;
 }) {
   const [form, setForm] = useState({
+    projectType: 'channel' as 'channel' | 'external', // 프로젝트 타입: 채널 or 외주
     name: '',
     cat: '',
+    channel_id: '', // 채널 프로젝트인 경우
     startDate: '',
     endDate: '',
     status: '준비중',
-    client_id: '',
+    client_id: '', // 클라이언트 (채널 프로젝트에서도 선택 가능)
     pm_name: '',
+    active_steps: [] as ProjectStep[],
+    release_date: '',
   });
 
   const selectedClient = form.client_id ? clients.find((c) => c.id === Number(form.client_id)) : null;
+  const selectedChannel = form.channel_id ? channels.find((c) => c.id === Number(form.channel_id)) : null;
+  const buChannels = channels.filter((c) => c.bu_code === bu);
+
+  // D-Day 변경 시 자동 계산
+  const handleReleaseDateChange = (releaseDate: string) => {
+    const calculatedDates = calculateDatesFromRelease(releaseDate);
+    setForm((prev) => ({
+      ...prev,
+      release_date: releaseDate,
+      endDate: releaseDate,
+      ...calculatedDates,
+    }));
+  };
+
+  // 단계 토글
+  const toggleStep = (step: ProjectStep) => {
+    const currentSteps = form.active_steps || [];
+    const newSteps = currentSteps.includes(step)
+      ? currentSteps.filter((s) => s !== step)
+      : [...currentSteps, step];
+    setForm((prev) => ({ ...prev, active_steps: newSteps }));
+  };
 
   return (
-    <ModalShell title="프로젝트 등록" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <InputField
-          label="카테고리"
-          placeholder="예: 안무제작"
-          value={form.cat}
-          onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
+    <ModalShell
+      title="프로젝트 등록"
+      onClose={onClose}
+      actions={
+        <ModalActions
+          onPrimary={() => {
+            const calculatedDates = form.release_date ? calculateDatesFromRelease(form.release_date) : {};
+            onSubmit({
+              bu,
+              name: form.name,
+              cat: form.cat || (selectedChannel?.name || ''),
+              startDate: form.startDate,
+              endDate: form.release_date || form.endDate,
+              status: form.status,
+              client_id: form.client_id ? Number(form.client_id) : undefined,
+              pm_name: form.pm_name || null,
+              active_steps: form.active_steps,
+              release_date: form.release_date || null,
+              ...calculatedDates,
+            });
+          }}
+          onClose={onClose}
+          primaryLabel="등록"
         />
-        <InputField
-          label="프로젝트명"
-          placeholder="프로젝트 이름"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <InputField
-            label="시작일"
-            type="date"
-            value={form.startDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
-          />
-          <InputField
-            label="종료일"
-            type="date"
-            value={form.endDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
-          />
+      }
+    >
+      {/* 프로젝트 타입 선택 */}
+      <div className="mb-6">
+        <label className="text-xs font-semibold text-slate-500 mb-2 block">프로젝트 유형</label>
+        <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+          <button
+            type="button"
+            onClick={() => setForm((prev) => ({ ...prev, projectType: 'channel', channel_id: '' }))}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
+              form.projectType === 'channel'
+                ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
+                : 'text-gray-400 hover:bg-gray-200'
+            }`}
+          >
+            <Youtube className="w-4 h-4" />
+            채널 프로젝트
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm((prev) => ({ ...prev, projectType: 'external', channel_id: '' }))}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
+              form.projectType === 'external'
+                ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
+                : 'text-gray-400 hover:bg-gray-200'
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            외주 프로젝트
+          </button>
         </div>
-        <SelectField
-          label="상태"
-          value={form.status}
-          onChange={(val) => setForm((prev) => ({ ...prev, status: val }))}
-          options={[
-            { value: '준비중', label: '준비중' },
-            { value: '진행중', label: '진행중' },
-            { value: '운영중', label: '운영중' },
-            { value: '기획중', label: '기획중' },
-            { value: '완료', label: '완료' },
-          ]}
-        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {/* 채널 선택 (채널 프로젝트인 경우 필수) */}
+        {form.projectType === 'channel' && (
+          <div className="md:col-span-2">
+            <SelectField
+              label="채널 선택"
+              value={form.channel_id}
+              onChange={(val) => {
+                const channel = channels.find((c) => c.id === Number(val));
+                setForm((prev) => ({
+                  ...prev,
+                  channel_id: val,
+                  cat: channel?.name || prev.cat,
+                }));
+              }}
+              options={[
+                { value: '', label: '채널을 선택하세요' },
+                ...buChannels.map((c) => ({ value: String(c.id), label: c.name })),
+              ]}
+            />
+          </div>
+        )}
+
+        {/* 클라이언트 선택 (선택 사항 - 채널 프로젝트에서도 선택 가능) */}
         <div className="md:col-span-2">
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <SelectField
-                label="클라이언트"
+                label={form.projectType === 'external' ? '클라이언트 (필수)' : '클라이언트 (선택 사항)'}
                 value={form.client_id}
                 onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
                 options={[
-                  { value: '', label: '선택 안함' },
-                  ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko })),
+                  { value: '', label: '클라이언트를 선택하세요' },
+                  ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko || c.company_name_en || '' })),
                 ]}
               />
             </div>
@@ -4162,24 +5359,873 @@ function CreateProjectModal({
             </div>
           </div>
         </div>
+
+        <InputField
+          label="카테고리"
+          placeholder={form.projectType === 'channel' ? '채널 선택 시 자동 입력' : '예: 안무제작'}
+          value={form.cat}
+          onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
+          disabled={form.projectType === 'channel' && !!form.channel_id}
+        />
+        <InputField
+          label="프로젝트명"
+          placeholder="프로젝트 이름"
+          value={form.name}
+          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <InputField
+            label="시작일"
+            type="date"
+            value={form.startDate}
+            onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
+          />
+          <InputField
+            label="종료일"
+            type="date"
+            value={form.endDate}
+            onChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
+          />
+        </div>
+        <SelectField
+          label="상태"
+          value={form.status}
+          onChange={(val) => setForm((prev) => ({ ...prev, status: val }))}
+          options={[
+            { value: '준비중', label: '준비중' },
+            { value: '진행중', label: '진행중' },
+            { value: '운영중', label: '운영중' },
+            { value: '기획중', label: '기획중' },
+            { value: '완료', label: '완료' },
+          ]}
+        />
+        <SelectField
+          label="PM / 감독"
+          value={form.pm_name}
+          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
+          options={[
+            { value: '', label: '선택 안함' },
+            ...appUsers.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value),
+          ]}
+        />
       </div>
-      <ModalActions
-        onPrimary={() =>
-          onSubmit({
-            bu,
-            name: form.name,
-            cat: form.cat,
-            startDate: form.startDate,
-            endDate: form.endDate,
-            status: form.status,
-            client_id: form.client_id ? Number(form.client_id) : undefined,
-            pm_name: form.pm_name || null,
-          })
-        }
-        onClose={onClose}
-        primaryLabel="등록"
-      />
+      {/* 진행 단계 설정 */}
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+          <Settings className="w-4 h-4" /> 진행 단계 설정
+        </h3>
+        <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+          {[
+            { id: 'plan' as ProjectStep, label: '기획' },
+            { id: 'script' as ProjectStep, label: '대본' },
+            { id: 'shoot' as ProjectStep, label: '촬영' },
+            { id: 'edit' as ProjectStep, label: '편집' }
+          ].map(step => {
+            const isActive = form.active_steps?.includes(step.id);
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => toggleStep(step.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
+                  isActive
+                    ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
+                    : 'text-gray-400 hover:bg-gray-200'
+                }`}
+              >
+                {isActive ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <X className="w-4 h-4" />}
+                {step.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 주요 일정 관리 */}
+      {form.active_steps && form.active_steps.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+            <CalendarIcon className="w-4 h-4" /> 주요 일정 관리
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              {form.active_steps.includes('plan') && (
+                <InputField
+                  label="기획 확정 (D-11)"
+                  type="date"
+                  value={form.startDate}
+                  onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
+                />
+              )}
+              {form.active_steps.includes('script') && (
+                <InputField
+                  label="대본 확정 (D-9)"
+                  type="date"
+                  value=""
+                  onChange={() => {}}
+                  disabled
+                />
+              )}
+              {form.active_steps.includes('shoot') && (
+                <InputField
+                  label="촬영 확정 (D-7)"
+                  type="date"
+                  value=""
+                  onChange={() => {}}
+                  disabled
+                />
+              )}
+            </div>
+            <div className="space-y-3">
+              {form.active_steps.includes('edit') && (
+                <>
+                  <InputField
+                    label="1차 편집 확정 (D-3)"
+                    type="date"
+                    value=""
+                    onChange={() => {}}
+                    disabled
+                  />
+                  <InputField
+                    label="최종 편집 확정 (D-1)"
+                    type="date"
+                    value=""
+                    onChange={() => {}}
+                    disabled
+                  />
+                </>
+              )}
+              <div className="bg-red-50 p-3 rounded-lg">
+                <InputField
+                  label={`${form.client_id ? '최종 납품' : '업로드'} 예정일 (기준일)`}
+                  type="date"
+                  value={form.release_date}
+                  onChange={(v) => handleReleaseDateChange(v)}
+                />
+                <p className="text-[10px] text-red-500 mt-1">* 날짜 변경 시 D-Day 역산하여 전체 일정 자동 조정</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </ModalShell>
+  );
+}
+
+// Project Detail Modal
+function ProjectDetailModal({
+  project,
+  bu,
+  clients,
+  channels,
+  orgMembers,
+  externalWorkers,
+  tasks,
+  onClose,
+  onEdit,
+  onUpdate,
+  onCreateTask,
+  onUpdateTask,
+  onDeleteTask,
+  onDelete,
+}: {
+  project: any;
+  bu: BU;
+  clients: Client[];
+  channels: Channel[];
+  orgMembers: any[];
+  externalWorkers: any[];
+  tasks: any[];
+  onClose: () => void;
+  onEdit: () => void;
+  onUpdate: (data: any) => Promise<void>;
+  onCreateTask: (data: any) => Promise<void>;
+  onUpdateTask: (taskId: string, data: any) => Promise<void>;
+  onDeleteTask: (taskId: string) => Promise<void>;
+  onDelete?: (projectId: number) => void;
+}) {
+  const isExternal = !!(project as any).client_id;
+  const projectClient = isExternal ? clients.find((c) => c.id === project.client_id) : null;
+  const projectChannel = !isExternal ? channels.find((c) => c.name === project.cat) : null;
+  
+  const [localProject, setLocalProject] = useState({
+    ...project,
+    active_steps: (project as any).active_steps || [] as ProjectStep[],
+    plan_date: (project as any).plan_date || null,
+    script_date: (project as any).script_date || null,
+    shoot_date: (project as any).shoot_date || null,
+    edit1_date: (project as any).edit1_date || null,
+    edit_final_date: (project as any).edit_final_date || null,
+    release_date: (project as any).release_date || null,
+    assets: (project as any).assets || {} as ProjectAssets,
+  });
+
+  const [localTasks, setLocalTasks] = useState(tasks);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+
+  // D-Day 변경 시 자동 계산
+  const handleReleaseDateChange = (releaseDate: string) => {
+    const calculatedDates = calculateDatesFromRelease(releaseDate);
+    setLocalProject((prev) => ({
+      ...prev,
+      release_date: releaseDate,
+      endDate: releaseDate,
+      ...calculatedDates,
+    }));
+  };
+
+  // 단계 토글
+  const toggleStep = (step: ProjectStep) => {
+    const currentSteps = localProject.active_steps || [];
+    const newSteps = currentSteps.includes(step)
+      ? currentSteps.filter((s) => s !== step)
+      : [...currentSteps, step];
+    
+    // 단계 활성화 시 기본 할일 추가 (로컬 상태만 업데이트, DB 저장은 저장 버튼 클릭 시)
+    let newTasks = [...localTasks];
+    if (!currentSteps.includes(step)) {
+      const templates = DEFAULT_TASKS_BY_STEP[step] || [];
+      const hasExistingTasks = newTasks.some((t) => (t as any).step === step);
+      
+      if (!hasExistingTasks) {
+        const tasksToAdd = templates.map((tmpl, idx) => ({
+          id: `new-${step}-${Date.now()}-${idx}`,
+          projectId: project.id.toString(),
+          step: step,
+          title: tmpl.title,
+          description: tmpl.description,
+          priority: tmpl.priority,
+          assignee: '',
+          dueDate: '',
+          status: 'todo' as const,
+          completed: false,
+        }));
+        newTasks = [...newTasks, ...tasksToAdd];
+      }
+    } else {
+      // 단계 비활성화 시 해당 단계 할일 제거 (로컬 상태만 업데이트)
+      newTasks = newTasks.filter((t) => (t as any).step !== step);
+    }
+    
+    setLocalProject((prev) => ({ ...prev, active_steps: newSteps }));
+    setLocalTasks(newTasks);
+  };
+
+  // 할일 추가
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    
+    const newTask = {
+      id: `manual-${Date.now()}`,
+      projectId: project.id.toString(),
+      step: 'manual' as any,
+      title: newTaskTitle,
+      description: '',
+      priority: 'medium' as const,
+      assignee: '',
+      dueDate: '',
+      status: 'todo' as const,
+      completed: false,
+    };
+    
+    setLocalTasks((prev) => [...prev, newTask]);
+    setNewTaskTitle('');
+    
+    try {
+      await onCreateTask({
+        bu,
+        projectId: project.id.toString(),
+        title: newTask.title,
+        description: newTask.description,
+        assignee: newTask.assignee,
+        dueDate: newTask.dueDate,
+        status: newTask.status,
+        priority: newTask.priority,
+      });
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      setLocalTasks((prev) => prev.filter((t) => t.id !== newTask.id));
+    }
+  };
+
+  // 할일 변경
+  const handleTaskChange = async (taskId: string, field: string, value: any) => {
+    const updatedTasks = localTasks.map((t) =>
+      t.id === taskId ? { ...t, [field]: value } : t
+    );
+    setLocalTasks(updatedTasks);
+    
+    const task = updatedTasks.find((t) => t.id === taskId);
+    if (task) {
+      try {
+        await onUpdateTask(taskId, {
+          bu,
+          projectId: task.projectId,
+          title: task.title,
+          description: (task as any).description || '',
+          assignee: task.assignee || '',
+          dueDate: task.dueDate,
+          status: task.status,
+          priority: (task as any).priority || 'medium',
+        });
+      } catch (error) {
+        console.error('Failed to update task:', error);
+      }
+    }
+  };
+
+  // 할일 삭제
+  const handleDeleteTask = async (taskId: string) => {
+    setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
+    try {
+      await onDeleteTask(taskId);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
+  };
+
+  // 상태 변경
+  const handleStatusChange = (newStatus: string) => {
+    setLocalProject((prev) => ({ ...prev, status: newStatus }));
+  };
+
+  // 일정 변경
+  const handleDateChange = (type: string, value: string) => {
+    if (type === 'release_date') {
+      handleReleaseDateChange(value);
+    } else {
+      setLocalProject((prev) => ({ ...prev, [type]: value || null }));
+    }
+  };
+
+  // 저장
+  const handleSave = async () => {
+    try {
+      // 프로젝트 정보 업데이트
+      await onUpdate({
+        bu,
+        name: localProject.name,
+        cat: localProject.cat,
+        startDate: localProject.startDate,
+        endDate: localProject.release_date || localProject.endDate,
+        status: localProject.status,
+        client_id: localProject.client_id,
+        pm_name: (localProject as any).pm_name || null,
+        active_steps: localProject.active_steps,
+        release_date: localProject.release_date,
+        plan_date: localProject.plan_date,
+        script_date: localProject.script_date,
+        shoot_date: localProject.shoot_date,
+        edit1_date: localProject.edit1_date,
+        edit_final_date: localProject.edit_final_date,
+      });
+      
+      // 새로 생성된 할일들(임시 ID를 가진 할일들)을 DB에 저장
+      const newTasksToSave = localTasks.filter((t) => 
+        t.id.startsWith('new-') || t.id.startsWith('manual-')
+      );
+      
+      for (const task of newTasksToSave) {
+        try {
+          // 마감일이 없으면 일정에 맞춰 자동 계산
+          let dueDate = task.dueDate || '';
+          if (!dueDate && (task as any).step) {
+            const schedule = {
+              plan_date: localProject.plan_date,
+              script_date: localProject.script_date,
+              shoot_date: localProject.shoot_date,
+              edit1_date: localProject.edit1_date,
+              edit_final_date: localProject.edit_final_date,
+              release_date: localProject.release_date,
+            };
+            dueDate = calculateTaskDueDate(task.title, (task as any).step, schedule);
+          }
+          
+          await onCreateTask({
+            bu,
+            projectId: project.id.toString(),
+            title: task.title,
+            description: (task as any).description || '',
+            assignee: task.assignee || '',
+            dueDate: dueDate,
+            status: task.status,
+            priority: (task as any).priority || 'medium',
+          });
+        } catch (error) {
+          console.error('Failed to create task:', error);
+        }
+      }
+      
+      // 삭제된 할일들 처리 (로컬에서 제거되었지만 DB에는 아직 있는 할일들)
+      const originalTaskIds = tasks.map((t) => t.id);
+      const currentTaskIds = localTasks.map((t) => t.id);
+      const deletedTaskIds = originalTaskIds.filter((id) => !currentTaskIds.includes(id));
+      
+      for (const taskId of deletedTaskIds) {
+        // 임시 ID가 아닌 실제 DB에 저장된 할일만 삭제
+        if (!taskId.startsWith('new-') && !taskId.startsWith('manual-')) {
+          try {
+            await onDeleteTask(taskId);
+          } catch (error) {
+            console.error('Failed to delete task:', error);
+          }
+        }
+      }
+      
+      // 수정된 할일들 업데이트
+      for (const task of localTasks) {
+        // 임시 ID가 아닌 실제 DB에 저장된 할일만 업데이트
+        if (!task.id.startsWith('new-') && !task.id.startsWith('manual-')) {
+          const originalTask = tasks.find((t) => t.id === task.id);
+          if (originalTask) {
+            const hasChanges = 
+              originalTask.title !== task.title ||
+              originalTask.assignee !== task.assignee ||
+              originalTask.dueDate !== task.dueDate ||
+              originalTask.status !== task.status ||
+              (originalTask as any).priority !== (task as any).priority;
+            
+            if (hasChanges) {
+              try {
+                await onUpdateTask(task.id, {
+                  bu,
+                  projectId: task.projectId,
+                  title: task.title,
+                  description: (task as any).description || '',
+                  assignee: task.assignee || '',
+                  dueDate: task.dueDate || '',
+                  status: task.status,
+                  priority: (task as any).priority || 'medium',
+                });
+              } catch (error) {
+                console.error('Failed to update task:', error);
+              }
+            }
+          }
+        }
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error('Failed to save project:', error);
+    }
+  };
+
+  const allWorkers = [...orgMembers, ...externalWorkers];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+          <h2 className="text-lg font-bold text-gray-800">프로젝트 상세 정보</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={onEdit}
+              className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+            >
+              <Edit3 size={14} /> 수정
+            </button>
+            <button
+              onClick={() => {
+                if (onDelete) {
+                  onDelete(project.id);
+                }
+              }}
+              className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 flex items-center gap-2"
+            >
+              <Trash2 size={14} /> 삭제
+            </button>
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="space-y-6">
+            {/* Header Info */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                {isExternal ? (
+                  <span className="text-xs px-2 py-0.5 rounded font-bold text-white bg-indigo-600">외주 프로젝트</span>
+                ) : (
+                  <span className="text-xs px-2 py-0.5 rounded font-bold text-white bg-red-600">
+                    {projectChannel?.name || project.cat || '채널'}
+                  </span>
+                )}
+                <span className="text-sm text-gray-500">ID: #{project.id}</span>
+              </div>
+              
+              {isExternal && projectClient && (
+                <div className="mb-2">
+                  <label className="text-[10px] uppercase text-gray-500 font-bold">Client</label>
+                  <input
+                    type="text"
+                    value={projectClient.company_name_ko || projectClient.company_name_en || ''}
+                    readOnly
+                    className="w-full text-indigo-700 font-bold border-none p-0 focus:ring-0 text-lg"
+                  />
+                </div>
+              )}
+
+              <input
+                type="text"
+                value={localProject.name}
+                onChange={(e) => setLocalProject((prev) => ({ ...prev, name: e.target.value }))}
+                className="text-2xl font-bold text-gray-900 w-full border-none p-0 focus:ring-0"
+                placeholder="프로젝트명"
+              />
+            </div>
+
+            {/* Status & Dates */}
+            <div className="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+              <div>
+                <label className="text-xs font-bold text-gray-500 block mb-2 uppercase">현재 상태</label>
+                <select
+                  className="w-full bg-white border border-gray-300 text-sm rounded-lg p-2.5"
+                  value={localProject.status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                >
+                  <option value="준비중">준비중</option>
+                  <option value="기획중">기획중</option>
+                  <option value="진행중">진행중</option>
+                  <option value="운영중">운영중</option>
+                  <option value="완료">완료</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 block mb-2 uppercase">PM / 감독</label>
+                <div className="text-sm text-gray-700">
+                  {(localProject as any).pm_name || '-'}
+                </div>
+              </div>
+            </div>
+
+            {/* Step Configuration */}
+            <div>
+              <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+                <Settings size={18} /> 진행 단계 설정 (Step Config)
+              </h3>
+              <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+                {[
+                  { id: 'plan' as ProjectStep, label: '기획' },
+                  { id: 'script' as ProjectStep, label: '대본' },
+                  { id: 'shoot' as ProjectStep, label: '촬영' },
+                  { id: 'edit' as ProjectStep, label: '편집' }
+                ].map(step => {
+                  const isActive = localProject.active_steps?.includes(step.id);
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => toggleStep(step.id)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
+                        isActive
+                          ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
+                          : 'text-gray-400 hover:bg-gray-200'
+                      }`}
+                    >
+                      {isActive ? <CheckSquare size={16} className="text-blue-600" /> : <X size={16} />}
+                      {step.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tasks Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                  <CheckSquare size={18} /> 할 일 및 업무 분장 (Tasks)
+                </h3>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
+                    placeholder="새 할일 입력..."
+                    className="text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleAddTask}
+                    className="text-xs bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-700 flex items-center gap-1"
+                  >
+                    <Plus size={12} /> 할일 추가
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-white border rounded-xl overflow-hidden">
+                {localTasks.length > 0 ? (
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 text-gray-500 font-medium">
+                      <tr>
+                        <th className="p-3 w-10"></th>
+                        <th className="p-3">업무명 / 내용</th>
+                        <th className="p-3 w-32">담당자</th>
+                        <th className="p-3 w-32">마감일</th>
+                        <th className="p-3 w-24">중요도</th>
+                        <th className="p-3 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {localTasks.map((task) => {
+                        const isCompleted = task.status === 'done';
+                        return (
+                          <tr key={task.id} className="hover:bg-gray-50">
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() => handleTaskChange(task.id, 'status', isCompleted ? 'todo' : 'done')}
+                                className={`rounded-full w-5 h-5 flex items-center justify-center border transition-colors ${
+                                  isCompleted
+                                    ? 'bg-green-500 border-green-500 text-white'
+                                    : 'border-gray-300 hover:border-green-500'
+                                }`}
+                              >
+                                {isCompleted && <CheckSquare size={12} />}
+                              </button>
+                            </td>
+                            <td className="p-3">
+                              <input
+                                type="text"
+                                value={task.title}
+                                onChange={(e) => handleTaskChange(task.id, 'title', e.target.value)}
+                                className={`w-full bg-transparent border-none p-0 focus:ring-0 font-medium ${
+                                  isCompleted ? 'line-through text-gray-400' : 'text-gray-800'
+                                }`}
+                                placeholder="업무명을 입력하세요"
+                              />
+                              <input
+                                type="text"
+                                value={(task as any).description || ''}
+                                onChange={(e) => handleTaskChange(task.id, 'description', e.target.value)}
+                                className="w-full bg-transparent border-none p-0 focus:ring-0 text-xs text-gray-500 mt-0.5"
+                                placeholder="상세 내용을 입력하세요"
+                              />
+                              {(task as any).step && (task as any).step !== 'manual' && (
+                                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mt-1 inline-block">
+                                  {(task as any).step === 'plan' ? '기획' : (task as any).step === 'script' ? '대본' : (task as any).step === 'shoot' ? '촬영' : (task as any).step === 'edit' ? '편집' : '기타'}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <select
+                                value={task.assignee || ''}
+                                onChange={(e) => handleTaskChange(task.id, 'assignee', e.target.value)}
+                                className="w-full text-xs border-gray-200 rounded p-1.5 bg-gray-50 focus:border-blue-500"
+                              >
+                                <option value="">담당자 선택</option>
+                                {allWorkers.map((w) => (
+                                  <option key={w.id} value={w.name || ''}>
+                                    {w.name || ''} {w.title ? `(${w.title})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="p-3">
+                              <input
+                                type="date"
+                                value={task.dueDate || ''}
+                                onChange={(e) => handleTaskChange(task.id, 'dueDate', e.target.value)}
+                                className="w-full text-xs border-gray-200 rounded p-1.5 bg-gray-50 focus:border-blue-500"
+                              />
+                            </td>
+                            <td className="p-3">
+                              <select
+                                value={(task as any).priority || 'medium'}
+                                onChange={(e) => handleTaskChange(task.id, 'priority', e.target.value)}
+                                className={`w-full text-xs border-none rounded p-1.5 font-medium ${
+                                  (task as any).priority === 'high'
+                                    ? 'bg-red-50 text-red-600'
+                                    : (task as any).priority === 'medium'
+                                      ? 'bg-yellow-50 text-yellow-600'
+                                      : 'bg-gray-100 text-gray-600'
+                                }`}
+                              >
+                                <option value="high">높음 (High)</option>
+                                <option value="medium">중간 (Med)</option>
+                                <option value="low">낮음 (Low)</option>
+                              </select>
+                            </td>
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() => handleDeleteTask(task.id)}
+                                className="text-gray-300 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="p-8 text-center text-gray-400 text-sm bg-gray-50">
+                    등록된 할일이 없습니다. <br />진행 단계를 켜거나 '할일 추가' 버튼을 눌러보세요.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Timeline Grid */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <CalendarIcon size={18} /> 주요 일정 관리
+              </h3>
+              <div className="bg-white border rounded-xl p-4 shadow-sm">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                  {/* Left Column: Pre-production */}
+                  <div className="space-y-4">
+                    {localProject.active_steps?.includes('plan') && (
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-1">기획 확정 (D-11)</label>
+                        <input
+                          type="date"
+                          value={localProject.plan_date || ''}
+                          onChange={(e) => handleDateChange('plan_date', e.target.value)}
+                          className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                        />
+                      </div>
+                    )}
+                    {localProject.active_steps?.includes('script') && (
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-1">대본 확정 (D-9)</label>
+                        <input
+                          type="date"
+                          value={localProject.script_date || ''}
+                          onChange={(e) => handleDateChange('script_date', e.target.value)}
+                          className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                        />
+                      </div>
+                    )}
+                    {localProject.active_steps?.includes('shoot') && (
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-1">촬영 확정 (D-7)</label>
+                        <input
+                          type="date"
+                          value={localProject.shoot_date || ''}
+                          onChange={(e) => handleDateChange('shoot_date', e.target.value)}
+                          className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Column: Post-production & Release */}
+                  <div className="space-y-4">
+                    {localProject.active_steps?.includes('edit') && (
+                      <>
+                        <div>
+                          <label className="text-xs font-bold text-gray-500 block mb-1">1차 편집 확정 (D-3)</label>
+                          <input
+                            type="date"
+                            value={localProject.edit1_date || ''}
+                            onChange={(e) => handleDateChange('edit1_date', e.target.value)}
+                            className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-gray-500 block mb-1">최종 편집 확정 (D-1)</label>
+                          <input
+                            type="date"
+                            value={localProject.edit_final_date || ''}
+                            onChange={(e) => handleDateChange('edit_final_date', e.target.value)}
+                            className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                          />
+                        </div>
+                      </>
+                    )}
+                    <div className="bg-red-50 p-2 rounded-lg -mx-2">
+                      <label className="text-xs font-bold text-red-600 block mb-1">
+                        {isExternal ? '최종 납품 예정일' : '업로드 예정일'} (기준일)
+                      </label>
+                      <input
+                        type="date"
+                        value={localProject.release_date || ''}
+                        onChange={(e) => handleDateChange('release_date', e.target.value)}
+                        className="w-full text-sm border-red-300 rounded-lg focus:ring-red-500 focus:border-red-500 font-bold text-red-700"
+                      />
+                      <p className="text-[10px] text-red-500 mt-1">* 날짜 변경 시 D-Day 역산하여 전체 일정 자동 조정</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Asset Management */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <FileText size={18} /> 제작 자산 관리
+              </h3>
+              <div className="border rounded-xl divide-y">
+                {localProject.active_steps?.includes('script') && (
+                  <div className="p-3 flex items-center justify-between hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`p-2 rounded-lg ${
+                          localProject.assets?.script?.status === 'completed'
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">대본 (Script)</p>
+                        <p className="text-xs text-gray-500">
+                          {localProject.assets?.script?.version || '미등록'}
+                          {localProject.assets?.script?.status === 'completed' && ' • 최종확인됨'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="text-xs bg-white border px-3 py-1.5 rounded hover:bg-gray-50">보기</button>
+                      <button className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">업로드</button>
+                    </div>
+                  </div>
+                )}
+
+                {localProject.active_steps?.includes('edit') && (
+                  <div className="p-3 flex items-center justify-between hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`p-2 rounded-lg ${
+                          localProject.assets?.video?.status === 'completed'
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        <PlayCircle size={20} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">최종 편집본 (Master)</p>
+                        <p className="text-xs text-gray-500">
+                          {localProject.assets?.video?.version || '편집중'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="text-xs bg-white border px-3 py-1.5 rounded hover:bg-gray-50">링크</button>
+                      <button className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">등록</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t flex justify-end gap-3">
+            <button onClick={onClose} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+              닫기
+            </button>
+            <button onClick={handleSave} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">
+              변경사항 저장
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -4188,6 +6234,8 @@ function EditProjectModal({
   bu,
   clients,
   orgMembers,
+  appUsers,
+  channels,
   onClose,
   onSubmit,
   onOpenClientModal,
@@ -4198,6 +6246,8 @@ function EditProjectModal({
   bu: BU;
   clients: Client[];
   orgMembers: any[];
+  appUsers: any[];
+  channels: Channel[];
   onClose: () => void;
   onSubmit: (data: {
     bu: BU;
@@ -4208,31 +6258,193 @@ function EditProjectModal({
     status: string;
     client_id?: number;
     pm_name?: string | null;
+    active_steps?: ProjectStep[];
+    release_date?: string | null;
+    plan_date?: string | null;
+    script_date?: string | null;
+    shoot_date?: string | null;
+    edit1_date?: string | null;
+    edit_final_date?: string | null;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
   onDeleteClient: (clientId: number) => void;
 }) {
+  const isExternal = !!(project as any).client_id;
   const [form, setForm] = useState({
+    projectType: isExternal ? 'external' as 'channel' | 'external' : 'channel' as 'channel' | 'external',
     name: project.name,
     cat: project.cat,
+    channel_id: isExternal ? '' : String(channels.find((c) => c.name === project.cat)?.id || ''),
     startDate: project.startDate,
     endDate: project.endDate,
     status: project.status,
     client_id: String((project as any).client_id || ''),
     pm_name: (project as any).pm_name || '',
+    active_steps: (project as any).active_steps || [] as ProjectStep[],
+    plan_date: (project as any).plan_date || null,
+    script_date: (project as any).script_date || null,
+    shoot_date: (project as any).shoot_date || null,
+    edit1_date: (project as any).edit1_date || null,
+    edit_final_date: (project as any).edit_final_date || null,
+    release_date: (project as any).release_date || null,
+    assets: (project as any).assets || {} as ProjectAssets,
   });
 
+  // D-Day 변경 시 자동 계산
+  const handleReleaseDateChange = (releaseDate: string) => {
+    const calculatedDates = calculateDatesFromRelease(releaseDate);
+    setForm((prev) => ({
+      ...prev,
+      release_date: releaseDate,
+      ...calculatedDates,
+    }));
+  };
+
+  // 단계 토글
+  const toggleStep = (step: ProjectStep) => {
+    const currentSteps = form.active_steps || [];
+    const newSteps = currentSteps.includes(step)
+      ? currentSteps.filter((s) => s !== step)
+      : [...currentSteps, step];
+    setForm((prev) => ({ ...prev, active_steps: newSteps }));
+  };
+
   const selectedClient = form.client_id ? clients.find((c) => c.id === Number(form.client_id)) : null;
+  const selectedChannel = form.channel_id ? channels.find((c) => c.id === Number(form.channel_id)) : null;
+  const buChannels = channels.filter((c) => c.bu_code === bu);
 
   return (
-    <ModalShell title="프로젝트 수정" onClose={onClose}>
+    <ModalShell
+      title="프로젝트 수정"
+      onClose={onClose}
+      actions={
+        <ModalActions
+          onPrimary={() =>
+            onSubmit({
+              bu,
+              name: form.name,
+              cat: form.cat || (selectedChannel?.name || ''),
+              startDate: form.startDate,
+              endDate: form.release_date || form.endDate,
+              status: form.status,
+              client_id: form.client_id ? Number(form.client_id) : undefined,
+              pm_name: form.pm_name || null,
+              active_steps: form.active_steps,
+              plan_date: form.plan_date,
+              script_date: form.script_date,
+              shoot_date: form.shoot_date,
+              edit1_date: form.edit1_date,
+              edit_final_date: form.edit_final_date,
+              release_date: form.release_date,
+            })
+          }
+          onClose={onClose}
+          primaryLabel="수정"
+        />
+      }
+    >
+      {/* 프로젝트 타입 표시 (수정 모드에서는 읽기 전용) */}
+      <div className="mb-6">
+        <label className="text-xs font-semibold text-slate-500 mb-2 block">프로젝트 유형</label>
+        <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+          <div className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold ${
+            form.projectType === 'channel'
+              ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
+              : 'text-gray-400'
+          }`}>
+            <Youtube className="w-4 h-4" />
+            채널 프로젝트
+          </div>
+          <div className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold ${
+            form.projectType === 'external'
+              ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
+              : 'text-gray-400'
+          }`}>
+            <Briefcase className="w-4 h-4" />
+            외주 프로젝트
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {/* 채널 프로젝트인 경우 */}
+        {form.projectType === 'channel' && (
+          <div className="md:col-span-2">
+            <SelectField
+              label="채널 선택"
+              value={form.channel_id}
+              onChange={(val) => {
+                const channel = channels.find((c) => c.id === Number(val));
+                setForm((prev) => ({
+                  ...prev,
+                  channel_id: val,
+                  cat: channel?.name || prev.cat,
+                }));
+              }}
+              options={[
+                { value: '', label: '채널을 선택하세요' },
+                ...buChannels.map((c) => ({ value: String(c.id), label: c.name })),
+              ]}
+            />
+          </div>
+        )}
+
+        {/* 외주 프로젝트인 경우 */}
+        {form.projectType === 'external' && (
+          <div className="md:col-span-2">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <SelectField
+                  label="클라이언트"
+                  value={form.client_id}
+                  onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
+                  options={[
+                    { value: '', label: '클라이언트를 선택하세요' },
+                    ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko || c.company_name_en || '' })),
+                  ]}
+                />
+              </div>
+              <div className="flex gap-2 pb-0.5">
+                <button
+                  type="button"
+                  onClick={onOpenClientModal}
+                  className="px-3 py-2 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  새로 만들기
+                </button>
+                {selectedClient && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onOpenEditClientModal(selectedClient)}
+                      className="px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteClient(selectedClient.id)}
+                      className="px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      삭제
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <InputField
           label="카테고리"
-          placeholder="예: 안무제작"
+          placeholder={form.projectType === 'channel' ? '채널 선택 시 자동 입력' : '예: 안무제작'}
           value={form.cat}
           onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
+          disabled={form.projectType === 'channel' && !!form.channel_id}
         />
         <InputField
           label="프로젝트명"
@@ -4267,76 +6479,177 @@ function EditProjectModal({
           ]}
         />
         <SelectField
-          label="PM"
+          label="PM / 감독"
           value={form.pm_name}
           onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
           options={[
             { value: '', label: '선택 안함' },
-            ...orgMembers.map((m) => ({ value: m.name || '', label: m.name || '' })).filter((o) => o.value),
+            ...appUsers.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value),
           ]}
         />
-        <div className="md:col-span-2">
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <SelectField
-                label="클라이언트"
-                value={form.client_id}
-                onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
-                options={[
-                  { value: '', label: '선택 안함' },
-                  ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko })),
-                ]}
-              />
-            </div>
-            <div className="flex gap-2 pb-0.5">
+      </div>
+      {/* 진행 단계 설정 */}
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+          <Settings className="w-4 h-4" /> 진행 단계 설정
+        </h3>
+        <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+          {[
+            { id: 'plan' as ProjectStep, label: '기획' },
+            { id: 'script' as ProjectStep, label: '대본' },
+            { id: 'shoot' as ProjectStep, label: '촬영' },
+            { id: 'edit' as ProjectStep, label: '편집' }
+          ].map(step => {
+            const isActive = form.active_steps?.includes(step.id);
+            return (
               <button
+                key={step.id}
                 type="button"
-                onClick={onOpenClientModal}
-                className="px-3 py-2 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
+                onClick={() => toggleStep(step.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
+                  isActive
+                    ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
+                    : 'text-gray-400 hover:bg-gray-200'
+                }`}
               >
-                <Plus className="w-3 h-3" />
-                새로 만들기
+                {isActive ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <X className="w-4 h-4" />}
+                {step.label}
               </button>
-              {selectedClient && (
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 주요 일정 관리 */}
+      {form.active_steps && form.active_steps.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+            <CalendarIcon className="w-4 h-4" /> 주요 일정 관리
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              {form.active_steps.includes('plan') && (
+                <InputField
+                  label="기획 확정 (D-11)"
+                  type="date"
+                  value={form.plan_date || ''}
+                  onChange={(v) => setForm((prev) => ({ ...prev, plan_date: v || null }))}
+                />
+              )}
+              {form.active_steps.includes('script') && (
+                <InputField
+                  label="대본 확정 (D-9)"
+                  type="date"
+                  value={form.script_date || ''}
+                  onChange={(v) => setForm((prev) => ({ ...prev, script_date: v || null }))}
+                />
+              )}
+              {form.active_steps.includes('shoot') && (
+                <InputField
+                  label="촬영 확정 (D-7)"
+                  type="date"
+                  value={form.shoot_date || ''}
+                  onChange={(v) => setForm((prev) => ({ ...prev, shoot_date: v || null }))}
+                />
+              )}
+            </div>
+            <div className="space-y-3">
+              {form.active_steps.includes('edit') && (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => onOpenEditClientModal(selectedClient)}
-                    className="px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    수정
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteClient(selectedClient.id)}
-                    className="px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    삭제
-                  </button>
+                  <InputField
+                    label="1차 편집 확정 (D-3)"
+                    type="date"
+                    value={form.edit1_date || ''}
+                    onChange={(v) => setForm((prev) => ({ ...prev, edit1_date: v || null }))}
+                  />
+                  <InputField
+                    label="최종 편집 확정 (D-1)"
+                    type="date"
+                    value={form.edit_final_date || ''}
+                    onChange={(v) => setForm((prev) => ({ ...prev, edit_final_date: v || null }))}
+                  />
                 </>
               )}
+              <div className="bg-red-50 p-3 rounded-lg">
+                <InputField
+                  label={`${form.client_id ? '최종 납품' : '업로드'} 예정일 (기준일)`}
+                  type="date"
+                  value={form.release_date || ''}
+                  onChange={(v) => handleReleaseDateChange(v)}
+                />
+                <p className="text-[10px] text-red-500 mt-1">* 날짜 변경 시 D-Day 역산하여 전체 일정 자동 조정</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <ModalActions
-        onPrimary={() =>
-          onSubmit({
-            bu,
-            name: form.name,
-            cat: form.cat,
-            startDate: form.startDate,
-            endDate: form.endDate,
-            status: form.status,
-            client_id: form.client_id ? Number(form.client_id) : undefined,
-            pm_name: form.pm_name || null,
-          })
-        }
-        onClose={onClose}
-        primaryLabel="수정"
-      />
+      )}
+
+      {/* 제작 자산 관리 */}
+      {form.active_steps && form.active_steps.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4" /> 제작 자산 관리
+          </h3>
+          <div className="space-y-2">
+            {form.active_steps.includes('script') && (
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="font-medium text-sm">대본 (Script)</p>
+                    <p className="text-xs text-gray-500">
+                      {form.assets?.script?.version || '미등록'}
+                      {form.assets?.script?.status === 'completed' && ' • 최종확인됨'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="text-xs bg-white border px-3 py-1.5 rounded hover:bg-gray-50"
+                  >
+                    보기
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700"
+                  >
+                    업로드
+                  </button>
+                </div>
+              </div>
+            )}
+            {form.active_steps.includes('edit') && (
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <PlayCircle className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="font-medium text-sm">최종 편집본 (Master)</p>
+                    <p className="text-xs text-gray-500">
+                      {form.assets?.video?.version || '편집중'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="text-xs bg-white border px-3 py-1.5 rounded hover:bg-gray-50"
+                  >
+                    링크
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700"
+                  >
+                    등록
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </ModalShell>
   );
 }
@@ -5198,6 +7511,152 @@ function CreateTaskModal({
         }
         onClose={onClose}
         primaryLabel="등록"
+      />
+    </ModalShell>
+  );
+}
+
+function TaskDetailModal({
+  task,
+  projects,
+  onClose,
+  onEdit,
+}: {
+  task: any;
+  projects: any[];
+  onClose: () => void;
+  onEdit: (task: any) => void;
+}) {
+  const relatedProject = projects.find((p) => p.id === task.projectId);
+  const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'done';
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'todo':
+        return '할 일';
+      case 'in-progress':
+        return '진행 중';
+      case 'done':
+        return '완료';
+      default:
+        return status;
+    }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'todo':
+        return 'bg-gray-100 text-gray-600';
+      case 'in-progress':
+        return 'bg-blue-100 text-blue-600';
+      case 'done':
+        return 'bg-green-100 text-green-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  const getPriorityLabel = (priority?: string) => {
+    switch (priority) {
+      case 'high':
+        return '높음';
+      case 'medium':
+        return '중간';
+      case 'low':
+        return '낮음';
+      default:
+        return '미설정';
+    }
+  };
+
+  const getPriorityBadgeClass = (priority?: string) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-50 text-red-600 border-red-100';
+      case 'medium':
+        return 'bg-orange-50 text-orange-600 border-orange-100';
+      case 'low':
+        return 'bg-green-50 text-green-600 border-green-100';
+      default:
+        return 'bg-gray-50 text-gray-600 border-gray-100';
+    }
+  };
+
+  return (
+    <ModalShell title="할일 상세보기" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={cn('text-xs px-2 py-0.5 rounded-full', getStatusBadgeClass(task.status))}>
+              {getStatusLabel(task.status)}
+            </span>
+            {task.priority && (
+              <span className={cn('text-xs px-2 py-0.5 rounded font-medium border', getPriorityBadgeClass(task.priority))}>
+                우선순위: {getPriorityLabel(task.priority)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-gray-500 mb-1 block">제목</label>
+            <p className="text-sm font-medium text-gray-800">{task.title}</p>
+          </div>
+
+          {relatedProject && (
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">프로젝트</label>
+              <p className="text-sm text-gray-800">{relatedProject.name}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            {task.assignee && (
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">담당자</label>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-400" />
+                  <p className="text-sm text-gray-800">{task.assignee}</p>
+                </div>
+              </div>
+            )}
+
+            {task.dueDate && (
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">마감일</label>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-gray-400" />
+                  <p className={cn('text-sm', isOverdue ? 'text-red-600 font-semibold' : 'text-gray-800')}>
+                    {new Date(task.dueDate).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                    {isOverdue && ' (지연)'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {task.tag && (
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">태그</label>
+              <span className="inline-block px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded">
+                {task.tag}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+      <ModalActions
+        onPrimary={() => {
+          onClose();
+          onEdit(task);
+        }}
+        onClose={onClose}
+        primaryLabel="수정하기"
       />
     </ModalShell>
   );

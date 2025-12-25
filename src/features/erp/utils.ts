@@ -1,4 +1,4 @@
-import type { Project, ProjectTask, FinancialEntry } from '@/types/database';
+import type { Project, ProjectTask, FinancialEntry, ProjectStep, ProjectAssets } from '@/types/database';
 import type { BU } from '@/types/database';
 
 // DB 타입 -> 프론트 타입 변환
@@ -13,6 +13,14 @@ export function dbProjectToFrontend(p: Project): {
   client_id?: number;
   artist_id?: number;
   pm_name?: string;
+  active_steps?: ProjectStep[];
+  plan_date?: string | null;
+  script_date?: string | null;
+  shoot_date?: string | null;
+  edit1_date?: string | null;
+  edit_final_date?: string | null;
+  release_date?: string | null;
+  assets?: ProjectAssets;
 } {
   return {
     id: String(p.id),
@@ -25,6 +33,14 @@ export function dbProjectToFrontend(p: Project): {
     client_id: p.client_id,
     artist_id: p.artist_id,
     pm_name: p.pm_name,
+    active_steps: p.active_steps,
+    plan_date: p.plan_date,
+    script_date: p.script_date,
+    shoot_date: p.shoot_date,
+    edit1_date: p.edit1_date,
+    edit_final_date: p.edit_final_date,
+    release_date: p.release_date,
+    assets: p.assets,
   };
 }
 
@@ -86,6 +102,14 @@ export function frontendProjectToDb(p: {
   status?: string;
   artist_id?: number;
   pm_name?: string | null;
+  active_steps?: ProjectStep[];
+  plan_date?: string | null;
+  script_date?: string | null;
+  shoot_date?: string | null;
+  edit1_date?: string | null;
+  edit_final_date?: string | null;
+  release_date?: string | null;
+  assets?: ProjectAssets;
 }): {
   bu_code: BU;
   name: string;
@@ -95,6 +119,14 @@ export function frontendProjectToDb(p: {
   end_date: string;
   artist_id?: number;
   pm_name?: string | null;
+  active_steps?: ProjectStep[];
+  plan_date?: string | null;
+  script_date?: string | null;
+  shoot_date?: string | null;
+  edit1_date?: string | null;
+  edit_final_date?: string | null;
+  release_date?: string | null;
+  assets?: ProjectAssets;
 } {
   const today = new Date().toISOString().split('T')[0];
   const result: {
@@ -106,6 +138,14 @@ export function frontendProjectToDb(p: {
     end_date: string;
     artist_id?: number;
     pm_name?: string | null;
+    active_steps?: ProjectStep[];
+    plan_date?: string | null;
+    script_date?: string | null;
+    shoot_date?: string | null;
+    edit1_date?: string | null;
+    edit_final_date?: string | null;
+    release_date?: string | null;
+    assets?: ProjectAssets;
   } = {
     bu_code: p.bu,
     name: p.name,
@@ -122,6 +162,38 @@ export function frontendProjectToDb(p: {
   if (p.pm_name !== undefined) {
     result.pm_name = p.pm_name || null;
   }
+
+  if (p.active_steps !== undefined) {
+    result.active_steps = p.active_steps;
+  }
+
+  if (p.plan_date !== undefined) {
+    result.plan_date = p.plan_date || null;
+  }
+
+  if (p.script_date !== undefined) {
+    result.script_date = p.script_date || null;
+  }
+
+  if (p.shoot_date !== undefined) {
+    result.shoot_date = p.shoot_date || null;
+  }
+
+  if (p.edit1_date !== undefined) {
+    result.edit1_date = p.edit1_date || null;
+  }
+
+  if (p.edit_final_date !== undefined) {
+    result.edit_final_date = p.edit_final_date || null;
+  }
+
+  if (p.release_date !== undefined) {
+    result.release_date = p.release_date || null;
+  }
+
+  if (p.assets !== undefined) {
+    result.assets = p.assets;
+  }
   
   return result;
 }
@@ -133,6 +205,8 @@ export function frontendTaskToDb(t: {
   assignee: string;
   dueDate: string;
   status?: 'todo' | 'in-progress' | 'done';
+  priority?: 'high' | 'medium' | 'low';
+  tag?: string;
 }): {
   project_id: number;
   bu_code: BU;
@@ -140,15 +214,19 @@ export function frontendTaskToDb(t: {
   assignee: string;
   due_date: string;
   status: 'todo' | 'in_progress' | 'done';
+  priority?: 'high' | 'medium' | 'low';
+  tag?: string;
 } {
   const today = new Date().toISOString().split('T')[0];
   return {
     project_id: Number(t.projectId),
     bu_code: t.bu,
     title: t.title,
-    assignee: t.assignee,
+    assignee: t.assignee || '',
     due_date: t.dueDate || today,
     status: t.status === 'in-progress' ? 'in_progress' : (t.status || 'todo'),
+    priority: t.priority || 'medium',
+    tag: t.tag,
   };
 }
 
