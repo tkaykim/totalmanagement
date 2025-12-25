@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export function MentionedCommentsSection() {
 
   const renderContent = (content: string, mentionedUserIds: string[]) => {
     let result = content;
-    const parts: (string | JSX.Element)[] = [];
+    const parts: (string | ReactElement)[] = [];
     let lastIndex = 0;
 
     mentionedUserIds.forEach((userId) => {
@@ -162,7 +162,7 @@ function MentionedCommentItem({
   onToggleExpand: () => void;
   isExpanded: boolean;
   getEntityName: (comment: Comment) => string;
-  renderContent: (content: string, mentionedUserIds: string[]) => (string | JSX.Element)[];
+  renderContent: (content: string, mentionedUserIds: string[]) => (string | ReactElement)[];
   isRead?: boolean;
 }) {
   const { data: reads = [] } = useCommentReads(isExpanded ? comment.id : 0);
