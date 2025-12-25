@@ -161,7 +161,7 @@ function MentionedCommentItem({
   onMarkAsRead: () => void;
   onToggleExpand: () => void;
   isExpanded: boolean;
-  getEntityName: (comment: Comment) => string;
+  getEntityName: (comment: Comment & { is_read: boolean; read_at: string | null }) => string;
   renderContent: (content: string, mentionedUserIds: string[]) => (string | ReactElement)[];
   isRead?: boolean;
 }) {
