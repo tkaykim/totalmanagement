@@ -53,6 +53,7 @@ import { createClient } from '@/lib/supabase/client';
 import type {
   BU,
   Channel,
+  ChannelContent,
   Client,
   Equipment,
   Artist,
