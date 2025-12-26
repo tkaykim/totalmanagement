@@ -7,3 +7,4 @@ export default function ModooGoodsPage() {
   return <ModooGoodsDashboard bu="MODOO" />;
 }
 
+

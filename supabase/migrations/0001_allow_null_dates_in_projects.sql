@@ -4,3 +4,4 @@ ALTER TABLE public.projects
   ALTER COLUMN end_date DROP NOT NULL;
 
 
+

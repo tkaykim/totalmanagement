@@ -22,6 +22,8 @@ import {
   Trash2,
   LogOut,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Filter,
   Receipt,
@@ -103,6 +105,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
   const { data: clientsData = [] } = useClients(bu);
   const { data: eventsData = [] } = useEvents(bu);
   const { data: externalWorkersData = [] } = useExternalWorkers(bu);
+  const { data: allExternalWorkersData = [] } = useExternalWorkers(); // 모든 외주 인원 (할일 모달용)
   const { data: manualsData = [] } = useManuals(bu);
 
   // Active period calculation
@@ -174,9 +177,12 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
   const [isEditProjectModalOpen, setEditProjectModalOpen] = useState<any>(null);
   const [deleteProjectId, setDeleteProjectId] = useState<number | null>(null);
+  const [isProjectDetailModalOpen, setProjectDetailModalOpen] = useState<any>(null);
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
   const [isEditTaskModalOpen, setEditTaskModalOpen] = useState<any>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
+  const [isTaskDetailModalOpen, setTaskDetailModalOpen] = useState<any>(null);
+  const [taskModalProjectId, setTaskModalProjectId] = useState<string | null>(null);
   const [isEventModalOpen, setEventModalOpen] = useState(false);
   const [isEditEventModalOpen, setEditEventModalOpen] = useState<Event | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<number | null>(null);
@@ -537,6 +543,25 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
   // Projects View
   const ProjectsView = () => {
+    const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+
+    const toggleExpand = (projectId: string) => {
+      setExpandedProjects((prev) => {
+        const next = new Set(prev);
+        if (next.has(projectId)) {
+          next.delete(projectId);
+        } else {
+          next.add(projectId);
+        }
+        return next;
+      });
+    };
+
+    const handleAddTask = (projectId: string) => {
+      setTaskModalProjectId(projectId);
+      setTaskModalOpen(true);
+    };
+
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
         <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
@@ -560,57 +585,212 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
             <div className="space-y-4">
               {projects.map((project) => {
                 const projectTasks = tasks.filter((t) => t.projectId === project.id);
+                const isExpanded = expandedProjects.has(project.id);
+                const client = clientsData.find((c) => c.id === project.client_id);
+                const todoCount = projectTasks.filter((t) => t.status === 'todo').length;
+                const inProgressCount = projectTasks.filter((t) => t.status === 'in-progress').length;
+                const doneCount = projectTasks.filter((t) => t.status === 'done').length;
+
                 return (
                   <div
                     key={project.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    className="border border-gray-200 rounded-xl bg-white hover:shadow-lg transition-all"
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-bold text-gray-800 text-lg">{project.name}</h3>
-                          <span
-                            className={cn(
-                              'text-xs px-2 py-1 rounded',
-                              project.status === '준비중'
-                                ? 'bg-purple-100 text-purple-700'
-                                : project.status === '기획중'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : project.status === '진행중'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : project.status === '운영중'
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-gray-100 text-gray-700'
+                    {/* 프로젝트 헤더 */}
+                    <div className="p-5">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-bold text-gray-800 text-xl">{project.name}</h3>
+                            <span
+                              className={cn(
+                                'text-xs px-2.5 py-1 rounded-full font-semibold',
+                                project.status === '준비중'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : project.status === '기획중'
+                                    ? 'bg-yellow-100 text-yellow-700'
+                                    : project.status === '진행중'
+                                      ? 'bg-blue-100 text-blue-700'
+                                      : project.status === '운영중'
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-gray-100 text-gray-700'
+                              )}
+                            >
+                              {project.status}
+                            </span>
+                            {project.cat && (
+                              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                                {project.cat}
+                              </span>
                             )}
-                          >
-                            {project.status}
-                          </span>
-                          <span className="text-xs text-gray-500">{project.cat}</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-1.5">
+                              <CalendarIcon className="w-4 h-4 text-gray-400" />
+                              <span>{project.startDate} ~ {project.endDate}</span>
+                            </div>
+                            {client && (
+                              <div className="flex items-center gap-1.5">
+                                <Briefcase className="w-4 h-4 text-indigo-500" />
+                                <span className="text-indigo-600 font-medium">{client.name}</span>
+                              </div>
+                            )}
+                            {project.pm_name && (
+                              <div className="flex items-center gap-1.5">
+                                <Users className="w-4 h-4 text-gray-400" />
+                                <span>PM: {project.pm_name}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-500">
-                          {project.startDate} ~ {project.endDate}
-                        </p>
+                        <div className="flex gap-2 flex-shrink-0 ml-4">
+                          <button
+                            onClick={() => handleAddTask(project.id)}
+                            className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 text-sm font-medium transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            할일 추가
+                          </button>
+                          <button
+                            onClick={() => setEditProjectModalOpen(project)}
+                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteProjectId(Number(project.id))}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setEditProjectModalOpen(project)}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteProjectId(Number(project.id))}
-                          className="p-1.5 text-gray-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+
+                      {/* 할일 통계 */}
+                      <div className="flex items-center gap-4 pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <CheckSquare className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-medium text-gray-700">
+                            할일 <span className="text-gray-500">({todoCount})</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-blue-400" />
+                          <span className="text-sm font-medium text-gray-700">
+                            진행중 <span className="text-blue-600">({inProgressCount})</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckSquare className="w-4 h-4 text-green-400" />
+                          <span className="text-sm font-medium text-gray-700">
+                            완료 <span className="text-green-600">({doneCount})</span>
+                          </span>
+                        </div>
+                        <div className="ml-auto">
+                          <button
+                            onClick={() => toggleExpand(project.id)}
+                            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                          >
+                            {isExpanded ? (
+                              <>
+                                <span>접기</span>
+                                <ChevronUp className="w-4 h-4" />
+                              </>
+                            ) : (
+                              <>
+                                <span>상세보기</span>
+                                <ChevronDown className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <p className="text-xs text-gray-500">
-                        할일: {projectTasks.filter((t) => t.status !== 'done').length} / {projectTasks.length}
-                      </p>
-                    </div>
+
+                    {/* 확장된 상세 정보 */}
+                    {isExpanded && (
+                      <div className="px-5 pb-5 border-t border-gray-100 bg-gray-50">
+                        {/* 할일 목록 */}
+                        <div className="pt-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                              <CheckSquare className="w-4 h-4" />
+                              관련 할일 ({projectTasks.length})
+                            </h4>
+                          </div>
+                          {projectTasks.length === 0 ? (
+                            <div className="text-center py-6 text-gray-400 bg-white rounded-lg border border-gray-200">
+                              <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                              <p className="text-sm">등록된 할일이 없습니다.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {projectTasks.map((task) => {
+                                const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
+                                return (
+                                  <div
+                                    key={task.id}
+                                    className={cn(
+                                      "bg-white border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer",
+                                      isOverdue ? "border-red-200 bg-red-50" : "border-gray-200"
+                                    )}
+                                    onClick={() => setEditTaskModalOpen(task)}
+                                  >
+                                    <div className="flex justify-between items-start">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <h5 className="font-medium text-gray-800 text-sm">{task.title}</h5>
+                                          <span className={cn(
+                                            'px-1.5 py-0.5 rounded text-[10px] font-medium',
+                                            task.status === 'done' ? 'bg-green-100 text-green-700' :
+                                            task.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-gray-100 text-gray-700'
+                                          )}>
+                                            {task.status === 'done' ? '완료' : task.status === 'in-progress' ? '진행중' : '할일'}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                                          {task.assignee && (
+                                            <span className="flex items-center gap-1">
+                                              <Users className="w-3 h-3" />
+                                              {task.assignee}
+                                            </span>
+                                          )}
+                                          {task.dueDate && (
+                                            <span className={cn(
+                                              "flex items-center gap-1",
+                                              isOverdue && "text-red-600 font-semibold"
+                                            )}>
+                                              <Clock className="w-3 h-3" />
+                                              {task.dueDate}
+                                              {isOverdue && <span>(지연)</span>}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-1 flex-shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                          onClick={() => setEditTaskModalOpen(task)}
+                                          className="p-1 text-gray-400 hover:text-indigo-600 rounded transition-colors"
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => setDeleteTaskId(Number(task.id))}
+                                          className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -621,13 +801,165 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
     );
   };
 
-  // Tasks View
+  // Tasks View - Kanban Board
   const TasksView = () => {
-    const [filterStatus, setFilterStatus] = useState<'all' | 'todo' | 'in-progress' | 'done'>('all');
-    const filteredTasks = useMemo(() => {
-      if (filterStatus === 'all') return tasks;
-      return tasks.filter((t) => t.status === filterStatus);
-    }, [tasks, filterStatus]);
+    const handleStatusChange = async (taskId: string, newStatus: 'todo' | 'in-progress' | 'done') => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+
+      try {
+        const dbData = frontendTaskToDb({
+          projectId: task.projectId,
+          bu: bu,
+          title: task.title,
+          assignee: task.assignee,
+          dueDate: task.dueDate,
+          status: newStatus,
+        });
+        await updateTaskMutation.mutateAsync({ id: Number(taskId), data: dbData });
+      } catch (error) {
+        console.error('Failed to update task status:', error);
+      }
+    };
+
+    // 각 상태별 할일 분류
+    const tasksByStatus = useMemo(() => {
+      return {
+        todo: tasks.filter((t) => t.status === 'todo'),
+        'in-progress': tasks.filter((t) => t.status === 'in-progress'),
+        done: tasks.filter((t) => t.status === 'done'),
+      };
+    }, [tasks]);
+
+    const statusColumns = [
+      {
+        id: 'todo' as const,
+        label: '할일',
+        color: 'gray',
+        tasks: tasksByStatus.todo,
+      },
+      {
+        id: 'in-progress' as const,
+        label: '진행중',
+        color: 'blue',
+        tasks: tasksByStatus['in-progress'],
+      },
+      {
+        id: 'done' as const,
+        label: '완료',
+        color: 'green',
+        tasks: tasksByStatus.done,
+      },
+    ];
+
+    const TaskCard = ({ task }: { task: typeof tasks[0] }) => {
+      const project = projects.find((p) => p.id === task.projectId);
+      const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
+
+      return (
+        <div
+          className={cn(
+            "border rounded-lg p-3 bg-white hover:shadow-md transition-all mb-3",
+            isOverdue ? "border-red-300 bg-red-50" : "border-gray-200"
+          )}
+        >
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 
+                className="font-semibold text-gray-800 text-sm line-clamp-2 cursor-pointer mb-1"
+                onClick={() => setEditTaskModalOpen(task)}
+              >
+                {task.title}
+              </h3>
+              {/* 프로젝트 정보 - 항상 표시 */}
+              <div className="flex items-center gap-1.5">
+                <Briefcase className={cn(
+                  "w-3 h-3 flex-shrink-0",
+                  project ? "text-indigo-500" : "text-gray-300"
+                )} />
+                <span className={cn(
+                  "text-xs font-medium truncate",
+                  project ? "text-indigo-600" : "text-gray-400"
+                )}>
+                  {project ? project.name : "프로젝트 미지정"}
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-1 flex-shrink-0 ml-2">
+              <button
+                onClick={() => setEditTaskModalOpen(task)}
+                className="p-1 text-gray-400 hover:text-indigo-600 rounded transition-colors"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setDeleteTaskId(Number(task.id))}
+                className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* 담당자 정보 */}
+          {task.assignee && (
+            <div className="flex items-center gap-1.5 mb-2">
+              <Users className="w-3 h-3 text-gray-400 flex-shrink-0" />
+              <span className="text-xs text-gray-600">{task.assignee}</span>
+            </div>
+          )}
+
+          {/* 마감일정 */}
+          {task.dueDate && (
+            <div className="flex items-center gap-1.5 mb-2">
+              <Clock className={cn(
+                "w-3 h-3 flex-shrink-0",
+                isOverdue ? "text-red-500" : "text-gray-400"
+              )} />
+              <span className={cn(
+                "text-xs font-medium",
+                isOverdue ? "text-red-600 font-bold" : "text-gray-600"
+              )}>
+                {task.dueDate}
+                {isOverdue && <span className="ml-1">(지연)</span>}
+              </span>
+            </div>
+          )}
+
+          {/* 하단 액션 바 */}
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+            {/* 우선순위 뱃지 */}
+            {task.priority && (
+              <span className={cn(
+                'px-1.5 py-0.5 rounded-full text-[10px] font-medium',
+                task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                'bg-gray-100 text-gray-600'
+              )}>
+                {task.priority === 'high' ? '높음' : task.priority === 'medium' ? '보통' : '낮음'}
+              </span>
+            )}
+
+            {/* 상태 변경 드롭다운 */}
+            <select
+              value={task.status}
+              onChange={(e) => handleStatusChange(task.id, e.target.value as 'todo' | 'in-progress' | 'done')}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "text-xs font-medium px-2 py-1 rounded border outline-none focus:ring-2 focus:ring-indigo-500",
+                task.status === 'done' ? 'bg-green-50 border-green-200 text-green-700' :
+                task.status === 'in-progress' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                'bg-gray-50 border-gray-200 text-gray-700'
+              )}
+            >
+              <option value="todo">할일</option>
+              <option value="in-progress">진행중</option>
+              <option value="done">완료</option>
+            </select>
+          </div>
+        </div>
+      );
+    };
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
@@ -641,143 +973,60 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           </button>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
-          <div className="flex gap-2">
-            {(['all', 'todo', 'in-progress', 'done'] as const).map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition',
-                  filterStatus === status
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                )}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+          <div className="grid grid-cols-3 gap-4 h-full min-w-max pb-4">
+            {statusColumns.map((column) => (
+              <div
+                key={column.id}
+                className="flex flex-col bg-gray-50 rounded-xl border border-gray-200 min-w-[320px] h-full"
               >
-                {status === 'all' ? '전체' : status === 'todo' ? '할일' : status === 'in-progress' ? '진행중' : '완료'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          {filteredTasks.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <CheckSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">등록된 할일이 없습니다.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredTasks.map((task) => {
-                const project = projects.find((p) => p.id === task.projectId);
-                const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
-                return (
-                  <div
-                    key={task.id}
-                    className={cn(
-                      "border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer",
-                      isOverdue ? "border-red-200 bg-red-50" : "border-gray-200 bg-white"
-                    )}
-                    onClick={() => setEditTaskModalOpen(task)}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1 min-w-0">
-                        {/* 할일 제목 */}
-                        <h3 className="font-semibold text-gray-800 text-base mb-2">{task.title}</h3>
-                        
-                        {/* 프로젝트 정보 */}
-                        {project ? (
-                          <div className="flex items-center gap-2 mb-2">
-                            <Briefcase className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
-                            <span className="text-sm font-medium text-indigo-600">{project.name}</span>
-                            {project.status && (
-                              <span className={cn(
-                                'px-1.5 py-0.5 rounded text-[10px] font-semibold',
-                                project.status === '진행중' ? 'bg-blue-100 text-blue-700' :
-                                project.status === '완료' ? 'bg-green-100 text-green-700' :
-                                'bg-gray-100 text-gray-600'
-                              )}>
-                                {project.status}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 mb-2">
-                            <Briefcase className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
-                            <span className="text-xs text-gray-400">프로젝트 미지정</span>
-                          </div>
-                        )}
-                        
-                        {/* 담당자 정보 */}
-                        {task.assignee && (
-                          <div className="flex items-center gap-2 mb-2">
-                            <Users className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                            <span className="text-sm text-gray-600">{task.assignee}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => setEditTaskModalOpen(task)}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTaskId(Number(task.id))}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* 하단 정보 바 */}
-                    <div className="flex items-center gap-3 pt-3 border-t border-gray-100 flex-wrap">
-                      {/* 마감일정 */}
-                      {task.dueDate && (
-                        <div className="flex items-center gap-1.5">
-                          <Clock className={cn(
-                            "w-3.5 h-3.5 flex-shrink-0",
-                            isOverdue ? "text-red-500" : "text-gray-400"
-                          )} />
-                          <span className={cn(
-                            "text-xs font-medium",
-                            isOverdue ? "text-red-600 font-bold" : "text-gray-600"
-                          )}>
-                            마감일: {task.dueDate}
-                            {isOverdue && <span className="ml-1">(지연)</span>}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* 상태 뱃지 */}
-                      <span className={cn(
-                        'px-2 py-1 rounded-full text-xs font-medium',
-                        task.status === 'done' ? 'bg-green-100 text-green-700' :
-                        task.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                        'bg-gray-100 text-gray-700'
+                {/* 컬럼 헤더 */}
+                <div className={cn(
+                  "p-4 rounded-t-xl border-b",
+                  column.color === 'gray' && "bg-gray-100 border-gray-200",
+                  column.color === 'blue' && "bg-blue-100 border-blue-200",
+                  column.color === 'green' && "bg-green-100 border-green-200"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h3 className={cn(
+                        "font-bold text-sm",
+                        column.color === 'gray' && "text-gray-700",
+                        column.color === 'blue' && "text-blue-700",
+                        column.color === 'green' && "text-green-700"
                       )}>
-                        {task.status === 'done' ? '완료' : task.status === 'in-progress' ? '진행중' : '할일'}
+                        {column.label}
+                      </h3>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-xs font-semibold",
+                        column.color === 'gray' && "bg-gray-200 text-gray-700",
+                        column.color === 'blue' && "bg-blue-200 text-blue-700",
+                        column.color === 'green' && "bg-green-200 text-green-700"
+                      )}>
+                        {column.tasks.length}
                       </span>
-                      
-                      {/* 우선순위 뱃지 */}
-                      {task.priority && (
-                        <span className={cn(
-                          'px-2 py-1 rounded-full text-xs font-medium',
-                          task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                          task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-gray-100 text-gray-600'
-                        )}>
-                          {task.priority === 'high' ? '높음' : task.priority === 'medium' ? '보통' : '낮음'}
-                        </span>
-                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+
+                {/* 컬럼 본문 */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {column.tasks.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <CheckSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                      <p className="text-xs">할일이 없습니다</p>
+                    </div>
+                  ) : (
+                    <div>
+                      {column.tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -1024,6 +1273,9 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
   // Dashboard View
   const DashboardView = () => {
+    const [taskFilter, setTaskFilter] = useState<'all' | 'my' | 'unassigned'>('all');
+    const [projectFilter, setProjectFilter] = useState<'all' | 'my' | 'unassigned'>('all');
+    
     const buFinancials = financials.filter((f) => f.bu === bu);
     const revenues = buFinancials.filter((f) => f.type === 'revenue');
     const expenses = buFinancials.filter((f) => f.type === 'expense');
@@ -1062,33 +1314,75 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
     const totalExpense = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
     const netProfit = totalRevenue - totalExpense;
 
-    const inProgressProjects = projects.filter(
+    // 진행 중인 프로젝트 필터링
+    const inProgressProjectsBase = projects.filter(
       (p) => p.status === '준비중' || p.status === '기획중' || p.status === '진행중' || p.status === '운영중'
     );
+
+    // 프로젝트 필터링 로직
+    const inProgressProjects = useMemo(() => {
+      let filtered = inProgressProjectsBase;
+      
+      if (projectFilter === 'my') {
+        // 내 담당 프로젝트 - PM이 본인인 프로젝트
+        const userName = user?.profile?.name || user?.email || '';
+        filtered = filtered.filter((p) => p.pm_name === userName);
+      } else if (projectFilter === 'unassigned') {
+        // PM 미정 프로젝트
+        filtered = filtered.filter((p) => !p.pm_name || p.pm_name.trim() === '');
+      }
+      // 'all'인 경우 필터링하지 않음
+      
+      return filtered;
+    }, [inProgressProjectsBase, projectFilter, user]);
 
     const upcomingEvents = [...buEvents]
       .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
       .slice(0, 5);
 
-    const activeTasks = tasks.filter((t) => t.status !== 'done').slice(0, 10);
+    // 필터링된 할일 목록
+    const filteredTasks = useMemo(() => {
+      let filtered = tasks;
+      
+      if (taskFilter === 'my') {
+        // 내 할일만 보기 - 현재 사용자 이름과 일치하는 할일
+        const userName = user?.profile?.name || user?.email || '';
+        filtered = filtered.filter((t) => t.assignee === userName);
+      } else if (taskFilter === 'unassigned') {
+        // 담당자 미정인 할일 보기
+        filtered = filtered.filter((t) => !t.assignee || t.assignee.trim() === '');
+      }
+      // 'all'인 경우 필터링하지 않음
+      
+      return filtered;
+    }, [tasks, taskFilter, user]);
+
+    const activeTasks = filteredTasks.filter((t) => t.status !== 'done').slice(0, 10);
+
+    // role이 admin이거나 manager인지 확인
+    const canViewFinancials = user?.profile?.role === 'admin' || user?.profile?.role === 'manager';
 
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-bold uppercase text-gray-400 mb-2">총 매출</p>
-            <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalRevenue)}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-bold uppercase text-gray-400 mb-2">총 지출</p>
-            <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-bold uppercase text-gray-400 mb-2">순이익</p>
-            <p className={cn('text-2xl font-bold', netProfit >= 0 ? 'text-green-600' : 'text-red-600')}>
-              {formatCurrency(netProfit)}
-            </p>
-          </div>
+          {canViewFinancials && (
+            <>
+              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <p className="text-xs font-bold uppercase text-gray-400 mb-2">총 매출</p>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalRevenue)}</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <p className="text-xs font-bold uppercase text-gray-400 mb-2">총 지출</p>
+                <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <p className="text-xs font-bold uppercase text-gray-400 mb-2">순이익</p>
+                <p className={cn('text-2xl font-bold', netProfit >= 0 ? 'text-green-600' : 'text-red-600')}>
+                  {formatCurrency(netProfit)}
+                </p>
+              </div>
+            </>
+          )}
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <p className="text-xs font-bold uppercase text-gray-400 mb-2">진행 중 프로젝트</p>
             <p className="text-2xl font-bold text-gray-800">{inProgressProjects.length} 건</p>
@@ -1098,13 +1392,49 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">진행 중인 프로젝트</h3>
                 <button
                   onClick={() => setActiveTab('projects')}
                   className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
                 >
                   전체 보기
+                </button>
+              </div>
+              {/* 프로젝트 필터 토글 */}
+              <div className="mb-6 flex gap-2">
+                <button
+                  onClick={() => setProjectFilter('all')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                    projectFilter === 'all'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  )}
+                >
+                  전체 프로젝트
+                </button>
+                <button
+                  onClick={() => setProjectFilter('my')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                    projectFilter === 'my'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  )}
+                >
+                  내 담당 프로젝트
+                </button>
+                <button
+                  onClick={() => setProjectFilter('unassigned')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                    projectFilter === 'unassigned'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  )}
+                >
+                  PM 미정 프로젝트
                 </button>
               </div>
               <div className="space-y-3">
@@ -1124,11 +1454,13 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                     const periodExpense = projectExpenses.reduce((sum, e) => sum + e.amount, 0);
                     const periodProfit = periodRevenue - periodExpense;
 
+                    const projectTasks = tasks.filter((t) => t.projectId === project.id);
+
                     return (
                       <div
                         key={project.id}
                         onClick={() => {
-                          setEditProjectModalOpen(project);
+                          setProjectDetailModalOpen(project);
                         }}
                         className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors"
                       >
@@ -1148,25 +1480,48 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                               {project.status}
                             </span>
                           </div>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
-                            <span>총 매출: {formatCurrency(projectRevenue)}</span>
-                            <span>총 지출: {formatCurrency(projectExpense)}</span>
-                            <span
-                              className={cn('font-medium', projectProfit >= 0 ? 'text-green-600' : 'text-red-600')}
-                            >
-                              총 순이익: {formatCurrency(projectProfit)}
+                          {/* PM, 운영일정, 관련할일 정보 */}
+                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-2">
+                            {project.pm_name && (
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3 h-3 text-gray-400" />
+                                PM: {project.pm_name}
+                              </span>
+                            )}
+                            {project.startDate && project.endDate && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-gray-400" />
+                                {project.startDate} ~ {project.endDate}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <CheckSquare className="w-3 h-3 text-gray-400" />
+                              관련할일: {projectTasks.length}개
                             </span>
                           </div>
-                          {activePeriod.start && activePeriod.end && (
-                            <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
-                              <span>기간 매출: {formatCurrency(periodRevenue)}</span>
-                              <span>기간 지출: {formatCurrency(periodExpense)}</span>
-                              <span
-                                className={cn('font-medium', periodProfit >= 0 ? 'text-green-500' : 'text-red-500')}
-                              >
-                                기간 순이익: {formatCurrency(periodProfit)}
-                              </span>
-                            </div>
+                          {canViewFinancials && (
+                            <>
+                              <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                                <span>총 매출: {formatCurrency(projectRevenue)}</span>
+                                <span>총 지출: {formatCurrency(projectExpense)}</span>
+                                <span
+                                  className={cn('font-medium', projectProfit >= 0 ? 'text-green-600' : 'text-red-600')}
+                                >
+                                  총 순이익: {formatCurrency(projectProfit)}
+                                </span>
+                              </div>
+                              {activePeriod.start && activePeriod.end && (
+                                <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
+                                  <span>기간 매출: {formatCurrency(periodRevenue)}</span>
+                                  <span>기간 지출: {formatCurrency(periodExpense)}</span>
+                                  <span
+                                    className={cn('font-medium', periodProfit >= 0 ? 'text-green-500' : 'text-red-500')}
+                                  >
+                                    기간 순이익: {formatCurrency(periodProfit)}
+                                  </span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                         <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -1245,6 +1600,42 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                   <Plus className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
+              {/* 할일 필터 토글 */}
+              <div className="mb-4 flex gap-2">
+                <button
+                  onClick={() => setTaskFilter('all')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                    taskFilter === 'all'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  )}
+                >
+                  할일 전체 보기
+                </button>
+                <button
+                  onClick={() => setTaskFilter('my')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                    taskFilter === 'my'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  )}
+                >
+                  내 할일만 보기
+                </button>
+                <button
+                  onClick={() => setTaskFilter('unassigned')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                    taskFilter === 'unassigned'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  )}
+                >
+                  담당자 미정인 할일 보기
+                </button>
+              </div>
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
                 {activeTasks.length > 0 ? (
                   activeTasks.map((task) => {
@@ -1253,7 +1644,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                     return (
                       <div
                         key={task.id}
-                        onClick={() => setEditTaskModalOpen(task)}
+                        onClick={() => setTaskDetailModalOpen(task)}
                         className={cn(
                           "p-4 bg-gray-50 rounded-lg border transition-colors cursor-pointer hover:shadow-md",
                           isOverdue ? "border-red-200 bg-red-50" : "border-gray-100 hover:bg-gray-100"
@@ -1264,13 +1655,13 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                             {/* 할일 제목 */}
                             <h4 className="font-semibold text-gray-800 text-sm mb-2 truncate">{task.title}</h4>
                             
-                            {/* 프로젝트 정보 */}
-                            {project && (
-                              <div className="flex items-center gap-2 mb-2">
-                                <Briefcase className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                <p className="text-xs text-gray-600 truncate">{project.name}</p>
-                              </div>
-                            )}
+                            {/* 프로젝트 정보 - 항상 표시 */}
+                            <div className="flex items-center gap-2 mb-2">
+                              <Briefcase className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                              <p className="text-xs text-gray-600 truncate">
+                                {project ? project.name : '프로젝트 없음'}
+                              </p>
+                            </div>
                             
                             {/* 담당자 정보 */}
                             {task.assignee && (
@@ -1969,7 +2360,13 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         <CreateTaskModal
           bu={bu}
           projects={projects}
-          onClose={() => setTaskModalOpen(false)}
+          appUsers={(usersData as any)?.users || []}
+          externalWorkers={allExternalWorkersData.filter((w) => w.name && w.name.trim() !== '' && w.is_active !== false)}
+          defaultProjectId={taskModalProjectId || undefined}
+          onClose={() => {
+            setTaskModalOpen(false);
+            setTaskModalProjectId(null);
+          }}
           onSubmit={async (data) => {
             try {
               await createTaskMutation.mutateAsync({
@@ -1978,6 +2375,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                 tag: data.tag,
               } as any);
               setTaskModalOpen(false);
+              setTaskModalProjectId(null);
             } catch (error) {
               console.error('Failed to create task:', error);
             }
@@ -1988,6 +2386,8 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         <EditTaskModal
           task={isEditTaskModalOpen}
           projects={projects}
+          appUsers={(usersData as any)?.users || []}
+          externalWorkers={allExternalWorkersData.filter((w) => w.name && w.name.trim() !== '' && w.is_active !== false)}
           onClose={() => setEditTaskModalOpen(null)}
           onSubmit={async (data) => {
             try {
@@ -2125,6 +2525,52 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           onCancel={() => setDeleteManualId(null)}
         />
       )}
+
+      {/* Project Detail Modal */}
+      {isProjectDetailModalOpen && (
+        <ProjectDetailModal
+          project={isProjectDetailModalOpen}
+          projects={projects}
+          tasks={tasks}
+          clients={clientsData}
+          onClose={() => setProjectDetailModalOpen(null)}
+          onEdit={() => {
+            setEditProjectModalOpen(isProjectDetailModalOpen);
+            setProjectDetailModalOpen(null);
+          }}
+          onDelete={() => {
+            setDeleteProjectId(Number(isProjectDetailModalOpen.id));
+            setProjectDetailModalOpen(null);
+          }}
+          onAddTask={() => {
+            setTaskModalProjectId(isProjectDetailModalOpen.id);
+            setTaskModalOpen(true);
+          }}
+          onEditTask={(task) => {
+            setEditTaskModalOpen(task);
+          }}
+          onDeleteTask={(taskId) => {
+            setDeleteTaskId(Number(taskId));
+          }}
+        />
+      )}
+
+      {/* Task Detail Modal */}
+      {isTaskDetailModalOpen && (
+        <TaskDetailModal
+          task={isTaskDetailModalOpen}
+          projects={projects}
+          onClose={() => setTaskDetailModalOpen(null)}
+          onEdit={() => {
+            setEditTaskModalOpen(isTaskDetailModalOpen);
+            setTaskDetailModalOpen(null);
+          }}
+          onDelete={() => {
+            setDeleteTaskId(Number(isTaskDetailModalOpen.id));
+            setTaskDetailModalOpen(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -2135,14 +2581,16 @@ function ModalShell({
   onClose,
   children,
   actions,
+  zIndex = 50,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  zIndex?: number;
 }) {
   return (
-    <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+    <div className={`modal-container active fixed inset-0 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur`} style={{ zIndex }}>
       <div className="w-full max-w-2xl max-h-[90vh] rounded-2xl bg-white shadow-2xl flex flex-col">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 flex-shrink-0">
           <h3 className="text-lg font-bold text-slate-800">{title}</h3>
@@ -2249,11 +2697,15 @@ function SelectField({
   value,
   onChange,
   options,
+  groupedOptions,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  options: { value: string; label: string }[];
+  options?: { value: string; label: string }[];
+  groupedOptions?: { group: string; options: { value: string; label: string }[] }[];
+  placeholder?: string;
 }) {
   return (
     <label className="space-y-1 text-sm font-semibold text-slate-700">
@@ -2263,11 +2715,28 @@ function SelectField({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
       >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
+        {placeholder && (
+          <option value="" disabled>
+            {placeholder}
           </option>
-        ))}
+        )}
+        {groupedOptions ? (
+          groupedOptions.map((group) => (
+            <optgroup key={group.group} label={group.group}>
+              {group.options.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </optgroup>
+          ))
+        ) : (
+          options?.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))
+        )}
       </select>
     </label>
   );
@@ -3097,11 +3566,17 @@ function EditProjectModal({
 function CreateTaskModal({
   bu,
   projects,
+  appUsers,
+  externalWorkers,
+  defaultProjectId,
   onClose,
   onSubmit,
 }: {
   bu: BU;
   projects: any[];
+  appUsers: any[];
+  externalWorkers: any[];
+  defaultProjectId?: string;
   onClose: () => void;
   onSubmit: (data: {
     projectId: string;
@@ -3115,7 +3590,7 @@ function CreateTaskModal({
   }) => void;
 }) {
   const [form, setForm] = useState({
-    projectId: projects[0]?.id || '',
+    projectId: defaultProjectId || projects[0]?.id || '',
     title: '',
     assignee: '',
     dueDate: new Date().toISOString().split('T')[0],
@@ -3124,8 +3599,37 @@ function CreateTaskModal({
     tag: '',
   });
 
+  const assigneeOptions = useMemo(() => {
+    const groups: { group: string; options: { value: string; label: string }[] }[] = [];
+    
+    // app_users 그룹
+    if (appUsers.length > 0) {
+      groups.push({
+        group: '내부',
+        options: appUsers.map((user) => ({
+          value: user.name || user.email || '',
+          label: user.name || user.email || '이름 없음',
+        })),
+      });
+    }
+    
+    // external_workers 그룹
+    const validWorkers = externalWorkers.filter((worker) => worker.name && worker.name.trim() !== '');
+    if (validWorkers.length > 0) {
+      groups.push({
+        group: '외주',
+        options: validWorkers.map((worker) => ({
+          value: worker.name || '',
+          label: worker.name || '이름 없음',
+        })),
+      });
+    }
+    
+    return groups;
+  }, [appUsers, externalWorkers]);
+
   return (
-    <ModalShell title="할일 등록" onClose={onClose}>
+    <ModalShell title="할일 등록" onClose={onClose} zIndex={60}>
       <div className="grid grid-cols-1 gap-3">
         <SelectField
           label="프로젝트"
@@ -3139,11 +3643,12 @@ function CreateTaskModal({
           value={form.title}
           onChange={(v) => setForm((prev) => ({ ...prev, title: v }))}
         />
-        <InputField
+        <SelectField
           label="담당자"
-          placeholder="담당자 이름"
           value={form.assignee}
-          onChange={(v) => setForm((prev) => ({ ...prev, assignee: v }))}
+          onChange={(val) => setForm((prev) => ({ ...prev, assignee: val }))}
+          groupedOptions={assigneeOptions}
+          placeholder="담당자 선택"
         />
         <div className="grid grid-cols-2 gap-2">
           <InputField
@@ -3194,11 +3699,15 @@ function CreateTaskModal({
 function EditTaskModal({
   task,
   projects,
+  appUsers,
+  externalWorkers,
   onClose,
   onSubmit,
 }: {
   task: any;
   projects: any[];
+  appUsers: any[];
+  externalWorkers: any[];
   onClose: () => void;
   onSubmit: (data: {
     projectId: string;
@@ -3221,8 +3730,37 @@ function EditTaskModal({
     tag: (task as any).tag || '',
   });
 
+  const assigneeOptions = useMemo(() => {
+    const groups: { group: string; options: { value: string; label: string }[] }[] = [];
+    
+    // app_users 그룹
+    if (appUsers.length > 0) {
+      groups.push({
+        group: '내부',
+        options: appUsers.map((user) => ({
+          value: user.name || user.email || '',
+          label: user.name || user.email || '이름 없음',
+        })),
+      });
+    }
+    
+    // external_workers 그룹
+    const validWorkers = externalWorkers.filter((worker) => worker.name && worker.name.trim() !== '');
+    if (validWorkers.length > 0) {
+      groups.push({
+        group: '외주',
+        options: validWorkers.map((worker) => ({
+          value: worker.name || '',
+          label: worker.name || '이름 없음',
+        })),
+      });
+    }
+    
+    return groups;
+  }, [appUsers, externalWorkers]);
+
   return (
-    <ModalShell title="할일 수정" onClose={onClose}>
+    <ModalShell title="할일 수정" onClose={onClose} zIndex={60}>
       <div className="grid grid-cols-1 gap-3">
         <SelectField
           label="프로젝트"
@@ -3236,11 +3774,12 @@ function EditTaskModal({
           value={form.title}
           onChange={(v) => setForm((prev) => ({ ...prev, title: v }))}
         />
-        <InputField
+        <SelectField
           label="담당자"
-          placeholder="담당자 이름"
           value={form.assignee}
-          onChange={(v) => setForm((prev) => ({ ...prev, assignee: v }))}
+          onChange={(val) => setForm((prev) => ({ ...prev, assignee: val }))}
+          groupedOptions={assigneeOptions}
+          placeholder="담당자 선택"
         />
         <div className="grid grid-cols-2 gap-2">
           <InputField
@@ -3789,6 +4328,336 @@ function EditManualModal({
         onClose={onClose}
         primaryLabel="수정"
       />
+    </ModalShell>
+  );
+}
+
+// Project Detail Modal
+function ProjectDetailModal({
+  project,
+  projects,
+  tasks,
+  clients,
+  onClose,
+  onEdit,
+  onDelete,
+  onAddTask,
+  onEditTask,
+  onDeleteTask,
+}: {
+  project: any;
+  projects: any[];
+  tasks: any[];
+  clients: any[];
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAddTask: () => void;
+  onEditTask: (task: any) => void;
+  onDeleteTask: (taskId: string) => void;
+}) {
+  const client = clients.find((c) => c.id === project.client_id);
+  const projectTasks = tasks.filter((t) => t.projectId === project.id);
+  const todoCount = projectTasks.filter((t) => t.status === 'todo').length;
+  const inProgressCount = projectTasks.filter((t) => t.status === 'in-progress').length;
+  const doneCount = projectTasks.filter((t) => t.status === 'done').length;
+
+  return (
+    <ModalShell
+      title="프로젝트 상세보기"
+      onClose={onClose}
+      actions={
+        <div className="flex items-center justify-end gap-2 px-6 py-4">
+          <button
+            onClick={onDelete}
+            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+          >
+            삭제
+          </button>
+          <button
+            onClick={onEdit}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+          >
+            수정
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="text-xs font-semibold text-gray-500">프로젝트명</label>
+          <p className="mt-1 text-base font-bold text-gray-800">{project.name}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-500">상태</label>
+            <p className="mt-1">
+              <span
+                className={cn(
+                  'text-xs px-2.5 py-1 rounded-full font-semibold',
+                  project.status === '준비중'
+                    ? 'bg-purple-100 text-purple-700'
+                    : project.status === '기획중'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : project.status === '진행중'
+                        ? 'bg-blue-100 text-blue-700'
+                        : project.status === '운영중'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-700'
+                )}
+              >
+                {project.status}
+              </span>
+            </p>
+          </div>
+          {project.cat && (
+            <div>
+              <label className="text-xs font-semibold text-gray-500">카테고리</label>
+              <p className="mt-1 text-sm text-gray-800">{project.cat}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-500">시작일</label>
+            <p className="mt-1 text-sm text-gray-800">{project.startDate}</p>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500">종료일</label>
+            <p className="mt-1 text-sm text-gray-800">{project.endDate}</p>
+          </div>
+        </div>
+
+        {client && (
+          <div>
+            <label className="text-xs font-semibold text-gray-500">클라이언트</label>
+            <p className="mt-1 text-sm text-gray-800">{client.name}</p>
+          </div>
+        )}
+
+        {project.pm_name && (
+          <div>
+            <label className="text-xs font-semibold text-gray-500">PM</label>
+            <p className="mt-1 text-sm text-gray-800">{project.pm_name}</p>
+          </div>
+        )}
+
+        <div className="pt-4 border-t border-gray-200">
+          <label className="text-xs font-semibold text-gray-500 mb-3 block">할일 통계</label>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">할일</p>
+              <p className="text-lg font-bold text-gray-700">{todoCount}</p>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3">
+              <p className="text-xs text-blue-600 mb-1">진행중</p>
+              <p className="text-lg font-bold text-blue-700">{inProgressCount}</p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-3">
+              <p className="text-xs text-green-600 mb-1">완료</p>
+              <p className="text-lg font-bold text-green-700">{doneCount}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-xs font-semibold text-gray-500">관련 할일 ({projectTasks.length})</label>
+            <button
+              onClick={onAddTask}
+              className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 text-xs font-medium transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              할일 추가
+            </button>
+          </div>
+          {projectTasks.length > 0 ? (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {projectTasks.map((task) => {
+                const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
+                return (
+                  <div
+                    key={task.id}
+                    className={cn(
+                      'p-3 rounded-lg border',
+                      isOverdue ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">{task.title}</p>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                          {task.assignee && <span>담당: {task.assignee}</span>}
+                          {task.dueDate && (
+                            <span className={cn(isOverdue && 'text-red-600 font-semibold')}>
+                              마감: {task.dueDate}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'text-xs px-2 py-1 rounded-full font-medium',
+                            task.status === 'done'
+                              ? 'bg-green-100 text-green-700'
+                              : task.status === 'in-progress'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-gray-100 text-gray-700'
+                          )}
+                        >
+                          {task.status === 'done' ? '완료' : task.status === 'in-progress' ? '진행중' : '할일'}
+                        </span>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => onEditTask(task)}
+                            className="p-1 text-gray-400 hover:text-indigo-600 rounded transition-colors"
+                            title="수정"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onDeleteTask(task.id)}
+                            className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-gray-400 bg-gray-50 rounded-lg border border-gray-200">
+              <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">등록된 할일이 없습니다.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// Task Detail Modal
+function TaskDetailModal({
+  task,
+  projects,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  task: any;
+  projects: any[];
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const project = projects.find((p) => p.id === task.projectId);
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
+
+  return (
+    <ModalShell
+      title="할일 상세보기"
+      onClose={onClose}
+      actions={
+        <div className="flex items-center justify-end gap-2 px-6 py-4">
+          <button
+            onClick={onDelete}
+            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+          >
+            삭제
+          </button>
+          <button
+            onClick={onEdit}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+          >
+            수정
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="text-xs font-semibold text-gray-500">업무 제목</label>
+          <p className="mt-1 text-base font-bold text-gray-800">{task.title}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-500">상태</label>
+            <p className="mt-1">
+              <span
+                className={cn(
+                  'text-xs px-2.5 py-1 rounded-full font-semibold',
+                  task.status === 'done'
+                    ? 'bg-green-100 text-green-700'
+                    : task.status === 'in-progress'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-700'
+                )}
+              >
+                {task.status === 'done' ? '완료' : task.status === 'in-progress' ? '진행중' : '할일'}
+              </span>
+            </p>
+          </div>
+          {(task as any).priority && (
+            <div>
+              <label className="text-xs font-semibold text-gray-500">우선순위</label>
+              <p className="mt-1">
+                <span
+                  className={cn(
+                    'text-xs px-2.5 py-1 rounded-full font-semibold',
+                    (task as any).priority === 'high'
+                      ? 'bg-red-100 text-red-700'
+                      : (task as any).priority === 'medium'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-gray-100 text-gray-600'
+                  )}
+                >
+                  {(task as any).priority === 'high' ? '높음' : (task as any).priority === 'medium' ? '보통' : '낮음'}
+                </span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {project && (
+          <div>
+            <label className="text-xs font-semibold text-gray-500">프로젝트</label>
+            <p className="mt-1 text-sm text-gray-800">{project.name}</p>
+          </div>
+        )}
+
+        {task.assignee && (
+          <div>
+            <label className="text-xs font-semibold text-gray-500">담당자</label>
+            <p className="mt-1 text-sm text-gray-800">{task.assignee}</p>
+          </div>
+        )}
+
+        {task.dueDate && (
+          <div>
+            <label className="text-xs font-semibold text-gray-500">마감일</label>
+            <p className={cn('mt-1 text-sm font-medium', isOverdue ? 'text-red-600 font-bold' : 'text-gray-800')}>
+              {task.dueDate}
+              {isOverdue && <span className="ml-2 text-red-600">(지연)</span>}
+            </p>
+          </div>
+        )}
+
+        {(task as any).tag && (
+          <div>
+            <label className="text-xs font-semibold text-gray-500">태그</label>
+            <p className="mt-1 text-sm text-gray-800">{(task as any).tag}</p>
+          </div>
+        )}
+      </div>
     </ModalShell>
   );
 }

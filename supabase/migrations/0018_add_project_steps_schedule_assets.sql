@@ -23,3 +23,4 @@ ALTER TABLE projects
 CREATE INDEX IF NOT EXISTS idx_projects_release_date ON projects(release_date) WHERE release_date IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_projects_shoot_date ON projects(shoot_date) WHERE shoot_date IS NOT NULL;
 
+
