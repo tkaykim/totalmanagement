@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
+import { ko } from 'date-fns/locale';
 import {
   LayoutDashboard,
   Factory,
@@ -823,7 +824,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                           {format(new Date(event.event_date), 'MM/dd')}
                         </div>
                         <div className="text-xs text-gray-400 mt-1">
-                          {format(new Date(event.event_date), 'EEE', { locale: { code: 'ko' } })}
+                          {format(new Date(event.event_date), 'EEE', { locale: ko })}
                         </div>
                       </div>
                       <div className="flex-1">
