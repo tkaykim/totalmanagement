@@ -632,7 +632,9 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                             {client && (
                               <div className="flex items-center gap-1.5">
                                 <Briefcase className="w-4 h-4 text-indigo-500" />
-                                <span className="text-indigo-600 font-medium">{client.name}</span>
+                                <span className="text-indigo-600 font-medium">
+                                  {client.company_name_ko || client.company_name_en || '클라이언트'}
+                                </span>
                               </div>
                             )}
                             {project.pm_name && (
@@ -4433,7 +4435,9 @@ function ProjectDetailModal({
         {client && (
           <div>
             <label className="text-xs font-semibold text-gray-500">클라이언트</label>
-            <p className="mt-1 text-sm text-gray-800">{client.name}</p>
+            <p className="mt-1 text-sm text-gray-800">
+              {client.company_name_ko || client.company_name_en || '클라이언트'}
+            </p>
           </div>
         )}
 
