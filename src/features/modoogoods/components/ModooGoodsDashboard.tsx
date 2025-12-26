@@ -204,7 +204,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         ...dbTaskToFrontend(t),
         priority: t.priority,
         tag: t.tag,
-      }));
+      })) as Array<ReturnType<typeof dbTaskToFrontend> & { priority?: 'high' | 'medium' | 'low'; tag?: string }>;
   }, [tasksData, bu]);
 
   const financials = useMemo(() => financialData.map(dbFinancialToFrontend), [financialData]);
@@ -1305,12 +1305,12 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                                 'text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap',
                                 task.status === 'todo'
                                   ? 'bg-yellow-100 text-yellow-700'
-                                  : task.status === 'in_progress'
+                                  : task.status === 'in-progress'
                                     ? 'bg-blue-100 text-blue-700'
                                     : 'bg-green-100 text-green-700'
                               )}
                             >
-                              {task.status === 'todo' ? '대기' : task.status === 'in_progress' ? '진행중' : '완료'}
+                              {task.status === 'todo' ? '대기' : task.status === 'in-progress' ? '진행중' : '완료'}
                             </span>
                             {(task as any).priority && (
                               <span
