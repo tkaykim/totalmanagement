@@ -107,15 +107,15 @@ function formatCurrency(amount: number): string {
 
 function StatusBadge({ type, text }: { type?: string; text: string }) {
   const styles: Record<string, string> = {
-    active: 'bg-green-100 text-green-700',
-    ongoing: 'bg-blue-100 text-blue-700',
-    planning: 'bg-purple-100 text-purple-700',
-    completed: 'bg-gray-100 text-gray-500',
-    paused: 'bg-yellow-100 text-yellow-700',
-    warning: 'bg-orange-100 text-orange-700',
-    danger: 'bg-red-100 text-red-700',
-    vip: 'bg-amber-100 text-amber-700',
-    default: 'bg-gray-100 text-gray-700',
+    active: 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300',
+    ongoing: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
+    planning: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300',
+    completed: 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400',
+    paused: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300',
+    warning: 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300',
+    danger: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300',
+    vip: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
+    default: 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300',
   };
 
   const key = type?.toLowerCase() || 'default';
@@ -136,11 +136,11 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }: { isOpen: bool
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className={cn('bg-white rounded-[2rem] w-full', sizeClasses[size], 'shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]')}>
-        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
-          <h3 className="font-black text-lg text-gray-900">{title}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
-            <X size={18} className="text-gray-500" />
+      <div className={cn('bg-white dark:bg-slate-800 rounded-[2rem] w-full', sizeClasses[size], 'shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]')}>
+        <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50 flex-shrink-0">
+          <h3 className="font-black text-lg text-gray-900 dark:text-slate-100">{title}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+            <X size={18} className="text-gray-500 dark:text-slate-400" />
           </button>
         </div>
         <div className="p-0 overflow-y-auto flex-1">{children}</div>
@@ -319,7 +319,7 @@ export default function GrigoEntDashboard() {
         {/* 통계 카드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setActiveTab('projects')}
@@ -328,19 +328,19 @@ export default function GrigoEntDashboard() {
             }}
           >
             <div className="flex justify-between mb-2">
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-2xl">
                 <Briefcase size={22} />
               </div>
-              <span className="text-[10px] font-black text-green-500 bg-green-50 px-2 py-1 rounded-full uppercase tracking-widest">Active</span>
+              <span className="text-[10px] font-black text-green-500 dark:text-green-300 bg-green-50 dark:bg-green-900/50 px-2 py-1 rounded-full uppercase tracking-widest">Active</span>
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Projects</p>
-              <h3 className="text-3xl font-black text-gray-900 mt-1">{projects.length}</h3>
-              <p className="text-xs text-gray-500 mt-1">진행중: {inProgressProjects.length}건</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Projects</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-slate-100 mt-1">{projects.length}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">진행중: {inProgressProjects.length}건</p>
             </div>
           </div>
           <div
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setActiveTab('artists')}
@@ -349,18 +349,18 @@ export default function GrigoEntDashboard() {
             }}
           >
             <div className="flex justify-between mb-2">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-2xl">
                 <Users size={22} />
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Artists</p>
-              <h3 className="text-3xl font-black text-gray-900 mt-1">{artists.length}</h3>
-              <p className="text-xs text-gray-500 mt-1">활성: {artists.filter((a) => a.status === 'Active').length}명</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Artists</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-slate-100 mt-1">{artists.length}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">활성: {artists.filter((a) => a.status === 'Active').length}명</p>
             </div>
           </div>
           <div
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between border-red-100 hover:shadow-lg transition-all cursor-pointer"
+            className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between border-red-100 dark:border-red-900/50 hover:shadow-lg transition-all cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setActiveTab('artists')}
@@ -369,19 +369,19 @@ export default function GrigoEntDashboard() {
             }}
           >
             <div className="flex justify-between mb-2">
-              <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
+              <div className="p-3 bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-300 rounded-2xl">
                 <ShieldCheck size={22} />
               </div>
-              {urgentVisas.length > 0 && <span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>}
+              {urgentVisas.length > 0 && <span className="w-3 h-3 bg-red-50 dark:bg-red-900/500 rounded-full animate-ping"></span>}
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Visa Critical</p>
-              <h3 className={cn('text-3xl font-black mt-1', urgentVisas.length > 0 ? 'text-red-600' : 'text-gray-900')}>{urgentVisas.length}</h3>
-              <p className="text-xs text-gray-500 mt-1">60일 이내 만료</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Visa Critical</p>
+              <h3 className={cn('text-3xl font-black mt-1', urgentVisas.length > 0 ? 'text-red-600 dark:text-red-300' : 'text-gray-900 dark:text-slate-100')}>{urgentVisas.length}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">60일 이내 만료</p>
             </div>
           </div>
           <div
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setActiveTab('settlements')}
@@ -390,14 +390,14 @@ export default function GrigoEntDashboard() {
             }}
           >
             <div className="flex justify-between mb-2">
-              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-300 rounded-2xl">
                 <DollarSign size={22} />
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Monthly Rev.</p>
-              <h3 className="text-3xl font-black text-gray-900 mt-1">₩{(totalRevenue / 10000).toLocaleString()}만</h3>
-              <p className="text-xs text-gray-500 mt-1">순이익: ₩{(netProfit / 10000).toLocaleString()}만</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Monthly Rev.</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-slate-100 mt-1">₩{(totalRevenue / 10000).toLocaleString()}만</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">순이익: ₩{(netProfit / 10000).toLocaleString()}만</p>
             </div>
           </div>
         </div>
@@ -405,7 +405,7 @@ export default function GrigoEntDashboard() {
         {/* 추가 통계 카드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setActiveTab('freelancers')}
@@ -414,18 +414,18 @@ export default function GrigoEntDashboard() {
             }}
           >
             <div className="flex justify-between mb-2">
-              <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+              <div className="p-3 bg-purple-50 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300 rounded-2xl">
                 <UserPlus size={22} />
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">외주 댄서</p>
-              <h3 className="text-3xl font-black text-gray-900 mt-1">{freelancers.length}</h3>
-              <p className="text-xs text-gray-500 mt-1">활성: {freelancers.filter((f) => f.is_active).length}명</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">외주 댄서</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-slate-100 mt-1">{freelancers.length}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">활성: {freelancers.filter((f) => f.is_active).length}명</p>
             </div>
           </div>
           <div
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setActiveTab('partners')}
@@ -434,18 +434,18 @@ export default function GrigoEntDashboard() {
             }}
           >
             <div className="flex justify-between mb-2">
-              <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
+              <div className="p-3 bg-orange-50 dark:bg-orange-900/50 text-orange-600 dark:text-orange-300 rounded-2xl">
                 <Building2 size={22} />
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">거래처</p>
-              <h3 className="text-3xl font-black text-gray-900 mt-1">{partners.length}</h3>
-              <p className="text-xs text-gray-500 mt-1">활성: {activeClients.length}개</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">거래처</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-slate-100 mt-1">{partners.length}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">활성: {activeClients.length}개</p>
             </div>
           </div>
           <div
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setActiveTab('tasks')}
@@ -454,18 +454,18 @@ export default function GrigoEntDashboard() {
             }}
           >
             <div className="flex justify-between mb-2">
-              <div className="p-3 bg-yellow-50 text-yellow-600 rounded-2xl">
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-300 rounded-2xl">
                 <CheckSquare size={22} />
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">진행 중 업무</p>
-              <h3 className="text-3xl font-black text-gray-900 mt-1">{activeTasks.length}</h3>
-              <p className="text-xs text-gray-500 mt-1">완료: {tasks.filter((t) => t.status === 'done').length}건</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">진행 중 업무</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-slate-100 mt-1">{activeTasks.length}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">완료: {tasks.filter((t) => t.status === 'done').length}건</p>
             </div>
           </div>
           <div
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
+            className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer"
             role="button"
             tabIndex={0}
             onClick={() => setActiveTab('settlements')}
@@ -474,14 +474,14 @@ export default function GrigoEntDashboard() {
             }}
           >
             <div className="flex justify-between mb-2">
-              <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl">
+              <div className="p-3 bg-pink-50 dark:bg-pink-900/50 text-pink-600 dark:text-pink-300 rounded-2xl">
                 <Receipt size={22} />
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">총 지출</p>
-              <h3 className="text-3xl font-black text-gray-900 mt-1">₩{(totalExpense / 10000).toLocaleString()}만</h3>
-              <p className="text-xs text-gray-500 mt-1">정산 완료: {settlements.filter((s) => s.status === 'Completed').length}건</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">총 지출</p>
+              <h3 className="text-3xl font-black text-gray-900 dark:text-slate-100 mt-1">₩{(totalExpense / 10000).toLocaleString()}만</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">정산 완료: {settlements.filter((s) => s.status === 'Completed').length}건</p>
             </div>
           </div>
         </div>
@@ -491,12 +491,12 @@ export default function GrigoEntDashboard() {
           {/* 왼쪽: 프로젝트 & 일정 */}
           <div className="lg:col-span-2 space-y-6">
             {/* 진행 중인 프로젝트 */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-black text-gray-900">진행 중인 프로젝트</h3>
+                <h3 className="text-lg font-black text-gray-900 dark:text-slate-100">진행 중인 프로젝트</h3>
                 <button
                   onClick={() => setActiveTab('projects')}
-                  className="text-sm text-indigo-600 hover:text-indigo-800 font-bold"
+                  className="text-sm text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-400 font-bold"
                 >
                   전체 보기 →
                 </button>
@@ -513,37 +513,37 @@ export default function GrigoEntDashboard() {
                       <div
                         key={project.id}
                         onClick={() => setActiveTab('projects')}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors group"
+                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 cursor-pointer transition-colors group"
                       >
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
-                            <h4 className="font-black text-gray-900 text-sm">{project.name}</h4>
+                            <h4 className="font-black text-gray-900 dark:text-slate-100 text-sm">{project.name}</h4>
                             <StatusBadge type={project.status.toLowerCase()} text={project.status} />
                           </div>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                          <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-slate-400 mt-2">
                             {(project as any).pm_name && <span>PM: {(project as any).pm_name}</span>}
                             {projectClient && <span>클라이언트: {(projectClient as any).company_name_ko || (projectClient as any).company_name_en || '-'}</span>}
                             <span>매출: ₩{(projectRevenue / 10000).toLocaleString()}만</span>
                             <span>지출: ₩{(projectExpense / 10000).toLocaleString()}만</span>
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                        <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300 transition-colors" />
                       </div>
                     );
                   })
                 ) : (
-                  <div className="text-center py-8 text-gray-400 text-sm font-bold">진행 중인 프로젝트가 없습니다.</div>
+                  <div className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm font-bold">진행 중인 프로젝트가 없습니다.</div>
                 )}
               </div>
             </div>
 
             {/* 주요 일정 */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-black text-gray-900">다가오는 일정</h3>
+                <h3 className="text-lg font-black text-gray-900 dark:text-slate-100">다가오는 일정</h3>
                 <button
                   onClick={() => setActiveTab('schedule')}
-                  className="text-sm text-indigo-600 hover:text-indigo-800 font-bold"
+                  className="text-sm text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-400 font-bold"
                 >
                   전체 보기 →
                 </button>
@@ -553,10 +553,10 @@ export default function GrigoEntDashboard() {
                   upcomingEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="flex items-center p-4 hover:bg-gray-50 rounded-2xl transition-colors border border-gray-100 cursor-pointer group"
+                      className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-slate-900 rounded-2xl transition-colors border border-gray-100 dark:border-slate-700 cursor-pointer group"
                     >
                       <div className="w-16 text-center mr-4 flex-shrink-0">
-                        <div className="text-xs text-gray-500 font-bold">
+                        <div className="text-xs text-gray-500 dark:text-slate-400 font-bold">
                           {new Date(event.event_date).toLocaleDateString('ko-KR', {
                             month: 'short',
                             day: 'numeric',
@@ -566,23 +566,23 @@ export default function GrigoEntDashboard() {
                       <div
                         className={cn(
                           'w-1 h-12 rounded-full mr-4 flex-shrink-0',
-                          event.event_type === 'shoot' ? 'bg-red-500' : event.event_type === 'meeting' ? 'bg-blue-500' : 'bg-purple-500'
+                          event.event_type === 'shoot' ? 'bg-red-50 dark:bg-red-900/500' : event.event_type === 'meeting' ? 'bg-blue-50 dark:bg-blue-900/500' : 'bg-purple-50 dark:bg-purple-900/500'
                         )}
                       ></div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-black text-gray-900 text-sm truncate">{event.title}</h4>
+                        <h4 className="font-black text-gray-900 dark:text-slate-100 text-sm truncate">{event.title}</h4>
                         {event.description && (
-                          <p className="text-xs text-gray-500 flex items-center mt-1 truncate">
+                          <p className="text-xs text-gray-500 dark:text-slate-400 flex items-center mt-1 truncate">
                             <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
                             <span className="truncate">{event.description}</span>
                           </p>
                         )}
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
+                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300 transition-colors flex-shrink-0" />
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-400 text-sm font-bold">등록된 일정이 없습니다.</div>
+                  <div className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm font-bold">등록된 일정이 없습니다.</div>
                 )}
               </div>
             </div>
@@ -591,25 +591,25 @@ export default function GrigoEntDashboard() {
           {/* 오른쪽: 할 일 & 비자 알림 */}
           <div className="space-y-6">
             {/* 할 일 */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-700 p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-black text-gray-900">할 일</h3>
+                <h3 className="text-lg font-black text-gray-900 dark:text-slate-100">할 일</h3>
                 <button
                   onClick={() => setActiveTab('tasks')}
-                  className="text-sm text-indigo-600 hover:text-indigo-800 font-bold"
+                  className="text-sm text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-400 font-bold"
                 >
                   전체 보기 →
                 </button>
               </div>
               {/* 할일 필터 */}
-              <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+              <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
                 <button
                   onClick={() => setTaskAssigneeFilter('all')}
                   className={cn(
                     'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
                     taskAssigneeFilter === 'all'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-300 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
                   )}
                 >
                   전체 할일 보기
@@ -619,8 +619,8 @@ export default function GrigoEntDashboard() {
                   className={cn(
                     'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
                     taskAssigneeFilter === 'my'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-300 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
                   )}
                 >
                   내 할일만 보기
@@ -631,7 +631,7 @@ export default function GrigoEntDashboard() {
                   filteredActiveTasks.slice(0, 5).map((task) => (
                     <div
                       key={task.id}
-                      className="flex items-start p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer"
+                      className="flex items-start p-3 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors cursor-pointer"
                       onClick={() => setActiveTab('tasks')}
                     >
                       <div className="flex-1 min-w-0">
@@ -639,7 +639,7 @@ export default function GrigoEntDashboard() {
                           <span
                             className={cn(
                               'text-xs px-2 py-0.5 rounded-full font-bold',
-                              task.priority === 'high' ? 'bg-red-100 text-red-600' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'
+                              task.priority === 'high' ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-600 dark:text-yellow-300' : 'bg-blue-100 text-blue-600 dark:text-blue-300'
                             )}
                           >
                             {task.priority || 'medium'}
@@ -647,21 +647,21 @@ export default function GrigoEntDashboard() {
                           <span
                             className={cn(
                               'text-xs px-2 py-0.5 rounded-full',
-                              task.status === 'todo' ? 'bg-gray-100 text-gray-600' : task.status === 'in-progress' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
+                              task.status === 'todo' ? 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300' : task.status === 'in-progress' ? 'bg-blue-100 text-blue-600 dark:text-blue-300' : 'bg-green-100 text-green-600'
                             )}
                           >
                             {task.status === 'todo' ? '할 일' : task.status === 'in-progress' ? '진행 중' : '완료'}
                           </span>
                         </div>
-                        <p className="text-sm font-bold text-gray-800 mb-2">{task.title}</p>
+                        <p className="text-sm font-bold text-gray-800 dark:text-slate-200 mb-2">{task.title}</p>
                         {task.assignee && (
-                          <div className="flex items-center text-xs text-gray-500">
+                          <div className="flex items-center text-xs text-gray-500 dark:text-slate-400">
                             <User className="w-3 h-3 mr-1" />
                             <span className="font-bold">{task.assignee}</span>
                           </div>
                         )}
                         {task.dueDate && (
-                          <div className="flex items-center text-xs text-gray-400 mt-1">
+                          <div className="flex items-center text-xs text-gray-400 dark:text-slate-500 mt-1">
                             <Clock className="w-3 h-3 mr-1" />
                             <span>{task.dueDate}</span>
                           </div>
@@ -670,17 +670,17 @@ export default function GrigoEntDashboard() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-400 text-sm font-bold">등록된 할 일이 없습니다.</div>
+                  <div className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm font-bold">등록된 할 일이 없습니다.</div>
                 )}
               </div>
             </div>
 
             {/* 비자 만료 임박 알림 */}
             {urgentVisas.length > 0 && (
-              <div className="bg-red-50 rounded-[2rem] shadow-sm border border-red-100 p-6">
+              <div className="bg-red-50 dark:bg-red-900/50 rounded-[2rem] shadow-sm border border-red-100 dark:border-red-900/50 p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                  <h3 className="text-lg font-black text-red-900">비자 만료 임박</h3>
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-300" />
+                  <h3 className="text-lg font-black text-red-900 dark:text-red-200">비자 만료 임박</h3>
                 </div>
                 <div className="space-y-3">
                   {urgentVisas.slice(0, 3).map((artist) => {
@@ -688,15 +688,15 @@ export default function GrigoEntDashboard() {
                     const daysLeft = Math.ceil((new Date(visaEnd).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
                     return (
-                      <div key={artist.id} className="bg-white p-3 rounded-xl border border-red-200">
+                      <div key={artist.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-red-200 dark:border-red-900/50">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-black text-sm text-gray-900">{artist.name}</p>
-                            <p className="text-xs text-gray-500">{artist.visa_type || 'N/A'}</p>
+                            <p className="font-black text-sm text-gray-900 dark:text-slate-100">{artist.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-slate-400">{artist.visa_type || 'N/A'}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs font-black text-red-600">{daysLeft}일 남음</p>
-                            <p className="text-xs text-gray-500">{visaEnd}</p>
+                            <p className="text-xs font-black text-red-600 dark:text-red-300">{daysLeft}일 남음</p>
+                            <p className="text-xs text-gray-500 dark:text-slate-400">{visaEnd}</p>
                           </div>
                         </div>
                       </div>
@@ -706,7 +706,7 @@ export default function GrigoEntDashboard() {
                 {urgentVisas.length > 3 && (
                   <button
                     onClick={() => setActiveTab('artists')}
-                    className="w-full mt-4 text-sm text-red-600 hover:text-red-800 font-bold"
+                    className="w-full mt-4 text-sm text-red-600 dark:text-red-300 hover:text-red-800 dark:hover:text-red-400 font-bold"
                   >
                     전체 보기 ({urgentVisas.length}건) →
                   </button>
@@ -921,20 +921,20 @@ export default function GrigoEntDashboard() {
       const isContractUrgent = artist.contract_end && (new Date(artist.contract_end).getTime() - today.getTime()) / (1000 * 60 * 60 * 24) <= 60;
 
       return (
-        <tr key={artist.id} className="hover:bg-gray-50/50 transition-colors group">
+        <tr key={artist.id} className="hover:bg-gray-50 dark:hover:bg-slate-900/50 transition-colors group">
           <td className="px-6 py-5">
             <div className="flex items-center gap-4">
               <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-sm', artist.role?.includes('한야') ? 'bg-black' : 'bg-gradient-to-br from-indigo-500 to-purple-600')}>
                 {artist.name[0]}
               </div>
               <div>
-                <p className="font-black text-gray-900 text-sm">{artist.name}</p>
+                <p className="font-black text-gray-900 dark:text-slate-100 text-sm">{artist.name}</p>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-500">개인</span>
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">개인</span>
                   {artist.role && (
                     <>
                       <span className="text-gray-300 text-[10px]">/</span>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase">{artist.role}</span>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase">{artist.role}</span>
                     </>
                   )}
                 </div>
@@ -943,32 +943,32 @@ export default function GrigoEntDashboard() {
           </td>
           <td className="px-6 py-5">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-black text-gray-700">{artist.nationality || 'N/A'}</span>
+              <span className="text-xs font-black text-gray-700 dark:text-slate-300">{artist.nationality || 'N/A'}</span>
               <span className="text-gray-300 text-[10px]">/</span>
-              <span className="text-[10px] font-bold text-gray-500 uppercase">{artist.visa_type || 'N/A'}</span>
+              <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase">{artist.visa_type || 'N/A'}</span>
             </div>
           </td>
-          <td className="px-6 py-5 bg-indigo-50/10">
+          <td className="px-6 py-5 bg-indigo-50 dark:bg-indigo-900/50/10">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-[9px] font-black text-indigo-400 uppercase">Start</span>
-                <span className="text-xs font-bold text-gray-700">{artist.contract_start}</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-slate-300">{artist.contract_start}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[9px] font-black text-indigo-400 uppercase">End</span>
-                <span className={cn('text-xs font-black', isContractUrgent ? 'text-red-500' : 'text-gray-900')}>{artist.contract_end}</span>
+                <span className={cn('text-xs font-black', isContractUrgent ? 'text-red-500' : 'text-gray-900 dark:text-slate-100')}>{artist.contract_end}</span>
               </div>
             </div>
           </td>
-          <td className="px-6 py-5 bg-red-50/10">
+          <td className="px-6 py-5 bg-red-50 dark:bg-red-900/50/10">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-[9px] font-black text-red-400 uppercase">Start</span>
-                <span className="text-xs font-bold text-gray-700">{artist.visa_start || 'N/A'}</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-slate-300">{artist.visa_start || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[9px] font-black text-red-400 uppercase">End</span>
-                <span className={cn('text-xs font-black', isVisaUrgent ? 'text-red-500' : 'text-gray-900')}>{visaEnd === '9999-12-31' ? '무기한' : visaEnd || 'N/A'}</span>
+                <span className={cn('text-xs font-black', isVisaUrgent ? 'text-red-500' : 'text-gray-900 dark:text-slate-100')}>{visaEnd === '9999-12-31' ? '무기한' : visaEnd || 'N/A'}</span>
               </div>
             </div>
           </td>
@@ -993,8 +993,8 @@ export default function GrigoEntDashboard() {
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">전속 아티스트 관리</h2>
-            <p className="text-sm text-gray-500 font-medium">아티스트의 신상 정보, 계약, 비자 상태를 통합 관리합니다.</p>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-slate-100 tracking-tighter">전속 아티스트 관리</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">아티스트의 신상 정보, 계약, 비자 상태를 통합 관리합니다.</p>
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -1004,12 +1004,12 @@ export default function GrigoEntDashboard() {
             아티스트 추가
           </button>
         </div>
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-gray-50/30 flex gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/30 flex gap-4">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
               <input
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="이름, 국적, 소속팀 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -1019,23 +1019,23 @@ export default function GrigoEntDashboard() {
               <button
                 onClick={() => setShowFilter(!showFilter)}
                 className={cn(
-                  'p-3 bg-white border rounded-2xl transition-colors',
+                  'p-3 bg-white dark:bg-slate-800 border rounded-2xl transition-colors',
                   (filterStatus || filterType || filterNationality) || showFilter
-                    ? 'border-indigo-300 text-indigo-600 bg-indigo-50'
-                    : 'border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-200'
+                    ? 'border-indigo-300 text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/50'
+                    : 'border-gray-200 dark:border-slate-700 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300 hover:border-indigo-200'
                 )}
               >
                 <Filter size={20} />
               </button>
               {showFilter && (
-                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-50 min-w-[280px]">
+                <div className="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-4 z-50 min-w-[280px]">
                   <div className="space-y-3">
                     <div>
-                      <label className="text-xs font-bold text-gray-500 mb-1 block">상태</label>
+                      <label className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-1 block">상태</label>
                       <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
+                        className="w-full rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-indigo-300"
                       >
                         <option value="">전체</option>
                         <option value="Active">Active</option>
@@ -1044,11 +1044,11 @@ export default function GrigoEntDashboard() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 mb-1 block">타입</label>
+                      <label className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-1 block">타입</label>
                       <select
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
+                        className="w-full rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-indigo-300"
                       >
                         <option value="">전체</option>
                         <option value="individual">개인</option>
@@ -1056,11 +1056,11 @@ export default function GrigoEntDashboard() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 mb-1 block">국적</label>
+                      <label className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-1 block">국적</label>
                       <select
                         value={filterNationality}
                         onChange={(e) => setFilterNationality(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-300"
+                        className="w-full rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-indigo-300"
                       >
                         <option value="">전체</option>
                         {uniqueNationalities.map((nat) => (
@@ -1077,7 +1077,7 @@ export default function GrigoEntDashboard() {
                           setFilterType('');
                           setFilterNationality('');
                         }}
-                        className="w-full px-3 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        className="w-full px-3 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:bg-indigo-900/50 rounded-lg transition-colors"
                       >
                         필터 초기화
                       </button>
@@ -1089,12 +1089,12 @@ export default function GrigoEntDashboard() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[1000px]">
-              <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+              <thead className="bg-gray-50 dark:bg-slate-900 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-5">Artist / Role</th>
                   <th className="px-6 py-5">Nation / Visa</th>
-                  <th className="px-6 py-5 bg-indigo-50/30 text-indigo-600">Contract Period</th>
-                  <th className="px-6 py-5 bg-red-50/30 text-red-600">Visa Period</th>
+                  <th className="px-6 py-5 bg-indigo-50 dark:bg-indigo-900/50/30 text-indigo-600 dark:text-indigo-300">Contract Period</th>
+                  <th className="px-6 py-5 bg-red-50 dark:bg-red-900/50/30 text-red-600 dark:text-red-300">Visa Period</th>
                   <th className="px-6 py-5 text-right">Status</th>
                   <th className="px-6 py-5 w-10"></th>
                 </tr>
@@ -1124,13 +1124,13 @@ export default function GrigoEntDashboard() {
                     <React.Fragment key={team.id}>
                       <tr
                         onClick={toggleExpand}
-                        className="cursor-pointer hover:bg-gray-50/50 transition-colors group"
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-900/50 transition-colors group"
                       >
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-4">
                             <ChevronDown
                               className={cn(
-                                'w-4 h-4 text-gray-400 transition-transform',
+                                'w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform',
                                 isExpanded && 'rotate-180'
                               )}
                             />
@@ -1138,39 +1138,39 @@ export default function GrigoEntDashboard() {
                               {team.name[0]}
                             </div>
                             <div>
-                              <p className="font-black text-gray-900 text-sm">{team.name}</p>
-                              <span className="text-[10px] font-bold text-gray-500">팀 {members.length > 0 && `(${members.length}명)`}</span>
+                              <p className="font-black text-gray-900 dark:text-slate-100 text-sm">{team.name}</p>
+                              <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">팀 {members.length > 0 && `(${members.length}명)`}</span>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-gray-700">{team.nationality || 'N/A'}</span>
+                            <span className="text-xs font-black text-gray-700 dark:text-slate-300">{team.nationality || 'N/A'}</span>
                             <span className="text-gray-300 text-[10px]">/</span>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">{team.visa_type || 'N/A'}</span>
+                            <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase">{team.visa_type || 'N/A'}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-5 bg-indigo-50/10">
+                        <td className="px-6 py-5 bg-indigo-50 dark:bg-indigo-900/50/10">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-indigo-400 uppercase">Start</span>
-                              <span className="text-xs font-bold text-gray-700">{team.contract_start}</span>
+                              <span className="text-xs font-bold text-gray-700 dark:text-slate-300">{team.contract_start}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-indigo-400 uppercase">End</span>
-                              <span className={cn('text-xs font-black', isContractUrgent ? 'text-red-500' : 'text-gray-900')}>{team.contract_end}</span>
+                              <span className={cn('text-xs font-black', isContractUrgent ? 'text-red-500' : 'text-gray-900 dark:text-slate-100')}>{team.contract_end}</span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-5 bg-red-50/10">
+                        <td className="px-6 py-5 bg-red-50 dark:bg-red-900/50/10">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-red-400 uppercase">Start</span>
-                              <span className="text-xs font-bold text-gray-700">{team.visa_start || 'N/A'}</span>
+                              <span className="text-xs font-bold text-gray-700 dark:text-slate-300">{team.visa_start || 'N/A'}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-red-400 uppercase">End</span>
-                              <span className={cn('text-xs font-black', isVisaUrgent ? 'text-red-500' : 'text-gray-900')}>{visaEnd === '9999-12-31' ? '무기한' : visaEnd || 'N/A'}</span>
+                              <span className={cn('text-xs font-black', isVisaUrgent ? 'text-red-500' : 'text-gray-900 dark:text-slate-100')}>{visaEnd === '9999-12-31' ? '무기한' : visaEnd || 'N/A'}</span>
                             </div>
                           </div>
                         </td>
@@ -1190,7 +1190,7 @@ export default function GrigoEntDashboard() {
                       </tr>
                       {isExpanded && members.length > 0 && (
                         <tr>
-                          <td colSpan={6} className="px-6 py-0 bg-gray-50/30">
+                          <td colSpan={6} className="px-6 py-0 bg-gray-50 dark:bg-slate-900/30">
                             <div className="pl-16 pr-6 py-4">
                               <table className="w-full">
                                 <tbody className="divide-y divide-gray-100">
@@ -1203,7 +1203,7 @@ export default function GrigoEntDashboard() {
                       )}
                       {isExpanded && members.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="px-6 py-4 pl-16 bg-gray-50/30 text-gray-400 text-xs">
+                          <td colSpan={6} className="px-6 py-4 pl-16 bg-gray-50 dark:bg-slate-900/30 text-gray-400 dark:text-slate-500 text-xs">
                             소속된 멤버가 없습니다.
                           </td>
                         </tr>
@@ -1231,13 +1231,13 @@ export default function GrigoEntDashboard() {
                     <React.Fragment key={artist.id}>
                       <tr
                         onClick={toggleExpand}
-                        className="cursor-pointer hover:bg-gray-50/50 transition-colors group"
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-900/50 transition-colors group"
                       >
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-4">
                             <ChevronDown
                               className={cn(
-                                'w-4 h-4 text-gray-400 transition-transform',
+                                'w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform',
                                 isExpanded && 'rotate-180'
                               )}
                             />
@@ -1245,39 +1245,39 @@ export default function GrigoEntDashboard() {
                               {artist.name[0]}
                             </div>
                             <div>
-                              <p className="font-black text-gray-900 text-sm">{artist.name}</p>
-                              <span className="text-[10px] font-bold text-gray-500">개인</span>
+                              <p className="font-black text-gray-900 dark:text-slate-100 text-sm">{artist.name}</p>
+                              <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">개인</span>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-gray-700">{artist.nationality || 'N/A'}</span>
+                            <span className="text-xs font-black text-gray-700 dark:text-slate-300">{artist.nationality || 'N/A'}</span>
                             <span className="text-gray-300 text-[10px]">/</span>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">{artist.visa_type || 'N/A'}</span>
+                            <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase">{artist.visa_type || 'N/A'}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-5 bg-indigo-50/10">
+                        <td className="px-6 py-5 bg-indigo-50 dark:bg-indigo-900/50/10">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-indigo-400 uppercase">Start</span>
-                              <span className="text-xs font-bold text-gray-700">{artist.contract_start}</span>
+                              <span className="text-xs font-bold text-gray-700 dark:text-slate-300">{artist.contract_start}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-indigo-400 uppercase">End</span>
-                              <span className="text-xs font-black text-gray-900">{artist.contract_end}</span>
+                              <span className="text-xs font-black text-gray-900 dark:text-slate-100">{artist.contract_end}</span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-5 bg-red-50/10">
+                        <td className="px-6 py-5 bg-red-50 dark:bg-red-900/50/10">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-red-400 uppercase">Start</span>
-                              <span className="text-xs font-bold text-gray-700">{artist.visa_start || 'N/A'}</span>
+                              <span className="text-xs font-bold text-gray-700 dark:text-slate-300">{artist.visa_start || 'N/A'}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-red-400 uppercase">End</span>
-                              <span className="text-xs font-black text-gray-900">{artist.visa_end === '9999-12-31' ? '무기한' : artist.visa_end || 'N/A'}</span>
+                              <span className="text-xs font-black text-gray-900 dark:text-slate-100">{artist.visa_end === '9999-12-31' ? '무기한' : artist.visa_end || 'N/A'}</span>
                             </div>
                           </div>
                         </td>
@@ -1297,13 +1297,13 @@ export default function GrigoEntDashboard() {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={6} className="px-6 py-0 bg-gray-50/30">
+                          <td colSpan={6} className="px-6 py-0 bg-gray-50 dark:bg-slate-900/30">
                             <div className="pl-16 pr-6 py-4">
                               {/* 개인 아티스트는 상세 정보 표시 (추가 정보가 필요하면 여기에 추가) */}
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-slate-400">
                                 {artist.role && (
                                   <div className="mb-2">
-                                    <span className="font-bold text-gray-700">역할:</span> {artist.role}
+                                    <span className="font-bold text-gray-700 dark:text-slate-300">역할:</span> {artist.role}
                                   </div>
                                 )}
                               </div>
@@ -1318,14 +1318,14 @@ export default function GrigoEntDashboard() {
                 {/* 빈 상태 */}
                 {artists.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                    <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">
                       등록된 아티스트가 없습니다.
                     </td>
                   </tr>
                 )}
                 {artists.length > 0 && filteredArtists.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                    <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">
                       검색 결과가 없습니다.
                     </td>
                   </tr>
@@ -1406,8 +1406,8 @@ export default function GrigoEntDashboard() {
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">외주 댄서 관리</h2>
-            <p className="text-sm text-gray-500 font-medium">외주 댄서 정보 및 작업 이력을 관리합니다.</p>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-slate-100 tracking-tighter">외주 댄서 관리</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">외주 댄서 정보 및 작업 이력을 관리합니다.</p>
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -1417,19 +1417,19 @@ export default function GrigoEntDashboard() {
             외주 댄서 추가
           </button>
         </div>
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-gray-50/30 flex gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/30 flex gap-4">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="이름, 전화번호, 장르 검색..." />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
+              <input className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="이름, 전화번호, 장르 검색..." />
             </div>
-            <button className="p-3 bg-white border border-gray-200 rounded-2xl text-gray-400 hover:text-indigo-600 transition-colors">
+            <button className="p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300 transition-colors">
               <Filter size={20} />
             </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+              <thead className="bg-gray-50 dark:bg-slate-900 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-5">Name</th>
                   <th className="px-6 py-5">Contact</th>
@@ -1440,25 +1440,25 @@ export default function GrigoEntDashboard() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {freelancers.map((f) => (
-                  <tr key={f.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={f.id} className="hover:bg-gray-50 dark:hover:bg-slate-900/50 transition-colors">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-black text-sm">
                           {f.name[0]}
                         </div>
-                        <span className="font-black text-sm text-gray-900">{f.name}</span>
+                        <span className="font-black text-sm text-gray-900 dark:text-slate-100">{f.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="space-y-1">
                         {f.phone && (
-                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300">
                             <Phone size={12} />
                             <span>{f.phone}</span>
                           </div>
                         )}
                         {f.email && (
-                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300">
                             <Mail size={12} />
                             <span>{f.email}</span>
                           </div>
@@ -1469,12 +1469,12 @@ export default function GrigoEntDashboard() {
                       <div className="flex gap-1.5 flex-wrap">
                         {f.specialties && f.specialties.length > 0 ? (
                           f.specialties.map((s, idx) => (
-                            <span key={idx} className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px] font-bold">
+                            <span key={idx} className="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/50 text-purple-700 rounded-full text-[10px] font-bold">
                               {s}
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-gray-400">N/A</span>
+                          <span className="text-xs text-gray-400 dark:text-slate-500">N/A</span>
                         )}
                       </div>
                     </td>
@@ -1495,7 +1495,7 @@ export default function GrigoEntDashboard() {
                 ))}
                 {freelancers.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                    <td colSpan={5} className="text-center py-10 text-gray-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">
                       등록된 외주 댄서가 없습니다.
                     </td>
                   </tr>
@@ -1735,20 +1735,20 @@ export default function GrigoEntDashboard() {
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">프로젝트 관리</h2>
-            <p className="text-sm text-gray-500 font-medium">진행 중인 모든 프로젝트의 예산 및 일정을 총괄합니다.</p>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-slate-100 tracking-tighter">프로젝트 관리</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">진행 중인 모든 프로젝트의 예산 및 일정을 총괄합니다.</p>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm gap-4">
           <div className="relative w-full md:w-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500 w-4 h-4" />
             <input
               type="text"
               placeholder="프로젝트 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-64"
+              className="pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-64"
             />
           </div>
           <button
@@ -1759,18 +1759,18 @@ export default function GrigoEntDashboard() {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-x-auto">
           <table className="w-full text-left min-w-[800px]">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
               <tr>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">프로젝트명</th>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">클라이언트</th>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">PM</th>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">카테고리</th>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">순이익</th>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">마감일</th>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">상태</th>
-                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">관리</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">프로젝트명</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">클라이언트</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">PM</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">카테고리</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">순이익</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">마감일</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">상태</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -1787,36 +1787,36 @@ export default function GrigoEntDashboard() {
                   <>
                     <tr
                       key={project.id}
-                      className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                      className="hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors cursor-pointer group"
                       onClick={() => setExpandedProjectId(isExpanded ? null : project.id)}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-gray-400" />
+                            <ChevronUp className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                           ) : (
-                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                            <ChevronDown className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                           )}
                           <div>
-                            <div className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
+                            <div className="font-medium text-gray-900 dark:text-slate-100 group-hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300 transition-colors">
                               {project.name}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
                         {projectClient?.company_name_ko || '-'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
                         {(project as any).pm_name || '-'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
                         {project.cat}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 font-mono">
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300 font-mono">
                         {formatCurrency(budget - totalExpenses)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{project.endDate}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{project.endDate}</td>
                       <td className="px-6 py-4">
                         <StatusBadge type={project.status.toLowerCase()} text={project.status} />
                       </td>
@@ -1827,7 +1827,7 @@ export default function GrigoEntDashboard() {
                               e.stopPropagation();
                               setEditProject(project);
                             }}
-                            className="text-gray-400 hover:text-indigo-600"
+                            className="text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300"
                             title="수정"
                           >
                             <Edit3 className="w-4 h-4" />
@@ -1837,7 +1837,7 @@ export default function GrigoEntDashboard() {
                               e.stopPropagation();
                               setDeleteProjectId(project.id);
                             }}
-                            className="text-gray-400 hover:text-red-600"
+                            className="text-gray-400 dark:text-slate-500 hover:text-red-600 dark:text-red-300"
                             title="삭제"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1847,11 +1847,11 @@ export default function GrigoEntDashboard() {
                     </tr>
                     {isExpanded && (
                       <tr key={`${project.id}-accordion`}>
-                        <td colSpan={8} className="px-6 py-4 bg-gray-50">
+                        <td colSpan={8} className="px-6 py-4 bg-gray-50 dark:bg-slate-900">
                           <div className="space-y-4">
-                            <div className="bg-white rounded-lg border border-gray-200 p-4">
+                            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
                               <div className="flex justify-between items-center mb-3">
-                                <h5 className="font-semibold text-gray-800 flex items-center gap-2">
+                                <h5 className="font-semibold text-gray-800 dark:text-slate-200 flex items-center gap-2">
                                   <CheckSquare className="w-4 h-4" /> 할 일 ({projectTasks.length}건)
                                 </h5>
                                 <button
@@ -1869,11 +1869,11 @@ export default function GrigoEntDashboard() {
                                   projectTasks.map((task) => (
                                     <div
                                       key={task.id}
-                                      className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-100 group"
+                                      className="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-900 rounded border border-gray-100 dark:border-slate-700 group"
                                     >
                                       <div className="flex-1">
-                                        <div className="text-sm font-medium text-gray-800">{task.title}</div>
-                                        <div className="text-xs text-gray-500">
+                                        <div className="text-sm font-medium text-gray-800 dark:text-slate-200">{task.title}</div>
+                                        <div className="text-xs text-gray-500 dark:text-slate-400">
                                           {task.assignee} • {task.dueDate}
                                         </div>
                                       </div>
@@ -1887,7 +1887,7 @@ export default function GrigoEntDashboard() {
                                             e.stopPropagation();
                                             setEditTask(task);
                                           }}
-                                          className="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          className="text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity"
                                           title="수정"
                                         >
                                           <Edit3 className="w-4 h-4" />
@@ -1897,7 +1897,7 @@ export default function GrigoEntDashboard() {
                                             e.stopPropagation();
                                             setDeleteTaskId(task.id);
                                           }}
-                                          className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          className="text-gray-400 dark:text-slate-500 hover:text-red-600 dark:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
                                           title="삭제"
                                         >
                                           <Trash2 className="w-4 h-4" />
@@ -1906,7 +1906,7 @@ export default function GrigoEntDashboard() {
                                     </div>
                                   ))
                                 ) : (
-                                  <div className="text-sm text-gray-400 text-center py-4">
+                                  <div className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">
                                     등록된 할 일이 없습니다.
                                   </div>
                                 )}
@@ -1914,7 +1914,7 @@ export default function GrigoEntDashboard() {
                             </div>
 
                             <div className="flex justify-between items-center mb-4">
-                              <h4 className="font-semibold text-gray-800">매출 및 지출 관리</h4>
+                              <h4 className="font-semibold text-gray-800 dark:text-slate-200">매출 및 지출 관리</h4>
                               <div className="flex gap-2">
                                 <button
                                   onClick={(e) => {
@@ -1938,7 +1938,7 @@ export default function GrigoEntDashboard() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                              <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
                                 <div className="flex justify-between items-center mb-3">
                                   <h5 className="font-semibold text-green-700 flex items-center gap-2">
                                     <TrendingUp className="w-4 h-4" /> 매출
@@ -1952,13 +1952,13 @@ export default function GrigoEntDashboard() {
                                     projectRevenues.map((revenue) => (
                                       <div
                                         key={revenue.id}
-                                        className="flex justify-between items-center p-2 bg-green-50 rounded border border-green-100"
+                                        className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/50 rounded border border-green-100"
                                       >
                                         <div className="flex-1">
-                                          <div className="text-sm font-medium text-gray-800">
+                                          <div className="text-sm font-medium text-gray-800 dark:text-slate-200">
                                             {revenue.name}
                                           </div>
-                                          <div className="text-xs text-gray-500">
+                                          <div className="text-xs text-gray-500 dark:text-slate-400">
                                             {revenue.category} • {revenue.date}
                                           </div>
                                         </div>
@@ -1971,7 +1971,7 @@ export default function GrigoEntDashboard() {
                                               e.stopPropagation();
                                               setEditFinance(revenue);
                                             }}
-                                            className="text-gray-400 hover:text-indigo-600"
+                                            className="text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300"
                                           >
                                             <Edit3 className="w-4 h-4" />
                                           </button>
@@ -1980,7 +1980,7 @@ export default function GrigoEntDashboard() {
                                               e.stopPropagation();
                                               setDeleteFinanceId(Number(revenue.id));
                                             }}
-                                            className="text-gray-400 hover:text-red-600"
+                                            className="text-gray-400 dark:text-slate-500 hover:text-red-600 dark:text-red-300"
                                           >
                                             <Trash2 className="w-4 h-4" />
                                           </button>
@@ -1988,19 +1988,19 @@ export default function GrigoEntDashboard() {
                                       </div>
                                     ))
                                   ) : (
-                                    <div className="text-sm text-gray-400 text-center py-4">
+                                    <div className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">
                                       등록된 매출이 없습니다.
                                     </div>
                                   )}
                                 </div>
                               </div>
 
-                              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                              <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
                                 <div className="flex justify-between items-center mb-3">
                                   <h5 className="font-semibold text-red-700 flex items-center gap-2">
                                     <DollarSign className="w-4 h-4" /> 지출
                                   </h5>
-                                  <span className="text-sm font-bold text-red-600">
+                                  <span className="text-sm font-bold text-red-600 dark:text-red-300">
                                     총 {formatCurrency(totalExpenses)}
                                   </span>
                                 </div>
@@ -2009,18 +2009,18 @@ export default function GrigoEntDashboard() {
                                     projectExpenses.map((expense) => (
                                       <div
                                         key={expense.id}
-                                        className="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100"
+                                        className="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/50 rounded border border-red-100 dark:border-red-900/50"
                                       >
                                         <div className="flex-1">
-                                          <div className="text-sm font-medium text-gray-800">
+                                          <div className="text-sm font-medium text-gray-800 dark:text-slate-200">
                                             {expense.name}
                                           </div>
-                                          <div className="text-xs text-gray-500">
+                                          <div className="text-xs text-gray-500 dark:text-slate-400">
                                             {expense.category} • {expense.date}
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          <span className="text-sm font-bold text-red-600">
+                                          <span className="text-sm font-bold text-red-600 dark:text-red-300">
                                             {formatCurrency(expense.amount)}
                                           </span>
                                           <button
@@ -2028,7 +2028,7 @@ export default function GrigoEntDashboard() {
                                               e.stopPropagation();
                                               setEditFinance(expense);
                                             }}
-                                            className="text-gray-400 hover:text-indigo-600"
+                                            className="text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300"
                                           >
                                             <Edit3 className="w-4 h-4" />
                                           </button>
@@ -2037,7 +2037,7 @@ export default function GrigoEntDashboard() {
                                               e.stopPropagation();
                                               setDeleteFinanceId(Number(expense.id));
                                             }}
-                                            className="text-gray-400 hover:text-red-600"
+                                            className="text-gray-400 dark:text-slate-500 hover:text-red-600 dark:text-red-300"
                                           >
                                             <Trash2 className="w-4 h-4" />
                                           </button>
@@ -2045,7 +2045,7 @@ export default function GrigoEntDashboard() {
                                       </div>
                                     ))
                                   ) : (
-                                    <div className="text-sm text-gray-400 text-center py-4">
+                                    <div className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">
                                       등록된 지출이 없습니다.
                                     </div>
                                   )}
@@ -2053,10 +2053,10 @@ export default function GrigoEntDashboard() {
                               </div>
                             </div>
 
-                            <div className="bg-indigo-50 rounded-lg border border-indigo-200 p-3">
+                            <div className="bg-indigo-50 dark:bg-indigo-900/50 rounded-lg border border-indigo-200 p-3">
                               <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-indigo-900">순이익</span>
-                                <span className="text-lg font-bold text-indigo-600">
+                                <span className="text-lg font-bold text-indigo-600 dark:text-indigo-300">
                                   {formatCurrency(budget - totalExpenses)}
                                 </span>
                               </div>
@@ -2070,7 +2070,7 @@ export default function GrigoEntDashboard() {
               })}
               {filteredProjects.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-gray-400 text-sm">
+                  <td colSpan={7} className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">
                     {searchQuery ? '검색 결과가 없습니다.' : '등록된 프로젝트가 없습니다.'}
                   </td>
                 </tr>
@@ -2307,7 +2307,7 @@ export default function GrigoEntDashboard() {
           primaryLabel={project ? '수정' : '등록'}
         />
         {project?.id && (
-          <div className="border-t border-slate-200 pt-4 mt-4">
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
             <CommentSection entityType="project" entityId={Number(project.id)} />
           </div>
         )}
@@ -2496,8 +2496,8 @@ export default function GrigoEntDashboard() {
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">업무 및 할일</h2>
-            <p className="text-sm text-gray-500 font-medium">실시간 칸반 보드로 업무 진척도를 통제합니다.</p>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-slate-100 tracking-tighter">업무 및 할일</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">실시간 칸반 보드로 업무 진척도를 통제합니다.</p>
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -2509,14 +2509,14 @@ export default function GrigoEntDashboard() {
         </div>
 
         {/* 할일 필터 */}
-        <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+        <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
           <button
             onClick={() => setTaskAssigneeFilter('all')}
             className={cn(
               'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
               taskAssigneeFilter === 'all'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
             )}
           >
             전체 할일 보기
@@ -2526,8 +2526,8 @@ export default function GrigoEntDashboard() {
             className={cn(
               'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
               taskAssigneeFilter === 'my'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
             )}
           >
             내 할일만 보기
@@ -2540,10 +2540,10 @@ export default function GrigoEntDashboard() {
             { label: 'In Progress', value: 'in-progress' },
             { label: 'Done', value: 'done' },
           ].map(({ label, value }) => (
-            <div key={value} className="bg-gray-100/40 rounded-[2.5rem] p-4 min-h-[600px]">
+            <div key={value} className="bg-gray-100 dark:bg-slate-800/40 rounded-[2.5rem] p-4 min-h-[600px]">
               <div className="px-4 py-3 flex justify-between items-center mb-6">
-                <h5 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">{label}</h5>
-                <span className="bg-white px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm text-gray-400">
+                <h5 className="text-[11px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-[0.2em]">{label}</h5>
+                <span className="bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm text-gray-400 dark:text-slate-500">
                   {tasks.filter((t) => t.status === value).length}
                 </span>
               </div>
@@ -2562,16 +2562,16 @@ export default function GrigoEntDashboard() {
                     const assigneeName = t.assignee || '미지정';
 
                     return (
-                      <div key={t.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 group transition-all">
+                      <div key={t.id} className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 group transition-all">
                         <div className="flex justify-between mb-3">
                           <span
                             className={cn(
                               'text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter',
                               t.priority === 'high'
-                                ? 'bg-red-100 text-red-600'
+                                ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300'
                                 : t.priority === 'medium'
-                                ? 'bg-yellow-100 text-yellow-600'
-                                : 'bg-blue-100 text-blue-600',
+                                ? 'bg-yellow-100 text-yellow-600 dark:text-yellow-300'
+                                : 'bg-blue-100 text-blue-600 dark:text-blue-300',
                             )}
                           >
                             {t.priority || 'medium'}
@@ -2579,14 +2579,14 @@ export default function GrigoEntDashboard() {
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => setEditTask(t)}
-                              className="text-gray-300 hover:text-indigo-600"
+                              className="text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300"
                               title="수정"
                             >
                               <Edit3 size={16} />
                             </button>
                             <button
                               onClick={() => handleToggleStatus(t)}
-                              className="text-indigo-400 hover:text-indigo-600"
+                              className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300"
                               title="상태 변경"
                             >
                               <CheckCircle2 size={16} />
@@ -2600,21 +2600,21 @@ export default function GrigoEntDashboard() {
                             </button>
                           </div>
                         </div>
-                        <p className="text-sm font-bold text-gray-800 mb-2 leading-relaxed">{t.title}</p>
+                        <p className="text-sm font-bold text-gray-800 dark:text-slate-200 mb-2 leading-relaxed">{t.title}</p>
 
                         {t.tag && (
-                          <div className="flex items-center gap-2 bg-indigo-50 px-3 py-2 rounded-xl mb-4">
-                            <BookOpen size={14} className="text-indigo-600" />
+                          <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/50 px-3 py-2 rounded-xl mb-4">
+                            <BookOpen size={14} className="text-indigo-600 dark:text-indigo-300" />
                             <span className="text-[10px] font-bold text-indigo-700 truncate">{t.tag}</span>
                           </div>
                         )}
 
                         <div className="flex justify-between items-center pt-4 border-t border-gray-50">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black text-gray-500">
+                            <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-gray-500 dark:text-slate-400">
                               {assigneeName[0]}
                             </div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase">{assigneeName}</span>
+                            <span className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase">{assigneeName}</span>
                           </div>
                           <span className="text-[10px] font-bold text-gray-300 italic">{t.dueDate}</span>
                         </div>
@@ -2665,12 +2665,12 @@ export default function GrigoEntDashboard() {
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">일정/캘린더</h2>
-            <p className="text-sm text-gray-500 font-medium">프로젝트 일정 및 이벤트를 캘린더로 확인합니다.</p>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-slate-100 tracking-tighter">일정/캘린더</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">프로젝트 일정 및 이벤트를 캘린더로 확인합니다.</p>
           </div>
         </div>
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
-          <div className="text-center py-20 text-gray-400 font-bold">캘린더 뷰 (추후 구현 예정)</div>
+        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-700 p-8">
+          <div className="text-center py-20 text-gray-400 dark:text-slate-500 font-bold">캘린더 뷰 (추후 구현 예정)</div>
         </div>
       </div>
     );
@@ -2717,8 +2717,8 @@ export default function GrigoEntDashboard() {
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">거래처/파트너 DB</h2>
-            <p className="text-sm text-gray-500 font-medium">협력사 및 클라이언트 연락망을 리스트로 관리합니다.</p>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-slate-100 tracking-tighter">거래처/파트너 DB</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">협력사 및 클라이언트 연락망을 리스트로 관리합니다.</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -2738,12 +2738,12 @@ export default function GrigoEntDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-gray-50/30">
+        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/30">
             <div className="relative">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
               <input
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="클라이언트 검색..."
                 value={clientSearchQuery}
                 onChange={(e) => setClientSearchQuery(e.target.value)}
@@ -2753,7 +2753,7 @@ export default function GrigoEntDashboard() {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[1000px]">
-              <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+              <thead className="bg-gray-50 dark:bg-slate-900 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-5">클라이언트 / 업종</th>
                   <th className="px-6 py-5">담당자</th>
@@ -2798,13 +2798,13 @@ export default function GrigoEntDashboard() {
                       return (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400">담당자</h4>
+                            <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-slate-500">담당자</h4>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setClientWorkerModalOpen(client.id);
                               }}
-                              className="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600 hover:bg-indigo-100 flex items-center gap-1"
+                              className="rounded-lg bg-indigo-50 dark:bg-indigo-900/50 px-2 py-1 text-[10px] font-black text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 flex items-center gap-1"
                             >
                               <Plus size={10} />
                               담당자 추가
@@ -2818,7 +2818,7 @@ export default function GrigoEntDashboard() {
                                 value={workerSearchQuery}
                                 onChange={(e) => setWorkerSearchQuery(e.target.value)}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
                               />
                             </div>
                           )}
@@ -2827,13 +2827,13 @@ export default function GrigoEntDashboard() {
                               {filteredWorkers.map((worker: any) => (
                                 <div
                                   key={worker.id}
-                                  className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
+                                  className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-slate-900 px-3 py-2 text-xs"
                                 >
                                   <div>
-                                    <p className="font-bold text-gray-800">
+                                    <p className="font-bold text-gray-800 dark:text-slate-200">
                                       {worker.name_ko || worker.name_en || '-'}
                                     </p>
-                                    <p className="font-mono text-[11px] text-gray-500">
+                                    <p className="font-mono text-[11px] text-gray-500 dark:text-slate-400">
                                       {worker.phone || ''}
                                       {worker.phone && worker.email && ' • '}
                                       {worker.email || ''}
@@ -2845,7 +2845,7 @@ export default function GrigoEntDashboard() {
                                         e.stopPropagation();
                                         setEditClientWorkerModalOpen({ companyId: client.id, workerId: worker.id });
                                       }}
-                                      className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
+                                      className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-[10px] font-black text-gray-500 dark:text-slate-400 hover:border-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300"
                                     >
                                       수정
                                     </button>
@@ -2854,7 +2854,7 @@ export default function GrigoEntDashboard() {
                                         e.stopPropagation();
                                         setDeleteClientWorkerId(worker.id);
                                       }}
-                                      className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-red-500 hover:border-red-300 hover:text-red-600"
+                                      className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-[10px] font-black text-red-500 hover:border-red-300 hover:text-red-600 dark:text-red-300"
                                     >
                                       삭제
                                     </button>
@@ -2864,7 +2864,7 @@ export default function GrigoEntDashboard() {
                             </div>
                           ) : (
                             <div className="py-4 text-center">
-                              <p className="text-xs text-gray-400 font-medium">
+                              <p className="text-xs text-gray-400 dark:text-slate-500 font-medium">
                                 {workerSearchQuery ? '검색 결과가 없습니다.' : '등록된 담당자가 없습니다.'}
                               </p>
                             </div>
@@ -2878,11 +2878,11 @@ export default function GrigoEntDashboard() {
                       const count = workers.length;
 
                       if (count === 0) {
-                        return <span className="text-xs text-gray-400 font-medium">담당자 없음</span>;
+                        return <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">담당자 없음</span>;
                       }
 
                       return (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-[11px] font-bold text-gray-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-slate-800 px-3 py-1 text-[11px] font-bold text-gray-700 dark:text-slate-300">
                           <Users size={10} />
                           담당자 {count}명
                         </span>
@@ -2895,14 +2895,14 @@ export default function GrigoEntDashboard() {
                           onClick={() => toggleExpand(client.id)}
                           className={cn(
                             'cursor-pointer transition-colors',
-                            expandedId === client.id ? 'bg-indigo-50/30' : 'hover:bg-gray-50'
+                            expandedId === client.id ? 'bg-indigo-50 dark:bg-indigo-900/50/30' : 'hover:bg-gray-50 dark:hover:bg-slate-900'
                           )}
                         >
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-4">
                               <ChevronDown
                                 className={cn(
-                                  'w-4 h-4 text-gray-400 transition-transform',
+                                  'w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform',
                                   expandedId === client.id && 'rotate-180',
                                 )}
                               />
@@ -2910,67 +2910,67 @@ export default function GrigoEntDashboard() {
                                 {((client as any).company_name_ko || (client as any).company_name_en || '-').substring(0, 1)}
                               </div>
                               <div>
-                                <p className="font-black text-gray-900 text-sm">
+                                <p className="font-black text-gray-900 dark:text-slate-100 text-sm">
                                   {(client as any).company_name_ko || (client as any).company_name_en || '-'}
                                 </p>
-                                <p className="text-[10px] font-bold text-gray-500">{client.industry || 'N/A'}</p>
+                                <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400">{client.industry || 'N/A'}</p>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-5">
                             <ClientWorkersCount />
                           </td>
-                          <td className="px-6 py-5 text-xs font-bold text-gray-900">
+                          <td className="px-6 py-5 text-xs font-bold text-gray-900 dark:text-slate-100">
                             {(client as any).representative_name || 'N/A'}
                           </td>
-                          <td className="px-6 py-5 text-xs text-gray-500 font-mono">
+                          <td className="px-6 py-5 text-xs text-gray-500 dark:text-slate-400 font-mono">
                             {client.last_meeting_date || '-'}
                           </td>
                           <td className="px-6 py-5 text-right">
                             <StatusBadge type={client.status === 'active' ? 'active' : 'default'} text={client.status} />
                           </td>
-                          <td className="px-6 py-5 text-gray-400">
+                          <td className="px-6 py-5 text-gray-400 dark:text-slate-500">
                             {expandedId === client.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </td>
                         </tr>
                         {expandedId === client.id && (
-                          <tr className="bg-gray-50/50">
+                          <tr className="bg-gray-50 dark:bg-slate-900/50">
                             <td colSpan={6} className="px-6 py-4">
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm animate-in slide-in-from-top-2 duration-200">
                                 <div className="space-y-2">
-                                  <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2">
+                                  <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-slate-500 mb-2">
                                     회사 정보
                                   </h4>
                                   {(client as any).business_registration_number && (
-                                    <div className="flex items-center text-xs text-gray-700">
-                                      <span className="text-gray-500 mr-2">사업자등록번호:</span>
+                                    <div className="flex items-center text-xs text-gray-700 dark:text-slate-300">
+                                      <span className="text-gray-500 dark:text-slate-400 mr-2">사업자등록번호:</span>
                                       {(client as any).business_registration_number}
                                     </div>
                                   )}
                                   {(client as any).representative_name && (
-                                    <div className="flex items-center text-xs text-gray-700">
-                                      <span className="text-gray-500 mr-2">대표자:</span>
+                                    <div className="flex items-center text-xs text-gray-700 dark:text-slate-300">
+                                      <span className="text-gray-500 dark:text-slate-400 mr-2">대표자:</span>
                                       {(client as any).representative_name}
                                     </div>
                                   )}
                                   {client.last_meeting_date && (
-                                    <div className="flex items-center text-xs text-gray-700">
-                                      <span className="text-gray-500 mr-2">최근 미팅:</span>
+                                    <div className="flex items-center text-xs text-gray-700 dark:text-slate-300">
+                                      <span className="text-gray-500 dark:text-slate-400 mr-2">최근 미팅:</span>
                                       {client.last_meeting_date}
                                     </div>
                                   )}
                                 </div>
                                 <div className="space-y-2">
-                                  <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2">
+                                  <h4 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-slate-500 mb-2">
                                     거래 현황
                                   </h4>
                                   <div className="flex justify-between text-xs">
-                                    <span className="text-gray-500">진행 프로젝트</span>
+                                    <span className="text-gray-500 dark:text-slate-400">진행 프로젝트</span>
                                     <span className="font-bold">{clientProjects.length} 건</span>
                                   </div>
                                   <div className="flex justify-between text-xs">
-                                    <span className="text-gray-500">총 매출액</span>
-                                    <span className="font-bold text-indigo-600">
+                                    <span className="text-gray-500 dark:text-slate-400">총 매출액</span>
+                                    <span className="font-bold text-indigo-600 dark:text-indigo-300">
                                       {formatCurrency(totalSpent)}
                                     </span>
                                   </div>
@@ -2981,7 +2981,7 @@ export default function GrigoEntDashboard() {
                                       e.stopPropagation();
                                       setEditClientModalOpen(client);
                                     }}
-                                    className="px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors text-gray-700"
+                                    className="px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors text-gray-700 dark:text-slate-300"
                                   >
                                     정보 수정
                                   </button>
@@ -2990,7 +2990,7 @@ export default function GrigoEntDashboard() {
                                       e.stopPropagation();
                                       setDeleteClientId(client.id);
                                     }}
-                                    className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                                    className="px-4 py-2 bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-300 rounded-xl text-sm font-bold hover:bg-red-100 dark:bg-red-900/50 transition-colors"
                                   >
                                     삭제
                                   </button>
@@ -3007,7 +3007,7 @@ export default function GrigoEntDashboard() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                    <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">
                       {clientSearchQuery ? '검색 결과가 없습니다.' : '등록된 클라이언트가 없습니다.'}
                     </td>
                   </tr>
@@ -3143,8 +3143,8 @@ export default function GrigoEntDashboard() {
       <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">정산 및 회계</h2>
-            <p className="text-sm text-gray-500 font-medium">안무 제작비 및 아티스트 지급 내역을 관리합니다.</p>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-slate-100 tracking-tighter">정산 및 회계</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">안무 제작비 및 아티스트 지급 내역을 관리합니다.</p>
           </div>
         </div>
 
@@ -3156,37 +3156,37 @@ export default function GrigoEntDashboard() {
               <TrendingUp size={14} /> +18.4% Trend
             </div>
           </div>
-          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Artist Share (70%)</p>
-            <h4 className="text-3xl font-black text-gray-800">₩{(settlements.reduce((sum, s) => sum + s.dancerFee, 0) / 10000).toLocaleString()}만</h4>
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2">Artist Share (70%)</p>
+            <h4 className="text-3xl font-black text-gray-800 dark:text-slate-200">₩{(settlements.reduce((sum, s) => sum + s.dancerFee, 0) / 10000).toLocaleString()}만</h4>
           </div>
-          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Net Profit (30%)</p>
-            <h4 className="text-3xl font-black text-indigo-600">₩{(settlements.reduce((sum, s) => sum + s.companyFee, 0) / 10000).toLocaleString()}만</h4>
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2">Net Profit (30%)</p>
+            <h4 className="text-3xl font-black text-indigo-600 dark:text-indigo-300">₩{(settlements.reduce((sum, s) => sum + s.companyFee, 0) / 10000).toLocaleString()}만</h4>
           </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+            <thead className="bg-gray-50 dark:bg-slate-900 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">
               <tr>
                 <th className="px-8 py-5">Item / Settlement Date</th>
                 <th className="px-8 py-5">Total Amount</th>
                 <th className="px-8 py-5 text-red-500">Artist Fee</th>
-                <th className="px-8 py-5 text-indigo-600">Company Net</th>
+                <th className="px-8 py-5 text-indigo-600 dark:text-indigo-300">Company Net</th>
                 <th className="px-8 py-5 text-right">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {settlements.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-slate-900/50 transition-colors">
                   <td className="px-8 py-5">
-                    <p className="font-bold text-sm text-gray-900">{s.title}</p>
-                    <p className="text-[10px] font-black text-gray-400 uppercase">{s.date}</p>
+                    <p className="font-bold text-sm text-gray-900 dark:text-slate-100">{s.title}</p>
+                    <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase">{s.date}</p>
                   </td>
-                  <td className="px-8 py-5 text-xs font-black text-gray-800">₩{s.totalAmount.toLocaleString()}</td>
+                  <td className="px-8 py-5 text-xs font-black text-gray-800 dark:text-slate-200">₩{s.totalAmount.toLocaleString()}</td>
                   <td className="px-8 py-5 text-xs font-bold text-red-500">- ₩{s.dancerFee.toLocaleString()}</td>
-                  <td className="px-8 py-5 text-xs font-black text-indigo-600">₩{s.companyFee.toLocaleString()}</td>
+                  <td className="px-8 py-5 text-xs font-black text-indigo-600 dark:text-indigo-300">₩{s.companyFee.toLocaleString()}</td>
                   <td className="px-8 py-5 text-right">
                     <StatusBadge type={s.status === 'Completed' ? 'active' : 'warning'} text={s.status} />
                   </td>
@@ -3210,15 +3210,15 @@ export default function GrigoEntDashboard() {
       <div className="flex flex-col h-full animate-in fade-in duration-500">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">SOP & Manual Center</h2>
-            <p className="text-sm text-gray-500 font-medium">실무 표준 절차 및 업무 가이드라인 (ERP Only)</p>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-slate-100 tracking-tighter">SOP & Manual Center</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">실무 표준 절차 및 업무 가이드라인 (ERP Only)</p>
           </div>
         </div>
 
         <div className="flex flex-1 gap-8 overflow-hidden">
           <div className="w-64 flex-shrink-0 overflow-y-auto pr-2">
-            <div className="bg-white rounded-[2rem] p-4 border border-gray-100 shadow-sm h-full">
-              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 px-4 mt-2">Categories</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-4 border border-gray-100 dark:border-slate-700 shadow-sm h-full">
+              <h3 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-4 px-4 mt-2">Categories</h3>
               <div className="space-y-1">
                 {MANUAL_CATEGORIES.map((c) => (
                   <button
@@ -3226,7 +3226,7 @@ export default function GrigoEntDashboard() {
                     onClick={() => setSelectedCategory(c)}
                     className={cn(
                       'w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-between transition-all group',
-                      selectedCategory === c ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                      selectedCategory === c ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-900 hover:text-gray-900 dark:text-slate-100'
                     )}
                   >
                     <span className="flex items-center gap-3">
@@ -3251,25 +3251,25 @@ export default function GrigoEntDashboard() {
                 <div
                   key={m.id}
                   onClick={() => setActiveManual(m)}
-                  className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:border-indigo-200 hover:shadow-lg transition-all cursor-pointer group flex items-center justify-between"
+                  className="bg-white dark:bg-slate-800 p-5 rounded-[1.5rem] border border-gray-100 dark:border-slate-700 shadow-sm hover:border-indigo-200 hover:shadow-lg transition-all cursor-pointer group flex items-center justify-between"
                 >
                   <div className="flex items-center gap-6">
                     <div
                       className={cn(
                         'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors',
-                        m.category === '전사 공통/ERP' ? 'bg-indigo-50 text-indigo-600' : '',
-                        m.category === '아티스트 관리' ? 'bg-purple-50 text-purple-600' : '',
-                        m.category === '행정/비자' ? 'bg-red-50 text-red-600' : '',
-                        m.category === '현장/제작' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-50 text-gray-600'
+                        m.category === '전사 공통/ERP' ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300' : '',
+                        m.category === '아티스트 관리' ? 'bg-purple-50 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300' : '',
+                        m.category === '행정/비자' ? 'bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-300' : '',
+                        m.category === '현장/제작' ? 'bg-emerald-50 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-300' : 'bg-gray-50 dark:bg-slate-900 text-gray-600 dark:text-slate-300'
                       )}
                     >
                       <BookOpen size={20} />
                     </div>
                     <div>
-                      <h3 className="text-base font-black text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">{m.title}</h3>
+                      <h3 className="text-base font-black text-gray-900 dark:text-slate-100 mb-1 group-hover:text-indigo-600 dark:hover:text-indigo-400 dark:text-indigo-300 transition-colors">{m.title}</h3>
                       <div className="flex items-center gap-3">
                         <StatusBadge type="default" text={m.category} />
-                        <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                        <span className="text-xs text-gray-400 dark:text-slate-500 font-medium flex items-center gap-1">
                           <Clock size={10} /> {new Date(m.updated_at).toLocaleDateString('ko-KR')}
                         </span>
                       </div>
@@ -3278,11 +3278,11 @@ export default function GrigoEntDashboard() {
 
                   <div className="flex items-center gap-8 pr-4">
                     <div className="text-right hidden md:block">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Author</p>
-                      <p className="text-xs font-bold text-gray-700">{m.author_name || '관리자'}</p>
+                      <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Author</p>
+                      <p className="text-xs font-bold text-gray-700 dark:text-slate-300">{m.author_name || '관리자'}</p>
                     </div>
-                    <div className="w-px h-8 bg-gray-100 hidden md:block"></div>
-                    <div className="flex items-center gap-1 text-gray-400">
+                    <div className="w-px h-8 bg-gray-100 dark:bg-slate-800 hidden md:block"></div>
+                    <div className="flex items-center gap-1 text-gray-400 dark:text-slate-500">
                       <Clock size={14} />
                       <span className="text-xs font-bold">{new Date(m.updated_at).toLocaleDateString('ko-KR')}</span>
                     </div>
@@ -3291,7 +3291,7 @@ export default function GrigoEntDashboard() {
                 </div>
               ))}
               {filteredManuals.length === 0 && (
-                <div className="py-20 text-center text-gray-400 font-bold bg-white rounded-[2rem] border-2 border-dashed border-gray-200">등록된 매뉴얼이 없습니다.</div>
+                <div className="py-20 text-center text-gray-400 dark:text-slate-500 font-bold bg-white dark:bg-slate-800 rounded-[2rem] border-2 border-dashed border-gray-200 dark:border-slate-700">등록된 매뉴얼이 없습니다.</div>
               )}
             </div>
           </div>
@@ -3308,39 +3308,39 @@ export default function GrigoEntDashboard() {
 
     return (
       <Modal isOpen={!!manual} onClose={onClose} title={manual.title} size="lg">
-        <div className="flex flex-col h-full bg-white">
-          <div className="p-8 bg-gray-50 border-b border-gray-100">
+        <div className="flex flex-col h-full bg-white dark:bg-slate-800">
+          <div className="p-8 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700">
             <div className="flex items-center gap-2 mb-4">
               <span
                 className={cn(
                   'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest',
                   manual.category === '전사 공통/ERP' ? 'bg-indigo-100 text-indigo-700' : '',
                   manual.category === '아티스트 관리' ? 'bg-purple-100 text-purple-700' : '',
-                  manual.category === '행정/비자' ? 'bg-red-100 text-red-700' : '',
-                  manual.category === '현장/제작' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'
+                  manual.category === '행정/비자' ? 'bg-red-100 dark:bg-red-900/50 text-red-700' : '',
+                  manual.category === '현장/제작' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300'
                 )}
               >
                 {manual.category}
               </span>
-              <span className="text-xs text-gray-400 font-bold">Last updated: {new Date(manual.updated_at).toLocaleDateString('ko-KR')}</span>
+              <span className="text-xs text-gray-400 dark:text-slate-500 font-bold">Last updated: {new Date(manual.updated_at).toLocaleDateString('ko-KR')}</span>
             </div>
-            <h2 className="text-2xl font-black text-gray-900 mb-2">{manual.title}</h2>
-            <p className="text-sm text-gray-500 font-medium">작성자: {manual.author_name || '관리자'}</p>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 mb-2">{manual.title}</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">작성자: {manual.author_name || '관리자'}</p>
           </div>
 
           <div className="p-8 space-y-8">
             <div className="space-y-6">
               {contentArray.length > 0 ? (
                 contentArray.map((item: any, idx: number) => (
-                  <div key={idx} className={cn('p-5 rounded-2xl border transition-all', item.type === 'warning' ? 'bg-red-50 border-red-100' : 'bg-white border-gray-100 hover:shadow-md')}>
+                  <div key={idx} className={cn('p-5 rounded-2xl border transition-all', item.type === 'warning' ? 'bg-red-50 dark:bg-red-900/50 border-red-100 dark:border-red-900/50' : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:shadow-md')}>
                     <div className="flex gap-4">
                       <div
                         className={cn(
                           'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-lg shadow-sm',
                           item.type === 'step' ? 'bg-indigo-600 text-white' : '',
-                          item.type === 'check' ? 'bg-green-500 text-white' : '',
-                          item.type === 'warning' ? 'bg-red-500 text-white' : '',
-                          item.type === 'info' ? 'bg-blue-500 text-white' : '',
+                          item.type === 'check' ? 'bg-green-50 dark:bg-green-900/500 text-white' : '',
+                          item.type === 'warning' ? 'bg-red-50 dark:bg-red-900/500 text-white' : '',
+                          item.type === 'info' ? 'bg-blue-50 dark:bg-blue-900/500 text-white' : '',
                           item.type === 'star' ? 'bg-amber-400 text-white' : ''
                         )}
                       >
@@ -3351,14 +3351,14 @@ export default function GrigoEntDashboard() {
                         {item.type === 'star' && <Star size={18} fill="currentColor" />}
                       </div>
                       <div>
-                        <h4 className={cn('font-black text-base mb-1.5', item.type === 'warning' ? 'text-red-700' : 'text-gray-900')}>{item.title || item.text}</h4>
-                        <p className="text-sm text-gray-600 leading-relaxed font-medium">{item.desc || item.text}</p>
+                        <h4 className={cn('font-black text-base mb-1.5', item.type === 'warning' ? 'text-red-700' : 'text-gray-900 dark:text-slate-100')}>{item.title || item.text}</h4>
+                        <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed font-medium">{item.desc || item.text}</p>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-12 text-gray-400">매뉴얼 내용이 없습니다.</div>
+                <div className="text-center py-12 text-gray-400 dark:text-slate-500">매뉴얼 내용이 없습니다.</div>
               )}
             </div>
           </div>
@@ -3393,7 +3393,7 @@ export default function GrigoEntDashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F8F9FD] text-gray-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-hidden">
+    <div className="flex h-screen bg-[#F8F9FD] dark:bg-slate-950 text-gray-900 dark:text-slate-100 font-sans selection:bg-indigo-100 dark:selection:bg-indigo-900 selection:text-indigo-900 dark:selection:text-indigo-100 overflow-hidden">
       <aside className="w-72 bg-gray-950 flex flex-col shadow-2xl z-20">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-10 group cursor-pointer" onClick={() => setActiveTab('dashboard')}>
@@ -3409,12 +3409,12 @@ export default function GrigoEntDashboard() {
               <>
                 <button
                   onClick={() => router.push('/')}
-                  className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[13px] font-black transition-all text-gray-500 hover:text-gray-200 hover:bg-white/5 border border-white/10"
+                  className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[13px] font-black transition-all text-gray-500 dark:text-slate-400 hover:text-gray-200 hover:bg-white dark:bg-slate-800/5 border border-white/10"
                 >
                   <Home size={18} />
                   통합 ERP로 이동
                 </button>
-                <div className="h-px bg-white/10 my-2"></div>
+                <div className="h-px bg-white dark:bg-slate-800/10 my-2"></div>
               </>
             )}
             {[
@@ -3433,7 +3433,7 @@ export default function GrigoEntDashboard() {
                 onClick={() => setActiveTab(item.id as GrigoEntView)}
                 className={cn(
                   'w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[13px] font-black transition-all',
-                  activeTab === item.id ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
+                  activeTab === item.id ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-gray-500 dark:text-slate-400 hover:text-gray-200 hover:bg-white dark:bg-slate-800/5'
                 )}
               >
                 <item.icon size={18} />
@@ -3444,18 +3444,18 @@ export default function GrigoEntDashboard() {
         </div>
 
         <div className="mt-auto p-6 pt-0">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="mb-1 text-[10px] uppercase tracking-tighter text-gray-500">Signed in as</p>
+          <div className="rounded-2xl border border-white/10 bg-white dark:bg-slate-800/5 p-4">
+            <p className="mb-1 text-[10px] uppercase tracking-tighter text-gray-500 dark:text-slate-400">Signed in as</p>
             <p className="text-sm font-semibold text-gray-200">
               {user?.profile?.name || user?.email || '사용자'}
             </p>
             {user?.profile?.position && (
-              <p className="mt-1 text-[10px] text-gray-400">{user.profile.position}</p>
+              <p className="mt-1 text-[10px] text-gray-400 dark:text-slate-500">{user.profile.position}</p>
             )}
           </div>
           <button
             onClick={handleLogout}
-            className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:bg-red-500/10 hover:text-red-400 flex items-center justify-center gap-2"
+            className="mt-3 w-full rounded-xl border border-white/10 bg-white dark:bg-slate-800/5 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:bg-red-50 dark:bg-red-900/500/10 hover:text-red-400 flex items-center justify-center gap-2"
           >
             <LogOut className="h-4 w-4" />
             로그아웃
@@ -3464,15 +3464,15 @@ export default function GrigoEntDashboard() {
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-10 z-10 sticky top-0">
+        <header className="h-20 bg-white dark:bg-slate-800/80 backdrop-blur-md border-b border-gray-100 dark:border-slate-700 flex items-center justify-between px-10 z-10 sticky top-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Workspace</h2>
+            <h2 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-[0.2em]">Workspace</h2>
             <ChevronRight size={14} className="text-gray-300" />
-            <span className="text-sm font-black text-gray-900 capitalize tracking-tight">{activeTab} Section</span>
+            <span className="text-sm font-black text-gray-900 dark:text-slate-100 capitalize tracking-tight">{activeTab} Section</span>
           </div>
           <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-[10px] font-black text-gray-500">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-800 rounded-full text-[10px] font-black text-gray-500 dark:text-slate-400">
+              <div className="w-1.5 h-1.5 bg-green-50 dark:bg-green-900/500 rounded-full animate-pulse"></div>
               SYSTEM ONLINE
             </div>
           </div>
@@ -3503,11 +3503,11 @@ function ModalShell({
 }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
-          <h3 className="font-black text-lg text-gray-900">{title}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
-            <X size={18} className="text-gray-500" />
+      <div className="bg-white dark:bg-slate-800 rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+        <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50 flex-shrink-0">
+          <h3 className="font-black text-lg text-gray-900 dark:text-slate-100">{title}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+            <X size={18} className="text-gray-500 dark:text-slate-400" />
           </button>
         </div>
         <div className="p-6 overflow-y-auto flex-1">{children}</div>
@@ -3532,13 +3532,13 @@ function InputField({
   if (type === 'date') {
     return (
       <label className="space-y-1.5">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">{label}</span>
         <input
           type="date"
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+          className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-4 py-3 text-sm outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/30"
         />
       </label>
     );
@@ -3546,13 +3546,13 @@ function InputField({
 
   return (
     <label className="space-y-1.5">
-      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+      <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">{label}</span>
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+        className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-4 py-3 text-sm outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/30"
       />
     </label>
   );
@@ -3571,11 +3571,11 @@ function SelectField({
 }) {
   return (
     <label className="space-y-1.5">
-      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+      <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">{label}</span>
       <select
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+        className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-4 py-3 text-sm outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/30"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -3597,10 +3597,10 @@ function ModalActions({
   primaryLabel: string;
 }) {
   return (
-    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-slate-700">
       <button
         onClick={onClose}
-        className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+        className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
       >
         취소
       </button>
@@ -3855,16 +3855,16 @@ function FreelancerModal({
             ]}
           />
           <div className="space-y-1.5">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">상태</span>
+            <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">상태</span>
             <div className="flex items-center gap-4 pt-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={form.is_active}
                   onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))}
-                  className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-gray-300 text-indigo-600 dark:text-indigo-300 focus:ring-indigo-500"
                 />
-                <span className="text-sm font-medium text-gray-700">활성</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">활성</span>
               </label>
             </div>
           </div>
@@ -3894,13 +3894,13 @@ function FreelancerModal({
         />
 
         <label className="space-y-1.5">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">메모</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">메모</span>
           <textarea
             value={form.notes}
             onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
             placeholder="추가 정보 및 메모"
             rows={3}
-            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+            className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-4 py-3 text-sm outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/30"
           />
         </label>
 
@@ -4016,8 +4016,8 @@ function CreateClientModal({
           />
         </div>
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-            <p className="text-xs font-semibold text-red-600">{error}</p>
+          <div className="rounded-lg bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-900/50 px-3 py-2">
+            <p className="text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>
           </div>
         )}
         <ModalActions
@@ -4134,8 +4134,8 @@ function EditClientModal({
           />
         </div>
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-            <p className="text-xs font-semibold text-red-600">{error}</p>
+          <div className="rounded-lg bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-900/50 px-3 py-2">
+            <p className="text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>
           </div>
         )}
         <ModalActions
@@ -4245,8 +4245,8 @@ function CreateClientWorkerModal({
           />
         </div>
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-            <p className="text-xs font-semibold text-red-600">{error}</p>
+          <div className="rounded-lg bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-900/50 px-3 py-2">
+            <p className="text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>
           </div>
         )}
         <ModalActions
@@ -4338,8 +4338,8 @@ function EditClientWorkerModal({
           />
         </div>
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-            <p className="text-xs font-semibold text-red-600">{error}</p>
+          <div className="rounded-lg bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-900/50 px-3 py-2">
+            <p className="text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>
           </div>
         )}
         <ModalActions
@@ -4455,7 +4455,7 @@ function TaskModal({
         primaryLabel={task ? '수정' : '등록'}
       />
       {task?.id && (
-        <div className="border-t border-slate-200 pt-4 mt-4">
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
           <CommentSection entityType="task" entityId={Number(task.id)} />
         </div>
       )}
@@ -4477,16 +4477,16 @@ function DeleteConfirmModal({
 }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-          <h3 className="font-black text-lg text-gray-900">{title}</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+          <h3 className="font-black text-lg text-gray-900 dark:text-slate-100">{title}</h3>
         </div>
         <div className="p-6">
-          <p className="text-sm text-gray-600 mb-6">{message}</p>
+          <p className="text-sm text-gray-600 dark:text-slate-300 mb-6">{message}</p>
           <div className="flex items-center justify-end gap-3">
             <button
               onClick={onCancel}
-              className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
             >
               취소
             </button>

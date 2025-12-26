@@ -262,30 +262,30 @@ const DEFAULT_TASKS_BY_STEP: Record<ProjectStep, Array<{ title: string; priority
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    'In Production': 'bg-blue-100 text-blue-800 border-blue-200',
-    'Pre-Production': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'Post-Production': 'bg-purple-100 text-purple-800 border-purple-200',
-    'Completed': 'bg-gray-100 text-gray-800 border-gray-200',
-    'Planning': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    'Available': 'bg-green-100 text-green-800 border-green-200',
-    'Rented': 'bg-red-100 text-red-800 border-red-200',
-    'Maintenance': 'bg-orange-100 text-orange-800 border-orange-200',
-    'Paid': 'bg-green-100 text-green-800',
-    'Pending': 'bg-yellow-100 text-yellow-800',
-    'Overdue': 'bg-red-100 text-red-800',
-    'Approved': 'bg-blue-100 text-blue-800',
-    'Active': 'bg-green-100 text-green-800',
-    'On Set': 'bg-red-100 text-red-800',
-    'Busy': 'bg-orange-100 text-orange-800',
-    'Inactive': 'bg-gray-100 text-gray-500',
-    'Growing': 'bg-purple-100 text-purple-800 border-purple-200',
+    'In Production': 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    'Pre-Production': 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
+    'Post-Production': 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+    'Completed': 'bg-gray-100 dark:bg-slate-800 dark:bg-slate-800 text-gray-800 dark:text-slate-200 dark:text-slate-300 border-gray-200 dark:border-slate-700 dark:border-slate-700',
+    'Planning': 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    'Available': 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800',
+    'Rented': 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800',
+    'Maintenance': 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+    'Paid': 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300',
+    'Pending': 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300',
+    'Overdue': 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300',
+    'Approved': 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300',
+    'Active': 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300',
+    'On Set': 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300',
+    'Busy': 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300',
+    'Inactive': 'bg-gray-100 dark:bg-slate-800 dark:bg-slate-800 text-gray-500 dark:text-slate-400 dark:text-slate-400',
+    'Growing': 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800',
   };
 
   return (
     <span
       className={cn(
         'px-2.5 py-0.5 rounded-full text-xs font-medium border',
-        styles[status] || 'bg-gray-100 text-gray-800'
+        styles[status] || 'bg-gray-100 dark:bg-slate-800 dark:bg-slate-800 text-gray-800 dark:text-slate-200 dark:text-slate-300'
       )}
     >
       {status}
@@ -307,10 +307,10 @@ function StatCard({
   trend?: 'up' | 'down';
 }) {
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-4">
-        <div className="p-2 bg-slate-50 rounded-lg">
-          <Icon className="w-6 h-6 text-slate-700" />
+        <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg">
+          <Icon className="w-6 h-6 text-slate-700 dark:text-slate-300" />
         </div>
         {trend && (
           <span
@@ -323,9 +323,9 @@ function StatCard({
           </span>
         )}
       </div>
-      <h3 className="text-gray-500 text-sm font-medium mb-1">{title}</h3>
+      <h3 className="text-gray-500 dark:text-slate-400 text-sm font-medium mb-1">{title}</h3>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
-      {subtext && <p className="text-xs text-gray-400 mt-2">{subtext}</p>}
+      {subtext && <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">{subtext}</p>}
     </div>
   );
 }
@@ -613,9 +613,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-gray-800">진행 중인 프로젝트</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-slate-200">진행 중인 프로젝트</h3>
                 <button
                   onClick={() => setActiveTab('projects')}
                   className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
@@ -638,22 +638,22 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       <div
                         key={project.id}
                         onClick={() => setActiveTab('projects')}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors"
+                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
                       >
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <h4 className="font-semibold text-gray-800 text-sm">{project.name}</h4>
+                            <h4 className="font-semibold text-gray-800 dark:text-slate-200 text-sm">{project.name}</h4>
                             <span className={cn(
                               'text-xs px-2 py-0.5 rounded-full',
                               project.status === '기획중' ? 'bg-yellow-100 text-yellow-700' :
                               project.status === '진행중' ? 'bg-blue-100 text-blue-700' :
                               project.status === '운영중' ? 'bg-green-100 text-green-700' :
-                              'bg-gray-100 text-gray-700'
+                              'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300'
                             )}>
                               {project.status}
                             </span>
                           </div>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                          <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-slate-400 mt-2">
                             <span>매출: {formatCurrency(projectRevenue)}</span>
                             <span>지출: {formatCurrency(projectExpense)}</span>
                             <span className={cn(
@@ -664,21 +664,21 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             </span>
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                        <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500" />
                       </div>
                     );
                   })
                 ) : (
-                  <div className="text-center py-8 text-gray-400 text-sm">
+                  <div className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm">
                     진행 중인 프로젝트가 없습니다.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-gray-800">주요 일정</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-slate-200">주요 일정</h3>
                 <button
                   onClick={() => setActiveTab('schedule')}
                   className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
@@ -691,11 +691,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   upcomingEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="flex items-center p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100 cursor-pointer"
+                      className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 rounded-lg transition-colors border border-gray-100 dark:border-slate-700 cursor-pointer"
                       onClick={() => setEditEventModalOpen(event)}
                     >
                       <div className="w-16 text-center mr-4 flex-shrink-0">
-                        <div className="text-xs text-gray-500 font-medium">
+                        <div className="text-xs text-gray-500 dark:text-slate-400 font-medium">
                           {new Date(event.event_date).toLocaleDateString('ko-KR', {
                             month: 'short',
                             day: 'numeric',
@@ -713,19 +713,19 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         )}
                       ></div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-800 text-sm truncate">{event.title}</h4>
+                        <h4 className="font-semibold text-gray-800 dark:text-slate-200 text-sm truncate">{event.title}</h4>
                         {event.description && (
-                          <p className="text-xs text-gray-500 flex items-center mt-1 truncate">
+                          <p className="text-xs text-gray-500 dark:text-slate-400 flex items-center mt-1 truncate">
                             <Clock className="w-3 h-3 mr-1 flex-shrink-0" /> 
                             <span className="truncate">{event.description}</span>
                           </p>
                         )}
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 flex-shrink-0" />
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-400 text-sm">
+                  <div className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm">
                     등록된 일정이 없습니다.
                   </div>
                 )}
@@ -733,25 +733,25 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             </div>
           </div>
 
-          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-800">할 일</h3>
+              <h3 className="text-lg font-bold text-gray-800 dark:text-slate-200">할 일</h3>
               <button
                 onClick={() => setTaskModalOpen(true)}
-                className="p-1 rounded-full hover:bg-gray-100"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800"
               >
-                <Plus className="w-4 h-4 text-gray-600" />
+                <Plus className="w-4 h-4 text-gray-600 dark:text-slate-300" />
               </button>
             </div>
             {/* 할일 필터 */}
-            <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+            <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
               <button
                 onClick={() => setTaskAssigneeFilter('all')}
                 className={cn(
                   'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
                   taskAssigneeFilter === 'all'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
                 )}
               >
                 전체 할일 보기
@@ -761,8 +761,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={cn(
                   'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
                   taskAssigneeFilter === 'my'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
                 )}
               >
                 내 할일만 보기
@@ -772,8 +772,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={cn(
                   'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
                   taskAssigneeFilter === 'unassigned'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
                 )}
               >
                 담당자 미지정 할일 보기
@@ -808,13 +808,13 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       <div
                         key={task.id}
                         onClick={() => setTaskDetailModalOpen(task)}
-                        className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer"
+                        className="flex items-start p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2 mb-2 flex-wrap">
                             <span className={cn(
                               'text-xs px-2 py-0.5 rounded-full',
-                              task.status === 'todo' ? 'bg-gray-100 text-gray-600' :
+                              task.status === 'todo' ? 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300' :
                               task.status === 'in-progress' ? 'bg-blue-100 text-blue-600' :
                               'bg-green-100 text-green-600'
                             )}>
@@ -826,8 +826,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                               </span>
                             )}
                           </div>
-                          <p className="text-sm font-medium text-gray-800 mb-2">{task.title}</p>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <p className="text-sm font-medium text-gray-800 dark:text-slate-200 mb-2">{task.title}</p>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-slate-400">
                             {task.assignee && (
                               <div className="flex items-center">
                                 <User className="w-3 h-3 mr-1" />
@@ -835,7 +835,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                               </div>
                             )}
                             {task.dueDate && (
-                              <div className="flex items-center text-gray-400">
+                              <div className="flex items-center text-gray-400 dark:text-slate-500">
                                 <Clock className="w-3 h-3 mr-1" />
                                 <span>{new Date(task.dueDate).toLocaleDateString('ko-KR')}</span>
                               </div>
@@ -846,7 +846,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     );
                   })
               ) : (
-                <div className="text-center py-8 text-gray-400 text-sm">
+                <div className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm">
                   등록된 할 일이 없습니다.
                 </div>
               )}
@@ -904,16 +904,16 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       return (
         <div className="flex gap-4 overflow-x-auto pb-4 h-full">
           {columns.map((col) => (
-            <div key={col.id} className="min-w-[320px] flex-1 bg-gray-50 rounded-xl p-3 h-fit max-h-full overflow-y-auto">
+            <div key={col.id} className="min-w-[320px] flex-1 bg-gray-50 dark:bg-slate-900 rounded-xl p-3 h-fit max-h-full overflow-y-auto">
               <div className="flex items-center justify-between mb-3 px-1">
-                <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                <h3 className="font-bold text-gray-700 dark:text-slate-300 flex items-center gap-2">
                   {col.id === '기획' && <FileText size={18} />}
                   {col.id === '촬영' && <Camera size={18} />}
                   {col.id === '후반' && <Edit3 size={18} />}
                   {col.id === '완료' && <CheckCircle2 size={18} />}
                   {col.title}
                 </h3>
-                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full text-gray-600">
+                <span className="text-xs bg-gray-200 dark:bg-slate-700 px-2 py-0.5 rounded-full text-gray-600 dark:text-slate-300">
                   {filteredProjects.filter((p) => col.statuses.includes(p.status)).length}
                 </span>
               </div>
@@ -927,7 +927,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       <div
                         key={project.id}
                         onClick={() => setSelectedProjectDetail(project)}
-                        className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer group"
+                        className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer group"
                       >
                         <div className="flex justify-between items-start mb-2">
                           {project.client_id ? (
@@ -945,7 +945,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                 e.stopPropagation();
                                 setEditProjectModalOpen(project);
                               }}
-                              className="text-gray-400 hover:text-gray-600"
+                              className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300"
                               title="수정"
                             >
                               <Edit3 className="w-4 h-4" />
@@ -963,7 +963,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           </div>
                         </div>
                         
-                        <h4 className="font-semibold text-gray-800 mb-1 line-clamp-2">{project.name}</h4>
+                        <h4 className="font-semibold text-gray-800 dark:text-slate-200 mb-1 line-clamp-2">{project.name}</h4>
                         {projectClient && (
                           <p className="text-xs text-indigo-600 mb-2 font-medium">Client: {projectClient.company_name_ko}</p>
                         )}
@@ -975,7 +975,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                               <span>촬영: {(project as any).shoot_date}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
                             <Clock size={12} />
                             <span>{project.client_id ? '납품' : '업로드'}: {(project as any).release_date || project.endDate}</span>
                           </div>
@@ -984,7 +984,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
                           <div className="flex -space-x-1 overflow-hidden max-w-[50%]">
                             {(project as any).pm_name && (
-                              <div className="w-6 h-6 rounded-full bg-slate-100 border border-white flex items-center justify-center text-[9px] font-bold text-slate-600 shrink-0" title={(project as any).pm_name}>
+                              <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-white flex items-center justify-center text-[9px] font-bold text-slate-600 dark:text-slate-300 shrink-0" title={(project as any).pm_name}>
                                 {(project as any).pm_name[0]}
                               </div>
                             )}
@@ -1017,21 +1017,21 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       }
 
       return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
-          <div className="p-4 border-b flex justify-between items-center">
-            <h3 className="font-bold text-lg">{format(currentMonth, 'yyyy년 M월')}</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 h-full flex flex-col">
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
+            <h3 className="font-bold text-lg text-gray-900 dark:text-slate-100">{format(currentMonth, 'yyyy년 M월')}</h3>
             <div className="flex gap-2">
-              <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-1 hover:bg-gray-100 rounded">
+              <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded">
                 <ChevronLeft size={20}/>
               </button>
-              <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-1 hover:bg-gray-100 rounded">
+              <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded">
                 <ChevronRight size={20}/>
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-px bg-gray-200 flex-1">
+          <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700 flex-1">
             {['일','월','화','수','목','금','토'].map(d => (
-              <div key={d} className="bg-gray-50 p-2 text-center text-sm font-bold text-gray-500">{d}</div>
+              <div key={d} className="bg-gray-50 dark:bg-slate-900 p-2 text-center text-sm font-bold text-gray-500 dark:text-slate-400">{d}</div>
             ))}
             {days.map((day, idx) => {
               const dayStr = format(day, 'yyyy-MM-dd');
@@ -1043,8 +1043,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               const isCurrentMonth = format(day, 'M') === format(currentMonth, 'M');
               
               return (
-                <div key={idx} className={`bg-white p-2 min-h-[100px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
-                  <span className={`text-sm font-medium ${isCurrentMonth ? 'text-gray-700' : 'text-gray-300'}`}>
+                <div key={idx} className={`bg-white dark:bg-slate-800 p-2 min-h-[100px] ${!isCurrentMonth ? 'bg-gray-50 dark:bg-slate-900' : ''}`}>
+                  <span className={`text-sm font-medium ${isCurrentMonth ? 'text-gray-700 dark:text-slate-300' : 'text-gray-300'}`}>
                     {format(day, 'd')}
                   </span>
                   <div className="mt-1 space-y-1">
@@ -1091,11 +1091,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       <div className="space-y-4 animate-fade-in h-full flex flex-col">
         <div className="flex flex-col gap-4">
           {/* 채널 필터링 UI */}
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">프로젝트 필터</span>
+                <Filter className="w-4 h-4 text-gray-500 dark:text-slate-400" />
+                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">프로젝트 필터</span>
               </div>
               <div className="flex gap-2">
                 <button
@@ -1103,7 +1103,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     projectViewMode === 'kanban'
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                   }`}
                 >
                   <Layout className="w-3 h-3 inline mr-1" /> 칸반
@@ -1113,7 +1113,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     projectViewMode === 'calendar'
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                   }`}
                 >
                   <CalendarIcon className="w-3 h-3 inline mr-1" /> 캘린더
@@ -1123,7 +1123,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     projectViewMode === 'list'
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                   }`}
                 >
                   <List className="w-3 h-3 inline mr-1" /> 리스트
@@ -1136,7 +1136,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   selectedChannelFilter === 'all'
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 전체 보기
@@ -1146,7 +1146,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                   selectedChannelFilter === 'external'
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 <Briefcase className="w-4 h-4" />
@@ -1159,7 +1159,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     selectedChannelFilter === String(channel.id)
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                   }`}
                 >
                   {channel.name}
@@ -1169,13 +1169,13 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
 
           {/* 검색 및 새 프로젝트 버튼 */}
-          <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm gap-4">
               <div className="relative w-full md:w-auto">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="프로젝트 검색..."
-                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-64"
+                  className="pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-64"
                 />
               </div>
               <button
@@ -1192,29 +1192,29 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           {projectViewMode === 'kanban' && <KanbanBoardView />}
           {projectViewMode === 'calendar' && <CalendarView />}
           {projectViewMode === 'list' && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-x-auto">
               <table className="w-full text-left min-w-[800px]">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                       프로젝트명
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                       클라이언트
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                       PM / 감독
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                       순이익
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                       마감일
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                       상태
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right">
                       관리
                     </th>
                   </tr>
@@ -1234,15 +1234,15 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     return (
                       <React.Fragment key={project.id}>
                         <tr
-                          className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                          className="hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 transition-colors cursor-pointer group"
                           onClick={() => setSelectedProjectDetail(project)}
                         >
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
                               {isExpanded ? (
-                                <ChevronUp className="w-4 h-4 text-gray-400" />
+                                <ChevronUp className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                               ) : (
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                <ChevronDown className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                               )}
                               <div>
                                 <div className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
@@ -1251,16 +1251,16 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
+                          <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
                             {projectClient?.company_name_ko || '-'}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
+                          <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
                             {(project as any).pm_name || '-'}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600 font-mono">
+                          <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300 font-mono">
                             {formatCurrency(budget - totalExpenses)}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{project.endDate}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{project.endDate}</td>
                           <td className="px-6 py-4">
                             <StatusBadge
                               status={
@@ -1283,7 +1283,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                   e.stopPropagation();
                                   setEditProjectModalOpen(project);
                                 }}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300"
                                 title="수정"
                               >
                                 <Edit3 className="w-4 h-4" />
@@ -1303,10 +1303,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         </tr>
                         {isExpanded && (
                           <tr key={`${project.id}-accordion`}>
-                            <td colSpan={7} className="px-6 py-4 bg-gray-50">
+                            <td colSpan={7} className="px-6 py-4 bg-gray-50 dark:bg-slate-900">
                               <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center mb-4">
-                                  <h4 className="font-semibold text-gray-800">매출 및 지출 관리</h4>
+                                  <h4 className="font-semibold text-gray-800 dark:text-slate-200">매출 및 지출 관리</h4>
                                   <div className="flex gap-2">
                                     <button
                                       onClick={(e) => {
@@ -1330,7 +1330,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
                                     <div className="flex justify-between items-center mb-3">
                                       <h5 className="font-semibold text-green-700 flex items-center gap-2">
                                         <TrendingUp className="w-4 h-4" /> 매출
@@ -1347,10 +1347,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                             className="flex justify-between items-center p-2 bg-green-50 rounded border border-green-100"
                                           >
                                             <div className="flex-1">
-                                              <div className="text-sm font-medium text-gray-800">
+                                              <div className="text-sm font-medium text-gray-800 dark:text-slate-200">
                                                 {revenue.name}
                                               </div>
-                                              <div className="text-xs text-gray-500">
+                                              <div className="text-xs text-gray-500 dark:text-slate-400">
                                                 {revenue.category} • {revenue.date}
                                               </div>
                                             </div>
@@ -1363,7 +1363,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                                   e.stopPropagation();
                                                   setEditFinanceModalOpen(revenue);
                                                 }}
-                                                className="text-gray-400 hover:text-indigo-600"
+                                                className="text-gray-400 dark:text-slate-500 hover:text-indigo-600"
                                               >
                                                 <Edit3 className="w-4 h-4" />
                                               </button>
@@ -1372,7 +1372,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                                   e.stopPropagation();
                                                   setDeleteFinanceId(Number(revenue.id));
                                                 }}
-                                                className="text-gray-400 hover:text-red-600"
+                                                className="text-gray-400 dark:text-slate-500 hover:text-red-600"
                                               >
                                                 <Trash2 className="w-4 h-4" />
                                               </button>
@@ -1380,14 +1380,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                           </div>
                                         ))
                                       ) : (
-                                        <div className="text-sm text-gray-400 text-center py-4">
+                                        <div className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">
                                           등록된 매출이 없습니다.
                                         </div>
                                       )}
                                     </div>
                                   </div>
 
-                                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
                                     <div className="flex justify-between items-center mb-3">
                                       <h5 className="font-semibold text-red-700 flex items-center gap-2">
                                         <DollarSign className="w-4 h-4" /> 지출
@@ -1404,10 +1404,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                             className="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100"
                                           >
                                             <div className="flex-1">
-                                              <div className="text-sm font-medium text-gray-800">
+                                              <div className="text-sm font-medium text-gray-800 dark:text-slate-200">
                                                 {expense.name}
                                               </div>
-                                              <div className="text-xs text-gray-500">
+                                              <div className="text-xs text-gray-500 dark:text-slate-400">
                                                 {expense.category} • {expense.date}
                                               </div>
                                             </div>
@@ -1420,7 +1420,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                                   e.stopPropagation();
                                                   setEditFinanceModalOpen(expense);
                                                 }}
-                                                className="text-gray-400 hover:text-indigo-600"
+                                                className="text-gray-400 dark:text-slate-500 hover:text-indigo-600"
                                               >
                                                 <Edit3 className="w-4 h-4" />
                                               </button>
@@ -1429,7 +1429,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                                   e.stopPropagation();
                                                   setDeleteFinanceId(Number(expense.id));
                                                 }}
-                                                className="text-gray-400 hover:text-red-600"
+                                                className="text-gray-400 dark:text-slate-500 hover:text-red-600"
                                               >
                                                 <Trash2 className="w-4 h-4" />
                                               </button>
@@ -1437,7 +1437,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                           </div>
                                         ))
                                       ) : (
-                                        <div className="text-sm text-gray-400 text-center py-4">
+                                        <div className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">
                                           등록된 지출이 없습니다.
                                         </div>
                                       )}
@@ -1454,9 +1454,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                   </div>
                                 </div>
 
-                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
                                   <div className="flex justify-between items-center mb-4">
-                                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                                    <h4 className="font-semibold text-gray-800 dark:text-slate-200 flex items-center gap-2">
                                       <CheckSquare className="w-5 h-5 text-indigo-600" /> 할일 관리
                                     </h4>
                                     <button
@@ -1471,7 +1471,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                     </button>
                                   </div>
 
-                                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
                                     <div className="space-y-2">
                                       {(() => {
                                         const projectTasks = tasks.filter((t) => t.projectId === project.id.toString());
@@ -1481,14 +1481,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                             return (
                                               <div
                                                 key={task.id}
-                                                className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors"
+                                                className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-900 rounded border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
                                               >
                                                 <div className="flex-1">
                                                   <div className="flex items-center gap-2 mb-1">
                                                     <span
                                                       className={cn(
                                                         'text-sm font-medium',
-                                                        task.status === 'done' ? 'text-gray-400 line-through' : 'text-gray-800',
+                                                        task.status === 'done' ? 'text-gray-400 dark:text-slate-500 line-through' : 'text-gray-800 dark:text-slate-200',
                                                         isOverdue ? 'text-red-600 font-bold' : ''
                                                       )}
                                                     >
@@ -1514,7 +1514,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                                       </span>
                                                     )}
                                                   </div>
-                                                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                                                  <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400">
                                                     {task.assignee && (
                                                       <span className="flex items-center gap-1">
                                                         <User className="w-3 h-3" /> {task.assignee}
@@ -1533,7 +1533,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                                           ? 'bg-green-100 text-green-700'
                                                           : task.status === 'in-progress'
                                                             ? 'bg-blue-100 text-blue-700'
-                                                            : 'bg-gray-100 text-gray-700'
+                                                            : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300'
                                                       )}
                                                     >
                                                       {task.status === 'done' ? '완료' : task.status === 'in-progress' ? '진행중' : '할일'}
@@ -1546,7 +1546,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                                       e.stopPropagation();
                                                       setEditTaskModalOpen(task);
                                                     }}
-                                                    className="text-gray-400 hover:text-indigo-600"
+                                                    className="text-gray-400 dark:text-slate-500 hover:text-indigo-600"
                                                     title="수정"
                                                   >
                                                     <Edit3 className="w-4 h-4" />
@@ -1556,7 +1556,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                                       e.stopPropagation();
                                                       setDeleteTaskId(Number(task.id));
                                                     }}
-                                                    className="text-gray-400 hover:text-red-600"
+                                                    className="text-gray-400 dark:text-slate-500 hover:text-red-600"
                                                     title="삭제"
                                                   >
                                                     <Trash2 className="w-4 h-4" />
@@ -1566,7 +1566,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                             );
                                           })
                                         ) : (
-                                          <div className="text-sm text-gray-400 text-center py-4">
+                                          <div className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">
                                             등록된 할일이 없습니다.
                                           </div>
                                         );
@@ -1597,24 +1597,24 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm gap-4">
           <div className="relative w-full md:w-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500 w-4 h-4" />
             <input
               type="text"
               placeholder="채널 검색..."
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-64"
+              className="pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-64"
             />
           </div>
           <div className="flex gap-2">
-            <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg">
+            <div className="flex space-x-1 bg-gray-200 dark:bg-slate-700 p-1 rounded-lg">
               <button
                 onClick={() => setViewMode('grid')}
                 className={cn(
                   'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                   viewMode === 'grid'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-white dark:bg-slate-800 text-gray-900 shadow-sm'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:text-slate-300'
                 )}
               >
                 그리드
@@ -1624,8 +1624,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={cn(
                   'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                   viewMode === 'list'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-white dark:bg-slate-800 text-gray-900 shadow-sm'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:text-slate-300'
                 )}
               >
                 리스트
@@ -1641,22 +1641,22 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
         </div>
 
         {viewMode === 'list' ? (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-x-auto">
             <table className="w-full text-left min-w-[1000px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">채널명</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">제작사</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">구독자</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">다음 업로드일</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">광고현황</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">상태</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">관리</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">채널명</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">제작사</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">구독자</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">다음 업로드일</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">광고현황</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">상태</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase text-right">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {buChannels.map((channel) => (
-                  <tr key={channel.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={channel.id} className="hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <Youtube className="w-5 h-5 text-red-600" />
@@ -1667,7 +1667,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                               href={channel.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs text-gray-400 hover:text-indigo-600 flex items-center"
+                              className="text-xs text-gray-400 dark:text-slate-500 hover:text-indigo-600 flex items-center"
                             >
                               <LinkIcon className="w-3 h-3 mr-1" />
                             </a>
@@ -1675,12 +1675,12 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{channel.production_company || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{channel.subscribers_count || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{channel.production_company || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{channel.subscribers_count || '-'}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         {channel.next_upload_date && (
-                          <div className="text-sm text-gray-600">{channel.next_upload_date}</div>
+                          <div className="text-sm text-gray-600 dark:text-slate-300">{channel.next_upload_date}</div>
                         )}
                         {channel.upload_days && channel.upload_days.length > 0 && (
                           <div className="flex flex-wrap gap-1">
@@ -1727,21 +1727,21 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => setChannelDetailModalOpen(channel)}
-                          className="text-gray-400 hover:text-blue-600"
+                          className="text-gray-400 dark:text-slate-500 hover:text-blue-600"
                           title="상세보기"
                         >
                           <CalendarIcon className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setEditChannelModalOpen(channel)}
-                          className="text-gray-400 hover:text-indigo-600"
+                          className="text-gray-400 dark:text-slate-500 hover:text-indigo-600"
                           title="수정"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setDeleteChannelId(channel.id)}
-                          className="text-gray-400 hover:text-red-600"
+                          className="text-gray-400 dark:text-slate-500 hover:text-red-600"
                           title="삭제"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1760,9 +1760,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               return (
                 <div
                   key={channel.id}
-                  className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full"
+                  className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col h-full"
                 >
-                  <div className="p-6 border-b border-gray-100">
+                  <div className="p-6 border-b border-gray-100 dark:border-slate-700">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center">
                         <div className="p-3 bg-red-50 rounded-lg mr-3">
@@ -1775,7 +1775,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                               href={channel.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs text-gray-400 hover:text-indigo-600 flex items-center mt-1"
+                              className="text-xs text-gray-400 dark:text-slate-500 hover:text-indigo-600 flex items-center mt-1"
                             >
                               채널 바로가기 <LinkIcon className="w-3 h-3 ml-1" />
                             </a>
@@ -1789,7 +1789,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             e.stopPropagation();
                             setChannelDetailModalOpen(channel);
                           }}
-                          className="text-gray-400 hover:text-blue-600"
+                          className="text-gray-400 dark:text-slate-500 hover:text-blue-600"
                           title="상세보기"
                         >
                           <CalendarIcon className="w-4 h-4" />
@@ -1799,7 +1799,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             e.stopPropagation();
                             setEditChannelModalOpen(channel);
                           }}
-                          className="text-gray-400 hover:text-indigo-600"
+                          className="text-gray-400 dark:text-slate-500 hover:text-indigo-600"
                           title="수정"
                         >
                           <Edit3 className="w-4 h-4" />
@@ -1809,7 +1809,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             e.stopPropagation();
                             setDeleteChannelId(channel.id);
                           }}
-                          className="text-gray-400 hover:text-red-600"
+                          className="text-gray-400 dark:text-slate-500 hover:text-red-600"
                           title="삭제"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1818,28 +1818,28 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="bg-slate-50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-1">구독자 수</p>
-                        <p className="text-lg font-bold text-gray-800">
+                      <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">구독자 수</p>
+                        <p className="text-lg font-bold text-gray-800 dark:text-slate-200">
                           {channel.subscribers_count || '0'}
                         </p>
                       </div>
-                      <div className="bg-slate-50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-1">총 조회수</p>
-                        <p className="text-lg font-bold text-gray-800">
+                      <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">총 조회수</p>
+                        <p className="text-lg font-bold text-gray-800 dark:text-slate-200">
                           {channel.total_views || '0'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-600 flex items-center justify-between mb-3">
+                    <div className="text-sm text-gray-600 dark:text-slate-300 flex items-center justify-between mb-3">
                       <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2 text-gray-400" />
+                        <User className="w-4 h-4 mr-2 text-gray-400 dark:text-slate-500" />
                         담당: {channel.manager_name || '-'}
                       </div>
                       {channel.next_upload_date && (
                         <div className="flex items-center">
-                          <CalendarIcon className="w-4 h-4 mr-2 text-gray-400" />
+                          <CalendarIcon className="w-4 h-4 mr-2 text-gray-400 dark:text-slate-500" />
                           다음 업로드:{' '}
                           <span className="font-bold text-indigo-600 ml-1">
                             {channel.next_upload_date}
@@ -1849,7 +1849,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     </div>
                     {channel.upload_days && channel.upload_days.length > 0 && (
                       <div className="mb-3">
-                        <p className="text-xs text-gray-500 mb-2">업로드 구좌</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">업로드 구좌</p>
                         <div className="flex flex-wrap gap-1.5">
                           {channel.upload_days.map((day) => {
                             const dayLabels: Record<string, string> = {
@@ -1875,8 +1875,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     )}
                   </div>
 
-                  <div className="flex-1 bg-gray-50 p-4">
-                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                  <div className="flex-1 bg-gray-50 dark:bg-slate-900 p-4">
+                    <h4 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-3 flex items-center">
                       <Clapperboard className="w-3 h-3 mr-1" /> 콘텐츠 제작 파이프라인
                     </h4>
                     <div className="space-y-2">
@@ -1888,7 +1888,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         return (
                           <div
                             key={content.id}
-                            className="bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center shadow-sm"
+                            className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 flex justify-between items-center shadow-sm"
                           >
                             <div className="flex-1">
                               <div className="flex items-center mb-1">
@@ -1896,7 +1896,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                   className={cn(
                                     'text-[10px] px-1.5 py-0.5 rounded mr-2 border',
                                     content.stage === 'uploaded'
-                                      ? 'bg-gray-100 text-gray-500 border-gray-200'
+                                      ? 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700'
                                       : content.stage === 'editing'
                                         ? 'bg-purple-50 text-purple-600 border-purple-100'
                                         : content.stage === 'shooting'
@@ -1912,11 +1912,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                         ? 'Shooting'
                                         : 'Planning'}
                                 </span>
-                                <span className="text-sm font-medium text-gray-800 truncate">
+                                <span className="text-sm font-medium text-gray-800 dark:text-slate-200 truncate">
                                   {content.title}
                                 </span>
                               </div>
-                              <div className="flex items-center text-xs text-gray-400">
+                              <div className="flex items-center text-xs text-gray-400 dark:text-slate-500">
                                 <span className="mr-2">{content.assignee_name || '-'}</span>
                                 {dDay > 0 ? (
                                   <span className="text-red-500 font-bold">D-{dDay}</span>
@@ -1942,7 +1942,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           setChannelContentModalChannelId(channel.id);
                           setChannelContentModalOpen(true);
                         }}
-                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:bg-gray-100 hover:text-indigo-600 transition-colors"
+                        className="w-full py-2 border border-dashed border-gray-300 dark:border-slate-700 rounded-lg text-xs text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-indigo-600 transition-colors"
                       >
                         + 새 콘텐츠 기획 추가
                       </button>
@@ -1974,34 +1974,34 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500">가용 장비</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">가용 장비</p>
               <p className="text-xl font-bold text-green-600">{availablePercent}%</p>
             </div>
             <CheckSquare className="w-8 h-8 text-green-100" />
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500">대여 중 (현장)</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">대여 중 (현장)</p>
               <p className="text-xl font-bold text-indigo-600">{rentedPercent}%</p>
             </div>
             <Camera className="w-8 h-8 text-indigo-100" />
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500">수리 / 분실</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">수리 / 분실</p>
               <p className="text-xl font-bold text-red-600">{maintenancePercent}%</p>
             </div>
             <Settings className="w-8 h-8 text-red-100" />
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <h3 className="font-bold text-gray-800">장비 전체 리스트</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <h3 className="font-bold text-gray-800 dark:text-slate-100">장비 전체 리스트</h3>
             <div className="flex gap-2 w-full sm:w-auto">
-              <button className="flex-1 sm:flex-none px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center">
+              <button className="flex-1 sm:flex-none px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 flex items-center justify-center">
                 <span className="mr-1">📷</span> 바코드 스캔
               </button>
               <button
@@ -2016,7 +2016,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   // 첫 번째 가용 장비를 선택하거나 새 장비 추가 모달을 열 수 있음
                   setEquipmentModalOpen(true);
                 }}
-                className="flex-1 sm:flex-none px-3 py-1.5 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                className="flex-1 sm:flex-none px-3 py-1.5 text-sm border border-slate-300 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900"
               >
                 대여 등록
               </button>
@@ -2024,32 +2024,32 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[800px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">장비명</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">분류</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">장비명</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">분류</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">
                     시리얼 넘버
                   </th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">현재 위치</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">반납 예정일</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">상태</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">현재 위치</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">반납 예정일</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">상태</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {buEquipment.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 cursor-pointer"
                     onClick={() => setEditEquipmentModalOpen(item)}
                   >
                     <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{item.category}</td>
-                    <td className="px-6 py-4 text-xs font-mono text-gray-500">
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{item.category}</td>
+                    <td className="px-6 py-4 text-xs font-mono text-gray-500 dark:text-slate-400">
                       {item.serial_number || '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-800">{item.location || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-800 dark:text-slate-200">{item.location || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
                       {item.return_date || '-'}
                     </td>
                     <td className="px-6 py-4">
@@ -2084,25 +2084,25 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-gray-500 text-xs font-bold uppercase mb-2">총 매출</h3>
+                <h3 className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase mb-2">총 매출</h3>
                 <p className="text-3xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
               </div>
               <div className="p-2 bg-blue-50 rounded-lg">
                 <TrendingUp className="w-5 h-5 text-blue-600" />
               </div>
             </div>
-            <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="mt-4 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div className="h-full bg-indigo-500 w-[70%]"></div>
             </div>
-            <p className="text-xs text-gray-400 mt-2">목표 달성률 70% (전년 대비 +5%)</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">목표 달성률 70% (전년 대비 +5%)</p>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-gray-500 text-xs font-bold uppercase mb-2">
+                <h3 className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase mb-2">
                   총 지출 (인건비/제작비)
                 </h3>
                 <p className="text-3xl font-bold text-gray-900">{formatCurrency(totalExpense)}</p>
@@ -2111,16 +2111,16 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 <Receipt className="w-5 h-5 text-red-600" />
               </div>
             </div>
-            <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="mt-4 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div className="h-full bg-red-400 w-[45%]"></div>
             </div>
-            <p className="text-xs text-gray-400 mt-2">예산 대비 45% 사용</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">예산 대비 45% 사용</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="font-bold text-gray-800">최근 입출금 내역</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
+            <h3 className="font-bold text-gray-800 dark:text-slate-200">최근 입출금 내역</h3>
             <button
               onClick={() => setFinanceModalOpen({ mode: 'expense' })}
               className="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors"
@@ -2130,16 +2130,16 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[800px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">날짜</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">구분</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">항목</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">날짜</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">구분</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">항목</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">
                     관련 프로젝트
                   </th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">금액</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">상태</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">금액</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">상태</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -2148,10 +2148,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   return (
                     <tr
                       key={item.id}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 cursor-pointer"
                       onClick={() => setEditFinanceModalOpen(item)}
                     >
-                      <td className="px-6 py-4 text-sm text-gray-600">{item.date}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{item.date}</td>
                       <td className="px-6 py-4">
                         <span
                           className={cn(
@@ -2162,8 +2162,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           {item.type === 'revenue' ? '입금' : '출금'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-medium text-gray-800">{item.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 font-medium text-gray-800 dark:text-slate-200">{item.name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">
                         {project?.name || '미지정'}
                       </td>
                       <td
@@ -2227,17 +2227,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <h3 className="font-bold text-gray-800">인력 풀 (Internal & Freelance)</h3>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+          <h3 className="font-bold text-gray-800 dark:text-slate-200">인력 풀 (Internal & Freelance)</h3>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <div className="relative flex-1 md:flex-initial md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
               <input
                 type="text"
                 placeholder="이름, 회사명, 전문분야, 비고로 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <button
@@ -2249,8 +2249,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="hidden md:flex bg-gray-50 border-b border-gray-200 px-6 py-3 text-xs font-semibold text-gray-500 uppercase">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="hidden md:flex bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">
             <div className="flex-1">이름 / 역할</div>
             <div className="w-32">소속</div>
             <div className="w-40">연락처</div>
@@ -2259,7 +2259,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
 
           {filteredWorkers.length === 0 ? (
-            <div className="px-6 py-12 text-center text-gray-400">
+            <div className="px-6 py-12 text-center text-gray-400 dark:text-slate-500">
               {searchQuery ? '검색 결과가 없습니다.' : '등록된 외주 인력이 없습니다.'}
             </div>
           ) : (
@@ -2269,17 +2269,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 <div
                   onClick={() => toggleExpand(staff.id)}
                   className={cn(
-                    'px-6 py-4 flex flex-col md:flex-row md:items-center cursor-pointer hover:bg-gray-50 transition-colors',
-                    expandedId === staff.id ? 'bg-gray-50' : ''
+                    'px-6 py-4 flex flex-col md:flex-row md:items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 transition-colors',
+                    expandedId === staff.id ? 'bg-gray-50 dark:bg-slate-900' : ''
                   )}
                 >
                   <div className="flex-1 flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 mr-3 border border-slate-200">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300 mr-3 border border-slate-200 dark:border-slate-700">
                       {staff.name.charAt(0)}
                     </div>
                     <div>
                       <div className="font-medium text-gray-900">{staff.name}</div>
-                      {staff.company_name && <div className="text-sm text-gray-500">{staff.company_name}</div>}
+                      {staff.company_name && <div className="text-sm text-gray-500 dark:text-slate-400">{staff.company_name}</div>}
                     </div>
                   </div>
 
@@ -2302,10 +2302,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     </span>
                   </div>
 
-                  <div className="mt-2 md:mt-0 w-full md:w-40 text-sm text-gray-600 flex items-center">
+                  <div className="mt-2 md:mt-0 w-full md:w-40 text-sm text-gray-600 dark:text-slate-300 flex items-center">
                     {staff.phone && (
                       <>
-                        <Phone className="w-3 h-3 mr-1 text-gray-400" /> {staff.phone}
+                        <Phone className="w-3 h-3 mr-1 text-gray-400 dark:text-slate-500" /> {staff.phone}
                       </>
                     )}
                   </div>
@@ -2316,33 +2316,33 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
                   <div className="hidden md:flex w-10 justify-end">
                     {expandedId === staff.id ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                      <ChevronUp className="w-5 h-5 text-gray-400 dark:text-slate-500" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <ChevronDown className="w-5 h-5 text-gray-400 dark:text-slate-500" />
                     )}
                   </div>
                 </div>
 
                 {expandedId === staff.id && (
-                  <div className="px-6 pb-6 pt-4 bg-gray-50 border-t border-gray-100 animate-fade-in">
+                  <div className="px-6 pb-6 pt-4 bg-gray-50 dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700 animate-fade-in">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* 왼쪽: 기본 정보 */}
                       <div className="space-y-4">
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">기본 정보</h4>
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">기본 정보</h4>
                           <div className="space-y-3">
                             <div className="flex items-start">
-                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">이름:</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 w-20 flex-shrink-0">이름:</span>
                               <span className="text-sm text-gray-900">{staff.name}</span>
                             </div>
                             {staff.company_name && (
                               <div className="flex items-start">
-                                <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">회사명:</span>
+                                <span className="text-xs font-medium text-gray-500 dark:text-slate-400 w-20 flex-shrink-0">회사명:</span>
                                 <span className="text-sm text-gray-900">{staff.company_name}</span>
                               </div>
                             )}
                             <div className="flex items-start">
-                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">타입:</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 w-20 flex-shrink-0">타입:</span>
                               <span className="text-sm text-gray-900">
                                 {staff.worker_type === 'freelancer'
                                   ? '프리랜서'
@@ -2352,32 +2352,32 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                               </span>
                             </div>
                             <div className="flex items-start">
-                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">사업부:</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 w-20 flex-shrink-0">사업부:</span>
                               <span className="text-sm text-gray-900">{bu}</span>
                             </div>
                             <div className="flex items-start">
-                              <span className="text-xs font-medium text-gray-500 w-20 flex-shrink-0">상태:</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 w-20 flex-shrink-0">상태:</span>
                               <StatusBadge status={staff.is_active ? 'Active' : 'Inactive'} />
                             </div>
                           </div>
                         </div>
 
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">연락처</h4>
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">연락처</h4>
                           <div className="space-y-3">
                             {staff.phone ? (
-                              <div className="flex items-center text-sm text-gray-700">
-                                <Phone className="w-4 h-4 mr-2 text-gray-400" /> {staff.phone}
+                              <div className="flex items-center text-sm text-gray-700 dark:text-slate-300">
+                                <Phone className="w-4 h-4 mr-2 text-gray-400 dark:text-slate-500" /> {staff.phone}
                               </div>
                             ) : (
-                              <div className="text-sm text-gray-400">-</div>
+                              <div className="text-sm text-gray-400 dark:text-slate-500">-</div>
                             )}
                             {staff.email ? (
-                              <div className="flex items-center text-sm text-gray-700">
-                                <Mail className="w-4 h-4 mr-2 text-gray-400" /> {staff.email}
+                              <div className="flex items-center text-sm text-gray-700 dark:text-slate-300">
+                                <Mail className="w-4 h-4 mr-2 text-gray-400 dark:text-slate-500" /> {staff.email}
                               </div>
                             ) : (
-                              <div className="text-sm text-gray-400">-</div>
+                              <div className="text-sm text-gray-400 dark:text-slate-500">-</div>
                             )}
                           </div>
                         </div>
@@ -2387,7 +2387,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       <div className="space-y-4">
                         {staff.specialties && staff.specialties.length > 0 && (
                           <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">전문 분야</h4>
+                            <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">전문 분야</h4>
                             <div className="flex flex-wrap gap-2">
                               {staff.specialties.map((specialty: string, index: number) => (
                                 <span
@@ -2403,16 +2403,16 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
                         {staff.notes && (
                           <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">비고</h4>
-                            <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">
+                            <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">비고</h4>
+                            <div className="text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 whitespace-pre-wrap">
                               {staff.notes}
                             </div>
                           </div>
                         )}
 
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">메타 정보</h4>
-                          <div className="space-y-2 text-xs text-gray-500">
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">메타 정보</h4>
+                          <div className="space-y-2 text-xs text-gray-500 dark:text-slate-400">
                             {staff.created_at && (
                               <div>등록일: {new Date(staff.created_at).toLocaleDateString('ko-KR')}</div>
                             )}
@@ -2425,7 +2425,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     </div>
 
                     {/* 액션 버튼 */}
-                    <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-2">
+                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700 flex flex-wrap gap-2">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -2689,11 +2689,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
     return (
       <div className="space-y-4 animate-fade-in h-full flex flex-col">
         {/* 필터 UI */}
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">프로젝트 필터</span>
+              <Filter className="w-4 h-4 text-gray-500 dark:text-slate-400" />
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-300">프로젝트 필터</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -2702,7 +2702,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedChannelFilter === 'all'
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
               }`}
             >
               전체 보기
@@ -2712,7 +2712,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                 selectedChannelFilter === 'external'
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
               }`}
             >
               <Briefcase className="w-4 h-4" />
@@ -2725,7 +2725,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                   selectedChannelFilter === String(channel.id)
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 <Youtube className="w-4 h-4" />
@@ -2735,9 +2735,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
         </div>
 
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm shrink-0">
           <div className="flex items-center space-x-4">
-            <h2 className="text-xl font-bold text-gray-800">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-slate-200">
               {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
             </h2>
             <div className="flex space-x-2">
@@ -2747,7 +2747,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1)
                   )
                 }
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -2757,17 +2757,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
                   )
                 }
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </div>
           <div className="flex space-x-2">
-            <button className="px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
+            <button className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900">
               월간
             </button>
-            <button className="px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
+            <button className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900">
               주간
             </button>
             <button
@@ -2780,14 +2780,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
         </div>
 
         <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden">
-          <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-4 overflow-hidden flex flex-col">
-            <div className="grid grid-cols-7 mb-2 border-b border-gray-200 pb-2">
+          <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 overflow-hidden flex flex-col">
+            <div className="grid grid-cols-7 mb-2 border-b border-gray-200 dark:border-slate-700 pb-2">
               {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
                 <div
                   key={day}
                   className={cn(
                     'text-center text-sm font-semibold',
-                    i === 0 ? 'text-red-500' : 'text-gray-500'
+                    i === 0 ? 'text-red-500' : 'text-gray-500 dark:text-slate-400'
                   )}
                 >
                   {day}
@@ -2796,7 +2796,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             </div>
             <div className="grid grid-cols-7 flex-1 auto-rows-fr gap-1 h-full overflow-y-auto">
               {Array.from({ length: startDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="bg-gray-50/50 rounded-lg"></div>
+                <div key={`empty-${i}`} className="bg-gray-50 dark:bg-slate-900/50 rounded-lg"></div>
               ))}
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
                 const dayItems = allMonthItems.filter((item) => {
@@ -2813,14 +2813,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 return (
                   <div
                     key={day}
-                    className="border border-gray-100 rounded-lg p-2 hover:bg-gray-50 transition-colors min-h-[80px] relative group flex flex-col"
+                    className="border border-gray-100 dark:border-slate-700 rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 transition-colors min-h-[80px] relative group flex flex-col"
                   >
                     <span
                       className={cn(
                         'text-sm font-semibold flex-shrink-0',
                         isToday
                           ? 'bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center'
-                          : 'text-gray-700'
+                          : 'text-gray-700 dark:text-slate-300'
                       )}
                     >
                       {day}
@@ -2883,9 +2883,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             </div>
           </div>
 
-          <div className="w-full lg:w-80 bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col overflow-hidden">
+          <div className="w-full lg:w-80 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-5 flex flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-slate-200 flex items-center">
                 <Star className="w-5 h-5 text-yellow-500 mr-2 fill-yellow-500" />
                 이달의 주요 일정
               </h3>
@@ -2898,7 +2898,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   return (
                     <div
                       key={event.id}
-                      className="p-3 rounded-lg border border-gray-100 hover:border-gray-300 transition-colors bg-gray-50 group"
+                      className="p-3 rounded-lg border border-gray-100 dark:border-slate-700 hover:border-gray-300 dark:border-slate-700 transition-colors bg-gray-50 dark:bg-slate-900 group"
                     >
                       <div className="flex justify-between items-start mb-1">
                         <div className="flex items-center">
@@ -2914,7 +2914,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                     : 'bg-blue-500'
                             )}
                           ></div>
-                          <span className="text-xs font-bold text-gray-500">
+                          <span className="text-xs font-bold text-gray-500 dark:text-slate-400">
                             {eventDate.getMonth() + 1}월 {eventDate.getDate()}일
                           </span>
                         </div>
@@ -2927,19 +2927,19 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           {getEventTypeLabel(event.event_type)}
                         </span>
                       </div>
-                      <h4 className="text-sm font-bold text-gray-800 mb-1">{event.title}</h4>
+                      <h4 className="text-sm font-bold text-gray-800 dark:text-slate-200 mb-1">{event.title}</h4>
                       {event.description && (
-                        <p className="text-xs text-gray-500 line-clamp-2">{event.description}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-2">{event.description}</p>
                       )}
                     </div>
                   );
                 })
               ) : (
-                <div className="text-center py-8 text-gray-400 text-sm">등록된 일정이 없습니다.</div>
+                <div className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm">등록된 일정이 없습니다.</div>
               )}
             </div>
 
-            <button className="w-full mt-4 py-2 text-sm text-indigo-600 font-medium border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors flex-shrink-0">
+            <button className="w-full mt-4 py-2 text-sm text-indigo-600 dark:text-indigo-300 font-medium border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition-colors flex-shrink-0">
               일정 전체 다운로드
             </button>
           </div>
@@ -2981,15 +2981,15 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500 w-4 h-4" />
             <input
               type="text"
               placeholder="클라이언트 검색..."
               value={clientSearchQuery}
               onChange={(e) => setClientSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64"
+              className="pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -3008,8 +3008,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="hidden md:flex bg-gray-50 border-b border-gray-200 px-6 py-3 text-xs font-semibold text-gray-500 uppercase">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="hidden md:flex bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 px-6 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">
             <div className="flex-1">클라이언트 / 업종</div>
             <div className="w-40">담당자</div>
             <div className="w-32">상태</div>
@@ -3050,7 +3050,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   return (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-xs font-bold text-gray-400 uppercase">담당자</h4>
+                        <h4 className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase">담당자</h4>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -3069,7 +3069,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             value={workerSearchQuery}
                             onChange={(e) => setWorkerSearchQuery(e.target.value)}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
                         </div>
                       )}
@@ -3077,13 +3077,13 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         filteredWorkers.map((worker: any) => (
                           <div
                             key={worker.id}
-                            className="flex items-center justify-between p-2 bg-white rounded border border-gray-200"
+                            className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700"
                           >
                             <div className="flex-1">
                               <div className="text-sm font-medium text-gray-900">
                                 {worker.name_ko}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-slate-400">
                                 {worker.phone && <span>{worker.phone}</span>}
                                 {worker.phone && worker.email && <span className="mx-1">•</span>}
                                 {worker.email && <span>{worker.email}</span>}
@@ -3095,7 +3095,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                   e.stopPropagation();
                                   setEditClientWorkerModalOpen({ companyId: client.id, workerId: worker.id });
                                 }}
-                                className="p-1 text-gray-400 hover:text-indigo-600"
+                                className="p-1 text-gray-400 dark:text-slate-500 hover:text-indigo-600"
                               >
                                 <Edit3 className="w-3 h-3" />
                               </button>
@@ -3104,7 +3104,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                   e.stopPropagation();
                                   setDeleteClientWorkerId(worker.id);
                                 }}
-                                className="p-1 text-gray-400 hover:text-red-600"
+                                className="p-1 text-gray-400 dark:text-slate-500 hover:text-red-600"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -3112,7 +3112,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           </div>
                         ))
                       ) : (
-                        <div className="text-xs text-gray-400 py-2">
+                        <div className="text-xs text-gray-400 dark:text-slate-500 py-2">
                           {workerSearchQuery ? '검색 결과가 없습니다.' : '등록된 담당자가 없습니다.'}
                         </div>
                       )}
@@ -3125,8 +3125,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     <div
                       onClick={() => toggleExpand(client.id)}
                       className={cn(
-                        'px-6 py-4 flex flex-col md:flex-row md:items-center cursor-pointer hover:bg-gray-50 transition-colors',
-                        expandedId === client.id ? 'bg-gray-50' : ''
+                        'px-6 py-4 flex flex-col md:flex-row md:items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 transition-colors',
+                        expandedId === client.id ? 'bg-gray-50 dark:bg-slate-900' : ''
                       )}
                     >
                       <div className="flex-1 flex items-center">
@@ -3135,12 +3135,12 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         </div>
                         <div>
                           <h3 className="font-bold text-gray-900">{(client as any).company_name_ko || (client as any).company_name_en || '-'}</h3>
-                          <p className="text-xs text-gray-500">{client.industry || '-'}</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400">{client.industry || '-'}</p>
                         </div>
                       </div>
 
-                      <div className="mt-2 md:mt-0 w-full md:w-40 text-sm text-gray-600 flex items-center">
-                        <User className="w-3 h-3 mr-2 text-gray-400" />{' '}
+                      <div className="mt-2 md:mt-0 w-full md:w-40 text-sm text-gray-600 dark:text-slate-300 flex items-center">
+                        <User className="w-3 h-3 mr-2 text-gray-400 dark:text-slate-500" />{' '}
                         {(client as any).representative_name || '-'}
                       </div>
 
@@ -3150,35 +3150,35 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
                       <div className="hidden md:flex w-10 justify-end">
                         {expandedId === client.id ? (
-                          <ChevronUp className="w-5 h-5 text-gray-400" />
+                          <ChevronUp className="w-5 h-5 text-gray-400 dark:text-slate-500" />
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-400" />
+                          <ChevronDown className="w-5 h-5 text-gray-400 dark:text-slate-500" />
                         )}
                       </div>
                     </div>
 
                     {expandedId === client.id && (
-                      <div className="px-6 pb-6 pt-2 bg-gray-50 border-t border-gray-100 animate-fade-in">
+                      <div className="px-6 pb-6 pt-2 bg-gray-50 dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700 animate-fade-in">
                         <div className="ml-0 md:ml-14 grid grid-cols-1 md:grid-cols-3 gap-6">
                           <div className="space-y-2">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">
+                            <h4 className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase mb-2">
                               회사 정보
                             </h4>
                             {(client as any).business_registration_number && (
-                              <div className="flex items-center text-sm text-gray-700">
-                                <span className="text-gray-500 mr-2">사업자등록번호:</span>
+                              <div className="flex items-center text-sm text-gray-700 dark:text-slate-300">
+                                <span className="text-gray-500 dark:text-slate-400 mr-2">사업자등록번호:</span>
                                 {(client as any).business_registration_number}
                               </div>
                             )}
                             {(client as any).representative_name && (
-                              <div className="flex items-center text-sm text-gray-700">
-                                <span className="text-gray-500 mr-2">대표자:</span>
+                              <div className="flex items-center text-sm text-gray-700 dark:text-slate-300">
+                                <span className="text-gray-500 dark:text-slate-400 mr-2">대표자:</span>
                                 {(client as any).representative_name}
                               </div>
                             )}
                             {client.last_meeting_date && (
-                              <div className="flex items-center text-sm text-gray-700">
-                                <span className="text-gray-500 mr-2">최근 미팅:</span>
+                              <div className="flex items-center text-sm text-gray-700 dark:text-slate-300">
+                                <span className="text-gray-500 dark:text-slate-400 mr-2">최근 미팅:</span>
                                 {client.last_meeting_date}
                               </div>
                             )}
@@ -3186,15 +3186,15 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           </div>
 
                           <div className="space-y-2">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">
+                            <h4 className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase mb-2">
                               거래 현황
                             </h4>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">진행 프로젝트</span>
+                              <span className="text-gray-500 dark:text-slate-400">진행 프로젝트</span>
                               <span className="font-bold">{clientProjects.length} 건</span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">총 매출액</span>
+                              <span className="text-gray-500 dark:text-slate-400">총 매출액</span>
                               <span className="font-bold text-indigo-600">
                                 {formatCurrency(totalSpent)}
                               </span>
@@ -3207,7 +3207,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                 e.stopPropagation();
                                 setEditClientModalOpen(client);
                               }}
-                              className="w-full md:w-auto px-4 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-100 transition-colors text-gray-700"
+                              className="w-full md:w-auto px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded text-sm hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-gray-700 dark:text-slate-300"
                             >
                               정보 수정
                             </button>
@@ -3237,7 +3237,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 );
               })
             ) : (
-              <div className="px-6 py-12 text-center text-gray-400">
+              <div className="px-6 py-12 text-center text-gray-400 dark:text-slate-500">
                 {clientSearchQuery ? '검색 결과가 없습니다.' : '등록된 클라이언트가 없습니다.'}
               </div>
             )}
@@ -3301,9 +3301,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex flex-col gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex flex-col gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm shrink-0">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-gray-800">업무 현황 (Kanban)</h2>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-slate-200">업무 현황 (Kanban)</h2>
             <div className="flex space-x-2">
               <button
                 onClick={() => setTaskModalOpen(true)}
@@ -3317,15 +3317,15 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           {/* 필터 UI */}
           <div className="flex flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <span className="text-xs font-medium text-gray-600">채널:</span>
+              <Filter className="w-4 h-4 text-gray-500 dark:text-slate-400" />
+              <span className="text-xs font-medium text-gray-600 dark:text-slate-300">채널:</span>
             </div>
             <button
               onClick={() => setTaskChannelFilter('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 taskChannelFilter === 'all'
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
               }`}
             >
               전체
@@ -3335,7 +3335,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
                 taskChannelFilter === 'external'
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
               }`}
             >
               <Briefcase className="w-3 h-3" /> 외주
@@ -3347,20 +3347,20 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   taskChannelFilter === String(channel.id)
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 {channel.name}
               </button>
             ))}
-            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
-              <span className="text-xs font-medium text-gray-600">담당자:</span>
+            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300 dark:border-slate-700">
+              <span className="text-xs font-medium text-gray-600 dark:text-slate-300">담당자:</span>
               <button
                 onClick={() => setTaskAssigneeFilter('all')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   taskAssigneeFilter === 'all'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 전체
@@ -3370,7 +3370,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   taskAssigneeFilter === 'my'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 내 업무만
@@ -3380,7 +3380,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   taskAssigneeFilter === 'unassigned'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 담당자 미지정
@@ -3394,11 +3394,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             {kanbanColumns.map((column) => (
               <div
                 key={column.id}
-                className="flex-1 flex flex-col bg-slate-100 rounded-xl min-w-[320px] max-w-md shrink-0"
+                className="flex-1 flex flex-col bg-slate-100 dark:bg-slate-800 rounded-xl min-w-[320px] max-w-md shrink-0"
               >
-                <div className="p-3 font-semibold text-gray-700 flex justify-between items-center border-b border-slate-200/50">
+                <div className="p-3 font-semibold text-gray-700 dark:text-slate-300 flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50">
                   {column.title}
-                  <span className="bg-slate-200 text-xs px-2 py-0.5 rounded-full text-slate-600">
+                  <span className="bg-slate-200 text-xs px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">
                     {column.items.length}
                   </span>
                 </div>
@@ -3406,7 +3406,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   {column.items.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                      className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer"
                       onClick={() => setEditTaskModalOpen(item)}
                     >
                       <div className="flex justify-between items-start mb-2">
@@ -3432,11 +3432,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                               e.stopPropagation();
                               setEditTaskModalOpen(item);
                             }}
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300"
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
-                          <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg z-10 opacity-0 group-hover/menu:opacity-100 transition-opacity pointer-events-none group-hover/menu:pointer-events-auto min-w-[120px]">
+                          <div className="absolute right-0 top-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-10 opacity-0 group-hover/menu:opacity-100 transition-opacity pointer-events-none group-hover/menu:pointer-events-auto min-w-[120px]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -3451,7 +3451,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                   data: { status: newStatus === 'in-progress' ? 'in_progress' : newStatus } as any,
                                 });
                               }}
-                              className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                              className="block w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 rounded-t-lg"
                             >
                               상태 변경
                             </button>
@@ -3467,7 +3467,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           </div>
                         </div>
                       </div>
-                      <h4 className="text-sm font-semibold text-gray-800 mb-2 leading-snug">
+                      <h4 className="text-sm font-semibold text-gray-800 dark:text-slate-200 mb-2 leading-snug">
                         {item.title}
                       </h4>
                       
@@ -3488,10 +3488,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] font-bold text-indigo-700">
                             {item.assignee?.charAt(0) || '?'}
                           </div>
-                          <span className="text-xs text-gray-500">{item.assignee || '미지정'}</span>
+                          <span className="text-xs text-gray-500 dark:text-slate-400">{item.assignee || '미지정'}</span>
                         </div>
                         {(item as any).tag && (
-                          <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-900 px-1.5 py-0.5 rounded">
                             {(item as any).tag}
                           </span>
                         )}
@@ -3499,14 +3499,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       
                       {/* 마감일 표시 */}
                       {item.dueDate && (
-                        <div className="flex items-center text-xs text-gray-400 mt-2">
+                        <div className="flex items-center text-xs text-gray-400 dark:text-slate-500 mt-2">
                           <Clock className="w-3 h-3 mr-1" />
                           <span>{new Date(item.dueDate).toLocaleDateString('ko-KR')}</span>
                         </div>
                       )}
                     </div>
                   ))}
-                  <button className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-slate-200/50 rounded-lg dashed border border-transparent hover:border-slate-300 transition-all flex items-center justify-center">
+                  <button className="w-full py-2 text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300 hover:bg-slate-200/50 rounded-lg dashed border border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all flex items-center justify-center">
                     <Plus className="w-3 h-3 mr-1" /> 카드 추가
                   </button>
                 </div>
@@ -3554,17 +3554,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
     if (selectedManual) {
       return (
-        <div className="h-full flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-white">
+        <div className="h-full flex flex-col bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex justify-between items-start bg-white dark:bg-slate-800">
             <div>
-              <div className="flex items-center space-x-2 text-xs text-gray-500 mb-3">
+              <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-slate-400 mb-3">
                 <FolderOpen className="w-3 h-3" />
                 <span>Wiki</span>
                 <ChevronRight className="w-3 h-3" />
                 <span>{selectedManual.category}</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{selectedManual.title}</h1>
-              <div className="flex items-center space-x-4 text-xs text-gray-500">
+              <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-slate-400">
                 {selectedManual.author_name && (
                   <div className="flex items-center">
                     <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700 mr-2">
@@ -3582,33 +3582,33 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             <div className="flex space-x-2">
               <button
                 onClick={() => setViewManualId(null)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
                 title="목록으로"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
                 title="공유"
               >
                 <Share2 className="w-4 h-4" />
               </button>
               <button
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
                 title="인쇄"
               >
                 <Printer className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setEditManualModalOpen(selectedManual)}
-                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                className="p-2 text-gray-400 dark:text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
                 title="수정"
               >
                 <Edit3 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setDeleteManualId(selectedManual.id)}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
                 title="삭제"
               >
                 <Trash2 className="w-4 h-4" />
@@ -3616,15 +3616,15 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-white">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-white dark:bg-slate-800">
             <div className="max-w-3xl mx-auto space-y-6">
               {typeof selectedManual.content === 'string' ? (
                 selectedManual.content ? (
-                  <div className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+                  <div className="text-gray-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                     {selectedManual.content}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-gray-400">
+                  <div className="text-center py-12 text-gray-400 dark:text-slate-500">
                     문서 내용이 없습니다.
                   </div>
                 )
@@ -3635,20 +3635,20 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       return (
                         <h2
                           key={idx}
-                          className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2 mt-6 mb-3"
+                          className="text-lg font-bold text-gray-800 dark:text-slate-200 border-b border-gray-200 dark:border-slate-700 pb-2 mt-6 mb-3"
                         >
                           {block.text}
                         </h2>
                       );
                     case 'text':
                       return (
-                        <p key={idx} className="text-gray-600 leading-relaxed text-sm">
+                        <p key={idx} className="text-gray-600 dark:text-slate-300 leading-relaxed text-sm">
                           {block.text}
                         </p>
                       );
                     case 'bullet':
                       return (
-                        <div key={idx} className="flex items-start text-sm text-gray-600 pl-2">
+                        <div key={idx} className="flex items-start text-sm text-gray-600 dark:text-slate-300 pl-2">
                           <span className="mr-2 mt-1.5 w-1.5 h-1.5 bg-gray-400 rounded-full shrink-0"></span>
                           <span>{block.text}</span>
                         </div>
@@ -3657,12 +3657,12 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       return (
                         <div
                           key={idx}
-                          className="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-100"
+                          className="flex items-start p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700"
                         >
                           <div className="mt-0.5 mr-3 text-indigo-500">
                             <CheckCircle2 className="w-4 h-4" />
                           </div>
-                          <span className="text-sm text-gray-700 font-medium">{block.text}</span>
+                          <span className="text-sm text-gray-700 dark:text-slate-300 font-medium">{block.text}</span>
                         </div>
                       );
                     case 'alert':
@@ -3677,9 +3677,9 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       );
                     case 'step':
                       return (
-                        <div key={idx} className="flex items-center text-sm text-gray-600 pl-2">
+                        <div key={idx} className="flex items-center text-sm text-gray-600 dark:text-slate-300 pl-2">
                           <span className="mr-3 font-bold text-indigo-200 text-lg">{idx + 1}</span>
-                          <span className="font-medium text-gray-800">{block.text}</span>
+                          <span className="font-medium text-gray-800 dark:text-slate-200">{block.text}</span>
                         </div>
                       );
                     default:
@@ -3687,7 +3687,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   }
                 })
               ) : (
-                <div className="text-center py-12 text-gray-400">
+                <div className="text-center py-12 text-gray-400 dark:text-slate-500">
                   문서 내용이 없습니다.
                 </div>
               )}
@@ -3716,17 +3716,17 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
         case 'HR':
           return 'bg-green-50 text-green-600';
         default:
-          return 'bg-gray-100 text-gray-600';
+          return 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300';
       }
     };
 
     return (
       <div className="h-full flex gap-6 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-72 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col shrink-0 overflow-hidden">
+        <div className="w-72 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col shrink-0 overflow-hidden">
           <div className="mb-4 px-2 pt-4">
             <h2 className="text-2xl font-black text-gray-900">지식 관리</h2>
-            <p className="text-xs text-gray-500 font-medium">SOP & Wiki Library</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">SOP & Wiki Library</p>
           </div>
           <div className="px-3 space-y-2 flex-1 overflow-y-auto">
             {categories.map(cat => {
@@ -3738,10 +3738,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all w-full ${
                     activeCategory === cat.id 
                     ? 'bg-gray-900 text-white shadow-lg' 
-                    : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+                    : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 border border-gray-100 dark:border-slate-700'
                   }`}
                 >
-                  <Icon size={16} className={activeCategory === cat.id ? 'text-red-500' : 'text-gray-400'}/>
+                  <Icon size={16} className={activeCategory === cat.id ? 'text-red-500' : 'text-gray-400 dark:text-slate-500'}/>
                   {cat.label}
                 </button>
               )
@@ -3749,29 +3749,29 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
           <div className="mt-auto p-4 bg-red-50 rounded-2xl border border-red-100 mx-3 mb-3">
             <p className="text-xs font-bold text-red-600 mb-2">Notice</p>
-            <p className="text-[10px] text-gray-600 leading-relaxed">
+            <p className="text-[10px] text-gray-600 dark:text-slate-300 leading-relaxed">
               매뉴얼 업데이트 시<br/> 반드시 <b>팀장 승인</b> 후<br/> 게시 바랍니다.
             </p>
           </div>
         </div>
         
         {/* Main Content */}
-        <div className="flex-1 flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-500">카테고리:</span>
+              <span className="text-sm font-bold text-gray-500 dark:text-slate-400">카테고리:</span>
               <span className="text-sm font-black text-gray-900">{categories.find(c => c.id === activeCategory)?.label}</span>
-              <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-bold ml-2">{filteredManuals.length}</span>
+              <span className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-0.5 rounded-full font-bold ml-2">{filteredManuals.length}</span>
             </div>
             <div className="flex gap-2">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14}/>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" size={14}/>
                 <input 
                   type="text" 
                   placeholder="매뉴얼 검색..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium w-64 focus:outline-none focus:border-red-500 transition-colors"
+                  className="pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium w-64 focus:outline-none focus:border-red-500 transition-colors"
                 />
               </div>
               <button 
@@ -3783,12 +3783,12 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-white">
+          <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-800">
             {filteredManuals.length > 0 ? (
               <div className="min-w-full inline-block align-middle">
-                <div className="border-b border-gray-100">
+                <div className="border-b border-gray-100 dark:border-slate-700">
                   {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 dark:bg-slate-900 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">
                     <div className="col-span-6">Title</div>
                     <div className="col-span-2">Category</div>
                     <div className="col-span-2">Author</div>
@@ -3809,12 +3809,12 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                         className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-red-50/30 cursor-pointer transition-colors group"
                       >
                         <div className="col-span-6 flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-gray-50 text-gray-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors">
+                          <div className="p-2 rounded-lg bg-gray-50 dark:bg-slate-900 text-gray-400 dark:text-slate-500 group-hover:text-red-500 group-hover:bg-red-50 transition-colors">
                             <BookOpen size={16}/>
                           </div>
                           <div>
-                            <h4 className="text-sm font-bold text-gray-800 group-hover:text-red-600 transition-colors">{manual.title}</h4>
-                            <p className="text-[10px] text-gray-400 truncate mt-0.5">{contentPreview}</p>
+                            <h4 className="text-sm font-bold text-gray-800 dark:text-slate-200 group-hover:text-red-600 transition-colors">{manual.title}</h4>
+                            <p className="text-[10px] text-gray-400 dark:text-slate-500 truncate mt-0.5">{contentPreview}</p>
                           </div>
                         </div>
                         <div className="col-span-2">
@@ -3822,10 +3822,10 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             {getCategoryLabel(manual.category)}
                           </span>
                         </div>
-                        <div className="col-span-2 text-xs font-medium text-gray-600">
+                        <div className="col-span-2 text-xs font-medium text-gray-600 dark:text-slate-300">
                           {manual.author_name || '-'}
                         </div>
-                        <div className="col-span-2 text-right text-[10px] text-gray-400 font-mono">
+                        <div className="col-span-2 text-right text-[10px] text-gray-400 dark:text-slate-500 font-mono">
                           {new Date(manual.updated_at).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '')}
                         </div>
                       </div>
@@ -3834,7 +3834,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-slate-500">
                 <BookOpen size={48} className="opacity-20 mb-4"/>
                 <p className="text-sm font-bold">등록된 매뉴얼이 없습니다.</p>
                 <p className="text-xs">새로운 매뉴얼을 작성하여 지식을 공유하세요.</p>
@@ -3874,7 +3874,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   };
 
   return (
-    <div className="flex h-full bg-gray-50 font-sans text-gray-900 overflow-hidden">
+    <div className="flex h-full bg-gray-50 dark:bg-slate-900 font-sans text-gray-900 overflow-hidden">
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl flex-shrink-0 z-20">
         <div className="p-6 flex items-center space-x-2 border-b border-slate-800 h-16">
           <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -3904,7 +3904,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 'w-full flex items-center px-3 py-3 rounded-lg transition-all duration-200 group relative',
                 activeTab === item.id
                   ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  : 'text-slate-400 dark:text-slate-500 hover:bg-slate-800 hover:text-white'
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0 mr-3" />
@@ -3914,14 +3914,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
         </nav>
         <div className="mt-auto p-6 pt-0">
           <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-4">
-            <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500">
+            <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500 dark:text-slate-400 dark:text-slate-500">
               Signed in as
             </p>
             <p className="text-sm font-semibold text-blue-100">
               {user?.profile?.name || user?.email || '사용자'}
             </p>
             {user?.profile?.position && (
-              <p className="mt-1 text-[10px] text-slate-400">{user.profile.position}</p>
+              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">{user.profile.position}</p>
             )}
           </div>
           <button
@@ -3935,25 +3935,25 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
       </aside>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
-        <header className="bg-white border-b border-gray-200 shadow-sm z-10">
+        <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shadow-sm z-10">
           <div className="h-16 flex items-center justify-between px-4 lg:px-8">
             <div className="flex items-center">
-              <h2 className="text-xl font-bold text-gray-800 capitalize hidden sm:block">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-slate-200 capitalize hidden sm:block">
                 {menuItems.find((m) => m.id === activeTab)?.label}
               </h2>
             </div>
 
             <div className="flex items-center space-x-4 lg:space-x-6">
               <div className="relative hidden sm:block">
-                <Search className="w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer transition-colors" />
+                <Search className="w-5 h-5 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300 cursor-pointer transition-colors" />
               </div>
               <div className="relative">
-                <Bell className="w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer transition-colors" />
+                <Bell className="w-5 h-5 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:text-slate-300 cursor-pointer transition-colors" />
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-100 px-4 lg:px-8 py-3">
+          <div className="border-t border-gray-100 dark:border-slate-700 px-4 lg:px-8 py-3">
             <div className="flex flex-col gap-3">
               {/* Period type buttons */}
               <div className="flex items-center gap-2">
@@ -3963,7 +3963,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'month'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   월별
@@ -3974,7 +3974,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'quarter'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   분기별
@@ -3985,7 +3985,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'year'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   연도별
@@ -3996,7 +3996,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'custom'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   직접선택
@@ -4007,7 +4007,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'all'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   전체 기간
@@ -4017,11 +4017,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               {/* Conditional selection UI */}
               {periodType === 'year' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600">연도:</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">연도:</label>
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {yearOptions.map((year) => (
                       <option key={year} value={year}>
@@ -4035,11 +4035,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               {periodType === 'quarter' && (
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-slate-600">연도:</label>
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">연도:</label>
                     <select
                       value={selectedQuarterYear}
                       onChange={(e) => setSelectedQuarterYear(Number(e.target.value))}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {yearOptions.map((year) => (
                         <option key={year} value={year}>
@@ -4049,11 +4049,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     </select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-slate-600">분기:</label>
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">분기:</label>
                     <select
                       value={selectedQuarter}
                       onChange={(e) => setSelectedQuarter(Number(e.target.value))}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value={1}>1분기 (1-3월)</option>
                       <option value={2}>2분기 (4-6월)</option>
@@ -4066,11 +4066,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
               {periodType === 'month' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600">월:</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">월:</label>
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                       <option key={month} value={month}>
@@ -4081,7 +4081,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {yearOptions.map((year) => (
                       <option key={year} value={year}>
@@ -4094,19 +4094,19 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
               {periodType === 'custom' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600">시작일:</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">시작일:</label>
                   <input
                     type="date"
                     value={customRange.start ?? ''}
                     onChange={(e) => handleDateChange('start', e.target.value)}
-                    className="rounded-lg border border-slate-200 px-2 py-1.5 text-[11px]"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-[11px]"
                   />
-                  <label className="text-[11px] font-semibold text-slate-600">종료일:</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">종료일:</label>
                   <input
                     type="date"
                     value={customRange.end ?? ''}
                     onChange={(e) => handleDateChange('end', e.target.value)}
-                    className="rounded-lg border border-slate-200 px-2 py-1.5 text-[11px]"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-[11px]"
                   />
                 </div>
               )}
@@ -4114,7 +4114,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-gray-50 p-4 lg:p-8">
+        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 p-4 lg:p-8">
           <div className="max-w-7xl mx-auto h-full">{renderView()}</div>
         </main>
       </div>
@@ -4958,12 +4958,12 @@ function ModalShell({
 }) {
   return (
     <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-      <div className="w-full max-w-2xl max-h-[90vh] rounded-2xl bg-white shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 flex-shrink-0">
-          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+      <div className="w-full max-w-2xl max-h-[90vh] rounded-2xl bg-white dark:bg-slate-800 shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 dark:bg-slate-900/50 px-6 py-4 flex-shrink-0">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{title}</h3>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:text-slate-700"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-700"
           >
             <X className="h-4 w-4" />
           </button>
@@ -4972,7 +4972,7 @@ function ModalShell({
           <div className="space-y-4 px-6 py-5">{children}</div>
         </div>
         {actions && (
-          <div className="flex-shrink-0 border-t border-slate-100 bg-white">
+          <div className="flex-shrink-0 border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800">
             {actions}
           </div>
         )}
@@ -4998,9 +4998,9 @@ function InputField({
 }) {
   if (type === 'date') {
     return (
-      <label className="space-y-1 text-sm font-semibold text-slate-700">
+      <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">{label}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
           {!disabled && (
             <button
               type="button"
@@ -5008,8 +5008,8 @@ function InputField({
               className={cn(
                 'text-[10px] font-semibold px-2 py-0.5 rounded transition',
                 value === ''
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300'
+                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               )}
             >
               미정
@@ -5022,7 +5022,7 @@ function InputField({
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30 disabled:bg-gray-100 dark:bg-slate-800 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
         />
       </label>
     );
@@ -5030,30 +5030,30 @@ function InputField({
 
   if (type === 'textarea') {
     return (
-      <label className="space-y-1 text-sm font-semibold text-slate-700">
-        <span className="text-xs text-slate-500">{label}</span>
+      <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{label}</span>
         <textarea
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           rows={4}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30 disabled:bg-gray-100 dark:bg-slate-800 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
         />
       </label>
     );
   }
 
   return (
-    <label className="space-y-1 text-sm font-semibold text-slate-700">
-      <span className="text-xs text-slate-500">{label}</span>
+    <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+      <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{label}</span>
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30 disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
       />
     </label>
   );
@@ -5071,12 +5071,12 @@ function SelectField({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="space-y-1 text-sm font-semibold text-slate-700">
-      <span className="text-xs text-slate-500">{label}</span>
+    <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+      <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{label}</span>
       <select
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -5101,7 +5101,7 @@ function ModalActions({
     <div className="flex items-center justify-end gap-2 px-6 py-4">
       <button
         onClick={onClose}
-        className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+        className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-900"
       >
         닫기
       </button>
@@ -5128,17 +5128,17 @@ function DeleteConfirmModal({
 }) {
   return (
     <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
         </div>
         <div className="px-6 py-4">
-          <p className="text-sm text-slate-600">{message}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
         </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100 dark:border-slate-700">
           <button
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-900"
           >
             취소
           </button>
@@ -5261,15 +5261,15 @@ function CreateProjectModal({
     >
       {/* 프로젝트 타입 선택 */}
       <div className="mb-6">
-        <label className="text-xs font-semibold text-slate-500 mb-2 block">프로젝트 유형</label>
-        <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 mb-2 block">프로젝트 유형</label>
+        <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
           <button
             type="button"
             onClick={() => setForm((prev) => ({ ...prev, projectType: 'channel', channel_id: '' }))}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
               form.projectType === 'channel'
-                ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
-                : 'text-gray-400 hover:bg-gray-200'
+                ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
+                : 'text-gray-400 dark:text-slate-500 hover:bg-gray-200 dark:bg-slate-700'
             }`}
           >
             <Youtube className="w-4 h-4" />
@@ -5280,8 +5280,8 @@ function CreateProjectModal({
             onClick={() => setForm((prev) => ({ ...prev, projectType: 'external', channel_id: '' }))}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
               form.projectType === 'external'
-                ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
-                : 'text-gray-400 hover:bg-gray-200'
+                ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
+                : 'text-gray-400 dark:text-slate-500 hover:bg-gray-200 dark:bg-slate-700'
             }`}
           >
             <Briefcase className="w-4 h-4" />
@@ -5341,7 +5341,7 @@ function CreateProjectModal({
                   <button
                     type="button"
                     onClick={() => onOpenEditClientModal(selectedClient)}
-                    className="px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1"
+                    className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-900 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1"
                   >
                     <Edit3 className="w-3 h-3" />
                     수정
@@ -5410,11 +5410,11 @@ function CreateProjectModal({
         />
       </div>
       {/* 진행 단계 설정 */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+        <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
           <Settings className="w-4 h-4" /> 진행 단계 설정
         </h3>
-        <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+        <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
           {[
             { id: 'plan' as ProjectStep, label: '기획' },
             { id: 'script' as ProjectStep, label: '대본' },
@@ -5429,8 +5429,8 @@ function CreateProjectModal({
                 onClick={() => toggleStep(step.id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
                   isActive
-                    ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
-                    : 'text-gray-400 hover:bg-gray-200'
+                    ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
+                    : 'text-gray-400 dark:text-slate-500 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 {isActive ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <X className="w-4 h-4" />}
@@ -5443,8 +5443,8 @@ function CreateProjectModal({
 
       {/* 주요 일정 관리 */}
       {form.active_steps && form.active_steps.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+          <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
             <CalendarIcon className="w-4 h-4" /> 주요 일정 관리
           </h3>
           <div className="grid grid-cols-2 gap-4">
@@ -5816,13 +5816,13 @@ function ProjectDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-bold text-gray-800">프로젝트 상세 정보</h2>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white dark:bg-slate-800 z-10">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-slate-200">프로젝트 상세 정보</h2>
           <div className="flex gap-2">
             <button
               onClick={onEdit}
-              className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+              className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-200 dark:bg-slate-700 flex items-center gap-2"
             >
               <Edit3 size={14} /> 수정
             </button>
@@ -5832,11 +5832,11 @@ function ProjectDetailModal({
                   onDelete(project.id);
                 }
               }}
-              className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 flex items-center gap-2"
+              className="px-3 py-1.5 text-sm bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/70 flex items-center gap-2"
             >
               <Trash2 size={14} /> 삭제
             </button>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -5853,12 +5853,12 @@ function ProjectDetailModal({
                     {projectChannel?.name || project.cat || '채널'}
                   </span>
                 )}
-                <span className="text-sm text-gray-500">ID: #{project.id}</span>
+                <span className="text-sm text-gray-500 dark:text-slate-400">ID: #{project.id}</span>
               </div>
               
               {isExternal && projectClient && (
                 <div className="mb-2">
-                  <label className="text-[10px] uppercase text-gray-500 font-bold">Client</label>
+                  <label className="text-[10px] uppercase text-gray-500 dark:text-slate-400 font-bold">Client</label>
                   <input
                     type="text"
                     value={projectClient.company_name_ko || projectClient.company_name_en || ''}
@@ -5878,11 +5878,11 @@ function ProjectDetailModal({
             </div>
 
             {/* Status & Dates */}
-            <div className="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div className="grid grid-cols-2 gap-6 bg-gray-50 dark:bg-slate-900 p-4 rounded-xl border border-gray-200 dark:border-slate-700">
               <div>
-                <label className="text-xs font-bold text-gray-500 block mb-2 uppercase">현재 상태</label>
+                <label className="text-xs font-bold text-gray-500 dark:text-slate-400 block mb-2 uppercase">현재 상태</label>
                 <select
-                  className="w-full bg-white border border-gray-300 text-sm rounded-lg p-2.5"
+                  className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-sm rounded-lg p-2.5"
                   value={localProject.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
                 >
@@ -5894,8 +5894,8 @@ function ProjectDetailModal({
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 block mb-2 uppercase">PM / 감독</label>
-                <div className="text-sm text-gray-700">
+                <label className="text-xs font-bold text-gray-500 dark:text-slate-400 block mb-2 uppercase">PM / 감독</label>
+                <div className="text-sm text-gray-700 dark:text-slate-300">
                   {(localProject as any).pm_name || '-'}
                 </div>
               </div>
@@ -5903,10 +5903,10 @@ function ProjectDetailModal({
 
             {/* Step Configuration */}
             <div>
-              <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+              <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
                 <Settings size={18} /> 진행 단계 설정 (Step Config)
               </h3>
-              <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+              <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
                 {[
                   { id: 'plan' as ProjectStep, label: '기획' },
                   { id: 'script' as ProjectStep, label: '대본' },
@@ -5920,8 +5920,8 @@ function ProjectDetailModal({
                       onClick={() => toggleStep(step.id)}
                       className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
                         isActive
-                          ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
-                          : 'text-gray-400 hover:bg-gray-200'
+                          ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
+                          : 'text-gray-400 dark:text-slate-500 hover:bg-gray-200 dark:bg-slate-700'
                       }`}
                     >
                       {isActive ? <CheckSquare size={16} className="text-blue-600" /> : <X size={16} />}
@@ -5935,7 +5935,7 @@ function ProjectDetailModal({
             {/* Tasks Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2">
                   <CheckSquare size={18} /> 할 일 및 업무 분장 (Tasks)
                 </h3>
                 <div className="flex gap-2">
@@ -5945,7 +5945,7 @@ function ProjectDetailModal({
                     onChange={(e) => setNewTaskTitle(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
                     placeholder="새 할일 입력..."
-                    className="text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="text-xs border border-gray-200 dark:border-slate-700 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                   <button
                     onClick={handleAddTask}
@@ -5956,10 +5956,10 @@ function ProjectDetailModal({
                 </div>
               </div>
               
-              <div className="bg-white border rounded-xl overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 border rounded-xl overflow-hidden">
                 {localTasks.length > 0 ? (
                   <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 text-gray-500 font-medium">
+                    <thead className="bg-gray-50 dark:bg-slate-900 text-gray-500 dark:text-slate-400 font-medium">
                       <tr>
                         <th className="p-3 w-10"></th>
                         <th className="p-3">업무명 / 내용</th>
@@ -5973,14 +5973,14 @@ function ProjectDetailModal({
                       {localTasks.map((task) => {
                         const isCompleted = task.status === 'done';
                         return (
-                          <tr key={task.id} className="hover:bg-gray-50">
+                          <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900">
                             <td className="p-3 text-center">
                               <button
                                 onClick={() => handleTaskChange(task.id, 'status', isCompleted ? 'todo' : 'done')}
                                 className={`rounded-full w-5 h-5 flex items-center justify-center border transition-colors ${
                                   isCompleted
                                     ? 'bg-green-500 border-green-500 text-white'
-                                    : 'border-gray-300 hover:border-green-500'
+                                    : 'border-gray-300 dark:border-slate-700 hover:border-green-500'
                                 }`}
                               >
                                 {isCompleted && <CheckSquare size={12} />}
@@ -5992,7 +5992,7 @@ function ProjectDetailModal({
                                 value={task.title}
                                 onChange={(e) => handleTaskChange(task.id, 'title', e.target.value)}
                                 className={`w-full bg-transparent border-none p-0 focus:ring-0 font-medium ${
-                                  isCompleted ? 'line-through text-gray-400' : 'text-gray-800'
+                                  isCompleted ? 'line-through text-gray-400 dark:text-slate-500' : 'text-gray-800 dark:text-slate-200'
                                 }`}
                                 placeholder="업무명을 입력하세요"
                               />
@@ -6000,11 +6000,11 @@ function ProjectDetailModal({
                                 type="text"
                                 value={(task as any).description || ''}
                                 onChange={(e) => handleTaskChange(task.id, 'description', e.target.value)}
-                                className="w-full bg-transparent border-none p-0 focus:ring-0 text-xs text-gray-500 mt-0.5"
+                                className="w-full bg-transparent border-none p-0 focus:ring-0 text-xs text-gray-500 dark:text-slate-400 mt-0.5"
                                 placeholder="상세 내용을 입력하세요"
                               />
                               {(task as any).step && (task as any).step !== 'manual' && (
-                                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mt-1 inline-block">
+                                <span className="text-[10px] text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded mt-1 inline-block">
                                   {(task as any).step === 'plan' ? '기획' : (task as any).step === 'script' ? '대본' : (task as any).step === 'shoot' ? '촬영' : (task as any).step === 'edit' ? '편집' : '기타'}
                                 </span>
                               )}
@@ -6013,7 +6013,7 @@ function ProjectDetailModal({
                               <select
                                 value={task.assignee || ''}
                                 onChange={(e) => handleTaskChange(task.id, 'assignee', e.target.value)}
-                                className="w-full text-xs border-gray-200 rounded p-1.5 bg-gray-50 focus:border-blue-500"
+                                className="w-full text-xs border-gray-200 dark:border-slate-700 rounded p-1.5 bg-gray-50 dark:bg-slate-900 focus:border-blue-500"
                               >
                                 <option value="">담당자 선택</option>
                                 {allWorkers.map((w) => (
@@ -6028,7 +6028,7 @@ function ProjectDetailModal({
                                 type="date"
                                 value={task.dueDate || ''}
                                 onChange={(e) => handleTaskChange(task.id, 'dueDate', e.target.value)}
-                                className="w-full text-xs border-gray-200 rounded p-1.5 bg-gray-50 focus:border-blue-500"
+                                className="w-full text-xs border-gray-200 dark:border-slate-700 rounded p-1.5 bg-gray-50 dark:bg-slate-900 focus:border-blue-500"
                               />
                             </td>
                             <td className="p-3">
@@ -6040,7 +6040,7 @@ function ProjectDetailModal({
                                     ? 'bg-red-50 text-red-600'
                                     : (task as any).priority === 'medium'
                                       ? 'bg-yellow-50 text-yellow-600'
-                                      : 'bg-gray-100 text-gray-600'
+                                      : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300'
                                 }`}
                               >
                                 <option value="high">높음 (High)</option>
@@ -6062,7 +6062,7 @@ function ProjectDetailModal({
                     </tbody>
                   </table>
                 ) : (
-                  <div className="p-8 text-center text-gray-400 text-sm bg-gray-50">
+                  <div className="p-8 text-center text-gray-400 dark:text-slate-500 text-sm bg-gray-50 dark:bg-slate-900">
                     등록된 할일이 없습니다. <br />진행 단계를 켜거나 '할일 추가' 버튼을 눌러보세요.
                   </div>
                 )}
@@ -6071,43 +6071,43 @@ function ProjectDetailModal({
 
             {/* Timeline Grid */}
             <div className="space-y-3">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
+              <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2">
                 <CalendarIcon size={18} /> 주요 일정 관리
               </h3>
-              <div className="bg-white border rounded-xl p-4 shadow-sm">
+              <div className="bg-white dark:bg-slate-800 border rounded-xl p-4 shadow-sm">
                 <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                   {/* Left Column: Pre-production */}
                   <div className="space-y-4">
                     {localProject.active_steps?.includes('plan') && (
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">기획 확정 (D-11)</label>
+                        <label className="text-xs font-bold text-gray-500 dark:text-slate-400 block mb-1">기획 확정 (D-11)</label>
                         <input
                           type="date"
                           value={localProject.plan_date || ''}
                           onChange={(e) => handleDateChange('plan_date', e.target.value)}
-                          className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                          className="w-full text-sm border-gray-300 dark:border-slate-700 rounded-lg focus:ring-red-500 focus:border-red-500"
                         />
                       </div>
                     )}
                     {localProject.active_steps?.includes('script') && (
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">대본 확정 (D-9)</label>
+                        <label className="text-xs font-bold text-gray-500 dark:text-slate-400 block mb-1">대본 확정 (D-9)</label>
                         <input
                           type="date"
                           value={localProject.script_date || ''}
                           onChange={(e) => handleDateChange('script_date', e.target.value)}
-                          className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                          className="w-full text-sm border-gray-300 dark:border-slate-700 rounded-lg focus:ring-red-500 focus:border-red-500"
                         />
                       </div>
                     )}
                     {localProject.active_steps?.includes('shoot') && (
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">촬영 확정 (D-7)</label>
+                        <label className="text-xs font-bold text-gray-500 dark:text-slate-400 block mb-1">촬영 확정 (D-7)</label>
                         <input
                           type="date"
                           value={localProject.shoot_date || ''}
                           onChange={(e) => handleDateChange('shoot_date', e.target.value)}
-                          className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                          className="w-full text-sm border-gray-300 dark:border-slate-700 rounded-lg focus:ring-red-500 focus:border-red-500"
                         />
                       </div>
                     )}
@@ -6118,21 +6118,21 @@ function ProjectDetailModal({
                     {localProject.active_steps?.includes('edit') && (
                       <>
                         <div>
-                          <label className="text-xs font-bold text-gray-500 block mb-1">1차 편집 확정 (D-3)</label>
+                          <label className="text-xs font-bold text-gray-500 dark:text-slate-400 block mb-1">1차 편집 확정 (D-3)</label>
                           <input
                             type="date"
                             value={localProject.edit1_date || ''}
                             onChange={(e) => handleDateChange('edit1_date', e.target.value)}
-                            className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                            className="w-full text-sm border-gray-300 dark:border-slate-700 rounded-lg focus:ring-red-500 focus:border-red-500"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-gray-500 block mb-1">최종 편집 확정 (D-1)</label>
+                          <label className="text-xs font-bold text-gray-500 dark:text-slate-400 block mb-1">최종 편집 확정 (D-1)</label>
                           <input
                             type="date"
                             value={localProject.edit_final_date || ''}
                             onChange={(e) => handleDateChange('edit_final_date', e.target.value)}
-                            className="w-full text-sm border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
+                            className="w-full text-sm border-gray-300 dark:border-slate-700 rounded-lg focus:ring-red-500 focus:border-red-500"
                           />
                         </div>
                       </>
@@ -6156,59 +6156,59 @@ function ProjectDetailModal({
 
             {/* Asset Management */}
             <div className="space-y-3">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
+              <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2">
                 <FileText size={18} /> 제작 자산 관리
               </h3>
               <div className="border rounded-xl divide-y">
                 {localProject.active_steps?.includes('script') && (
-                  <div className="p-3 flex items-center justify-between hover:bg-gray-50">
+                  <div className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900">
                     <div className="flex items-center gap-3">
                       <div
                         className={`p-2 rounded-lg ${
                           localProject.assets?.script?.status === 'completed'
                             ? 'bg-green-100 text-green-600'
-                            : 'bg-gray-100 text-gray-500'
+                            : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400'
                         }`}
                       >
                         <FileText size={20} />
                       </div>
                       <div>
                         <p className="font-medium text-sm">대본 (Script)</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
                           {localProject.assets?.script?.version || '미등록'}
                           {localProject.assets?.script?.status === 'completed' && ' • 최종확인됨'}
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="text-xs bg-white border px-3 py-1.5 rounded hover:bg-gray-50">보기</button>
-                      <button className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">업로드</button>
+                      <button className="text-xs bg-white dark:bg-slate-800 border px-3 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900">보기</button>
+                      <button className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 dark:hover:bg-blue-800">업로드</button>
                     </div>
                   </div>
                 )}
 
                 {localProject.active_steps?.includes('edit') && (
-                  <div className="p-3 flex items-center justify-between hover:bg-gray-50">
+                  <div className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900">
                     <div className="flex items-center gap-3">
                       <div
                         className={`p-2 rounded-lg ${
                           localProject.assets?.video?.status === 'completed'
                             ? 'bg-green-100 text-green-600'
-                            : 'bg-gray-100 text-gray-500'
+                            : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400'
                         }`}
                       >
                         <PlayCircle size={20} />
                       </div>
                       <div>
                         <p className="font-medium text-sm">최종 편집본 (Master)</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
                           {localProject.assets?.video?.version || '편집중'}
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="text-xs bg-white border px-3 py-1.5 rounded hover:bg-gray-50">링크</button>
-                      <button className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">등록</button>
+                      <button className="text-xs bg-white dark:bg-slate-800 border px-3 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900">링크</button>
+                      <button className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 dark:hover:bg-blue-800">등록</button>
                     </div>
                   </div>
                 )}
@@ -6216,10 +6216,10 @@ function ProjectDetailModal({
             </div>
           </div>
           <div className="mt-6 pt-4 border-t flex justify-end gap-3">
-            <button onClick={onClose} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+            <button onClick={onClose} className="px-4 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-900">
               닫기
             </button>
-            <button onClick={handleSave} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">
+            <button onClick={handleSave} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 dark:hover:bg-red-800">
               변경사항 저장
             </button>
           </div>
@@ -6346,20 +6346,20 @@ function EditProjectModal({
     >
       {/* 프로젝트 타입 표시 (수정 모드에서는 읽기 전용) */}
       <div className="mb-6">
-        <label className="text-xs font-semibold text-slate-500 mb-2 block">프로젝트 유형</label>
-        <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 mb-2 block">프로젝트 유형</label>
+        <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
           <div className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold ${
             form.projectType === 'channel'
-              ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
-              : 'text-gray-400'
+              ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
+              : 'text-gray-400 dark:text-slate-500'
           }`}>
             <Youtube className="w-4 h-4" />
             채널 프로젝트
           </div>
           <div className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold ${
             form.projectType === 'external'
-              ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
-              : 'text-gray-400'
+              ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
+              : 'text-gray-400 dark:text-slate-500'
           }`}>
             <Briefcase className="w-4 h-4" />
             외주 프로젝트
@@ -6419,7 +6419,7 @@ function EditProjectModal({
                     <button
                       type="button"
                       onClick={() => onOpenEditClientModal(selectedClient)}
-                      className="px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1"
+                      className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-900 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1"
                     >
                       <Edit3 className="w-3 h-3" />
                       수정
@@ -6489,11 +6489,11 @@ function EditProjectModal({
         />
       </div>
       {/* 진행 단계 설정 */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+        <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
           <Settings className="w-4 h-4" /> 진행 단계 설정
         </h3>
-        <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+        <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
           {[
             { id: 'plan' as ProjectStep, label: '기획' },
             { id: 'script' as ProjectStep, label: '대본' },
@@ -6508,8 +6508,8 @@ function EditProjectModal({
                 onClick={() => toggleStep(step.id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
                   isActive
-                    ? 'bg-white text-gray-800 shadow-sm border border-gray-200'
-                    : 'text-gray-400 hover:bg-gray-200'
+                    ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
+                    : 'text-gray-400 dark:text-slate-500 hover:bg-gray-200 dark:bg-slate-700'
                 }`}
               >
                 {isActive ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <X className="w-4 h-4" />}
@@ -6522,8 +6522,8 @@ function EditProjectModal({
 
       {/* 주요 일정 관리 */}
       {form.active_steps && form.active_steps.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+          <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
             <CalendarIcon className="w-4 h-4" /> 주요 일정 관리
           </h3>
           <div className="grid grid-cols-2 gap-4">
@@ -6586,18 +6586,18 @@ function EditProjectModal({
 
       {/* 제작 자산 관리 */}
       {form.active_steps && form.active_steps.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+          <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
             <FileText className="w-4 h-4" /> 제작 자산 관리
           </h3>
           <div className="space-y-2">
             {form.active_steps.includes('script') && (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-gray-500" />
+                  <FileText className="w-5 h-5 text-gray-500 dark:text-slate-400" />
                   <div>
                     <p className="font-medium text-sm">대본 (Script)</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
                       {form.assets?.script?.version || '미등록'}
                       {form.assets?.script?.status === 'completed' && ' • 최종확인됨'}
                     </p>
@@ -6606,7 +6606,7 @@ function EditProjectModal({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="text-xs bg-white border px-3 py-1.5 rounded hover:bg-gray-50"
+                    className="text-xs bg-white dark:bg-slate-800 border px-3 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900"
                   >
                     보기
                   </button>
@@ -6620,12 +6620,12 @@ function EditProjectModal({
               </div>
             )}
             {form.active_steps.includes('edit') && (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <PlayCircle className="w-5 h-5 text-gray-500" />
+                  <PlayCircle className="w-5 h-5 text-gray-500 dark:text-slate-400" />
                   <div>
                     <p className="font-medium text-sm">최종 편집본 (Master)</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
                       {form.assets?.video?.version || '편집중'}
                     </p>
                   </div>
@@ -6633,7 +6633,7 @@ function EditProjectModal({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="text-xs bg-white border px-3 py-1.5 rounded hover:bg-gray-50"
+                    className="text-xs bg-white dark:bg-slate-800 border px-3 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900"
                   >
                     링크
                   </button>
@@ -7546,13 +7546,13 @@ function TaskDetailModal({
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'todo':
-        return 'bg-gray-100 text-gray-600';
+        return 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300';
       case 'in-progress':
         return 'bg-blue-100 text-blue-600';
       case 'done':
         return 'bg-green-100 text-green-600';
       default:
-        return 'bg-gray-100 text-gray-600';
+        return 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300';
     }
   };
 
@@ -7578,7 +7578,7 @@ function TaskDetailModal({
       case 'low':
         return 'bg-green-50 text-green-600 border-green-100';
       default:
-        return 'bg-gray-50 text-gray-600 border-gray-100';
+        return 'bg-gray-50 dark:bg-slate-900 text-gray-600 dark:text-slate-300 border-gray-100 dark:border-slate-700';
     }
   };
 
@@ -7600,34 +7600,34 @@ function TaskDetailModal({
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">제목</label>
-            <p className="text-sm font-medium text-gray-800">{task.title}</p>
+            <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1 block">제목</label>
+            <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{task.title}</p>
           </div>
 
           {relatedProject && (
             <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">프로젝트</label>
-              <p className="text-sm text-gray-800">{relatedProject.name}</p>
+              <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1 block">프로젝트</label>
+              <p className="text-sm text-gray-800 dark:text-slate-200">{relatedProject.name}</p>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             {task.assignee && (
               <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">담당자</label>
+                <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1 block">담당자</label>
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-gray-800">{task.assignee}</p>
+                  <User className="w-4 h-4 text-gray-400 dark:text-slate-500" />
+                  <p className="text-sm text-gray-800 dark:text-slate-200">{task.assignee}</p>
                 </div>
               </div>
             )}
 
             {task.dueDate && (
               <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">마감일</label>
+                <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1 block">마감일</label>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-gray-400" />
-                  <p className={cn('text-sm', isOverdue ? 'text-red-600 font-semibold' : 'text-gray-800')}>
+                  <Clock className="w-4 h-4 text-gray-400 dark:text-slate-500" />
+                  <p className={cn('text-sm', isOverdue ? 'text-red-600 font-semibold' : 'text-gray-800 dark:text-slate-200')}>
                     {new Date(task.dueDate).toLocaleDateString('ko-KR', {
                       year: 'numeric',
                       month: 'long',
@@ -7642,7 +7642,7 @@ function TaskDetailModal({
 
           {task.tag && (
             <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">태그</label>
+              <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1 block">태그</label>
               <span className="inline-block px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded">
                 {task.tag}
               </span>
@@ -8062,7 +8062,7 @@ function CreateChannelModal({
           onChange={(v) => setForm((prev) => ({ ...prev, next_upload_date: v }))}
         />
         <div className="md:col-span-2">
-          <label className="mb-2 block text-xs font-semibold text-slate-700">업로드 구좌 (요일 선택)</label>
+          <label className="mb-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">업로드 구좌 (요일 선택)</label>
           <div className="flex flex-wrap gap-2">
             {weekDays.map((day) => (
               <button
@@ -8073,7 +8073,7 @@ function CreateChannelModal({
                   'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                   form.upload_days.includes(day.value)
                     ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 )}
               >
                 {day.label}
@@ -8081,7 +8081,7 @@ function CreateChannelModal({
             ))}
           </div>
           {form.upload_days.length > 0 && (
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
               선택된 요일: 매주 {form.upload_days.map((d) => weekDays.find((wd) => wd.value === d)?.label).join(', ')} 업로드
             </p>
           )}
@@ -8188,7 +8188,7 @@ function EditChannelModal({
           onChange={(v) => setForm((prev) => ({ ...prev, next_upload_date: v }))}
         />
         <div className="md:col-span-2">
-          <label className="mb-2 block text-xs font-semibold text-slate-700">업로드 구좌 (요일 선택)</label>
+          <label className="mb-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">업로드 구좌 (요일 선택)</label>
           <div className="flex flex-wrap gap-2">
             {weekDays.map((day) => (
               <button
@@ -8199,7 +8199,7 @@ function EditChannelModal({
                   'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                   form.upload_days.includes(day.value)
                     ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:bg-slate-700'
                 )}
               >
                 {day.label}
@@ -8207,7 +8207,7 @@ function EditChannelModal({
             ))}
           </div>
           {form.upload_days.length > 0 && (
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
               선택된 요일: 매주 {form.upload_days.map((d) => weekDays.find((wd) => wd.value === d)?.label).join(', ')} 업로드
             </p>
           )}
@@ -8475,24 +8475,24 @@ function ChannelDetailModal({
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">채널명</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1">채널명</p>
             <p className="text-sm font-bold text-gray-900">{channel.name}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">제작사</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1">제작사</p>
             <p className="text-sm text-gray-900">{channel.production_company || '-'}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">구독자 수</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1">구독자 수</p>
             <p className="text-sm text-gray-900">{channel.subscribers_count || '-'}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">담당자</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1">담당자</p>
             <p className="text-sm text-gray-900">{channel.manager_name || '-'}</p>
           </div>
           {channel.upload_days && channel.upload_days.length > 0 && (
             <div className="md:col-span-2">
-              <p className="text-xs font-semibold text-gray-500 mb-2">업로드 구좌</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2">업로드 구좌</p>
               <div className="flex flex-wrap gap-1.5">
                 {channel.upload_days.map((day) => (
                   <span
@@ -8507,9 +8507,9 @@ function ChannelDetailModal({
           )}
         </div>
 
-        <div className="border-t border-gray-200 pt-6">
+        <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-800">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-slate-200">
               {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
             </h3>
             <div className="flex space-x-2">
@@ -8519,7 +8519,7 @@ function ChannelDetailModal({
                     new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1)
                   )
                 }
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -8529,21 +8529,21 @@ function ChannelDetailModal({
                     new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
                   )
                 }
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="grid grid-cols-7 mb-2 border-b border-gray-200 pb-2">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4">
+            <div className="grid grid-cols-7 mb-2 border-b border-gray-200 dark:border-slate-700 pb-2">
               {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
                 <div
                   key={day}
                   className={cn(
                     'text-center text-sm font-semibold',
-                    i === 0 ? 'text-red-500' : 'text-gray-500'
+                    i === 0 ? 'text-red-500' : 'text-gray-500 dark:text-slate-400'
                   )}
                 >
                   {day}
@@ -8552,7 +8552,7 @@ function ChannelDetailModal({
             </div>
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: startDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="bg-gray-50/50 rounded-lg h-12"></div>
+                <div key={`empty-${i}`} className="bg-gray-50 dark:bg-slate-900/50 rounded-lg h-12"></div>
               ))}
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
                 const isUploadDay = uploadDays.includes(day);
@@ -8565,7 +8565,7 @@ function ChannelDetailModal({
                   <div
                     key={day}
                     className={cn(
-                      'border border-gray-100 rounded-lg p-2 min-h-[48px] flex flex-col items-center justify-center relative',
+                      'border border-gray-100 dark:border-slate-700 rounded-lg p-2 min-h-[48px] flex flex-col items-center justify-center relative',
                       isUploadDay && 'bg-blue-50 border-blue-200',
                       isToday && 'ring-2 ring-indigo-500'
                     )}
@@ -8577,7 +8577,7 @@ function ChannelDetailModal({
                           ? 'bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center'
                           : isUploadDay
                             ? 'text-blue-700'
-                            : 'text-gray-700'
+                            : 'text-gray-700 dark:text-slate-300'
                       )}
                     >
                       {day}
@@ -8594,16 +8594,16 @@ function ChannelDetailModal({
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-6">
+        <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-800">회차별 업로드 일정 & 할일</h3>
-            <p className="text-xs text-gray-400">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-slate-200">회차별 업로드 일정 & 할일</h3>
+            <p className="text-xs text-gray-400 dark:text-slate-500">
               업로드 예정일(회차)을 기준으로 간단한 체크리스트를 관리할 수 있습니다. (화면 단위 저장)
             </p>
           </div>
 
           {contentsThisMonth.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+            <div className="rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
               이번 달에 등록된 업로드 예정 회차가 없습니다. 채널 카드에서 &quot;새 콘텐츠 기획 추가&quot;를
               통해 회차를 먼저 등록해 주세요.
             </div>
@@ -8628,11 +8628,11 @@ function ChannelDetailModal({
                   return (
                     <div
                       key={content.id}
-                      className="rounded-xl border border-gray-200 bg-white px-4 py-3"
+                      className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <p className="text-xs font-semibold text-gray-400">
+                          <p className="text-xs font-semibold text-gray-400 dark:text-slate-500">
                             {content.upload_date}
                           </p>
                           <p className="text-sm font-semibold text-gray-900">
@@ -8640,7 +8640,7 @@ function ChannelDetailModal({
                           </p>
                         </div>
                         <div className="flex items-center gap-3 text-xs">
-                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+                          <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300">
                             {content.stage === 'planning'
                               ? '기획'
                               : content.stage === 'shooting'
@@ -8649,7 +8649,7 @@ function ChannelDetailModal({
                               ? '편집'
                               : '업로드 완료'}
                           </span>
-                          <span className="text-gray-400">
+                          <span className="text-gray-400 dark:text-slate-500">
                             {dDay > 0 ? `D-${dDay}` : `업로드일: ${content.upload_date}`}
                           </span>
                         </div>
@@ -8657,7 +8657,7 @@ function ChannelDetailModal({
 
                       <div className="mt-3 space-y-2">
                         {todos.length > 0 && (
-                          <div className="space-y-1 rounded-lg bg-slate-50 px-3 py-2">
+                          <div className="space-y-1 rounded-lg bg-slate-50 dark:bg-slate-900 px-3 py-2">
                             {todos.map((todo) => (
                               <button
                                 key={todo.id}
@@ -8673,7 +8673,7 @@ function ChannelDetailModal({
                                       'inline-flex h-4 w-4 items-center justify-center rounded border',
                                       todo.done
                                         ? 'border-indigo-500 bg-indigo-500 text-white'
-                                        : 'border-slate-300 bg-white text-transparent',
+                                        : 'border-slate-300 bg-white dark:bg-slate-800 text-transparent',
                                     )}
                                   >
                                     ✓
@@ -8682,14 +8682,14 @@ function ChannelDetailModal({
                                     className={cn(
                                       'font-medium',
                                       todo.done
-                                        ? 'text-slate-400 line-through'
-                                        : 'text-slate-800',
+                                        ? 'text-slate-400 dark:text-slate-500 line-through'
+                                        : 'text-slate-800 dark:text-slate-200',
                                     )}
                                   >
                                     {todo.title}
                                   </span>
                                 </div>
-                                <span className="text-[10px] text-slate-500">
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 dark:text-slate-500">
                                   {todo.dueDate}
                                 </span>
                               </button>
@@ -8697,7 +8697,7 @@ function ChannelDetailModal({
                           </div>
                         )}
 
-                        <div className="flex flex-col gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-2 text-[11px] md:flex-row md:items-center">
+                        <div className="flex flex-col gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 dark:bg-slate-900 p-2 text-[11px] md:flex-row md:items-center">
                           <input
                             type="text"
                             placeholder="예: 대본 확정, 촬영 스케줄 조율"
@@ -8714,7 +8714,7 @@ function ChannelDetailModal({
                                 },
                               }))
                             }
-                            className="flex-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] focus:border-indigo-500 focus:outline-none"
+                            className="flex-1 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-[11px] focus:border-indigo-500 focus:outline-none"
                           />
                           <div className="flex items-center gap-2">
                             <input
@@ -8732,7 +8732,7 @@ function ChannelDetailModal({
                                   },
                                 }))
                               }
-                              className="rounded-md border border-slate-200 px-2 py-1 text-[11px] focus:border-indigo-500 focus:outline-none"
+                              className="rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-[11px] focus:border-indigo-500 focus:outline-none"
                             />
                             <button
                               type="button"
@@ -8987,7 +8987,7 @@ function CreateStaffModal({
           onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
         />
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700">전문 분야</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">전문 분야</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -9000,7 +9000,7 @@ function CreateStaffModal({
                   handleAddSpecialty();
                 }
               }}
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             />
             <button
               type="button"
@@ -9031,9 +9031,9 @@ function CreateStaffModal({
           )}
         </div>
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700">비고</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">비고</label>
           <textarea
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             rows={3}
             placeholder="추가 정보를 입력하세요"
             value={form.notes}
@@ -9177,7 +9177,7 @@ function EditStaffModal({
           onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
         />
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700">전문 분야</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">전문 분야</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -9190,7 +9190,7 @@ function EditStaffModal({
                   handleAddSpecialty();
                 }
               }}
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             />
             <button
               type="button"
@@ -9221,9 +9221,9 @@ function EditStaffModal({
           )}
         </div>
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700">비고</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">비고</label>
           <textarea
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             rows={3}
             placeholder="추가 정보를 입력하세요"
             value={form.notes}

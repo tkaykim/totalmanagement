@@ -271,7 +271,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">외주(공장) 관리</h2>
           <button
             onClick={() => setFactoryModalOpen(true)}
@@ -281,7 +281,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
           {factories.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <Factory className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -371,7 +371,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">클라이언트 관리</h2>
           <button
             onClick={() => setClientModalOpen(true)}
@@ -381,7 +381,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
           {clients.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -458,11 +458,11 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">제작현황</h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
           {inProgressProjects.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -564,7 +564,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">프로젝트 관리</h2>
           <button
             onClick={() => setProjectModalOpen(true)}
@@ -574,7 +574,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
           {projects.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -594,7 +594,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                 return (
                   <div
                     key={project.id}
-                    className="border border-gray-200 rounded-xl bg-white hover:shadow-lg transition-all"
+                    className="border border-gray-200 rounded-xl bg-white dark:bg-slate-800 hover:shadow-lg transition-all"
                   >
                     {/* 프로젝트 헤더 */}
                     <div className="p-5">
@@ -721,7 +721,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                             </h4>
                           </div>
                           {projectTasks.length === 0 ? (
-                            <div className="text-center py-6 text-gray-400 bg-white rounded-lg border border-gray-200">
+                            <div className="text-center py-6 text-gray-400 bg-white dark:bg-slate-800 rounded-lg border border-gray-200">
                               <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
                               <p className="text-sm">등록된 할일이 없습니다.</p>
                             </div>
@@ -733,7 +733,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                                   <div
                                     key={task.id}
                                     className={cn(
-                                      "bg-white border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer",
+                                      "bg-white dark:bg-slate-800 border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer",
                                       isOverdue ? "border-red-200 bg-red-50" : "border-gray-200"
                                     )}
                                     onClick={() => setEditTaskModalOpen(task)}
@@ -861,7 +861,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
       return (
         <div
           className={cn(
-            "border rounded-lg p-3 bg-white hover:shadow-md transition-all mb-3",
+            "border rounded-lg p-3 bg-white dark:bg-slate-800 hover:shadow-md transition-all mb-3",
             isOverdue ? "border-red-300 bg-red-50" : "border-gray-200"
           )}
         >
@@ -965,7 +965,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">할일관리</h2>
           <button
             onClick={() => setTaskModalOpen(true)}
@@ -1045,7 +1045,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">스케줄 관리</h2>
           <button
             onClick={() => setEventModalOpen(true)}
@@ -1055,7 +1055,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
           {sortedEvents.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <CalendarIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -1131,7 +1131,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">정산/회계</h2>
           <div className="flex gap-2">
             <button
@@ -1150,15 +1150,15 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         </div>
 
         <div className="grid grid-cols-3 gap-4 shrink-0">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
             <p className="text-xs font-bold uppercase text-gray-400 mb-2">총 매출</p>
             <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalRevenue)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
             <p className="text-xs font-bold uppercase text-gray-400 mb-2">총 지출</p>
             <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
             <p className="text-xs font-bold uppercase text-gray-400 mb-2">순이익</p>
             <p className={cn('text-2xl font-bold', netProfit >= 0 ? 'text-green-600' : 'text-red-600')}>
               {formatCurrency(netProfit)}
@@ -1167,7 +1167,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-gray-800 flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-blue-600" /> 매출 내역
@@ -1218,7 +1218,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-gray-800 flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-red-600" /> 지출 내역
@@ -1369,15 +1369,15 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {canViewFinancials && (
             <>
-              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 shadow-sm">
                 <p className="text-xs font-bold uppercase text-gray-400 mb-2">총 매출</p>
                 <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalRevenue)}</p>
               </div>
-              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 shadow-sm">
                 <p className="text-xs font-bold uppercase text-gray-400 mb-2">총 지출</p>
                 <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
               </div>
-              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 shadow-sm">
                 <p className="text-xs font-bold uppercase text-gray-400 mb-2">순이익</p>
                 <p className={cn('text-2xl font-bold', netProfit >= 0 ? 'text-green-600' : 'text-red-600')}>
                   {formatCurrency(netProfit)}
@@ -1385,7 +1385,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
               </div>
             </>
           )}
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 shadow-sm">
             <p className="text-xs font-bold uppercase text-gray-400 mb-2">진행 중 프로젝트</p>
             <p className="text-2xl font-bold text-gray-800">{inProgressProjects.length} 건</p>
           </div>
@@ -1393,7 +1393,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">진행 중인 프로젝트</h3>
                 <button
@@ -1536,7 +1536,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-gray-800">주요 일정</h3>
                 <button
@@ -1592,7 +1592,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">할 일</h3>
                 <button
@@ -1737,7 +1737,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
             </div>
 
             {/* Revenue/Expense Summary */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
               <h3 className="text-lg font-bold text-gray-800 mb-4">매출/지출 요약</h3>
               <div className="space-y-4">
                 <div>
@@ -1791,7 +1791,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">매뉴얼</h2>
           <button
             onClick={() => setManualModalOpen(true)}
@@ -1801,7 +1801,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
           {buManuals.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -1907,7 +1907,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
                 'w-full flex items-center px-3 py-3 rounded-lg transition-all duration-200 group relative',
                 activeTab === item.id
                   ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  : 'text-slate-400 dark:text-slate-500 hover:bg-slate-800 hover:text-white'
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0 mr-3" />
@@ -1917,14 +1917,14 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         </nav>
         <div className="mt-auto p-6 pt-0">
           <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-4">
-            <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500">
+            <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500 dark:text-slate-400 dark:text-slate-500">
               Signed in as
             </p>
             <p className="text-sm font-semibold text-blue-100">
               {user?.profile?.name || user?.email || '사용자'}
             </p>
             {user?.profile?.position && (
-              <p className="mt-1 text-[10px] text-slate-400">{user.profile.position}</p>
+              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">{user.profile.position}</p>
             )}
           </div>
           <button
@@ -1938,7 +1938,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
       </aside>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
-        <header className="bg-white border-b border-gray-200 shadow-sm z-10">
+        <header className="bg-white dark:bg-slate-800 border-b border-gray-200 shadow-sm z-10">
           <div className="flex flex-col px-4 lg:px-8 py-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold text-gray-800 capitalize">
@@ -2593,12 +2593,12 @@ function ModalShell({
 }) {
   return (
     <div className={`modal-container active fixed inset-0 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur`} style={{ zIndex }}>
-      <div className="w-full max-w-2xl max-h-[90vh] rounded-2xl bg-white shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 flex-shrink-0">
-          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+      <div className="w-full max-w-2xl max-h-[90vh] rounded-2xl bg-white dark:bg-slate-800 shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-6 py-4 flex-shrink-0">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{title}</h3>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:text-slate-700"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
           >
             <X className="h-4 w-4" />
           </button>
@@ -2607,7 +2607,7 @@ function ModalShell({
           <div className="space-y-4 px-6 py-5">{children}</div>
         </div>
         {actions && (
-          <div className="flex-shrink-0 border-t border-slate-100 bg-white">
+          <div className="flex-shrink-0 border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800">
             {actions}
           </div>
         )}
@@ -2633,9 +2633,9 @@ function InputField({
 }) {
   if (type === 'date') {
     return (
-      <label className="space-y-1 text-sm font-semibold text-slate-700">
+      <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">{label}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
           {!disabled && (
             <button
               type="button"
@@ -2643,8 +2643,8 @@ function InputField({
               className={cn(
                 'text-[10px] font-semibold px-2 py-0.5 rounded transition',
                 value === ''
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300'
+                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               )}
             >
               미정
@@ -2657,7 +2657,7 @@ function InputField({
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30 disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
         />
       </label>
     );
@@ -2665,30 +2665,30 @@ function InputField({
 
   if (type === 'textarea') {
     return (
-      <label className="space-y-1 text-sm font-semibold text-slate-700">
-        <span className="text-xs text-slate-500">{label}</span>
+      <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{label}</span>
         <textarea
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           rows={4}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30 disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
         />
       </label>
     );
   }
 
   return (
-    <label className="space-y-1 text-sm font-semibold text-slate-700">
-      <span className="text-xs text-slate-500">{label}</span>
+    <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+      <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{label}</span>
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
       />
     </label>
   );
@@ -2710,12 +2710,12 @@ function SelectField({
   placeholder?: string;
 }) {
   return (
-    <label className="space-y-1 text-sm font-semibold text-slate-700">
-      <span className="text-xs text-slate-500">{label}</span>
+    <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+      <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{label}</span>
       <select
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30"
       >
         {placeholder && (
           <option value="" disabled>
@@ -2757,7 +2757,7 @@ function ModalActions({
     <div className="flex items-center justify-end gap-2 px-6 py-4">
       <button
         onClick={onClose}
-        className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+        className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900"
       >
         닫기
       </button>
@@ -2784,17 +2784,17 @@ function DeleteConfirmModal({
 }) {
   return (
     <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
         </div>
         <div className="px-6 py-4">
-          <p className="text-sm text-slate-600">{message}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
         </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100 dark:border-slate-700">
           <button
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900"
           >
             취소
           </button>
@@ -2885,8 +2885,8 @@ function CreateFactoryModal({
           onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
         />
         <div className="md:col-span-2">
-          <label className="space-y-1 text-sm font-semibold text-slate-700">
-            <span className="text-xs text-slate-500">전문 분야</span>
+          <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">전문 분야</span>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -2894,7 +2894,7 @@ function CreateFactoryModal({
                 onChange={(e) => setForm((prev) => ({ ...prev, specialtyInput: e.target.value }))}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSpecialty())}
                 placeholder="전문 분야 입력 후 Enter"
-                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+                className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
               />
               <button
                 type="button"
@@ -3027,8 +3027,8 @@ function EditFactoryModal({
           onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
         />
         <div className="md:col-span-2">
-          <label className="space-y-1 text-sm font-semibold text-slate-700">
-            <span className="text-xs text-slate-500">전문 분야</span>
+          <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">전문 분야</span>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -3036,7 +3036,7 @@ function EditFactoryModal({
                 onChange={(e) => setForm((prev) => ({ ...prev, specialtyInput: e.target.value }))}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSpecialty())}
                 placeholder="전문 분야 입력 후 Enter"
-                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+                className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
               />
               <button
                 type="button"

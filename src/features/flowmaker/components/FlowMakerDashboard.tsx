@@ -128,30 +128,30 @@ function formatCurrency(amount: number): string {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    'In Production': 'bg-blue-100 text-blue-800 border-blue-200',
-    'Pre-Production': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'Post-Production': 'bg-purple-100 text-purple-800 border-purple-200',
-    'Completed': 'bg-gray-100 text-gray-800 border-gray-200',
-    'Planning': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    'Available': 'bg-green-100 text-green-800 border-green-200',
-    'Rented': 'bg-red-100 text-red-800 border-red-200',
-    'Maintenance': 'bg-orange-100 text-orange-800 border-orange-200',
-    'Paid': 'bg-green-100 text-green-800',
-    'Pending': 'bg-yellow-100 text-yellow-800',
-    'Overdue': 'bg-red-100 text-red-800',
-    'Approved': 'bg-blue-100 text-blue-800',
-    'Active': 'bg-green-100 text-green-800',
-    'On Set': 'bg-red-100 text-red-800',
-    'Busy': 'bg-orange-100 text-orange-800',
-    'Inactive': 'bg-gray-100 text-gray-500',
-    'Growing': 'bg-purple-100 text-purple-800 border-purple-200',
+    'In Production': 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    'Pre-Production': 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
+    'Post-Production': 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+    'Completed': 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300 border-gray-200 dark:border-slate-700',
+    'Planning': 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    'Available': 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800',
+    'Rented': 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800',
+    'Maintenance': 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+    'Paid': 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300',
+    'Pending': 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300',
+    'Overdue': 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300',
+    'Approved': 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300',
+    'Active': 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300',
+    'On Set': 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300',
+    'Busy': 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300',
+    'Inactive': 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400',
+    'Growing': 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800',
   };
 
   return (
     <span
       className={cn(
         'px-2.5 py-0.5 rounded-full text-xs font-medium border',
-        styles[status] || 'bg-gray-100 text-gray-800'
+        styles[status] || 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300'
       )}
     >
       {status}
@@ -173,10 +173,10 @@ function StatCard({
   trend?: 'up' | 'down';
 }) {
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-4">
-        <div className="p-2 bg-slate-50 rounded-lg">
-          <Icon className="w-6 h-6 text-slate-700" />
+        <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg">
+          <Icon className="w-6 h-6 text-slate-700 dark:text-slate-300" />
         </div>
         {trend && (
           <span
@@ -466,7 +466,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-gray-800">진행 중인 프로젝트</h3>
                 <button
@@ -529,7 +529,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-gray-800">주요 일정</h3>
                 <button
@@ -586,7 +586,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-800">할 일</h3>
               <button
@@ -597,14 +597,14 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
               </button>
             </div>
             {/* 할일 필터 */}
-            <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+            <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
               <button
                 onClick={() => setTaskAssigneeFilter('all')}
                 className={cn(
                   'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
                   taskAssigneeFilter === 'all'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
                 )}
               >
                 전체 할일 보기
@@ -614,8 +614,8 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                 className={cn(
                   'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
                   taskAssigneeFilter === 'my'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
                 )}
               >
                 내 할일만 보기
@@ -689,7 +689,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
               <div className="relative w-full md:w-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
@@ -706,7 +706,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
               </button>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
               <table className="w-full text-left min-w-[800px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
@@ -771,7 +771,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                             {projectClient?.company_name_ko || '-'}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600 flex items-center">
-                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 mr-2 border border-slate-200">
+                            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300 mr-2 border border-slate-200 dark:border-slate-700">
                               {project.name.charAt(0)}
                             </div>
                             PM
@@ -836,7 +836,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 p-4">
                                     <div className="flex justify-between items-center mb-3">
                                       <h5 className="font-semibold text-green-700 flex items-center gap-2">
                                         <TrendingUp className="w-4 h-4" /> 매출
@@ -893,7 +893,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                                     </div>
                                   </div>
 
-                                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 p-4">
                                     <div className="flex justify-between items-center mb-3">
                                       <h5 className="font-semibold text-red-700 flex items-center gap-2">
                                         <DollarSign className="w-4 h-4" /> 지출
@@ -977,7 +977,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                                     </button>
                                   </div>
 
-                                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 p-4">
                                     <div className="space-y-2">
                                       {(() => {
                                         const projectTasks = tasks.filter((t) => t.projectId === project.id.toString());
@@ -1101,7 +1101,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
           <div className="relative w-full md:w-auto">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -1117,7 +1117,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                 className={cn(
                   'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                   viewMode === 'grid'
-                    ? 'bg-white text-gray-900 shadow-sm'
+                    ? 'bg-white dark:bg-slate-800 text-gray-900 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 )}
               >
@@ -1128,7 +1128,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                 className={cn(
                   'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                   viewMode === 'list'
-                    ? 'bg-white text-gray-900 shadow-sm'
+                    ? 'bg-white dark:bg-slate-800 text-gray-900 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 )}
               >
@@ -1145,7 +1145,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
         </div>
 
         {viewMode === 'list' ? (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
             <table className="w-full text-left min-w-[1000px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -1218,7 +1218,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
               return (
                 <div
                   key={artist.id}
-                  className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full"
+                  className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full"
                 >
                   <div className="p-6 border-b border-gray-100">
                     <div className="flex justify-between items-start mb-4">
@@ -1261,13 +1261,13 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="bg-slate-50 p-3 rounded-lg">
+                      <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
                         <p className="text-xs text-gray-500 mb-1">국적</p>
                         <p className="text-lg font-bold text-gray-800">
                           {artist.nationality || '-'}
                         </p>
                       </div>
-                      <div className="bg-slate-50 p-3 rounded-lg">
+                      <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
                         <p className="text-xs text-gray-500 mb-1">역할</p>
                         <p className="text-lg font-bold text-gray-800">
                           {artist.role || '-'}
@@ -1538,21 +1538,21 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500">가용 장비</p>
               <p className="text-xl font-bold text-green-600">{availablePercent}%</p>
             </div>
             <CheckSquare className="w-8 h-8 text-green-100" />
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500">대여 중 (현장)</p>
               <p className="text-xl font-bold text-indigo-600">{rentedPercent}%</p>
             </div>
             <Camera className="w-8 h-8 text-indigo-100" />
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500">수리 / 분실</p>
               <p className="text-xl font-bold text-red-600">{maintenancePercent}%</p>
@@ -1561,7 +1561,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3">
             <h3 className="font-bold text-gray-800">장비 전체 리스트</h3>
             <div className="flex gap-2 w-full sm:w-auto">
@@ -1580,7 +1580,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                   // 첫 번째 가용 장비를 선택하거나 새 장비 추가 모달을 열 수 있음
                   setEquipmentModalOpen(true);
                 }}
-                className="flex-1 sm:flex-none px-3 py-1.5 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                className="flex-1 sm:flex-none px-3 py-1.5 text-sm border border-slate-300 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:bg-slate-900"
               >
                 대여 등록
               </button>
@@ -1648,7 +1648,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-gray-500 text-xs font-bold uppercase mb-2">총 매출</h3>
@@ -1663,7 +1663,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
             </div>
             <p className="text-xs text-gray-400 mt-2">목표 달성률 70% (전년 대비 +5%)</p>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-gray-500 text-xs font-bold uppercase mb-2">
@@ -1682,7 +1682,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="font-bold text-gray-800">최근 입출금 내역</h3>
             <button
@@ -1791,7 +1791,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm">
           <h3 className="font-bold text-gray-800">인력 풀 (Internal & Freelance)</h3>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <div className="relative flex-1 md:flex-initial md:w-64">
@@ -1813,7 +1813,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="hidden md:flex bg-gray-50 border-b border-gray-200 px-6 py-3 text-xs font-semibold text-gray-500 uppercase">
             <div className="flex-1">이름 / 역할</div>
             <div className="w-32">소속</div>
@@ -1838,7 +1838,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                   )}
                 >
                   <div className="flex-1 flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 mr-3 border border-slate-200">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300 mr-3 border border-slate-200 dark:border-slate-700">
                       {staff.name.charAt(0)}
                     </div>
                     <div>
@@ -1968,7 +1968,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                         {staff.notes && (
                           <div>
                             <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">비고</h4>
-                            <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">
+                            <div className="text-sm text-gray-700 bg-white dark:bg-slate-800 p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">
                               {staff.notes}
                             </div>
                           </div>
@@ -2085,7 +2085,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
     return (
       <div className="space-y-4 animate-fade-in h-full flex flex-col">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <div className="flex items-center space-x-4">
             <h2 className="text-xl font-bold text-gray-800">
               {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
@@ -2114,10 +2114,10 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
             </div>
           </div>
           <div className="flex space-x-2">
-            <button className="px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
+            <button className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
               월간
             </button>
-            <button className="px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
+            <button className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
               주간
             </button>
             <button
@@ -2130,7 +2130,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
         </div>
 
         <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden">
-          <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-4 overflow-hidden flex flex-col">
+          <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-4 overflow-hidden flex flex-col">
             <div className="grid grid-cols-7 mb-2 border-b border-gray-200 pb-2">
               {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
                 <div
@@ -2209,7 +2209,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
             </div>
           </div>
 
-          <div className="w-full lg:w-80 bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col overflow-hidden">
+          <div className="w-full lg:w-80 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-bold text-gray-800 flex items-center">
                 <Star className="w-5 h-5 text-yellow-500 mr-2 fill-yellow-500" />
@@ -2307,7 +2307,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -2334,7 +2334,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="hidden md:flex bg-gray-50 border-b border-gray-200 px-6 py-3 text-xs font-semibold text-gray-500 uppercase">
             <div className="flex-1">클라이언트 / 업종</div>
             <div className="w-40">담당자</div>
@@ -2403,7 +2403,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                         filteredWorkers.map((worker: any) => (
                           <div
                             key={worker.id}
-                            className="flex items-center justify-between p-2 bg-white rounded border border-gray-200"
+                            className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200"
                           >
                             <div className="flex-1">
                               <div className="text-sm font-medium text-gray-900">
@@ -2533,7 +2533,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                                 e.stopPropagation();
                                 setEditClientModalOpen(client);
                               }}
-                              className="w-full md:w-auto px-4 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-100 transition-colors text-gray-700"
+                              className="w-full md:w-auto px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 rounded text-sm hover:bg-gray-100 transition-colors text-gray-700"
                             >
                               정보 수정
                             </button>
@@ -2589,10 +2589,10 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
     return (
       <div className="h-full flex flex-col space-y-4 animate-fade-in overflow-hidden">
-        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-gray-800">업무 현황 (Kanban)</h2>
           <div className="flex space-x-2">
-            <button className="flex items-center px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
+            <button className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
               <Filter className="w-4 h-4 mr-2" /> 내 업무만 보기
             </button>
             <button
@@ -2609,11 +2609,11 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
             {kanbanColumns.map((column) => (
               <div
                 key={column.id}
-                className="flex-1 flex flex-col bg-slate-100 rounded-xl max-w-xs sm:max-w-sm shrink-0"
+                className="flex-1 flex flex-col bg-slate-100 dark:bg-slate-800 rounded-xl max-w-xs sm:max-w-sm shrink-0"
               >
-                <div className="p-3 font-semibold text-gray-700 flex justify-between items-center border-b border-slate-200/50">
+                <div className="p-3 font-semibold text-gray-700 flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50">
                   {column.title}
-                  <span className="bg-slate-200 text-xs px-2 py-0.5 rounded-full text-slate-600">
+                  <span className="bg-slate-200 text-xs px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">
                     {column.items.length}
                   </span>
                 </div>
@@ -2621,7 +2621,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                   {column.items.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                      className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
                       onClick={() => setEditTaskModalOpen(item)}
                     >
                       <div className="flex justify-between items-start mb-2">
@@ -2651,7 +2651,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
-                          <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg z-10 opacity-0 group-hover/menu:opacity-100 transition-opacity pointer-events-none group-hover/menu:pointer-events-auto min-w-[120px]">
+                          <div className="absolute right-0 top-6 bg-white dark:bg-slate-800 border border-gray-200 rounded-lg shadow-lg z-10 opacity-0 group-hover/menu:opacity-100 transition-opacity pointer-events-none group-hover/menu:pointer-events-auto min-w-[120px]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -2749,8 +2749,8 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
     if (selectedManual) {
       return (
-        <div className="h-full flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-white">
+        <div className="h-full flex flex-col bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-white dark:bg-slate-800">
             <div>
               <div className="flex items-center space-x-2 text-xs text-gray-500 mb-3">
                 <FolderOpen className="w-3 h-3" />
@@ -2811,7 +2811,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-white">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-white dark:bg-slate-800">
             <div className="max-w-3xl mx-auto space-y-6">
               {typeof selectedManual.content === 'string' ? (
                 selectedManual.content ? (
@@ -2918,7 +2918,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
     return (
       <div className="h-full flex gap-6 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-72 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col shrink-0 overflow-hidden">
+        <div className="w-72 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 shadow-sm flex flex-col shrink-0 overflow-hidden">
           <div className="mb-4 px-2 pt-4">
             <h2 className="text-2xl font-black text-gray-900">지식 관리</h2>
             <p className="text-xs text-gray-500 font-medium">SOP & Wiki Library</p>
@@ -2933,7 +2933,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all w-full ${
                     activeCategory === cat.id 
                     ? 'bg-gray-900 text-white shadow-lg' 
-                    : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+                    : 'bg-white dark:bg-slate-800 text-gray-500 hover:bg-gray-50 border border-gray-100'
                   }`}
                 >
                   <Icon size={16} className={activeCategory === cat.id ? 'text-red-500' : 'text-gray-400'}/>
@@ -2951,7 +2951,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
         </div>
         
         {/* Main Content */}
-        <div className="flex-1 flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-gray-500">카테고리:</span>
@@ -2966,7 +2966,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                   placeholder="매뉴얼 검색..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium w-64 focus:outline-none focus:border-red-500 transition-colors"
+                  className="pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 rounded-lg text-xs font-medium w-64 focus:outline-none focus:border-red-500 transition-colors"
                 />
               </div>
               <button 
@@ -2978,7 +2978,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-white">
+          <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-800">
             {filteredManuals.length > 0 ? (
               <div className="min-w-full inline-block align-middle">
                 <div className="border-b border-gray-100">
@@ -3099,7 +3099,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                 'w-full flex items-center px-3 py-3 rounded-lg transition-all duration-200 group relative',
                 activeTab === item.id
                   ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  : 'text-slate-400 dark:text-slate-500 hover:bg-slate-800 hover:text-white'
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0 mr-3" />
@@ -3109,14 +3109,14 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
         </nav>
         <div className="mt-auto p-6 pt-0">
           <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-4">
-            <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500">
+            <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500 dark:text-slate-400 dark:text-slate-500">
               Signed in as
             </p>
             <p className="text-sm font-semibold text-blue-100">
               {user?.profile?.name || user?.email || '사용자'}
             </p>
             {user?.profile?.position && (
-              <p className="mt-1 text-[10px] text-slate-400">{user.profile.position}</p>
+              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">{user.profile.position}</p>
             )}
           </div>
           <button
@@ -3130,7 +3130,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
       </aside>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
-        <header className="bg-white border-b border-gray-200 shadow-sm z-10">
+        <header className="bg-white dark:bg-slate-800 border-b border-gray-200 shadow-sm z-10">
           <div className="h-16 flex items-center justify-between px-4 lg:px-8">
             <div className="flex items-center">
               <h2 className="text-xl font-bold text-gray-800 capitalize hidden sm:block">
@@ -3158,7 +3158,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'all'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   전체 기간
@@ -3169,7 +3169,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'year'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   연도
@@ -3180,7 +3180,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'quarter'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   분기
@@ -3191,7 +3191,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'month'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   월별
@@ -3202,7 +3202,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                     'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
                     periodType === 'custom'
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   )}
                 >
                   직접선택
@@ -3212,11 +3212,11 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
               {/* Conditional selection UI */}
               {periodType === 'year' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600">연도:</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">연도:</label>
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {yearOptions.map((year) => (
                       <option key={year} value={year}>
@@ -3230,11 +3230,11 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
               {periodType === 'quarter' && (
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-slate-600">연도:</label>
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">연도:</label>
                     <select
                       value={selectedQuarterYear}
                       onChange={(e) => setSelectedQuarterYear(Number(e.target.value))}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {yearOptions.map((year) => (
                         <option key={year} value={year}>
@@ -3244,11 +3244,11 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                     </select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-slate-600">분기:</label>
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">분기:</label>
                     <select
                       value={selectedQuarter}
                       onChange={(e) => setSelectedQuarter(Number(e.target.value))}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value={1}>1분기 (1-3월)</option>
                       <option value={2}>2분기 (4-6월)</option>
@@ -3261,11 +3261,11 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
               {periodType === 'month' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600">월:</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">월:</label>
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                       <option key={month} value={month}>
@@ -3276,7 +3276,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {yearOptions.map((year) => (
                       <option key={year} value={year}>
@@ -3289,19 +3289,19 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
               {periodType === 'custom' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600">시작일:</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">시작일:</label>
                   <input
                     type="date"
                     value={customRange.start ?? ''}
                     onChange={(e) => handleDateChange('start', e.target.value)}
-                    className="rounded-lg border border-slate-200 px-2 py-1.5 text-[11px]"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-[11px]"
                   />
-                  <label className="text-[11px] font-semibold text-slate-600">종료일:</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">종료일:</label>
                   <input
                     type="date"
                     value={customRange.end ?? ''}
                     onChange={(e) => handleDateChange('end', e.target.value)}
-                    className="rounded-lg border border-slate-200 px-2 py-1.5 text-[11px]"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-[11px]"
                   />
                 </div>
               )}
@@ -3878,12 +3878,12 @@ function ModalShell({
 }) {
   return (
     <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+      <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-6 py-4">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{title}</h3>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:text-slate-700"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
           >
             <X className="h-4 w-4" />
           </button>
@@ -3909,17 +3909,17 @@ function InputField({
 }) {
   if (type === 'date') {
     return (
-      <label className="space-y-1 text-sm font-semibold text-slate-700">
+      <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">{label}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
           <button
             type="button"
             onClick={() => onChange('')}
             className={cn(
               'text-[10px] font-semibold px-2 py-0.5 rounded transition',
               value === ''
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300'
+                : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             )}
           >
             미정
@@ -3930,7 +3930,7 @@ function InputField({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30"
         />
       </label>
     );
@@ -3938,28 +3938,28 @@ function InputField({
 
   if (type === 'textarea') {
     return (
-      <label className="space-y-1 text-sm font-semibold text-slate-700">
-        <span className="text-xs text-slate-500">{label}</span>
+      <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{label}</span>
         <textarea
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
           rows={4}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30"
         />
       </label>
     );
   }
 
   return (
-    <label className="space-y-1 text-sm font-semibold text-slate-700">
-      <span className="text-xs text-slate-500">{label}</span>
+    <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-500/30"
       />
     </label>
   );
@@ -3977,12 +3977,12 @@ function SelectField({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="space-y-1 text-sm font-semibold text-slate-700">
-      <span className="text-xs text-slate-500">{label}</span>
+    <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+      <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{label}</span>
       <select
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -4007,7 +4007,7 @@ function ModalActions({
     <div className="flex items-center justify-end gap-2 pt-2">
       <button
         onClick={onClose}
-        className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+        className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900"
       >
         닫기
       </button>
@@ -4034,17 +4034,17 @@ function DeleteConfirmModal({
 }) {
   return (
     <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
         </div>
         <div className="px-6 py-4">
-          <p className="text-sm text-slate-600">{message}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
         </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100 dark:border-slate-700">
           <button
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900"
           >
             취소
           </button>
@@ -5609,7 +5609,7 @@ function CreateChannelModal({
           onChange={(v) => setForm((prev) => ({ ...prev, next_upload_date: v }))}
         />
         <div className="md:col-span-2">
-          <label className="mb-2 block text-xs font-semibold text-slate-700">업로드 구좌 (요일 선택)</label>
+          <label className="mb-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">업로드 구좌 (요일 선택)</label>
           <div className="flex flex-wrap gap-2">
             {weekDays.map((day) => (
               <button
@@ -5735,7 +5735,7 @@ function EditChannelModal({
           onChange={(v) => setForm((prev) => ({ ...prev, next_upload_date: v }))}
         />
         <div className="md:col-span-2">
-          <label className="mb-2 block text-xs font-semibold text-slate-700">업로드 구좌 (요일 선택)</label>
+          <label className="mb-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">업로드 구좌 (요일 선택)</label>
           <div className="flex flex-wrap gap-2">
             {weekDays.map((day) => (
               <button
@@ -6015,7 +6015,7 @@ function ChannelDetailModal({
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 p-4">
             <div className="grid grid-cols-7 mb-2 border-b border-gray-200 pb-2">
               {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
                 <div
@@ -6309,7 +6309,7 @@ function CreateStaffModal({
           onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
         />
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700">전문 분야</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">전문 분야</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -6322,7 +6322,7 @@ function CreateStaffModal({
                   handleAddSpecialty();
                 }
               }}
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             />
             <button
               type="button"
@@ -6353,9 +6353,9 @@ function CreateStaffModal({
           )}
         </div>
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700">비고</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">비고</label>
           <textarea
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             rows={3}
             placeholder="추가 정보를 입력하세요"
             value={form.notes}
@@ -6499,7 +6499,7 @@ function EditStaffModal({
           onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
         />
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700">전문 분야</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">전문 분야</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -6512,7 +6512,7 @@ function EditStaffModal({
                   handleAddSpecialty();
                 }
               }}
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             />
             <button
               type="button"
@@ -6543,9 +6543,9 @@ function EditStaffModal({
           )}
         </div>
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700">비고</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">비고</label>
           <textarea
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             rows={3}
             placeholder="추가 정보를 입력하세요"
             value={form.notes}

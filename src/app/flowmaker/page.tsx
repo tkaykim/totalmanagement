@@ -42,10 +42,10 @@ export default function FlowMakerPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
         <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900 mx-auto" />
-          <p className="text-sm text-slate-500">로딩 중...</p>
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-slate-900 dark:border-t-slate-100 mx-auto" />
+          <p className="text-sm text-slate-500 dark:text-slate-400">로딩 중...</p>
         </div>
       </div>
     );

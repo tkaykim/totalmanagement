@@ -157,19 +157,19 @@ export function CommentInput({ onSubmit, isLoading = false, placeholder = 'ëŒ“ê¸
       {showMentionList && filteredUsers.length > 0 && (
         <div
           ref={mentionListRef}
-          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg"
+          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg"
         >
           {filteredUsers.map((user: AppUser, index: number) => (
             <div
               key={user.id}
               onClick={() => selectUser(user)}
-              className={`cursor-pointer px-3 py-2 hover:bg-slate-100 ${
-                index === selectedMentionIndex ? 'bg-slate-100' : ''
+              className={`cursor-pointer px-3 py-2 hover:bg-slate-100 dark:bg-slate-800 ${
+                index === selectedMentionIndex ? 'bg-slate-100 dark:bg-slate-800' : ''
               }`}
             >
-              <div className="font-medium text-slate-900">{user.name}</div>
+              <div className="font-medium text-slate-900 dark:text-slate-100">{user.name}</div>
               {user.email && (
-                <div className="text-xs text-slate-500">{user.email}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{user.email}</div>
               )}
             </div>
           ))}

@@ -108,13 +108,13 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
   };
 
   if (isLoading) {
-    return <div className="text-sm text-slate-500">댓글을 불러오는 중...</div>;
+    return <div className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">댓글을 불러오는 중...</div>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="border-t border-slate-200 pt-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">댓글 ({comments.length})</h3>
+      <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+        <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">댓글 ({comments.length})</h3>
         <CommentInput
           onSubmit={handleSubmit}
           isLoading={createComment.isPending}
@@ -124,27 +124,27 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
 
       <div className="space-y-4">
         {comments.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-400">아직 댓글이 없습니다.</div>
+          <div className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">아직 댓글이 없습니다.</div>
         ) : (
           comments.map((comment: Comment) => {
             const isEditing = editingId === comment.id;
             const author = getUserById(comment.author_id);
 
             return (
-              <div key={comment.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div key={comment.id} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4">
                 <div className="mb-2 flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="font-semibold text-slate-900">
+                    <div className="font-semibold text-slate-900 dark:text-slate-100">
                       {author?.name || comment.author_name}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">
                       {formatDistanceToNow(new Date(comment.created_at), {
                         addSuffix: true,
                         locale: ko,
                       })}
                     </div>
                     {comment.updated_at !== comment.created_at && (
-                      <span className="text-xs text-slate-400">(수정됨)</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500">(수정됨)</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -198,7 +198,7 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
                     rows={3}
                   />
                 ) : (
-                  <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                  <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                     {renderContent(comment.content, comment.mentioned_user_ids)}
                   </div>
                 )}

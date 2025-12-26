@@ -71,7 +71,7 @@ export function MentionedCommentsSection() {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-gray-100 p-6">
         <div className="text-sm text-gray-500">멘션된 댓글을 불러오는 중...</div>
       </div>
     );
@@ -82,7 +82,7 @@ export function MentionedCommentsSection() {
   }
 
   return (
-    <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6">
+    <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-gray-100 p-6">
       <div className="flex items-center gap-2 mb-4">
         <MessageSquare className="w-5 h-5 text-indigo-600" />
         <h3 className="text-lg font-black text-gray-900">나를 멘션한 댓글</h3>

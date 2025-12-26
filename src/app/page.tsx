@@ -3057,6 +3057,7 @@ function ModalProject({
     { value: '운영중', label: '운영중' },
     { value: '완료', label: '완료' },
   ];
+
   return (
     <div
       className="modal-container active fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur"
