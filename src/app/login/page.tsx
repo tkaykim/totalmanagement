@@ -54,7 +54,7 @@ export default function LoginPage() {
         } else if (buCode === 'FLOW') {
           router.push('/flow');
         } else if (buCode === 'MODOO') {
-          router.push('/modoo');
+          router.push('/modoogoods');
         } else {
           // 사업부 정보가 없으면 로그인 페이지에 머무름
           setError('사업부 정보가 없습니다. 관리자에게 문의하세요.');

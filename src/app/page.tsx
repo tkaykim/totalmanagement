@@ -365,7 +365,7 @@ export default function HomePage() {
         } else if (appUser.bu_code === 'FLOW') {
           router.push('/flow');
         } else if (appUser.bu_code === 'MODOO') {
-          router.push('/modoo');
+          router.push('/modoogoods');
         }
         return;
       }
@@ -844,6 +844,8 @@ export default function HomePage() {
                     ? '/grigoent' 
                     : buKey === 'FLOW'
                     ? '/flowmaker'
+                    : buKey === 'MODOO'
+                    ? '/modoogoods'
                     : `/${buToSlug(buKey)}`
                 }
                 className={cn(

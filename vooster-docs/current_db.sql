@@ -27,8 +27,11 @@ CREATE TABLE public.artists (
   status text NOT NULL DEFAULT 'Active'::text CHECK (status = ANY (ARRAY['Active'::text, 'Inactive'::text, 'Archived'::text])),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  type text NOT NULL DEFAULT 'individual'::text CHECK (type = ANY (ARRAY['individual'::text, 'team'::text])),
+  team_id bigint,
   CONSTRAINT artists_pkey PRIMARY KEY (id),
-  CONSTRAINT artists_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code)
+  CONSTRAINT artists_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code),
+  CONSTRAINT artists_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.artists(id)
 );
 CREATE TABLE public.business_units (
   id bigint NOT NULL DEFAULT nextval('business_units_id_seq'::regclass),
@@ -72,21 +75,56 @@ CREATE TABLE public.channels (
   CONSTRAINT channels_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code),
   CONSTRAINT channels_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES public.app_users(id)
 );
-CREATE TABLE public.clients (
-  id bigint NOT NULL DEFAULT nextval('clients_id_seq'::regclass),
+CREATE TABLE public.client_company (
+  id bigint NOT NULL DEFAULT nextval('client_company_id_seq'::regclass),
   bu_code USER-DEFINED NOT NULL,
-  name text NOT NULL,
+  company_name_en text,
+  company_name_ko text,
   industry text,
-  contact_person text,
-  phone text,
-  email text,
-  address text,
+  business_registration_number text,
+  representative_name text,
   status USER-DEFINED NOT NULL DEFAULT 'active'::client_status,
   last_meeting_date date,
+  business_registration_file text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT clients_pkey PRIMARY KEY (id),
-  CONSTRAINT clients_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code)
+  CONSTRAINT client_company_pkey PRIMARY KEY (id),
+  CONSTRAINT client_company_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code)
+);
+CREATE TABLE public.client_worker (
+  id bigint NOT NULL DEFAULT nextval('client_worker_id_seq'::regclass),
+  client_company_id bigint,
+  name_en text,
+  name_ko text,
+  phone text,
+  email text,
+  business_card_file text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT client_worker_pkey PRIMARY KEY (id),
+  CONSTRAINT client_worker_client_company_id_fkey FOREIGN KEY (client_company_id) REFERENCES public.client_company(id)
+);
+CREATE TABLE public.comment_mentions_reads (
+  id bigint NOT NULL DEFAULT nextval('comment_mentions_reads_id_seq'::regclass),
+  comment_id bigint NOT NULL,
+  user_id uuid NOT NULL,
+  read_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT comment_mentions_reads_pkey PRIMARY KEY (id),
+  CONSTRAINT comment_mentions_reads_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id),
+  CONSTRAINT comment_mentions_reads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_users(id)
+);
+CREATE TABLE public.comments (
+  id bigint NOT NULL DEFAULT nextval('comments_id_seq'::regclass),
+  entity_type text NOT NULL CHECK (entity_type = ANY (ARRAY['task'::text, 'project'::text])),
+  entity_id bigint NOT NULL,
+  content text NOT NULL,
+  author_id uuid NOT NULL,
+  author_name text NOT NULL,
+  mentioned_user_ids jsonb DEFAULT '[]'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT comments_pkey PRIMARY KEY (id),
+  CONSTRAINT comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.app_users(id)
 );
 CREATE TABLE public.creators (
   id bigint NOT NULL DEFAULT nextval('creators_id_seq'::regclass),
@@ -243,16 +281,27 @@ CREATE TABLE public.projects (
   name text NOT NULL,
   category text NOT NULL,
   status USER-DEFINED NOT NULL DEFAULT '준비중'::project_status,
-  start_date date NOT NULL,
-  end_date date NOT NULL,
+  start_date date,
+  end_date date,
   created_by uuid,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   client_id bigint,
   creators jsonb DEFAULT '[]'::jsonb,
   freelancers jsonb DEFAULT '[]'::jsonb,
+  artist_id bigint,
+  pm_name text,
+  active_steps jsonb DEFAULT '[]'::jsonb,
+  plan_date date,
+  script_date date,
+  shoot_date date,
+  edit1_date date,
+  edit_final_date date,
+  release_date date,
+  assets jsonb DEFAULT '{}'::jsonb,
   CONSTRAINT projects_pkey PRIMARY KEY (id),
   CONSTRAINT projects_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code),
   CONSTRAINT projects_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_users(id),
-  CONSTRAINT fk_projects_client_id FOREIGN KEY (client_id) REFERENCES public.clients(id)
+  CONSTRAINT projects_artist_id_fkey FOREIGN KEY (artist_id) REFERENCES public.artists(id),
+  CONSTRAINT fk_projects_client_company_id FOREIGN KEY (client_id) REFERENCES public.client_company(id)
 );
