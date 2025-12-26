@@ -1475,6 +1475,7 @@ function DashboardView({
 }) {
   const [selectedBu, setSelectedBu] = useState<BU | 'ALL'>('ALL');
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
+  const [projectAssigneeFilter, setProjectAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
   const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
   const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
 
@@ -1497,8 +1498,16 @@ function DashboardView({
       filtered = filtered.filter((p) => p.bu === selectedBu);
     }
     
+    // PM 필터링
+    if (projectAssigneeFilter === 'my' && currentUser?.profile?.name) {
+      filtered = filtered.filter((p) => p.pm_name === currentUser.profile.name);
+    }
+    if (projectAssigneeFilter === 'unassigned') {
+      filtered = filtered.filter((p) => !p.pm_name || p.pm_name.trim() === '');
+    }
+    
     return filtered;
-  }, [projects, selectedBu, projectFilter]);
+  }, [projects, selectedBu, projectFilter, projectAssigneeFilter, currentUser]);
 
   // 필터링된 프로젝트에 연결된 할일 필터링
   const filteredTasksByProject = useMemo(() => {
@@ -1551,6 +1560,9 @@ function DashboardView({
     };
   }, [selectedBu, totals, revenues, expenses, projects]);
 
+  // 권한 체크: manager 또는 admin만 매출/지출/순이익 데이터 확인 가능
+  const canViewFinancialData = currentUser?.profile?.role === 'manager' || currentUser?.profile?.role === 'admin';
+
   return (
     <section className="space-y-8">
       {/* 탭 전환 */}
@@ -1582,26 +1594,28 @@ function DashboardView({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <StatCard
-          title={selectedBu === 'ALL' ? '선택 기간 총 매출' : `${BU_TITLES[selectedBu]} 총 매출`}
-          value={filteredTotals.totalRev}
-          icon={<DollarSign className="h-5 w-5 text-blue-500" />}
-          accent="text-blue-600"
-        />
-        <StatCard
-          title={selectedBu === 'ALL' ? '선택 기간 총 지출' : `${BU_TITLES[selectedBu]} 총 지출`}
-          value={filteredTotals.totalExp}
-          icon={<Coins className="h-5 w-5 text-red-500" />}
-          accent="text-red-500"
-        />
-        <StatCard
-          title={selectedBu === 'ALL' ? '선택 기간 순이익' : `${BU_TITLES[selectedBu]} 순이익`}
-          value={filteredTotals.totalProfit}
-          icon={<ChartLine className="h-5 w-5 text-emerald-500" />}
-          accent="text-emerald-600"
-        />
-      </div>
+      {canViewFinancialData && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <StatCard
+            title={selectedBu === 'ALL' ? '선택 기간 총 매출' : `${BU_TITLES[selectedBu]} 총 매출`}
+            value={filteredTotals.totalRev}
+            icon={<DollarSign className="h-5 w-5 text-blue-500" />}
+            accent="text-blue-600"
+          />
+          <StatCard
+            title={selectedBu === 'ALL' ? '선택 기간 총 지출' : `${BU_TITLES[selectedBu]} 총 지출`}
+            value={filteredTotals.totalExp}
+            icon={<Coins className="h-5 w-5 text-red-500" />}
+            accent="text-red-500"
+          />
+          <StatCard
+            title={selectedBu === 'ALL' ? '선택 기간 순이익' : `${BU_TITLES[selectedBu]} 순이익`}
+            value={filteredTotals.totalProfit}
+            icon={<ChartLine className="h-5 w-5 text-emerald-500" />}
+            accent="text-emerald-600"
+          />
+        </div>
+      )}
 
       {/* 프로젝트와 할일을 좌우로 배치 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -1619,36 +1633,79 @@ function DashboardView({
             </span>
           </div>
           {/* 프로젝트 필터 토글 */}
-          <div className="mb-4 flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
-            <button
-              onClick={() => setProjectFilter('active')}
-              className={cn(
-                'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                projectFilter === 'active'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              진행예정/진행중
-            </button>
-            <button
-              onClick={() => setProjectFilter('completed')}
-              className={cn(
-                'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                projectFilter === 'completed'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              완료
-            </button>
+          <div className="mb-4 space-y-2">
+            {/* 상태 필터 */}
+            <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+              <button
+                onClick={() => setProjectFilter('active')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  projectFilter === 'active'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                진행예정/진행중
+              </button>
+              <button
+                onClick={() => setProjectFilter('completed')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  projectFilter === 'completed'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                완료
+              </button>
+            </div>
+            {/* PM 필터 */}
+            <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 p-1">
+              <button
+                onClick={() => setProjectAssigneeFilter('all')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  projectAssigneeFilter === 'all'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                전체 프로젝트 보기
+              </button>
+              <button
+                onClick={() => setProjectAssigneeFilter('my')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  projectAssigneeFilter === 'my'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                내 맡은 프로젝트 보기
+              </button>
+              <button
+                onClick={() => setProjectAssigneeFilter('unassigned')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  projectAssigneeFilter === 'unassigned'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                )}
+              >
+                담당자 미정인 프로젝트 보기
+              </button>
+            </div>
           </div>
           <div className="space-y-3 max-h-[600px] overflow-y-auto">
             {filteredProjects.length === 0 ? (
               <p className="text-center text-xs text-slate-400 py-8">
-                {projectFilter === 'active' 
-                  ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 진행 예정이거나 진행 중인 프로젝트가 없습니다.`
-                  : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 프로젝트가 없습니다.`
+                {projectAssigneeFilter === 'my'
+                  ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 내가 담당하는 프로젝트가 없습니다.`
+                  : projectAssigneeFilter === 'unassigned'
+                    ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 담당자 미정인 프로젝트가 없습니다.`
+                    : projectFilter === 'active' 
+                      ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 진행 예정이거나 진행 중인 프로젝트가 없습니다.`
+                      : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 프로젝트가 없습니다.`
                 }
               </p>
             ) : (
@@ -1864,68 +1921,70 @@ function DashboardView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-blue-500" />
-            <h3 className="font-bold text-slate-800">사업부별 성과 요약</h3>
-          </div>
-          <div className="space-y-4">
-            {buCards.map((item) => (
-              <div
-                key={item.bu}
-                className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/60 p-5 transition hover:border-blue-200"
-              >
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-tight text-slate-400">
-                    {BU_LABELS[item.bu]}
-                  </p>
-                  <p className="text-sm font-black text-slate-800">{BU_TITLES[item.bu]}</p>
-                  <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    {item.projects} Active Projects
-                  </p>
-          </div>
-                <div className="text-right">
-                  <p className="text-xs font-black text-blue-600">{formatCurrency(item.revenue)}</p>
-                  <p className="mt-0.5 text-[10px] font-bold text-red-500">- {formatCurrency(item.expense)}</p>
-                  <p className="mt-1 text-[11px] font-black text-emerald-600">Net: {formatCurrency(item.profit)}</p>
-        </div>
-      </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <PieLikeIcon className="h-5 w-5 text-blue-500" />
-              <h3 className="font-bold text-slate-800">사업부별 매출 비율</h3>
+      {canViewFinancialData && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="mb-6 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-500" />
+              <h3 className="font-bold text-slate-800">사업부별 성과 요약</h3>
             </div>
-            <span className="text-xs font-semibold text-slate-500">필터 적용 기준</span>
+            <div className="space-y-4">
+              {buCards.map((item) => (
+                <div
+                  key={item.bu}
+                  className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/60 p-5 transition hover:border-blue-200"
+                >
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-tight text-slate-400">
+                      {BU_LABELS[item.bu]}
+                    </p>
+                    <p className="text-sm font-black text-slate-800">{BU_TITLES[item.bu]}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      {item.projects} Active Projects
+                    </p>
           </div>
-          <div className="space-y-3">
-            {share.map((item) => (
-              <div key={item.bu}>
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
-                  <span>{BU_TITLES[item.bu]}</span>
-                  <span className="text-slate-500">
-                    {item.ratio}% • {formatCurrency(item.amount)}
-                  </span>
-                </div>
-                <div className="mt-1 h-3 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                    style={{ width: `${item.ratio}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-            {share.every((s) => s.amount === 0) && (
-              <p className="text-center text-xs text-slate-400">매출 데이터가 없습니다.</p>
-            )}
-          </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-blue-600">{formatCurrency(item.revenue)}</p>
+                    <p className="mt-0.5 text-[10px] font-bold text-red-500">- {formatCurrency(item.expense)}</p>
+                    <p className="mt-1 text-[11px] font-black text-emerald-600">Net: {formatCurrency(item.profit)}</p>
         </div>
       </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <PieLikeIcon className="h-5 w-5 text-blue-500" />
+                <h3 className="font-bold text-slate-800">사업부별 매출 비율</h3>
+              </div>
+              <span className="text-xs font-semibold text-slate-500">필터 적용 기준</span>
+            </div>
+            <div className="space-y-3">
+              {share.map((item) => (
+                <div key={item.bu}>
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+                    <span>{BU_TITLES[item.bu]}</span>
+                    <span className="text-slate-500">
+                      {item.ratio}% • {formatCurrency(item.amount)}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-3 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                      style={{ width: `${item.ratio}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {share.every((s) => s.amount === 0) && (
+                <p className="text-center text-xs text-slate-400">매출 데이터가 없습니다.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
