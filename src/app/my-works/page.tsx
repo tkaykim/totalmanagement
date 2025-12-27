@@ -57,7 +57,7 @@ type TaskItem = {
   title: string;
   assignee: string;
   dueDate: string;
-  status: string;
+  status: 'todo' | 'in-progress' | 'done';
 };
 
 type View = 'projects' | 'tasks' | 'schedule';
@@ -538,14 +538,14 @@ function TasksView({
                                     'rounded-full px-2 py-0.5 text-[10px] font-semibold',
                                     task.status === 'done'
                                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                      : task.status === 'in_progress'
+                                      : task.status === 'in-progress'
                                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                         : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
                                   )}
                                 >
                                   {task.status === 'done'
                                     ? '완료'
-                                    : task.status === 'in_progress'
+                                    : task.status === 'in-progress'
                                       ? '진행중'
                                       : '할일'}
                                 </span>
@@ -777,14 +777,14 @@ function WeekScheduleView({
                               'rounded-full px-1.5 py-0.5 text-[9px] font-semibold',
                               task.status === 'done'
                                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                : task.status === 'in_progress'
+                                : task.status === 'in-progress'
                                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                   : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
                             )}
                           >
                             {task.status === 'done'
                               ? '완료'
-                              : task.status === 'in_progress'
+                              : task.status === 'in-progress'
                                 ? '진행중'
                                 : '할일'}
                           </span>
@@ -1764,14 +1764,14 @@ function ProjectDetailModal({
                                 'rounded-full px-2 py-0.5 text-xs font-semibold',
                                 task.status === 'done'
                                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                  : task.status === 'in_progress'
+                                  : task.status === 'in-progress'
                                     ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                     : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
                               )}
                             >
                               {task.status === 'done'
                                 ? '완료'
-                                : task.status === 'in_progress'
+                                : task.status === 'in-progress'
                                   ? '진행중'
                                   : '할일'}
                             </span>
@@ -1905,7 +1905,12 @@ function TaskEditForm({
   onSave: (task: TaskItem) => void;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    title: string;
+    assignee: string;
+    dueDate: string;
+    status: 'todo' | 'in-progress' | 'done';
+  }>({
     title: task.title,
     assignee: task.assignee,
     dueDate: task.dueDate,
@@ -1946,11 +1951,11 @@ function TaskEditForm({
           <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">상태</label>
           <select
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value as TaskItem['status'] })}
+            onChange={(e) => setForm({ ...form, status: e.target.value as 'todo' | 'in-progress' | 'done' })}
             className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             <option value="todo">할일</option>
-            <option value="in_progress">진행중</option>
+            <option value="in-progress">진행중</option>
             <option value="done">완료</option>
           </select>
         </div>
