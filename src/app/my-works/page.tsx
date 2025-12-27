@@ -961,11 +961,16 @@ function ProjectDetailModal({
   }, [isReactProject, channelsData, project.cat, originalProject]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-  const [newTaskForm, setNewTaskForm] = useState({
+  const [newTaskForm, setNewTaskForm] = useState<{
+    title: string;
+    assignee: string;
+    dueDate: string;
+    status: 'todo' | 'in-progress' | 'done';
+  }>({
     title: '',
     assignee: '',
     dueDate: '',
-    status: 'todo' as TaskItem['status'],
+    status: 'todo',
   });
   const [localTasks, setLocalTasks] = useState<TaskItem[]>(tasks);
 
@@ -1856,11 +1861,11 @@ function ProjectDetailModal({
                 <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">상태</label>
                 <select
                   value={newTaskForm.status}
-                  onChange={(e) => setNewTaskForm({ ...newTaskForm, status: e.target.value as TaskItem['status'] })}
+                  onChange={(e) => setNewTaskForm({ ...newTaskForm, status: e.target.value as 'todo' | 'in-progress' | 'done' })}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 >
                   <option value="todo">할일</option>
-                  <option value="in_progress">진행중</option>
+                  <option value="in-progress">진행중</option>
                   <option value="done">완료</option>
                 </select>
               </div>
