@@ -654,4 +654,15 @@ export function useCommentReads(commentId: number) {
   });
 }
 
+// ============================================
+// My Works Hooks
+// ============================================
+
+export function useMyWorks() {
+  return useQuery({
+    queryKey: ['my-works'],
+    queryFn: api.fetchMyWorks,
+  });
+}
+
 

@@ -21,6 +21,7 @@ export function dbProjectToFrontend(p: Project): {
   edit_final_date?: string | null;
   release_date?: string | null;
   assets?: ProjectAssets;
+  participants?: Array<{ user_id?: string; external_worker_id?: number; role: string; is_pm: boolean }>;
 } {
   return {
     id: String(p.id),
@@ -41,6 +42,7 @@ export function dbProjectToFrontend(p: Project): {
     edit_final_date: p.edit_final_date,
     release_date: p.release_date,
     assets: p.assets,
+    participants: p.participants,
   };
 }
 
@@ -110,6 +112,7 @@ export function frontendProjectToDb(p: {
   edit_final_date?: string | null;
   release_date?: string | null;
   assets?: ProjectAssets;
+  participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
 }): {
   bu_code: BU;
   name: string;
@@ -127,6 +130,7 @@ export function frontendProjectToDb(p: {
   edit_final_date?: string | null;
   release_date?: string | null;
   assets?: ProjectAssets;
+  participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
 } {
   const today = new Date().toISOString().split('T')[0];
   const result: {
@@ -146,6 +150,7 @@ export function frontendProjectToDb(p: {
     edit_final_date?: string | null;
     release_date?: string | null;
     assets?: ProjectAssets;
+    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   } = {
     bu_code: p.bu,
     name: p.name,
@@ -194,7 +199,11 @@ export function frontendProjectToDb(p: {
   if (p.assets !== undefined) {
     result.assets = p.assets;
   }
-  
+
+  if (p.participants !== undefined) {
+    result.participants = p.participants;
+  }
+
   return result;
 }
 

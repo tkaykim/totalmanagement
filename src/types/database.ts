@@ -66,6 +66,13 @@ export interface ProjectFreelancer {
   notes?: string;
 }
 
+export interface ProjectParticipant {
+  user_id?: string;
+  external_worker_id?: number;
+  role: string;
+  is_pm: boolean;
+}
+
 export interface Project {
   id: number;
   bu_code: BU;
@@ -87,6 +94,7 @@ export interface Project {
   edit_final_date?: string | null; // 최종 편집 확정일 (D-1)
   release_date?: string | null; // 업로드/납품일 (D-Day)
   assets?: ProjectAssets; // JSONB: 제작 자산 정보
+  participants?: ProjectParticipant[]; // 프로젝트 참여자 목록
   created_by?: string;
   created_at: string;
   updated_at: string;

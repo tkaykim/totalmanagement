@@ -324,7 +324,7 @@ function StatCard({
         )}
       </div>
       <h3 className="text-gray-500 dark:text-slate-400 text-sm font-medium mb-1">{title}</h3>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{value}</p>
       {subtext && <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">{subtext}</p>}
     </div>
   );
@@ -1044,7 +1044,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
               
               return (
                 <div key={idx} className={`bg-white dark:bg-slate-800 p-2 min-h-[100px] ${!isCurrentMonth ? 'bg-gray-50 dark:bg-slate-900' : ''}`}>
-                  <span className={`text-sm font-medium ${isCurrentMonth ? 'text-gray-700 dark:text-slate-300' : 'text-gray-300'}`}>
+                  <span className={`text-sm font-medium ${isCurrentMonth ? 'text-gray-700 dark:text-slate-300' : 'text-gray-300 dark:text-slate-600'}`}>
                     {format(day, 'd')}
                   </span>
                   <div className="mt-1 space-y-1">
@@ -1245,7 +1245,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                 <ChevronDown className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                               )}
                               <div>
-                                <div className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                <div className="font-medium text-gray-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                   {project.name}
                                 </div>
                               </div>
@@ -1613,7 +1613,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={cn(
                   'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                   viewMode === 'grid'
-                    ? 'bg-white dark:bg-slate-800 text-gray-900 shadow-sm'
+                    ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-sm'
                     : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:text-slate-300'
                 )}
               >
@@ -1624,7 +1624,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 className={cn(
                   'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                   viewMode === 'list'
-                    ? 'bg-white dark:bg-slate-800 text-gray-900 shadow-sm'
+                    ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-sm'
                     : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:text-slate-300'
                 )}
               >
@@ -1661,7 +1661,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       <div className="flex items-center gap-2">
                         <Youtube className="w-5 h-5 text-red-600" />
                         <div>
-                          <div className="font-medium text-gray-900">{channel.name}</div>
+                          <div className="font-medium text-gray-900 dark:text-slate-100">{channel.name}</div>
                           {channel.url && (
                             <a
                               href={channel.url}
@@ -1769,7 +1769,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           <Youtube className="w-6 h-6 text-red-600" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-xl text-gray-900">{channel.name}</h3>
+                          <h3 className="font-bold text-xl text-gray-900 dark:text-slate-100">{channel.name}</h3>
                           {channel.url && (
                             <a
                               href={channel.url}
@@ -1930,7 +1930,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                                 e.stopPropagation();
                                 setEditChannelContentModalOpen(content);
                               }}
-                              className="text-gray-300 hover:text-indigo-600"
+                              className="text-gray-300 dark:text-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400"
                             >
                               <MoreVertical className="w-4 h-4" />
                             </button>
@@ -2043,7 +2043,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                     className="hover:bg-gray-50 dark:hover:bg-slate-900 dark:hover:bg-slate-900 cursor-pointer"
                     onClick={() => setEditEquipmentModalOpen(item)}
                   >
-                    <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-slate-100">{item.name}</td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">{item.category}</td>
                     <td className="px-6 py-4 text-xs font-mono text-gray-500 dark:text-slate-400">
                       {item.serial_number || '-'}
@@ -2088,7 +2088,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase mb-2">총 매출</h3>
-                <p className="text-3xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(totalRevenue)}</p>
               </div>
               <div className="p-2 bg-blue-50 rounded-lg">
                 <TrendingUp className="w-5 h-5 text-blue-600" />
@@ -2105,7 +2105,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 <h3 className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase mb-2">
                   총 지출 (인건비/제작비)
                 </h3>
-                <p className="text-3xl font-bold text-gray-900">{formatCurrency(totalExpense)}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(totalExpense)}</p>
               </div>
               <div className="p-2 bg-red-50 rounded-lg">
                 <Receipt className="w-5 h-5 text-red-600" />
@@ -2278,7 +2278,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                       {staff.name.charAt(0)}
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">{staff.name}</div>
+                      <div className="font-medium text-gray-900 dark:text-slate-100">{staff.name}</div>
                       {staff.company_name && <div className="text-sm text-gray-500 dark:text-slate-400">{staff.company_name}</div>}
                     </div>
                   </div>
@@ -3080,7 +3080,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                             className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700"
                           >
                             <div className="flex-1">
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium text-gray-900 dark:text-slate-100">
                                 {worker.name_ko}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-slate-400">
@@ -3134,7 +3134,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                           {(client as any).company_name_ko?.substring(0, 1) || (client as any).company_name_en?.substring(0, 1) || '-'}
                         </div>
                         <div>
-                          <h3 className="font-bold text-gray-900">{(client as any).company_name_ko || (client as any).company_name_en || '-'}</h3>
+                          <h3 className="font-bold text-gray-900 dark:text-slate-100">{(client as any).company_name_ko || (client as any).company_name_en || '-'}</h3>
                           <p className="text-xs text-gray-500 dark:text-slate-400">{client.industry || '-'}</p>
                         </div>
                       </div>
@@ -3563,7 +3563,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 <ChevronRight className="w-3 h-3" />
                 <span>{selectedManual.category}</span>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">{selectedManual.title}</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">{selectedManual.title}</h1>
               <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-slate-400">
                 {selectedManual.author_name && (
                   <div className="flex items-center">
@@ -3874,7 +3874,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   };
 
   return (
-    <div className="flex h-full bg-gray-50 dark:bg-slate-900 font-sans text-gray-900 overflow-hidden">
+    <div className="flex h-full bg-gray-50 dark:bg-slate-900 font-sans text-gray-900 dark:text-slate-100 overflow-hidden">
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl flex-shrink-0 z-20">
         <div className="p-6 flex items-center space-x-2 border-b border-slate-800 h-16">
           <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -5872,7 +5872,7 @@ function ProjectDetailModal({
                 type="text"
                 value={localProject.name}
                 onChange={(e) => setLocalProject((prev) => ({ ...prev, name: e.target.value }))}
-                className="text-2xl font-bold text-gray-900 w-full border-none p-0 focus:ring-0"
+                className="text-2xl font-bold text-gray-900 dark:text-slate-100 w-full border-none p-0 focus:ring-0"
                 placeholder="프로젝트명"
               />
             </div>
@@ -6051,7 +6051,7 @@ function ProjectDetailModal({
                             <td className="p-3 text-center">
                               <button
                                 onClick={() => handleDeleteTask(task.id)}
-                                className="text-gray-300 hover:text-red-500 transition-colors"
+                                className="text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                               >
                                 <Trash2 size={16} />
                               </button>

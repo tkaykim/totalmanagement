@@ -354,8 +354,14 @@ export default function HomePage() {
         .eq('id', user.id)
         .single();
 
+      // bu_code가 null인 경우 /my-works로 리디렉션
+      if (!appUser?.bu_code) {
+        router.push('/my-works');
+        return;
+      }
+
       // 본사(HEAD)가 아닌 경우 해당 사업부 ERP로 리디렉션
-      if (appUser?.bu_code && appUser.bu_code !== 'HEAD') {
+      if (appUser.bu_code !== 'HEAD') {
         if (appUser.bu_code === 'AST') {
           router.push('/astcompany');
         } else if (appUser.bu_code === 'GRIGO') {
@@ -592,6 +598,7 @@ export default function HomePage() {
     startDate: string;
     endDate: string;
     pm_name?: string | null;
+    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   }) => {
     if (!payload.name || !payload.cat) return;
     try {
@@ -1232,6 +1239,7 @@ export default function HomePage() {
           onSubmit={handleCreateProject}
           defaultBu={bu}
           usersData={usersData}
+          externalWorkersData={externalWorkersData}
         />
       )}
       {isTaskModalOpen && (
@@ -1498,9 +1506,17 @@ function DashboardView({
       filtered = filtered.filter((p) => p.bu === selectedBu);
     }
     
-    // PM 필터링
-    if (projectAssigneeFilter === 'my' && currentUser?.profile?.name) {
-      filtered = filtered.filter((p) => p.pm_name === currentUser.profile.name);
+    // 내 프로젝트 필터링 (PM이거나 참여자인 프로젝트)
+    if (projectAssigneeFilter === 'my' && currentUser) {
+      filtered = filtered.filter((p) => {
+        // PM으로 맡은 프로젝트
+        const isPM = currentUser.profile?.name && p.pm_name === currentUser.profile.name;
+        // 참여자로 포함된 프로젝트
+        const isParticipant = p.participants?.some(
+          (participant) => participant.user_id === currentUser.id
+        ) || false;
+        return isPM || isParticipant;
+      });
     }
     if (projectAssigneeFilter === 'unassigned') {
       filtered = filtered.filter((p) => !p.pm_name || p.pm_name.trim() === '');
@@ -1681,7 +1697,7 @@ function DashboardView({
                     : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
                 )}
               >
-                내 맡은 프로젝트 보기
+                내 프로젝트
               </button>
               <button
                 onClick={() => setProjectAssigneeFilter('unassigned')}
@@ -1692,7 +1708,7 @@ function DashboardView({
                     : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
                 )}
               >
-                담당자 미정인 프로젝트 보기
+                담당자 미정 프로젝트
               </button>
             </div>
           </div>
@@ -1700,7 +1716,7 @@ function DashboardView({
             {filteredProjects.length === 0 ? (
               <p className="text-center text-xs text-slate-400 dark:text-slate-500 py-8">
                 {projectAssigneeFilter === 'my'
-                  ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 내가 담당하는 프로젝트가 없습니다.`
+                  ? '내 프로젝트가 없습니다.'
                   : projectAssigneeFilter === 'unassigned'
                     ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 담당자 미정인 프로젝트가 없습니다.`
                     : projectFilter === 'active' 
@@ -3396,11 +3412,13 @@ function CreateProjectModal({
   onSubmit,
   defaultBu,
   usersData,
+  externalWorkersData,
 }: {
   onClose: () => void;
-  onSubmit: (payload: { name: string; bu: BU; cat: string; startDate: string; endDate: string; pm_name?: string | null }) => void;
+  onSubmit: (payload: { name: string; bu: BU; cat: string; startDate: string; endDate: string; pm_name?: string | null; participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }> }) => void;
   defaultBu: BU;
   usersData?: { users: any[]; currentUser: any };
+  externalWorkersData?: any[];
 }) {
   const [form, setForm] = useState({
     name: '',
@@ -3410,56 +3428,158 @@ function CreateProjectModal({
     endDate: '',
     pm_name: '',
   });
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>([]);
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
+  const [participantSelectId, setParticipantSelectId] = useState<string>('');
+
+  const handleAddParticipant = () => {
+    if (!participantSelectId) return;
+
+    if (participantSelectType === 'user') {
+      const user = usersData?.users.find((u: any) => u.id === participantSelectId);
+      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name }]);
+        setParticipantSelectId('');
+      }
+    } else {
+      const worker = externalWorkersData?.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name }]);
+        setParticipantSelectId('');
+      }
+    }
+  };
+
+  const handleRemoveParticipant = (index: number) => {
+    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <ModalShell title="프로젝트 등록" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="사업부"
-          value={form.bu}
-          onChange={(val) => setForm((prev) => ({ ...prev, bu: val as BU }))}
-          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
-        />
-        <InputField
-          label="카테고리"
-          placeholder="예: 안무제작"
-          value={form.cat}
-          onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
-        />
-        <InputField
-          label="프로젝트명"
-          placeholder="프로젝트 이름"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <SelectField
-          label="PM"
-          value={form.pm_name}
-          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...((usersData?.users ?? [])
-              .map((u: any) => ({ value: u.name || '', label: u.name || '' }))
-              .filter((o: any) => o.value)),
-          ]}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <InputField
-            label="시작일"
-            type="date"
-            value={form.startDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <SelectField
+            label="사업부"
+            value={form.bu}
+            onChange={(val) => setForm((prev) => ({ ...prev, bu: val as BU }))}
+            options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
           />
           <InputField
-            label="종료일"
-            type="date"
-            value={form.endDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
+            label="카테고리"
+            placeholder="예: 안무제작"
+            value={form.cat}
+            onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
           />
+          <InputField
+            label="프로젝트명"
+            placeholder="프로젝트 이름"
+            value={form.name}
+            onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+          />
+          <SelectField
+            label="PM"
+            value={form.pm_name}
+            onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
+            options={[
+              { value: '', label: '선택 안함' },
+              ...((usersData?.users ?? [])
+                .map((u: any) => ({ value: u.name || '', label: u.name || '' }))
+                .filter((o: any) => o.value)),
+            ]}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <InputField
+              label="시작일"
+              type="date"
+              value={form.startDate}
+              onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
+            />
+            <InputField
+              label="종료일"
+              type="date"
+              value={form.endDate}
+              onChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
+            />
+          </div>
+        </div>
+
+        {/* 참여자 선택 섹션 */}
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+            참여자 추가
+          </label>
+          <div className="flex gap-2 mb-3">
+            <select
+              value={participantSelectType}
+              onChange={(e) => {
+                setParticipantSelectType(e.target.value as 'user' | 'external');
+                setParticipantSelectId('');
+              }}
+              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+            >
+              <option value="user">내부 사용자</option>
+              <option value="external">외주 인력</option>
+            </select>
+            <select
+              value={participantSelectId}
+              onChange={(e) => setParticipantSelectId(e.target.value)}
+              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+            >
+              <option value="">선택하세요</option>
+              {participantSelectType === 'user'
+                ? (usersData?.users ?? []).map((u: any) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))
+                : (externalWorkersData ?? []).map((w: any) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleAddParticipant}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+            >
+              추가
+            </button>
+          </div>
+          {selectedParticipants.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedParticipants.map((p, index) => (
+                  <span
+                    key={`${p.type}-${p.id}`}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                  >
+                    {p.name}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveParticipant(index)}
+                      className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <ModalActions
-        onPrimary={() => onSubmit({ ...form, pm_name: form.pm_name || null })}
+        onPrimary={() => {
+          const participants = selectedParticipants.map((p) => ({
+            user_id: p.type === 'user' ? (p.id as string) : undefined,
+            external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+            role: 'participant',
+            is_pm: false,
+          }));
+          onSubmit({ ...form, pm_name: form.pm_name || null, participants });
+        }}
         onClose={onClose}
         primaryLabel="등록"
       />

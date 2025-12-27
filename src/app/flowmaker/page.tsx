@@ -29,7 +29,13 @@ export default function FlowMakerPage() {
         .eq('id', user.id)
         .single();
 
-      if (appUser?.bu_code && appUser.bu_code !== 'FLOW' && appUser.bu_code !== 'HEAD') {
+      // bu_code가 null인 경우 /my-works로 리디렉션
+      if (!appUser?.bu_code) {
+        router.push('/my-works');
+        return;
+      }
+
+      if (appUser.bu_code !== 'FLOW' && appUser.bu_code !== 'HEAD') {
         router.push('/login');
         return;
       }

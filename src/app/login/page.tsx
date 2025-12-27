@@ -55,6 +55,9 @@ export default function LoginPage() {
           router.push('/flow');
         } else if (buCode === 'MODOO') {
           router.push('/modoogoods');
+        } else if (!buCode) {
+          // bu_code가 null인 경우 my-works 페이지로 리디렉션
+          router.push('/my-works');
         } else {
           // 사업부 정보가 없으면 로그인 페이지에 머무름
           setError('사업부 정보가 없습니다. 관리자에게 문의하세요.');

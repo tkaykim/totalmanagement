@@ -21,7 +21,7 @@ export async function PATCH(
       }
     });
 
-    const { data, error } = await supabase
+    const { data: project, error } = await supabase
       .from('projects')
       .update(updateData)
       .eq('id', id)
@@ -33,7 +33,12 @@ export async function PATCH(
       throw error;
     }
 
-    return NextResponse.json(data);
+    // participants가 null이면 빈 배열로 초기화
+    if (!project.participants) {
+      project.participants = [];
+    }
+
+    return NextResponse.json(project);
   } catch (error: any) {
     console.error('Failed to update project:', error);
     return NextResponse.json(

@@ -48,6 +48,7 @@ export async function createProject(data: {
   status?: string;
   start_date?: string | null;
   end_date?: string | null;
+  participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   created_by?: string;
   client_id?: number;
   artist_id?: number;
@@ -874,6 +875,20 @@ export async function markCommentAsRead(commentId: number): Promise<any> {
 export async function fetchCommentReads(commentId: number): Promise<any[]> {
   const res = await fetch(`${API_BASE}/comments/${commentId}/reads`);
   if (!res.ok) throw new Error('Failed to fetch comment reads');
+  return res.json();
+}
+
+// ============================================
+// My Works API Functions
+// ============================================
+
+export async function fetchMyWorks(): Promise<{
+  projects: Project[];
+  tasks: ProjectTask[];
+  user: any;
+}> {
+  const res = await fetch(`${API_BASE}/my-works`);
+  if (!res.ok) throw new Error('Failed to fetch my works');
   return res.json();
 }
 

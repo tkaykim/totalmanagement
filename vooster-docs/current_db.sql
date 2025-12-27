@@ -299,6 +299,7 @@ CREATE TABLE public.projects (
   edit_final_date date,
   release_date date,
   assets jsonb DEFAULT '{}'::jsonb,
+  participants jsonb DEFAULT '[]'::jsonb,
   CONSTRAINT projects_pkey PRIMARY KEY (id),
   CONSTRAINT projects_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code),
   CONSTRAINT projects_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_users(id),

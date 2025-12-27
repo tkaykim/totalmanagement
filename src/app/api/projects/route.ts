@@ -14,11 +14,21 @@ export async function GET(request: NextRequest) {
       query = query.eq('bu_code', bu);
     }
 
-    const { data, error } = await query;
+    const { data: projects, error } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // participants JSONB 컬럼이 이미 포함되어 있으므로 별도 조회 불필요
+    // 각 프로젝트의 participants가 null이면 빈 배열로 초기화
+    if (projects) {
+      projects.forEach((project: any) => {
+        if (!project.participants) {
+          project.participants = [];
+        }
+      });
+    }
+
+    return NextResponse.json(projects);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -61,7 +71,14 @@ export async function POST(request: NextRequest) {
       insertData.pm_name = body.pm_name || null;
     }
 
-    const { data, error } = await supabase
+    // participants JSONB 컬럼 추가
+    if (body.participants && Array.isArray(body.participants)) {
+      insertData.participants = body.participants;
+    } else {
+      insertData.participants = [];
+    }
+
+    const { data: project, error } = await supabase
       .from('projects')
       .insert(insertData)
       .select()
@@ -72,7 +89,12 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json(data);
+    // participants가 null이면 빈 배열로 초기화
+    if (!project.participants) {
+      project.participants = [];
+    }
+
+    return NextResponse.json(project);
   } catch (error: any) {
     console.error('Failed to create project:', error);
     return NextResponse.json(

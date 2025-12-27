@@ -19,3 +19,4 @@ CREATE INDEX IF NOT EXISTS idx_comment_mentions_reads_comment_id ON public.comme
 CREATE INDEX IF NOT EXISTS idx_comment_mentions_reads_read_at ON public.comment_mentions_reads(read_at DESC);
 
 
+

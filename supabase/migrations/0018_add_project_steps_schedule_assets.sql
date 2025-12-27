@@ -24,3 +24,4 @@ CREATE INDEX IF NOT EXISTS idx_projects_release_date ON projects(release_date) W
 CREATE INDEX IF NOT EXISTS idx_projects_shoot_date ON projects(shoot_date) WHERE shoot_date IS NOT NULL;
 
 
+
