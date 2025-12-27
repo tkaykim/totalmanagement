@@ -70,6 +70,7 @@ type Project = {
   endDate: string;
   status: string;
   pm_name?: string;
+  participants?: Array<{ user_id?: string; external_worker_id?: number; role: string; is_pm: boolean }>;
 };
 
 type FinancialEntryStatus = 'planned' | 'paid' | 'canceled';
