@@ -1008,7 +1008,7 @@ function ProjectDetailModal({
   }, [user, originalProject]);
 
   const todoCount = localTasks.filter((t) => t.status === 'todo').length;
-  const inProgressCount = localTasks.filter((t) => t.status === 'in_progress').length;
+  const inProgressCount = localTasks.filter((t) => t.status === 'in-progress').length;
   const doneCount = localTasks.filter((t) => t.status === 'done').length;
 
   // D-Day 변경 시 자동 계산 (REACT 프로젝트용)
