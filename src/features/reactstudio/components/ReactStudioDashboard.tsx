@@ -4221,6 +4221,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                   shoot_date: data.shoot_date || null,
                   edit1_date: data.edit1_date || null,
                   edit_final_date: data.edit_final_date || null,
+                  participants: data.participants || [],
                 } as any,
               });
               
@@ -4875,6 +4876,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           clients={clientsData}
           channels={channelsData}
           orgMembers={orgData}
+          appUsers={usersData?.users || []}
           externalWorkers={externalWorkersData}
           tasks={tasks.filter((t) => t.projectId === selectedProjectDetail.id.toString())}
           onClose={() => setSelectedProjectDetail(null)}
@@ -5189,6 +5191,7 @@ function CreateProjectModal({
     shoot_date?: string | null;
     edit1_date?: string | null;
     edit_final_date?: string | null;
+    participants?: Array<{ user_id?: string; external_worker_id?: number; role: string; is_pm: boolean }>;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
@@ -5207,6 +5210,22 @@ function CreateProjectModal({
     active_steps: [] as ProjectStep[],
     release_date: '',
   });
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ id: string; name: string }>>([]);
+  const [participantSelectId, setParticipantSelectId] = useState<string>('');
+
+  const handleAddParticipant = () => {
+    if (!participantSelectId) return;
+
+    const user = appUsers.find((u: any) => u.id === participantSelectId);
+    if (user && !selectedParticipants.some((p) => p.id === user.id)) {
+      setSelectedParticipants((prev) => [...prev, { id: user.id, name: user.name || '' }]);
+      setParticipantSelectId('');
+    }
+  };
+
+  const handleRemoveParticipant = (index: number) => {
+    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const selectedClient = form.client_id ? clients.find((c) => c.id === Number(form.client_id)) : null;
   const selectedChannel = form.channel_id ? channels.find((c) => c.id === Number(form.channel_id)) : null;
@@ -5240,6 +5259,11 @@ function CreateProjectModal({
         <ModalActions
           onPrimary={() => {
             const calculatedDates = form.release_date ? calculateDatesFromRelease(form.release_date) : {};
+            const participants = selectedParticipants.map((p) => ({
+              user_id: p.id,
+              role: 'participant',
+              is_pm: false,
+            }));
             onSubmit({
               bu,
               name: form.name,
@@ -5251,6 +5275,7 @@ function CreateProjectModal({
               pm_name: form.pm_name || null,
               active_steps: form.active_steps,
               release_date: form.release_date || null,
+              participants,
               ...calculatedDates,
             });
           }}
@@ -5522,6 +5547,7 @@ function ProjectDetailModal({
   orgMembers,
   externalWorkers,
   tasks,
+  appUsers,
   onClose,
   onEdit,
   onUpdate,
@@ -5537,6 +5563,7 @@ function ProjectDetailModal({
   orgMembers: any[];
   externalWorkers: any[];
   tasks: any[];
+  appUsers: any[];
   onClose: () => void;
   onEdit: () => void;
   onUpdate: (data: any) => Promise<void>;
@@ -5563,6 +5590,31 @@ function ProjectDetailModal({
 
   const [localTasks, setLocalTasks] = useState(tasks);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const projectParticipants = (project as any).participants || [];
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ id: string; name: string }>>(() => {
+    return projectParticipants
+      .filter((p: any) => p.user_id)
+      .map((p: any) => {
+        const user = appUsers.find((u: any) => u.id === p.user_id);
+        return user ? { id: user.id, name: user.name || '' } : null;
+      })
+      .filter((p: any) => p !== null) as Array<{ id: string; name: string }>;
+  });
+  const [participantSelectId, setParticipantSelectId] = useState<string>('');
+
+  const handleAddParticipant = () => {
+    if (!participantSelectId) return;
+
+    const user = appUsers.find((u: any) => u.id === participantSelectId);
+    if (user && !selectedParticipants.some((p) => p.id === user.id)) {
+      setSelectedParticipants((prev) => [...prev, { id: user.id, name: user.name || '' }]);
+      setParticipantSelectId('');
+    }
+  };
+
+  const handleRemoveParticipant = (index: number) => {
+    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
+  };
 
   // D-Day 변경 시 자동 계산
   const handleReleaseDateChange = (releaseDate: string) => {
@@ -5719,6 +5771,11 @@ function ProjectDetailModal({
         shoot_date: localProject.shoot_date,
         edit1_date: localProject.edit1_date,
         edit_final_date: localProject.edit_final_date,
+        participants: selectedParticipants.map((p) => ({
+          user_id: p.id,
+          role: 'participant',
+          is_pm: false,
+        })),
       });
       
       // 새로 생성된 할일들(임시 ID를 가진 할일들)을 DB에 저장
@@ -5899,6 +5956,59 @@ function ProjectDetailModal({
                   {(localProject as any).pm_name || '-'}
                 </div>
               </div>
+            </div>
+
+            {/* 참여자 관리 */}
+            <div className="mt-6">
+              <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
+                <Users size={18} /> 참여자 관리
+              </h3>
+              <div className="flex gap-2 mb-3">
+                <select
+                  value={participantSelectId}
+                  onChange={(e) => setParticipantSelectId(e.target.value)}
+                  className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                >
+                  <option value="">사용자를 선택하세요</option>
+                  {appUsers
+                    .filter((u: any) => !selectedParticipants.some((p) => p.id === u.id))
+                    .map((u: any) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddParticipant}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  추가
+                </button>
+              </div>
+              {selectedParticipants.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedParticipants.map((p, index) => (
+                      <span
+                        key={p.id}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                      >
+                        {p.name}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveParticipant(index)}
+                          className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Step Configuration */}
@@ -6265,12 +6375,14 @@ function EditProjectModal({
     shoot_date?: string | null;
     edit1_date?: string | null;
     edit_final_date?: string | null;
+    participants?: Array<{ user_id?: string; external_worker_id?: number; role: string; is_pm: boolean }>;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
   onDeleteClient: (clientId: number) => void;
 }) {
   const isExternal = !!(project as any).client_id;
+  const projectParticipants = (project as any).participants || [];
   const [form, setForm] = useState({
     projectType: isExternal ? 'external' as 'channel' | 'external' : 'channel' as 'channel' | 'external',
     name: project.name,
@@ -6290,6 +6402,30 @@ function EditProjectModal({
     release_date: (project as any).release_date || null,
     assets: (project as any).assets || {} as ProjectAssets,
   });
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ id: string; name: string }>>(() => {
+    return projectParticipants
+      .filter((p: any) => p.user_id)
+      .map((p: any) => {
+        const user = appUsers.find((u: any) => u.id === p.user_id);
+        return user ? { id: user.id, name: user.name || '' } : null;
+      })
+      .filter((p: any) => p !== null) as Array<{ id: string; name: string }>;
+  });
+  const [participantSelectId, setParticipantSelectId] = useState<string>('');
+
+  const handleAddParticipant = () => {
+    if (!participantSelectId) return;
+
+    const user = appUsers.find((u: any) => u.id === participantSelectId);
+    if (user && !selectedParticipants.some((p) => p.id === user.id)) {
+      setSelectedParticipants((prev) => [...prev, { id: user.id, name: user.name || '' }]);
+      setParticipantSelectId('');
+    }
+  };
+
+  const handleRemoveParticipant = (index: number) => {
+    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
+  };
 
   // D-Day 변경 시 자동 계산
   const handleReleaseDateChange = (releaseDate: string) => {
@@ -6320,7 +6456,12 @@ function EditProjectModal({
       onClose={onClose}
       actions={
         <ModalActions
-          onPrimary={() =>
+          onPrimary={() => {
+            const participants = selectedParticipants.map((p) => ({
+              user_id: p.id,
+              role: 'participant',
+              is_pm: false,
+            }));
             onSubmit({
               bu,
               name: form.name,
@@ -6337,8 +6478,9 @@ function EditProjectModal({
               edit1_date: form.edit1_date,
               edit_final_date: form.edit_final_date,
               release_date: form.release_date,
-            })
-          }
+              participants,
+            });
+          }}
           onClose={onClose}
           primaryLabel="수정"
         />
@@ -6488,6 +6630,60 @@ function EditProjectModal({
           ]}
         />
       </div>
+
+      {/* 참여자 관리 */}
+      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+        <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
+          <Users className="w-4 h-4" /> 참여자 관리
+        </h3>
+        <div className="flex gap-2 mb-3">
+          <select
+            value={participantSelectId}
+            onChange={(e) => setParticipantSelectId(e.target.value)}
+            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option value="">사용자를 선택하세요</option>
+            {appUsers
+              .filter((u: any) => !selectedParticipants.some((p) => p.id === u.id))
+              .map((u: any) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAddParticipant}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            추가
+          </button>
+        </div>
+        {selectedParticipants.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
+            <div className="flex flex-wrap gap-2">
+              {selectedParticipants.map((p, index) => (
+                <span
+                  key={p.id}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                >
+                  {p.name}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveParticipant(index)}
+                    className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 진행 단계 설정 */}
       <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
         <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
