@@ -3029,6 +3029,7 @@ function ModalProject({
   projects,
   orgData,
   usersData,
+  externalWorkersData,
 }: {
   project: Project;
   onClose: () => void;
