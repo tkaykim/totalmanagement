@@ -83,6 +83,31 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
+    // 아티스트가 'individual' 타입이고, 'GRIGO' 사업부인 경우 dancers 테이블에도 추가
+    if (data.type === 'individual' && data.bu_code === 'GRIGO') {
+      try {
+        const dancerInsertData: any = {
+          bu_code: data.bu_code,
+          name: data.name,
+          nickname_ko: data.name,
+          company: '그리고 엔터테인먼트',
+        };
+        if (data.nationality) {
+          dancerInsertData.nationality = data.nationality;
+        }
+
+        const { error: dancerError } = await supabase
+          .from('dancers')
+          .insert(dancerInsertData);
+
+        if (dancerError) {
+          console.warn('Failed to create corresponding dancer entry for artist:', dancerError);
+        }
+      } catch (dancerError) {
+        console.warn('Failed to create corresponding dancer entry for artist:', dancerError);
+      }
+    }
+
     return NextResponse.json(data);
   } catch (error: any) {
     console.error('Failed to create artist:', error);

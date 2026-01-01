@@ -584,6 +584,43 @@ export function useDeleteArtist() {
   });
 }
 
+export function useDancers(bu?: BU) {
+  return useQuery({
+    queryKey: ['dancers', bu],
+    queryFn: () => api.fetchDancers(bu),
+  });
+}
+
+export function useCreateDancer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createDancer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dancers'] });
+    },
+  });
+}
+
+export function useUpdateDancer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Dancer> }) => api.updateDancer(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dancers'] });
+    },
+  });
+}
+
+export function useDeleteDancer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteDancer(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dancers'] });
+    },
+  });
+}
+
 // ============================================
 // Comments Hooks
 // ============================================
@@ -662,6 +699,13 @@ export function useMyWorks() {
   return useQuery({
     queryKey: ['my-works'],
     queryFn: api.fetchMyWorks,
+  });
+}
+
+export function useMyArtistProfile() {
+  return useQuery({
+    queryKey: ['my-artist-profile'],
+    queryFn: api.fetchMyArtistProfile,
   });
 }
 

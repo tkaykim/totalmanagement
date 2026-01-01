@@ -233,6 +233,18 @@ CREATE TABLE public.manuals (
   CONSTRAINT manuals_bu_code_fkey FOREIGN KEY (bu_code) REFERENCES public.business_units(code),
   CONSTRAINT manuals_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.app_users(id)
 );
+CREATE TABLE public.notifications (
+  id bigint NOT NULL DEFAULT nextval('notifications_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  type text DEFAULT 'info'::text,
+  read boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
 CREATE TABLE public.org_members (
   id bigint NOT NULL DEFAULT nextval('org_members_id_seq'::regclass),
   org_unit_id bigint,

@@ -355,6 +355,12 @@ export default function HomePage() {
         .eq('id', user.id)
         .single();
 
+      // role이 artist인 경우 /my-profile로 리디렉션
+      if (appUser?.role === 'artist') {
+        router.push('/grigoent/my-profile');
+        return;
+      }
+
       // bu_code가 null인 경우 /my-works로 리디렉션
       if (!appUser?.bu_code) {
         router.push('/my-works');
@@ -620,6 +626,7 @@ export default function HomePage() {
     endDate: string;
     status?: string;
     pm_name?: string | null;
+    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   }) => {
     if (!payload.name || !payload.cat) return;
     try {
@@ -631,6 +638,7 @@ export default function HomePage() {
         endDate: payload.endDate,
         status: payload.status,
         pm_name: payload.pm_name,
+        participants: payload.participants,
       });
       await updateProjectMutation.mutateAsync({ id: Number(payload.id), data: dbData });
       setEditProjectModalOpen(null);
@@ -1232,6 +1240,7 @@ export default function HomePage() {
           projects={projects}
           orgData={orgData}
           usersData={usersData}
+          externalWorkersData={externalWorkersData}
         />
       )}
       {isProjectModalOpen && (
@@ -1289,6 +1298,7 @@ export default function HomePage() {
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={handleUpdateProject}
           usersData={usersData}
+          externalWorkersData={externalWorkersData}
         />
       )}
       {deleteProjectId && (
@@ -2920,7 +2930,9 @@ function OrganizationView({
                                 ? 'bg-blue-100 text-blue-700'
                                 : u.role === 'member'
                                   ? 'bg-emerald-100 text-emerald-700'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
+                                  : u.role === 'artist'
+                                    ? 'bg-purple-100 text-purple-700'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
                           )}
                         >
                           {u.role === 'admin'
@@ -2929,7 +2941,9 @@ function OrganizationView({
                               ? '매니저'
                               : u.role === 'member'
                                 ? '멤버'
-                                : '뷰어'}
+                                : u.role === 'artist'
+                                  ? '아티스트'
+                                  : '뷰어'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
@@ -3059,14 +3073,73 @@ function ModalProject({
     endDate: string;
     status?: string;
     pm_name?: string | null;
+    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   }) => void;
   onAddTask: (projectId: string) => void;
   tasks: TaskItem[];
   projects: Project[];
   orgData: any[];
   usersData?: { users: any[]; currentUser: any };
+  externalWorkersData?: any[];
 }) {
+  const projectParticipants = (project as any).participants || [];
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
+    return projectParticipants.map((p: any) => {
+      if (p.user_id) {
+        const user = usersData?.users.find((u: any) => u.id === p.user_id);
+        return user ? { type: 'user' as const, id: user.id, name: user.name } : null;
+      } else if (p.external_worker_id) {
+        const worker = externalWorkersData?.find((w: any) => w.id === p.external_worker_id);
+        return worker ? { type: 'external' as const, id: worker.id, name: worker.name } : null;
+      }
+      return null;
+    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
+  });
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
+  const [participantSelectId, setParticipantSelectId] = useState<string>('');
   const [statusValue, setStatusValue] = useState(project.status);
+
+  const handleAddParticipant = () => {
+    if (!participantSelectId) return;
+
+    if (participantSelectType === 'user') {
+      const user = usersData?.users.find((u: any) => u.id === participantSelectId);
+      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name }]);
+        setParticipantSelectId('');
+      }
+    } else {
+      const worker = externalWorkersData?.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name }]);
+        setParticipantSelectId('');
+      }
+    }
+  };
+
+  const handleRemoveParticipant = (index: number) => {
+    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveParticipants = () => {
+    const participants = selectedParticipants.map((p) => ({
+      user_id: p.type === 'user' ? (p.id as string) : undefined,
+      external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+      role: 'participant',
+      is_pm: false,
+    }));
+    onUpdateProject({
+      id: project.id,
+      name: project.name,
+      bu: project.bu,
+      cat: project.cat,
+      startDate: project.startDate,
+      endDate: project.endDate,
+      status: project.status,
+      pm_name: project.pm_name || null,
+      participants,
+    });
+  };
   const statusOptions = [
     { value: '준비중', label: '준비중' },
     { value: '기획중', label: '기획중' },
@@ -3102,6 +3175,12 @@ function ModalProject({
                     endDate: project.endDate,
                     status: newStatus,
                     pm_name: project.pm_name || null,
+                    participants: selectedParticipants.map((p) => ({
+                      user_id: p.type === 'user' ? (p.id as string) : undefined,
+                      external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+                      role: 'participant',
+                      is_pm: false,
+                    })),
                   });
                 }}
                 className={cn(
@@ -3234,6 +3313,84 @@ function ModalProject({
                 </>
               )}
             </div>
+          </div>
+
+          {/* 참여자 관리 섹션 */}
+          <div className="rounded-2xl border-2 border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-900/20 p-6">
+            <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
+              <h4 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-200">
+                <Users className="h-5 w-5 text-blue-600" />
+                참여자 관리
+              </h4>
+            </div>
+            <div className="flex gap-2 mb-3">
+              <select
+                value={participantSelectType}
+                onChange={(e) => {
+                  setParticipantSelectType(e.target.value as 'user' | 'external');
+                  setParticipantSelectId('');
+                }}
+                className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+              >
+                <option value="user">내부 사용자</option>
+                <option value="external">외주 인력</option>
+              </select>
+              <select
+                value={participantSelectId}
+                onChange={(e) => setParticipantSelectId(e.target.value)}
+                className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+              >
+                <option value="">선택하세요</option>
+                {participantSelectType === 'user'
+                  ? (usersData?.users ?? []).filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id)).map((u: any) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))
+                  : (externalWorkersData ?? []).filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id)).map((w: any) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleAddParticipant}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                추가
+              </button>
+            </div>
+            {selectedParticipants.length > 0 && (
+              <div className="space-y-2 mb-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedParticipants.map((p, index) => (
+                    <span
+                      key={`${p.type}-${p.id}`}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                    >
+                      {p.name}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveParticipant(index)}
+                        className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleSaveParticipants}
+              className="w-full rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              참여자 저장
+            </button>
           </div>
 
           {/* 매출/지출 요약 - 작게 표시 */}
@@ -4186,6 +4343,7 @@ function EditProjectModal({
   onClose,
   onSubmit,
   usersData,
+  externalWorkersData,
 }: {
   project: Project;
   onClose: () => void;
@@ -4198,9 +4356,12 @@ function EditProjectModal({
     endDate: string;
     status?: string;
     pm_name?: string | null;
+    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   }) => void;
   usersData?: { users: any[]; currentUser: any };
+  externalWorkersData?: any[];
 }) {
+  const projectParticipants = (project as any).participants || [];
   const [form, setForm] = useState({
     name: project.name,
     bu: project.bu,
@@ -4210,7 +4371,43 @@ function EditProjectModal({
     status: project.status,
     pm_name: (project as any).pm_name || '',
   });
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
+    return projectParticipants.map((p: any) => {
+      if (p.user_id) {
+        const user = usersData?.users.find((u: any) => u.id === p.user_id);
+        return user ? { type: 'user' as const, id: user.id, name: user.name } : null;
+      } else if (p.external_worker_id) {
+        const worker = externalWorkersData?.find((w: any) => w.id === p.external_worker_id);
+        return worker ? { type: 'external' as const, id: worker.id, name: worker.name } : null;
+      }
+      return null;
+    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
+  });
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
+  const [participantSelectId, setParticipantSelectId] = useState<string>('');
   const [error, setError] = useState<string>('');
+
+  const handleAddParticipant = () => {
+    if (!participantSelectId) return;
+
+    if (participantSelectType === 'user') {
+      const user = usersData?.users.find((u: any) => u.id === participantSelectId);
+      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name }]);
+        setParticipantSelectId('');
+      }
+    } else {
+      const worker = externalWorkersData?.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name }]);
+        setParticipantSelectId('');
+      }
+    }
+  };
+
+  const handleRemoveParticipant = (index: number) => {
+    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <ModalShell title="프로젝트 수정" onClose={onClose}>
@@ -4271,6 +4468,74 @@ function EditProjectModal({
           ]}
         />
       </div>
+
+      {/* 참여자 선택 섹션 */}
+      <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+          참여자 관리
+        </label>
+        <div className="flex gap-2 mb-3">
+          <select
+            value={participantSelectType}
+            onChange={(e) => {
+              setParticipantSelectType(e.target.value as 'user' | 'external');
+              setParticipantSelectId('');
+            }}
+            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option value="user">내부 사용자</option>
+            <option value="external">외주 인력</option>
+          </select>
+          <select
+            value={participantSelectId}
+            onChange={(e) => setParticipantSelectId(e.target.value)}
+            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option value="">선택하세요</option>
+            {participantSelectType === 'user'
+              ? (usersData?.users ?? []).filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id)).map((u: any) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))
+              : (externalWorkersData ?? []).filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id)).map((w: any) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAddParticipant}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+          >
+            추가
+          </button>
+        </div>
+        {selectedParticipants.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
+            <div className="flex flex-wrap gap-2">
+              {selectedParticipants.map((p, index) => (
+                <span
+                  key={`${p.type}-${p.id}`}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                >
+                  {p.name}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveParticipant(index)}
+                    className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
           <p className="text-xs font-semibold text-red-600">{error}</p>
@@ -4288,7 +4553,13 @@ function EditProjectModal({
           }
           
           setError('');
-          onSubmit({ ...form, id: project.id, pm_name: form.pm_name || null });
+          const participants = selectedParticipants.map((p) => ({
+            user_id: p.type === 'user' ? (p.id as string) : undefined,
+            external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+            role: 'participant',
+            is_pm: false,
+          }));
+          onSubmit({ ...form, id: project.id, pm_name: form.pm_name || null, participants });
         }}
         onClose={onClose}
         primaryLabel="수정"
@@ -5364,6 +5635,7 @@ function EditUserModal({
             { value: 'manager', label: '매니저' },
             { value: 'member', label: '멤버' },
             { value: 'viewer', label: '뷰어' },
+            { value: 'artist', label: '아티스트' },
           ]}
         />
         <SelectField
@@ -5480,6 +5752,7 @@ function CreateUserModal({
             { value: 'manager', label: '매니저' },
             { value: 'member', label: '멤버' },
             { value: 'viewer', label: '뷰어' },
+            { value: 'artist', label: '아티스트' },
           ]}
         />
         <SelectField

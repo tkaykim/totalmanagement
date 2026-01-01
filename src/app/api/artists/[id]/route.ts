@@ -75,6 +75,63 @@ export async function PATCH(
       return NextResponse.json({ error: `Failed to update artist: ${error.message}` }, { status: 500 });
     }
 
+    // 아티스트가 'individual' 타입이고, 'GRIGO' 사업부인 경우 dancers 테이블에도 업데이트
+    if (data.type === 'individual' && data.bu_code === 'GRIGO') {
+      try {
+        // 기존 댄서 엔트리 조회 (name으로 찾기)
+        const { data: existingDancers, error: fetchDancerError } = await supabase
+          .from('dancers')
+          .select('*')
+          .eq('bu_code', data.bu_code)
+          .eq('name', data.name)
+          .limit(1);
+
+        if (fetchDancerError) {
+          console.warn('Failed to fetch existing dancer entry:', fetchDancerError);
+        } else if (existingDancers && existingDancers.length > 0) {
+          // 기존 댄서 엔트리가 있으면 업데이트
+          const dancerUpdateData: any = {
+            name: data.name,
+            nickname_ko: data.name,
+            company: '그리고 엔터테인먼트',
+          };
+          if (data.nationality) {
+            dancerUpdateData.nationality = data.nationality;
+          }
+
+          const { error: dancerUpdateError } = await supabase
+            .from('dancers')
+            .update(dancerUpdateData)
+            .eq('id', existingDancers[0].id);
+
+          if (dancerUpdateError) {
+            console.warn('Failed to update corresponding dancer entry for artist:', dancerUpdateError);
+          }
+        } else {
+          // 기존 댄서 엔트리가 없으면 생성
+          const dancerInsertData: any = {
+            bu_code: data.bu_code,
+            name: data.name,
+            nickname_ko: data.name,
+            company: '그리고 엔터테인먼트',
+          };
+          if (data.nationality) {
+            dancerInsertData.nationality = data.nationality;
+          }
+
+          const { error: dancerCreateError } = await supabase
+            .from('dancers')
+            .insert(dancerInsertData);
+
+          if (dancerCreateError) {
+            console.warn('Failed to create corresponding dancer entry for artist:', dancerCreateError);
+          }
+        }
+      } catch (dancerError) {
+        console.warn('Failed to update/create corresponding dancer entry for artist:', dancerError);
+      }
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     console.error('Unexpected error:', error);

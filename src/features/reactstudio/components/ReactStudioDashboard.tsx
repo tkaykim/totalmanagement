@@ -4126,6 +4126,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           clients={clientsData}
           orgMembers={orgData}
           appUsers={usersData?.users || []}
+          externalWorkers={externalWorkersData}
           channels={channelsData}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
@@ -4201,6 +4202,7 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           clients={clientsData}
           orgMembers={orgData}
           appUsers={usersData?.users || []}
+          externalWorkers={externalWorkersData}
           channels={channelsData}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
@@ -4879,6 +4881,42 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           appUsers={usersData?.users || []}
           externalWorkers={externalWorkersData}
           tasks={tasks.filter((t) => t.projectId === selectedProjectDetail.id.toString())}
+          financials={financials.filter((f) => f.projectId === selectedProjectDetail.id.toString())}
+          currentUser={usersData?.currentUser}
+          onCreateFinancial={async (data) => {
+            try {
+              await createFinancialMutation.mutateAsync({
+                project_id: Number(selectedProjectDetail.id),
+                bu_code: bu,
+                kind: data.kind,
+                category: data.category,
+                name: data.name,
+                amount: data.amount,
+                occurred_at: data.occurred_at,
+                status: data.status || 'planned',
+                memo: data.memo,
+              });
+            } catch (error) {
+              console.error('Failed to create financial entry:', error);
+            }
+          }}
+          onUpdateFinancial={async (id, data) => {
+            try {
+              await updateFinancialMutation.mutateAsync({
+                id: Number(id),
+                data,
+              });
+            } catch (error) {
+              console.error('Failed to update financial entry:', error);
+            }
+          }}
+          onDeleteFinancial={async (id) => {
+            try {
+              await deleteFinancialMutation.mutateAsync(Number(id));
+            } catch (error) {
+              console.error('Failed to delete financial entry:', error);
+            }
+          }}
           onClose={() => setSelectedProjectDetail(null)}
           onEdit={() => {
             setEditProjectModalOpen(selectedProjectDetail);
@@ -5162,6 +5200,7 @@ function CreateProjectModal({
   clients,
   orgMembers,
   appUsers,
+  externalWorkers,
   channels,
   onClose,
   onSubmit,
@@ -5173,6 +5212,7 @@ function CreateProjectModal({
   clients: Client[];
   orgMembers: any[];
   appUsers: any[];
+  externalWorkers: any[];
   channels: Channel[];
   onClose: () => void;
   onSubmit: (data: {
@@ -5210,16 +5250,25 @@ function CreateProjectModal({
     active_steps: [] as ProjectStep[],
     release_date: '',
   });
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>([]);
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
   const [participantSelectId, setParticipantSelectId] = useState<string>('');
 
   const handleAddParticipant = () => {
     if (!participantSelectId) return;
 
-    const user = appUsers.find((u: any) => u.id === participantSelectId);
-    if (user && !selectedParticipants.some((p) => p.id === user.id)) {
-      setSelectedParticipants((prev) => [...prev, { id: user.id, name: user.name || '' }]);
-      setParticipantSelectId('');
+    if (participantSelectType === 'user') {
+      const user = appUsers.find((u: any) => u.id === participantSelectId);
+      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name || '' }]);
+        setParticipantSelectId('');
+      }
+    } else {
+      const worker = externalWorkers.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name || '' }]);
+        setParticipantSelectId('');
+      }
     }
   };
 
@@ -5260,7 +5309,8 @@ function CreateProjectModal({
           onPrimary={() => {
             const calculatedDates = form.release_date ? calculateDatesFromRelease(form.release_date) : {};
             const participants = selectedParticipants.map((p) => ({
-              user_id: p.id,
+              user_id: p.type === 'user' ? (p.id as string) : undefined,
+              external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
               role: 'participant',
               is_pm: false,
             }));
@@ -5548,6 +5598,11 @@ function ProjectDetailModal({
   externalWorkers,
   tasks,
   appUsers,
+  financials,
+  currentUser,
+  onCreateFinancial,
+  onUpdateFinancial,
+  onDeleteFinancial,
   onClose,
   onEdit,
   onUpdate,
@@ -5564,6 +5619,11 @@ function ProjectDetailModal({
   externalWorkers: any[];
   tasks: any[];
   appUsers: any[];
+  financials: any[];
+  currentUser?: any;
+  onCreateFinancial: (data: any) => Promise<void>;
+  onUpdateFinancial: (id: string, data: any) => Promise<void>;
+  onDeleteFinancial: (id: string) => Promise<void>;
   onClose: () => void;
   onEdit: () => void;
   onUpdate: (data: any) => Promise<void>;
@@ -5591,24 +5651,36 @@ function ProjectDetailModal({
   const [localTasks, setLocalTasks] = useState(tasks);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const projectParticipants = (project as any).participants || [];
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ id: string; name: string }>>(() => {
-    return projectParticipants
-      .filter((p: any) => p.user_id)
-      .map((p: any) => {
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
+    return projectParticipants.map((p: any) => {
+      if (p.user_id) {
         const user = appUsers.find((u: any) => u.id === p.user_id);
-        return user ? { id: user.id, name: user.name || '' } : null;
-      })
-      .filter((p: any) => p !== null) as Array<{ id: string; name: string }>;
+        return user ? { type: 'user' as const, id: user.id, name: user.name || '' } : null;
+      } else if (p.external_worker_id) {
+        const worker = externalWorkers.find((w: any) => w.id === p.external_worker_id);
+        return worker ? { type: 'external' as const, id: worker.id, name: worker.name || '' } : null;
+      }
+      return null;
+    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
   });
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
   const [participantSelectId, setParticipantSelectId] = useState<string>('');
 
   const handleAddParticipant = () => {
     if (!participantSelectId) return;
 
-    const user = appUsers.find((u: any) => u.id === participantSelectId);
-    if (user && !selectedParticipants.some((p) => p.id === user.id)) {
-      setSelectedParticipants((prev) => [...prev, { id: user.id, name: user.name || '' }]);
-      setParticipantSelectId('');
+    if (participantSelectType === 'user') {
+      const user = appUsers.find((u: any) => u.id === participantSelectId);
+      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name || '' }]);
+        setParticipantSelectId('');
+      }
+    } else {
+      const worker = externalWorkers.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name || '' }]);
+        setParticipantSelectId('');
+      }
     }
   };
 
@@ -5772,7 +5844,8 @@ function ProjectDetailModal({
         edit1_date: localProject.edit1_date,
         edit_final_date: localProject.edit_final_date,
         participants: selectedParticipants.map((p) => ({
-          user_id: p.id,
+          user_id: p.type === 'user' ? (p.id as string) : undefined,
+          external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
           role: 'participant',
           is_pm: false,
         })),
@@ -5965,18 +6038,37 @@ function ProjectDetailModal({
               </h3>
               <div className="flex gap-2 mb-3">
                 <select
+                  value={participantSelectType}
+                  onChange={(e) => {
+                    setParticipantSelectType(e.target.value as 'user' | 'external');
+                    setParticipantSelectId('');
+                  }}
+                  className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                >
+                  <option value="user">내부 사용자</option>
+                  <option value="external">외주 인력</option>
+                </select>
+                <select
                   value={participantSelectId}
                   onChange={(e) => setParticipantSelectId(e.target.value)}
                   className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
                 >
-                  <option value="">사용자를 선택하세요</option>
-                  {appUsers
-                    .filter((u: any) => !selectedParticipants.some((p) => p.id === u.id))
-                    .map((u: any) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
+                  <option value="">선택하세요</option>
+                  {participantSelectType === 'user'
+                    ? appUsers
+                        .filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id))
+                        .map((u: any) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name}
+                          </option>
+                        ))
+                    : externalWorkers
+                        .filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id))
+                        .map((w: any) => (
+                          <option key={w.id} value={w.id}>
+                            {w.name}
+                          </option>
+                        ))}
                 </select>
                 <button
                   type="button"
@@ -5993,7 +6085,7 @@ function ProjectDetailModal({
                   <div className="flex flex-wrap gap-2">
                     {selectedParticipants.map((p, index) => (
                       <span
-                        key={p.id}
+                        key={`${p.type}-${p.id}`}
                         className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
                       >
                         {p.name}
@@ -6324,6 +6416,18 @@ function ProjectDetailModal({
                 )}
               </div>
             </div>
+
+            {/* Financial Section - Manager/Admin Only */}
+            {(currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
+              <FinancialSection
+                financials={financials}
+                projectId={project.id.toString()}
+                bu={bu}
+                onCreateFinancial={onCreateFinancial}
+                onUpdateFinancial={onUpdateFinancial}
+                onDeleteFinancial={onDeleteFinancial}
+              />
+            )}
           </div>
           <div className="mt-6 pt-4 border-t flex justify-end gap-3">
             <button onClick={onClose} className="px-4 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-900">
@@ -6339,12 +6443,539 @@ function ProjectDetailModal({
   );
 }
 
+function FinancialSection({
+  financials,
+  projectId,
+  bu,
+  onCreateFinancial,
+  onUpdateFinancial,
+  onDeleteFinancial,
+}: {
+  financials: any[];
+  projectId: string;
+  bu: BU;
+  onCreateFinancial: (data: any) => Promise<void>;
+  onUpdateFinancial: (id: string, data: any) => Promise<void>;
+  onDeleteFinancial: (id: string) => Promise<void>;
+}) {
+  const [isAddingRevenue, setIsAddingRevenue] = useState(false);
+  const [isAddingExpense, setIsAddingExpense] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const revenues = financials.filter((f) => f.type === 'revenue');
+  const expenses = financials.filter((f) => f.type === 'expense');
+  const totalRevenue = revenues.reduce((sum, r) => sum + r.amount, 0);
+  const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const profit = totalRevenue - totalExpense;
+
+  const [newFinancial, setNewFinancial] = useState({
+    kind: 'revenue' as 'revenue' | 'expense',
+    category: '',
+    name: '',
+    amount: '',
+    occurred_at: format(new Date(), 'yyyy-MM-dd'),
+    status: 'planned' as 'planned' | 'paid' | 'canceled',
+    memo: '',
+  });
+
+  const [editFinancial, setEditFinancial] = useState({
+    category: '',
+    name: '',
+    amount: '',
+    occurred_at: '',
+    status: 'planned' as 'planned' | 'paid' | 'canceled',
+    memo: '',
+  });
+
+  const handleCreateFinancial = async (kind: 'revenue' | 'expense') => {
+    if (!newFinancial.category || !newFinancial.name || !newFinancial.amount) {
+      return;
+    }
+
+    try {
+      await onCreateFinancial({
+        kind,
+        category: newFinancial.category,
+        name: newFinancial.name,
+        amount: Number(newFinancial.amount),
+        occurred_at: newFinancial.occurred_at,
+        status: newFinancial.status,
+        memo: newFinancial.memo || undefined,
+      });
+      setNewFinancial({
+        kind: 'revenue',
+        category: '',
+        name: '',
+        amount: '',
+        occurred_at: format(new Date(), 'yyyy-MM-dd'),
+        status: 'planned',
+        memo: '',
+      });
+      setIsAddingRevenue(false);
+      setIsAddingExpense(false);
+    } catch (error) {
+      console.error('Failed to create financial entry:', error);
+    }
+  };
+
+  const handleUpdateFinancial = async (id: string) => {
+    if (!editFinancial.category || !editFinancial.name || !editFinancial.amount) {
+      return;
+    }
+
+    try {
+      await onUpdateFinancial(id, {
+        category: editFinancial.category,
+        name: editFinancial.name,
+        amount: Number(editFinancial.amount),
+        occurred_at: editFinancial.occurred_at,
+        status: editFinancial.status,
+        memo: editFinancial.memo || undefined,
+      });
+      setEditingId(null);
+    } catch (error) {
+      console.error('Failed to update financial entry:', error);
+    }
+  };
+
+  const handleDeleteFinancial = async (id: string) => {
+    if (confirm('정말 삭제하시겠습니까?')) {
+      try {
+        await onDeleteFinancial(id);
+      } catch (error) {
+        console.error('Failed to delete financial entry:', error);
+      }
+    }
+  };
+
+  const startEdit = (financial: any) => {
+    setEditingId(financial.id);
+    setEditFinancial({
+      category: financial.category,
+      name: financial.name,
+      amount: String(financial.amount),
+      occurred_at: financial.date,
+      status: financial.status,
+      memo: (financial as any).memo || '',
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2">
+        <DollarSign size={18} /> 매출 및 지출 관리
+      </h3>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-1">총 매출</p>
+          <p className="text-lg font-bold text-blue-700 dark:text-blue-300">{formatCurrency(totalRevenue)}</p>
+        </div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1">총 지출</p>
+          <p className="text-lg font-bold text-red-700 dark:text-red-300">{formatCurrency(totalExpense)}</p>
+        </div>
+        <div className={`${profit >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'} border rounded-lg p-4`}>
+          <p className={`text-xs font-bold ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'} uppercase mb-1`}>순익</p>
+          <p className={`text-lg font-bold ${profit >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>{formatCurrency(profit)}</p>
+        </div>
+      </div>
+
+      {/* Revenue Section */}
+      <div className="border rounded-xl overflow-hidden">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-3 flex items-center justify-between">
+          <h4 className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+            <TrendingUp size={16} /> 매출 ({revenues.length}건)
+          </h4>
+          <button
+            onClick={() => {
+              setIsAddingRevenue(true);
+              setIsAddingExpense(false);
+              setNewFinancial({ ...newFinancial, kind: 'revenue' });
+            }}
+            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 flex items-center gap-1"
+          >
+            <Plus size={12} /> 매출 추가
+          </button>
+        </div>
+
+        {isAddingRevenue && (
+          <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 border-b border-blue-200 dark:border-blue-800 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="카테고리"
+                value={newFinancial.category}
+                onChange={(e) => setNewFinancial({ ...newFinancial, category: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+              <input
+                type="text"
+                placeholder="항목명"
+                value={newFinancial.name}
+                onChange={(e) => setNewFinancial({ ...newFinancial, name: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+              <input
+                type="number"
+                placeholder="금액"
+                value={newFinancial.amount}
+                onChange={(e) => setNewFinancial({ ...newFinancial, amount: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+              <input
+                type="date"
+                value={newFinancial.occurred_at}
+                onChange={(e) => setNewFinancial({ ...newFinancial, occurred_at: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+              <select
+                value={newFinancial.status}
+                onChange={(e) => setNewFinancial({ ...newFinancial, status: e.target.value as any })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              >
+                <option value="planned">예정</option>
+                <option value="paid">완료</option>
+                <option value="canceled">취소</option>
+              </select>
+              <input
+                type="text"
+                placeholder="메모 (선택)"
+                value={newFinancial.memo}
+                onChange={(e) => setNewFinancial({ ...newFinancial, memo: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleCreateFinancial('revenue')}
+                className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700"
+              >
+                저장
+              </button>
+              <button
+                onClick={() => {
+                  setIsAddingRevenue(false);
+                  setNewFinancial({ ...newFinancial, category: '', name: '', amount: '', memo: '' });
+                }}
+                className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="divide-y">
+          {revenues.length === 0 ? (
+            <div className="p-4 text-center text-sm text-gray-400 dark:text-slate-500">등록된 매출이 없습니다.</div>
+          ) : (
+            revenues.map((revenue) => (
+              <div key={revenue.id} className="p-3 hover:bg-gray-50 dark:hover:bg-slate-900">
+                {editingId === revenue.id ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={editFinancial.category}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, category: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                      <input
+                        type="text"
+                        value={editFinancial.name}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, name: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                      <input
+                        type="number"
+                        value={editFinancial.amount}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, amount: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                      <input
+                        type="date"
+                        value={editFinancial.occurred_at}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, occurred_at: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                      <select
+                        value={editFinancial.status}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, status: e.target.value as any })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      >
+                        <option value="planned">예정</option>
+                        <option value="paid">완료</option>
+                        <option value="canceled">취소</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="메모"
+                        value={editFinancial.memo}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, memo: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleUpdateFinancial(revenue.id)}
+                        className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700"
+                      >
+                        저장
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{revenue.category}</span>
+                        <span className="text-sm font-medium text-gray-800 dark:text-slate-200">{revenue.name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          revenue.status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' :
+                          revenue.status === 'canceled' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300'
+                        }`}>
+                          {revenue.status === 'paid' ? '완료' : revenue.status === 'canceled' ? '취소' : '예정'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                        {revenue.date} • {formatCurrency(revenue.amount)}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => startEdit(revenue)}
+                        className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteFinancial(revenue.id)}
+                        className="text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Expense Section */}
+      <div className="border rounded-xl overflow-hidden">
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 px-4 py-3 flex items-center justify-between">
+          <h4 className="font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
+            <Receipt size={16} /> 지출 ({expenses.length}건)
+          </h4>
+          <button
+            onClick={() => {
+              setIsAddingExpense(true);
+              setIsAddingRevenue(false);
+              setNewFinancial({ ...newFinancial, kind: 'expense' });
+            }}
+            className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 flex items-center gap-1"
+          >
+            <Plus size={12} /> 지출 추가
+          </button>
+        </div>
+
+        {isAddingExpense && (
+          <div className="p-4 bg-red-50/50 dark:bg-red-900/10 border-b border-red-200 dark:border-red-800 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="카테고리"
+                value={newFinancial.category}
+                onChange={(e) => setNewFinancial({ ...newFinancial, category: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+              <input
+                type="text"
+                placeholder="항목명"
+                value={newFinancial.name}
+                onChange={(e) => setNewFinancial({ ...newFinancial, name: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+              <input
+                type="number"
+                placeholder="금액"
+                value={newFinancial.amount}
+                onChange={(e) => setNewFinancial({ ...newFinancial, amount: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+              <input
+                type="date"
+                value={newFinancial.occurred_at}
+                onChange={(e) => setNewFinancial({ ...newFinancial, occurred_at: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+              <select
+                value={newFinancial.status}
+                onChange={(e) => setNewFinancial({ ...newFinancial, status: e.target.value as any })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              >
+                <option value="planned">예정</option>
+                <option value="paid">완료</option>
+                <option value="canceled">취소</option>
+              </select>
+              <input
+                type="text"
+                placeholder="메모 (선택)"
+                value={newFinancial.memo}
+                onChange={(e) => setNewFinancial({ ...newFinancial, memo: e.target.value })}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleCreateFinancial('expense')}
+                className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700"
+              >
+                저장
+              </button>
+              <button
+                onClick={() => {
+                  setIsAddingExpense(false);
+                  setNewFinancial({ ...newFinancial, category: '', name: '', amount: '', memo: '' });
+                }}
+                className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="divide-y">
+          {expenses.length === 0 ? (
+            <div className="p-4 text-center text-sm text-gray-400 dark:text-slate-500">등록된 지출이 없습니다.</div>
+          ) : (
+            expenses.map((expense) => (
+              <div key={expense.id} className="p-3 hover:bg-gray-50 dark:hover:bg-slate-900">
+                {editingId === expense.id ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={editFinancial.category}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, category: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                      <input
+                        type="text"
+                        value={editFinancial.name}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, name: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                      <input
+                        type="number"
+                        value={editFinancial.amount}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, amount: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                      <input
+                        type="date"
+                        value={editFinancial.occurred_at}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, occurred_at: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                      <select
+                        value={editFinancial.status}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, status: e.target.value as any })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      >
+                        <option value="planned">예정</option>
+                        <option value="paid">완료</option>
+                        <option value="canceled">취소</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="메모"
+                        value={editFinancial.memo}
+                        onChange={(e) => setEditFinancial({ ...editFinancial, memo: e.target.value })}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleUpdateFinancial(expense.id)}
+                        className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700"
+                      >
+                        저장
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-red-600 dark:text-red-400">{expense.category}</span>
+                        <span className="text-sm font-medium text-gray-800 dark:text-slate-200">{expense.name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          expense.status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' :
+                          expense.status === 'canceled' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300'
+                        }`}>
+                          {expense.status === 'paid' ? '완료' : expense.status === 'canceled' ? '취소' : '예정'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                        {expense.date} • {formatCurrency(expense.amount)}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => startEdit(expense)}
+                        className="text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteFinancial(expense.id)}
+                        className="text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditProjectModal({
   project,
   bu,
   clients,
   orgMembers,
   appUsers,
+  externalWorkers,
   channels,
   onClose,
   onSubmit,
@@ -6357,6 +6988,7 @@ function EditProjectModal({
   clients: Client[];
   orgMembers: any[];
   appUsers: any[];
+  externalWorkers: any[];
   channels: Channel[];
   onClose: () => void;
   onSubmit: (data: {
@@ -6402,24 +7034,36 @@ function EditProjectModal({
     release_date: (project as any).release_date || null,
     assets: (project as any).assets || {} as ProjectAssets,
   });
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ id: string; name: string }>>(() => {
-    return projectParticipants
-      .filter((p: any) => p.user_id)
-      .map((p: any) => {
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
+    return projectParticipants.map((p: any) => {
+      if (p.user_id) {
         const user = appUsers.find((u: any) => u.id === p.user_id);
-        return user ? { id: user.id, name: user.name || '' } : null;
-      })
-      .filter((p: any) => p !== null) as Array<{ id: string; name: string }>;
+        return user ? { type: 'user' as const, id: user.id, name: user.name || '' } : null;
+      } else if (p.external_worker_id) {
+        const worker = externalWorkers.find((w: any) => w.id === p.external_worker_id);
+        return worker ? { type: 'external' as const, id: worker.id, name: worker.name || '' } : null;
+      }
+      return null;
+    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
   });
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
   const [participantSelectId, setParticipantSelectId] = useState<string>('');
 
   const handleAddParticipant = () => {
     if (!participantSelectId) return;
 
-    const user = appUsers.find((u: any) => u.id === participantSelectId);
-    if (user && !selectedParticipants.some((p) => p.id === user.id)) {
-      setSelectedParticipants((prev) => [...prev, { id: user.id, name: user.name || '' }]);
-      setParticipantSelectId('');
+    if (participantSelectType === 'user') {
+      const user = appUsers.find((u: any) => u.id === participantSelectId);
+      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name || '' }]);
+        setParticipantSelectId('');
+      }
+    } else {
+      const worker = externalWorkers.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name || '' }]);
+        setParticipantSelectId('');
+      }
     }
   };
 
@@ -6458,7 +7102,8 @@ function EditProjectModal({
         <ModalActions
           onPrimary={() => {
             const participants = selectedParticipants.map((p) => ({
-              user_id: p.id,
+              user_id: p.type === 'user' ? (p.id as string) : undefined,
+              external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
               role: 'participant',
               is_pm: false,
             }));
@@ -6638,18 +7283,37 @@ function EditProjectModal({
         </h3>
         <div className="flex gap-2 mb-3">
           <select
+            value={participantSelectType}
+            onChange={(e) => {
+              setParticipantSelectType(e.target.value as 'user' | 'external');
+              setParticipantSelectId('');
+            }}
+            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option value="user">내부 사용자</option>
+            <option value="external">외주 인력</option>
+          </select>
+          <select
             value={participantSelectId}
             onChange={(e) => setParticipantSelectId(e.target.value)}
             className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
           >
-            <option value="">사용자를 선택하세요</option>
-            {appUsers
-              .filter((u: any) => !selectedParticipants.some((p) => p.id === u.id))
-              .map((u: any) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
+            <option value="">선택하세요</option>
+            {participantSelectType === 'user'
+              ? appUsers
+                  .filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id))
+                  .map((u: any) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))
+              : externalWorkers
+                  .filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id))
+                  .map((w: any) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
           </select>
           <button
             type="button"
@@ -6666,7 +7330,7 @@ function EditProjectModal({
             <div className="flex flex-wrap gap-2">
               {selectedParticipants.map((p, index) => (
                 <span
-                  key={p.id}
+                  key={`${p.type}-${p.id}`}
                   className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
                 >
                   {p.name}

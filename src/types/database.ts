@@ -3,7 +3,7 @@ export type ProjectStatus = '준비중' | '진행중' | '운영중' | '기획중
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 export type FinancialKind = 'revenue' | 'expense';
 export type FinancialStatus = 'planned' | 'paid' | 'canceled';
-export type ERPRole = 'admin' | 'manager' | 'member' | 'viewer';
+export type ERPRole = 'admin' | 'manager' | 'member' | 'viewer' | 'artist';
 export type TaskPriority = 'high' | 'medium' | 'low';
 export type EquipmentStatus = 'available' | 'rented' | 'maintenance' | 'lost';
 export type ChannelStatus = 'active' | 'growing' | 'inactive' | 'archived';
@@ -69,6 +69,7 @@ export interface ProjectFreelancer {
 export interface ProjectParticipant {
   user_id?: string;
   external_worker_id?: number;
+  dancer_id?: number;
   role: string;
   is_pm: boolean;
 }
@@ -160,6 +161,7 @@ export interface AppUser {
   role: ERPRole;
   bu_code?: BU;
   position?: string;
+  artist_id?: number;
   created_at: string;
   updated_at: string;
 }
@@ -320,6 +322,32 @@ export interface Artist {
   created_at: string;
   updated_at: string;
 }
+
+export interface Dancer {
+  id: number;
+  bu_code: BU;
+  name: string; // 하위 호환성을 위해 유지 (nickname_ko와 동일한 값)
+  nickname_ko?: string; // 닉네임 (한글)
+  nickname_en?: string; // 닉네임 (영어)
+  real_name?: string; // 본명
+  photo?: string;
+  team_name?: string;
+  company?: string;
+  nationality?: string;
+  gender?: 'male' | 'female'; // 성별
+  contact?: string;
+  bank_copy?: string;
+  bank_name?: string; // 은행명
+  account_number?: string;
+  id_document_type?: 'passport' | 'resident_registration' | 'alien_registration';
+  id_document_file?: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 하위 호환성을 위한 타입 별칭
+export type ExternalDancer = Dancer;
 
 export type CommentEntityType = 'task' | 'project';
 

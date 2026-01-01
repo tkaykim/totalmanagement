@@ -24,9 +24,15 @@ export default function ASTCompanyPage() {
 
       const { data: appUser } = await supabase
         .from('app_users')
-        .select('bu_code')
+        .select('bu_code, role')
         .eq('id', user.id)
         .single();
+
+      // role이 artist인 경우 /my-profile로 리디렉션
+      if (appUser?.role === 'artist') {
+        router.push('/grigoent/my-profile');
+        return;
+      }
 
       // bu_code가 null인 경우 /my-works로 리디렉션
       if (!appUser?.bu_code) {

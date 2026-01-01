@@ -28,6 +28,7 @@ import type {
   Artist,
   ArtistStatus,
   ArtistType,
+  Dancer,
   Comment,
   CommentEntityType,
 } from '@/types/database';
@@ -794,6 +795,65 @@ export async function deleteArtist(id: number): Promise<void> {
 }
 
 // ============================================
+// Dancers API Functions
+// ============================================
+
+export async function fetchDancers(bu?: BU): Promise<Dancer[]> {
+  const url = bu ? `${API_BASE}/dancers?bu=${bu}` : `${API_BASE}/dancers`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch dancers');
+  return res.json();
+}
+
+export async function createDancer(data: {
+  bu_code: BU;
+  name: string;
+  nickname_ko?: string;
+  nickname_en?: string;
+  real_name?: string;
+  photo?: string;
+  team_name?: string;
+  company?: string;
+  nationality?: string;
+  gender?: 'male' | 'female';
+  contact?: string;
+  bank_copy?: string;
+  bank_name?: string;
+  account_number?: string;
+  id_document_type?: 'passport' | 'resident_registration' | 'alien_registration';
+  id_document_file?: string;
+  note?: string;
+}): Promise<Dancer> {
+  const res = await fetch(`${API_BASE}/dancers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(errorData.error || 'Failed to create dancer');
+  }
+  return res.json();
+}
+
+export async function updateDancer(id: number, data: Partial<Dancer>): Promise<Dancer> {
+  const res = await fetch(`${API_BASE}/dancers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update dancer');
+  return res.json();
+}
+
+export async function deleteDancer(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/dancers/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete dancer');
+}
+
+// ============================================
 // Comments API Functions
 // ============================================
 
@@ -889,6 +949,28 @@ export async function fetchMyWorks(): Promise<{
 }> {
   const res = await fetch(`${API_BASE}/my-works`);
   if (!res.ok) throw new Error('Failed to fetch my works');
+  return res.json();
+}
+
+export async function fetchMyArtistProfile(): Promise<{
+  artist: Artist;
+  projects: Project[];
+  financialSummary: {
+    totalRevenue: number;
+    totalExpense: number;
+    totalProfit: number;
+    byProject: Array<{
+      projectId: number;
+      projectName: string;
+      revenue: number;
+      expense: number;
+      profit: number;
+    }>;
+  };
+  financialEntries: FinancialEntry[];
+}> {
+  const res = await fetch(`${API_BASE}/grigoent/my-profile`);
+  if (!res.ok) throw new Error('Failed to fetch artist profile');
   return res.json();
 }
 
