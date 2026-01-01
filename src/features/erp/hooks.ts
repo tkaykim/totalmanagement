@@ -9,6 +9,7 @@ import type {
   ContentStage,
   EventType,
   CommentEntityType,
+  Dancer,
 } from '@/types/database';
 import * as api from './api';
 
