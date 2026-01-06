@@ -54,6 +54,10 @@ export async function POST(request: NextRequest) {
         occurred_at: body.occurred_at,
         status: body.status || 'planned',
         memo: body.memo,
+        partner_company_id: body.partner_company_id || null,
+        partner_worker_id: body.partner_worker_id || null,
+        payment_method: body.payment_method || null,
+        actual_amount: body.actual_amount || null,
         created_by: body.created_by,
       })
       .select()

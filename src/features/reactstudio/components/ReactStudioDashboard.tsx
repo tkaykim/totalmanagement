@@ -80,6 +80,8 @@ import {
   useCreateExternalWorker,
   useUpdateExternalWorker,
   useDeleteExternalWorker,
+  usePartnerWorkers,
+  usePartnerCompanies,
   useCreateProject,
   useUpdateProject,
   useDeleteProject,
@@ -132,6 +134,24 @@ interface ReactStudioDashboardProps {
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
+}
+
+function formatUserName(user: any): string {
+  if (user.name_ko && user.name_en) {
+    return `${user.name_ko}(${user.name_en})`;
+  }
+  if (user.name_ko) return user.name_ko;
+  if (user.name_en) return user.name_en;
+  return user.name || '';
+}
+
+function formatPartnerWorkerName(worker: any): string {
+  if (worker.name_ko && worker.name_en) {
+    return `${worker.name_ko}(${worker.name_en})`;
+  }
+  if (worker.name_ko) return worker.name_ko;
+  if (worker.name_en) return worker.name_en;
+  return worker.name || '';
 }
 
 // 유틸리티 함수: D-Day 기준으로 일정 계산
@@ -393,6 +413,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
   const { data: orgData = [] } = useOrgMembers();
   const { data: usersData } = useUsers();
   const { data: externalWorkersData = [] } = useExternalWorkers(bu);
+  const { data: partnerWorkersData = [] } = usePartnerWorkers(bu);
+  const { data: partnerCompaniesData = [] } = usePartnerCompanies(bu);
 
   // Mutation hooks
   const createProjectMutation = useCreateProject();
@@ -4127,20 +4149,14 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           orgMembers={orgData}
           appUsers={usersData?.users || []}
           externalWorkers={externalWorkersData}
+          partnerWorkers={partnerWorkersData}
+          partnerCompanies={partnerCompaniesData}
           channels={channelsData}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
             try {
               const createdProject = await createProjectMutation.mutateAsync({
                 ...frontendProjectToDb(data),
-                client_id: data.client_id,
-                active_steps: data.active_steps || [],
-                release_date: data.release_date || null,
-                plan_date: data.plan_date || null,
-                script_date: data.script_date || null,
-                shoot_date: data.shoot_date || null,
-                edit1_date: data.edit1_date || null,
-                edit_final_date: data.edit_final_date || null,
               } as any);
               
               // 프로젝트 생성 후 active_steps에 따라 할일 목록 생성 (저장 시점에 생성)
@@ -4203,6 +4219,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           orgMembers={orgData}
           appUsers={usersData?.users || []}
           externalWorkers={externalWorkersData}
+          partnerWorkers={partnerWorkersData}
+          partnerCompanies={partnerCompaniesData}
           channels={channelsData}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
@@ -4215,15 +4233,6 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 id: Number(isEditProjectModalOpen.id),
                 data: {
                   ...frontendProjectToDb(data),
-                  client_id: data.client_id,
-                  active_steps: data.active_steps || [],
-                  release_date: data.release_date || null,
-                  plan_date: data.plan_date || null,
-                  script_date: data.script_date || null,
-                  shoot_date: data.shoot_date || null,
-                  edit1_date: data.edit1_date || null,
-                  edit_final_date: data.edit_final_date || null,
-                  participants: data.participants || [],
                 } as any,
               });
               
@@ -4880,6 +4889,8 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
           orgMembers={orgData}
           appUsers={usersData?.users || []}
           externalWorkers={externalWorkersData}
+          partnerWorkers={partnerWorkersData}
+          partnerCompanies={partnerCompaniesData}
           tasks={tasks.filter((t) => t.projectId === selectedProjectDetail.id.toString())}
           financials={financials.filter((f) => f.projectId === selectedProjectDetail.id.toString())}
           currentUser={usersData?.currentUser}
@@ -4895,7 +4906,11 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
                 occurred_at: data.occurred_at,
                 status: data.status || 'planned',
                 memo: data.memo,
-              });
+                partner_company_id: data.partner_company_id,
+                partner_worker_id: data.partner_worker_id,
+                payment_method: data.payment_method,
+                actual_amount: data.actual_amount,
+              } as any);
             } catch (error) {
               console.error('Failed to create financial entry:', error);
             }
@@ -5201,6 +5216,8 @@ function CreateProjectModal({
   orgMembers,
   appUsers,
   externalWorkers,
+  partnerWorkers,
+  partnerCompanies,
   channels,
   onClose,
   onSubmit,
@@ -5213,17 +5230,21 @@ function CreateProjectModal({
   orgMembers: any[];
   appUsers: any[];
   externalWorkers: any[];
+  partnerWorkers: any[];
+  partnerCompanies?: any[];
   channels: Channel[];
   onClose: () => void;
   onSubmit: (data: {
     bu: BU;
     name: string;
-    cat: string;
+    description?: string | null;
+    cat?: string | null;
+    channel_id?: number | null;
     startDate: string;
     endDate: string;
     status: string;
-    client_id?: number;
-    pm_name?: string | null;
+    client_id?: number | null;
+    pm_ids?: string[];
     active_steps?: ProjectStep[];
     release_date?: string | null;
     plan_date?: string | null;
@@ -5231,27 +5252,27 @@ function CreateProjectModal({
     shoot_date?: string | null;
     edit1_date?: string | null;
     edit_final_date?: string | null;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role: string; is_pm: boolean }>;
+    participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role: string; is_pm: boolean }>;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
   onDeleteClient: (clientId: number) => void;
 }) {
   const [form, setForm] = useState({
-    projectType: 'channel' as 'channel' | 'external', // 프로젝트 타입: 채널 or 외주
     name: '',
+    description: '',
     cat: '',
-    channel_id: '', // 채널 프로젝트인 경우
+    channel_id: '',
     startDate: '',
     endDate: '',
     status: '준비중',
-    client_id: '', // 클라이언트 (채널 프로젝트에서도 선택 가능)
-    pm_name: '',
+    client_id: '',
+    pm_ids: [] as string[],
     active_steps: [] as ProjectStep[],
     release_date: '',
   });
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>([]);
-  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'partner_worker' | 'partner_company'; id: string | number; name: string }>>([]);
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'partner_worker' | 'partner_company'>('user');
   const [participantSelectId, setParticipantSelectId] = useState<string>('');
 
   const handleAddParticipant = () => {
@@ -5260,13 +5281,20 @@ function CreateProjectModal({
     if (participantSelectType === 'user') {
       const user = appUsers.find((u: any) => u.id === participantSelectId);
       if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name || '' }]);
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: formatUserName(user) }]);
         setParticipantSelectId('');
       }
-    } else {
-      const worker = externalWorkers.find((w: any) => w.id === Number(participantSelectId));
-      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name || '' }]);
+    } else if (participantSelectType === 'partner_worker') {
+      const worker = partnerWorkers.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'partner_worker', id: worker.id, name: formatPartnerWorkerName(worker) }]);
+        setParticipantSelectId('');
+      }
+    } else if (participantSelectType === 'partner_company') {
+      const company = (partnerCompanies || []).find((c: any) => c.id === Number(participantSelectId));
+      if (company && !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === company.id)) {
+        const companyName = company.company_name_ko || company.company_name_en || `회사 #${company.id}`;
+        setSelectedParticipants((prev) => [...prev, { type: 'partner_company', id: company.id, name: companyName }]);
         setParticipantSelectId('');
       }
     }
@@ -5307,22 +5335,31 @@ function CreateProjectModal({
       actions={
         <ModalActions
           onPrimary={() => {
+            if (!form.name.trim()) {
+              alert('프로젝트 제목은 필수입니다.');
+              return;
+            }
+            
             const calculatedDates = form.release_date ? calculateDatesFromRelease(form.release_date) : {};
             const participants = selectedParticipants.map((p) => ({
               user_id: p.type === 'user' ? (p.id as string) : undefined,
-              external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+              partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
+              partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
               role: 'participant',
               is_pm: false,
             }));
+            
             onSubmit({
               bu,
-              name: form.name,
-              cat: form.cat || (selectedChannel?.name || ''),
+              name: form.name.trim(),
+              description: form.description.trim() || null,
+              cat: form.cat.trim() || null,
+              channel_id: form.channel_id ? Number(form.channel_id) : null,
               startDate: form.startDate,
               endDate: form.release_date || form.endDate,
               status: form.status,
-              client_id: form.client_id ? Number(form.client_id) : undefined,
-              pm_name: form.pm_name || null,
+              client_id: form.client_id ? Number(form.client_id) : null,
+              pm_ids: form.pm_ids,
               active_steps: form.active_steps,
               release_date: form.release_date || null,
               participants,
@@ -5334,70 +5371,61 @@ function CreateProjectModal({
         />
       }
     >
-      {/* 프로젝트 타입 선택 */}
-      <div className="mb-6">
-        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 mb-2 block">프로젝트 유형</label>
-        <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
-          <button
-            type="button"
-            onClick={() => setForm((prev) => ({ ...prev, projectType: 'channel', channel_id: '' }))}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
-              form.projectType === 'channel'
-                ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
-                : 'text-gray-400 dark:text-slate-500 hover:bg-gray-200 dark:bg-slate-700'
-            }`}
-          >
-            <Youtube className="w-4 h-4" />
-            채널 프로젝트
-          </button>
-          <button
-            type="button"
-            onClick={() => setForm((prev) => ({ ...prev, projectType: 'external', channel_id: '' }))}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-colors ${
-              form.projectType === 'external'
-                ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
-                : 'text-gray-400 dark:text-slate-500 hover:bg-gray-200 dark:bg-slate-700'
-            }`}
-          >
-            <Briefcase className="w-4 h-4" />
-            외주 프로젝트
-          </button>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {/* 채널 선택 (채널 프로젝트인 경우 필수) */}
-        {form.projectType === 'channel' && (
-          <div className="md:col-span-2">
-            <SelectField
-              label="채널 선택"
-              value={form.channel_id}
-              onChange={(val) => {
-                const channel = channels.find((c) => c.id === Number(val));
-                setForm((prev) => ({
-                  ...prev,
-                  channel_id: val,
-                  cat: channel?.name || prev.cat,
-                }));
-              }}
-              options={[
-                { value: '', label: '채널을 선택하세요' },
-                ...buChannels.map((c) => ({ value: String(c.id), label: c.name })),
-              ]}
+        {/* 프로젝트 제목 (필수) */}
+        <div className="md:col-span-2">
+          <InputField
+            label="프로젝트 제목 *"
+            placeholder="프로젝트 제목을 입력하세요"
+            value={form.name}
+            onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+          />
+        </div>
+        
+        {/* 프로젝트 설명 (선택사항) */}
+        <div className="md:col-span-2">
+          <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <span className="text-xs text-slate-500 dark:text-slate-400">프로젝트 설명 (선택사항)</span>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="프로젝트에 대한 설명을 입력하세요"
+              rows={3}
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 resize-none"
             />
-          </div>
-        )}
+          </label>
+        </div>
 
-        {/* 클라이언트 선택 (선택 사항 - 채널 프로젝트에서도 선택 가능) */}
+        {/* 채널 선택 (선택사항) */}
+        <div className="md:col-span-2">
+          <SelectField
+            label="채널 선택 (선택사항)"
+            value={form.channel_id}
+            onChange={(val) => {
+              const channel = channels.find((c) => c.id === Number(val));
+              setForm((prev) => ({
+                ...prev,
+                channel_id: val,
+                cat: channel?.name || prev.cat,
+              }));
+            }}
+            options={[
+              { value: '', label: '선택 안함' },
+              ...buChannels.map((c) => ({ value: String(c.id), label: c.name })),
+            ]}
+          />
+        </div>
+
+        {/* 클라이언트 선택 (선택사항) */}
         <div className="md:col-span-2">
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <SelectField
-                label={form.projectType === 'external' ? '클라이언트 (필수)' : '클라이언트 (선택 사항)'}
+                label="클라이언트 (선택사항)"
                 value={form.client_id}
                 onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
                 options={[
-                  { value: '', label: '클라이언트를 선택하세요' },
+                  { value: '', label: '선택 안함' },
                   ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko || c.company_name_en || '' })),
                 ]}
               />
@@ -5435,18 +5463,12 @@ function CreateProjectModal({
           </div>
         </div>
 
+        {/* 카테고리 (선택사항) */}
         <InputField
-          label="카테고리"
-          placeholder={form.projectType === 'channel' ? '채널 선택 시 자동 입력' : '예: 안무제작'}
+          label="카테고리 (선택사항)"
+          placeholder="예: 안무제작"
           value={form.cat}
           onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
-          disabled={form.projectType === 'channel' && !!form.channel_id}
-        />
-        <InputField
-          label="프로젝트명"
-          placeholder="프로젝트 이름"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
         />
         <div className="grid grid-cols-2 gap-2">
           <InputField
@@ -5474,15 +5496,135 @@ function CreateProjectModal({
             { value: '완료', label: '완료' },
           ]}
         />
-        <SelectField
-          label="PM / 감독"
-          value={form.pm_name}
-          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...appUsers.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value),
-          ]}
-        />
+        {/* PM 선택 (다수 가능) */}
+        <div className="md:col-span-2">
+          <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 block">PM / 감독 (다수 선택 가능)</label>
+          <div className="space-y-2">
+            <select
+              value=""
+              onChange={(e) => {
+                const userId = e.target.value;
+                if (userId && !form.pm_ids.includes(userId)) {
+                  setForm((prev) => ({ ...prev, pm_ids: [...prev.pm_ids, userId] }));
+                  e.target.value = '';
+                }
+              }}
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+            >
+              <option value="">PM을 선택하세요</option>
+              {appUsers
+                .filter((u: any) => !form.pm_ids.includes(u.id))
+                .map((u: any) => (
+                  <option key={u.id} value={u.id}>
+                    {formatUserName(u)}
+                  </option>
+                ))}
+            </select>
+            {form.pm_ids.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {form.pm_ids.map((pmId) => {
+                  const pm = appUsers.find((u: any) => u.id === pmId);
+                  if (!pm) return null;
+                  return (
+                    <span
+                      key={pmId}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                    >
+                      {formatUserName(pm)}
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, pm_ids: prev.pm_ids.filter((id) => id !== pmId) }))}
+                        className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      {/* 참여자 관리 */}
+      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+        <h3 className="font-bold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3">
+          <Users className="w-4 h-4" /> 참여자 관리
+        </h3>
+        <div className="flex gap-2 mb-3">
+          <select
+            value={participantSelectType}
+            onChange={(e) => {
+              setParticipantSelectType(e.target.value as 'user' | 'partner_worker' | 'partner_company');
+              setParticipantSelectId('');
+            }}
+            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option value="user">내부 직원 (app_users)</option>
+            <option value="partner_worker">파트너 인력 (partner_worker)</option>
+            <option value="partner_company">파트너 회사 (partner_company)</option>
+          </select>
+          <select
+            value={participantSelectId}
+            onChange={(e) => setParticipantSelectId(e.target.value)}
+            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option value="">선택하세요</option>
+            {participantSelectType === 'user'
+              ? appUsers
+                  .filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id))
+                  .map((u: any) => (
+                    <option key={u.id} value={u.id}>
+                      {formatUserName(u)}
+                    </option>
+                  ))
+              : participantSelectType === 'partner_worker'
+                ? partnerWorkers
+                    .filter((w: any) => !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === w.id))
+                    .map((w: any) => (
+                      <option key={w.id} value={w.id}>
+                        {formatPartnerWorkerName(w)}
+                      </option>
+                    ))
+                : (partnerCompanies || [])
+                    .filter((c: any) => !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === c.id))
+                    .map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.company_name_ko || c.company_name_en || `회사 #${c.id}`}
+                      </option>
+                    ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAddParticipant}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold transition hover:bg-blue-700 flex items-center gap-1"
+          >
+            <Plus className="h-4 w-4" />
+            추가
+          </button>
+        </div>
+        {selectedParticipants.length > 0 && (
+          <div className="space-y-2 mb-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
+            <div className="flex flex-wrap gap-2">
+              {selectedParticipants.map((p, index) => (
+                <span
+                  key={`${p.type}-${p.id}`}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                >
+                  {p.name}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveParticipant(index)}
+                    className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       {/* 진행 단계 설정 */}
       <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
@@ -5596,6 +5738,8 @@ function ProjectDetailModal({
   channels,
   orgMembers,
   externalWorkers,
+  partnerWorkers,
+  partnerCompanies,
   tasks,
   appUsers,
   financials,
@@ -5617,6 +5761,8 @@ function ProjectDetailModal({
   channels: Channel[];
   orgMembers: any[];
   externalWorkers: any[];
+  partnerWorkers: any[];
+  partnerCompanies?: any[];
   tasks: any[];
   appUsers: any[];
   financials: any[];
@@ -5651,19 +5797,26 @@ function ProjectDetailModal({
   const [localTasks, setLocalTasks] = useState(tasks);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const projectParticipants = (project as any).participants || [];
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'partner_worker' | 'partner_company'; id: string | number; name: string }>>(() => {
     return projectParticipants.map((p: any) => {
       if (p.user_id) {
         const user = appUsers.find((u: any) => u.id === p.user_id);
-        return user ? { type: 'user' as const, id: user.id, name: user.name || '' } : null;
-      } else if (p.external_worker_id) {
-        const worker = externalWorkers.find((w: any) => w.id === p.external_worker_id);
-        return worker ? { type: 'external' as const, id: worker.id, name: worker.name || '' } : null;
+        return user ? { type: 'user' as const, id: user.id, name: formatUserName(user) } : null;
+      } else if (p.partner_worker_id || p.external_worker_id) {
+        const workerId = p.partner_worker_id || p.external_worker_id;
+        const worker = partnerWorkers.find((w: any) => w.id === workerId) || externalWorkers.find((w: any) => w.id === workerId);
+        return worker ? { type: 'partner_worker' as const, id: worker.id, name: formatPartnerWorkerName(worker) } : null;
+      } else if (p.partner_company_id) {
+        const company = (partnerCompanies || []).find((c: any) => c.id === p.partner_company_id);
+        if (company) {
+          const companyName = company.company_name_ko || company.company_name_en || `회사 #${company.id}`;
+          return { type: 'partner_company' as const, id: company.id, name: companyName };
+        }
       }
       return null;
-    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
+    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'partner_worker' | 'partner_company'; id: string | number; name: string }>;
   });
-  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'partner_worker' | 'partner_company'>('user');
   const [participantSelectId, setParticipantSelectId] = useState<string>('');
 
   const handleAddParticipant = () => {
@@ -5672,13 +5825,20 @@ function ProjectDetailModal({
     if (participantSelectType === 'user') {
       const user = appUsers.find((u: any) => u.id === participantSelectId);
       if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name || '' }]);
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: formatUserName(user) }]);
         setParticipantSelectId('');
       }
-    } else {
-      const worker = externalWorkers.find((w: any) => w.id === Number(participantSelectId));
-      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name || '' }]);
+    } else if (participantSelectType === 'partner_worker') {
+      const worker = partnerWorkers.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'partner_worker', id: worker.id, name: formatPartnerWorkerName(worker) }]);
+        setParticipantSelectId('');
+      }
+    } else if (participantSelectType === 'partner_company') {
+      const company = (partnerCompanies || []).find((c: any) => c.id === Number(participantSelectId));
+      if (company && !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === company.id)) {
+        const companyName = company.company_name_ko || company.company_name_en || `회사 #${company.id}`;
+        setSelectedParticipants((prev) => [...prev, { type: 'partner_company', id: company.id, name: companyName }]);
         setParticipantSelectId('');
       }
     }
@@ -5845,7 +6005,8 @@ function ProjectDetailModal({
         edit_final_date: localProject.edit_final_date,
         participants: selectedParticipants.map((p) => ({
           user_id: p.type === 'user' ? (p.id as string) : undefined,
-          external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+          partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
+          partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
           role: 'participant',
           is_pm: false,
         })),
@@ -6040,13 +6201,14 @@ function ProjectDetailModal({
                 <select
                   value={participantSelectType}
                   onChange={(e) => {
-                    setParticipantSelectType(e.target.value as 'user' | 'external');
+                    setParticipantSelectType(e.target.value as 'user' | 'partner_worker' | 'partner_company');
                     setParticipantSelectId('');
                   }}
                   className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
                 >
-                  <option value="user">내부 사용자</option>
-                  <option value="external">외주 인력</option>
+                  <option value="user">내부 직원</option>
+                  <option value="partner_worker">파트너 인력</option>
+                  <option value="partner_company">파트너 회사</option>
                 </select>
                 <select
                   value={participantSelectId}
@@ -6059,16 +6221,24 @@ function ProjectDetailModal({
                         .filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id))
                         .map((u: any) => (
                           <option key={u.id} value={u.id}>
-                            {u.name}
+                            {formatUserName(u)}
                           </option>
                         ))
-                    : externalWorkers
-                        .filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id))
-                        .map((w: any) => (
-                          <option key={w.id} value={w.id}>
-                            {w.name}
-                          </option>
-                        ))}
+                    : participantSelectType === 'partner_worker'
+                      ? partnerWorkers
+                          .filter((w: any) => !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === w.id))
+                          .map((w: any) => (
+                            <option key={w.id} value={w.id}>
+                              {formatPartnerWorkerName(w)}
+                            </option>
+                          ))
+                      : (partnerCompanies || [])
+                          .filter((c: any) => !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === c.id))
+                          .map((c: any) => (
+                            <option key={c.id} value={c.id}>
+                              {c.company_name_ko || c.company_name_en || `회사 #${c.id}`}
+                            </option>
+                          ))}
                 </select>
                 <button
                   type="button"
@@ -6423,6 +6593,8 @@ function ProjectDetailModal({
                 financials={financials}
                 projectId={project.id.toString()}
                 bu={bu}
+                partnerWorkers={partnerWorkers}
+                partnerCompanies={partnerCompanies}
                 onCreateFinancial={onCreateFinancial}
                 onUpdateFinancial={onUpdateFinancial}
                 onDeleteFinancial={onDeleteFinancial}
@@ -6447,6 +6619,8 @@ function FinancialSection({
   financials,
   projectId,
   bu,
+  partnerWorkers,
+  partnerCompanies,
   onCreateFinancial,
   onUpdateFinancial,
   onDeleteFinancial,
@@ -6454,6 +6628,8 @@ function FinancialSection({
   financials: any[];
   projectId: string;
   bu: BU;
+  partnerWorkers: any[];
+  partnerCompanies?: any[];
   onCreateFinancial: (data: any) => Promise<void>;
   onUpdateFinancial: (id: string, data: any) => Promise<void>;
   onDeleteFinancial: (id: string) => Promise<void>;
@@ -6476,6 +6652,11 @@ function FinancialSection({
     occurred_at: format(new Date(), 'yyyy-MM-dd'),
     status: 'planned' as 'planned' | 'paid' | 'canceled',
     memo: '',
+    partner_type: '' as 'company' | 'worker' | '',
+    partner_company_id: '',
+    partner_worker_id: '',
+    payment_method: '' as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
+    actual_amount: '',
   });
 
   const [editFinancial, setEditFinancial] = useState({
@@ -6485,12 +6666,42 @@ function FinancialSection({
     occurred_at: '',
     status: 'planned' as 'planned' | 'paid' | 'canceled',
     memo: '',
+    partner_type: '' as 'company' | 'worker' | '',
+    partner_company_id: '',
+    partner_worker_id: '',
+    payment_method: '' as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
+    actual_amount: '',
   });
+
+  const calculateActualAmount = (
+    amount: string | number,
+    paymentMethod: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | ''
+  ): number => {
+    const amt = Number(amount);
+    if (!amt || !paymentMethod) return 0;
+    
+    switch (paymentMethod) {
+      case 'vat_included':
+        return Math.round(amt * 1.1);
+      case 'tax_free':
+        return amt;
+      case 'withholding':
+        return Math.round(amt * 0.967);
+      case 'actual_payment':
+        return amt;
+      default:
+        return amt;
+    }
+  };
 
   const handleCreateFinancial = async (kind: 'revenue' | 'expense') => {
     if (!newFinancial.category || !newFinancial.name || !newFinancial.amount) {
       return;
     }
+
+    const actualAmount = newFinancial.payment_method
+      ? calculateActualAmount(newFinancial.amount, newFinancial.payment_method)
+      : undefined;
 
     try {
       await onCreateFinancial({
@@ -6501,6 +6712,10 @@ function FinancialSection({
         occurred_at: newFinancial.occurred_at,
         status: newFinancial.status,
         memo: newFinancial.memo || undefined,
+        partner_company_id: newFinancial.partner_type === 'company' && newFinancial.partner_company_id ? Number(newFinancial.partner_company_id) : undefined,
+        partner_worker_id: newFinancial.partner_type === 'worker' && newFinancial.partner_worker_id ? Number(newFinancial.partner_worker_id) : undefined,
+        payment_method: newFinancial.payment_method || undefined,
+        actual_amount: actualAmount,
       });
       setNewFinancial({
         kind: 'revenue',
@@ -6510,6 +6725,11 @@ function FinancialSection({
         occurred_at: format(new Date(), 'yyyy-MM-dd'),
         status: 'planned',
         memo: '',
+        partner_type: '',
+        partner_company_id: '',
+        partner_worker_id: '',
+        payment_method: '',
+        actual_amount: '',
       });
       setIsAddingRevenue(false);
       setIsAddingExpense(false);
@@ -6523,6 +6743,10 @@ function FinancialSection({
       return;
     }
 
+    const actualAmount = editFinancial.payment_method
+      ? calculateActualAmount(editFinancial.amount, editFinancial.payment_method)
+      : undefined;
+
     try {
       await onUpdateFinancial(id, {
         category: editFinancial.category,
@@ -6531,6 +6755,10 @@ function FinancialSection({
         occurred_at: editFinancial.occurred_at,
         status: editFinancial.status,
         memo: editFinancial.memo || undefined,
+        partner_company_id: editFinancial.partner_type === 'company' && editFinancial.partner_company_id ? Number(editFinancial.partner_company_id) : undefined,
+        partner_worker_id: editFinancial.partner_type === 'worker' && editFinancial.partner_worker_id ? Number(editFinancial.partner_worker_id) : undefined,
+        payment_method: editFinancial.payment_method || undefined,
+        actual_amount: actualAmount,
       });
       setEditingId(null);
     } catch (error) {
@@ -6550,6 +6778,7 @@ function FinancialSection({
 
   const startEdit = (financial: any) => {
     setEditingId(financial.id);
+    const partnerType = (financial as any).partner_company_id ? 'company' : (financial as any).partner_worker_id ? 'worker' : '';
     setEditFinancial({
       category: financial.category,
       name: financial.name,
@@ -6557,6 +6786,11 @@ function FinancialSection({
       occurred_at: financial.date,
       status: financial.status,
       memo: (financial as any).memo || '',
+      partner_type: partnerType,
+      partner_company_id: (financial as any).partner_company_id ? String((financial as any).partner_company_id) : '',
+      partner_worker_id: (financial as any).partner_worker_id ? String((financial as any).partner_worker_id) : '',
+      payment_method: (financial as any).payment_method || '',
+      actual_amount: (financial as any).actual_amount ? String((financial as any).actual_amount) : '',
     });
   };
 
@@ -6625,7 +6859,14 @@ function FinancialSection({
                 type="number"
                 placeholder="금액"
                 value={newFinancial.amount}
-                onChange={(e) => setNewFinancial({ ...newFinancial, amount: e.target.value })}
+                onChange={(e) => {
+                  const amount = e.target.value;
+                  setNewFinancial({
+                    ...newFinancial,
+                    amount,
+                    actual_amount: newFinancial.payment_method ? String(calculateActualAmount(amount, newFinancial.payment_method)) : '',
+                  });
+                }}
                 className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
               />
               <input
@@ -6651,6 +6892,81 @@ function FinancialSection({
                 className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
               />
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={newFinancial.partner_type}
+                onChange={(e) => {
+                  const partnerType = e.target.value as 'company' | 'worker' | '';
+                  setNewFinancial({
+                    ...newFinancial,
+                    partner_type: partnerType,
+                    partner_company_id: '',
+                    partner_worker_id: '',
+                  });
+                }}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              >
+                <option value="">지급처 유형 선택</option>
+                <option value="company">회사</option>
+                <option value="worker">인력</option>
+              </select>
+              {newFinancial.partner_type === 'company' && (
+                <select
+                  value={newFinancial.partner_company_id}
+                  onChange={(e) => setNewFinancial({ ...newFinancial, partner_company_id: e.target.value })}
+                  className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                >
+                  <option value="">지급처 회사 선택</option>
+                  {(partnerCompanies || []).map((company: any) => (
+                    <option key={company.id} value={company.id}>
+                      {company.company_name_ko || company.company_name_en || `회사 #${company.id}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {newFinancial.partner_type === 'worker' && (
+                <select
+                  value={newFinancial.partner_worker_id}
+                  onChange={(e) => setNewFinancial({ ...newFinancial, partner_worker_id: e.target.value })}
+                  className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                >
+                  <option value="">지급처 인력 선택</option>
+                  {partnerWorkers.map((worker: any) => (
+                    <option key={worker.id} value={worker.id}>
+                      {formatPartnerWorkerName(worker)}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {newFinancial.partner_type === '' && <div />}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={newFinancial.payment_method}
+                onChange={(e) => {
+                  const paymentMethod = e.target.value as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
+                  setNewFinancial({
+                    ...newFinancial,
+                    payment_method: paymentMethod,
+                    actual_amount: paymentMethod && newFinancial.amount ? String(calculateActualAmount(newFinancial.amount, paymentMethod)) : '',
+                  });
+                }}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              >
+                <option value="">지급 방식 선택</option>
+                <option value="vat_included">부가세 포함 10%</option>
+                <option value="tax_free">면세 0%</option>
+                <option value="withholding">원천징수 3.3%</option>
+                <option value="actual_payment">실지급액</option>
+              </select>
+              <input
+                type="number"
+                placeholder="실지급액 (자동 계산)"
+                value={newFinancial.actual_amount}
+                readOnly
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
+              />
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => handleCreateFinancial('revenue')}
@@ -6661,7 +6977,20 @@ function FinancialSection({
               <button
                 onClick={() => {
                   setIsAddingRevenue(false);
-                  setNewFinancial({ ...newFinancial, category: '', name: '', amount: '', memo: '' });
+                  setNewFinancial({
+                    kind: 'revenue',
+                    category: '',
+                    name: '',
+                    amount: '',
+                    occurred_at: format(new Date(), 'yyyy-MM-dd'),
+                    status: 'planned',
+                    memo: '',
+                    partner_type: '',
+                    partner_company_id: '',
+                    partner_worker_id: '',
+                    payment_method: '',
+                    actual_amount: '',
+                  });
                 }}
                 className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
               >
@@ -6695,7 +7024,14 @@ function FinancialSection({
                       <input
                         type="number"
                         value={editFinancial.amount}
-                        onChange={(e) => setEditFinancial({ ...editFinancial, amount: e.target.value })}
+                        onChange={(e) => {
+                          const amount = e.target.value;
+                          setEditFinancial({
+                            ...editFinancial,
+                            amount,
+                            actual_amount: editFinancial.payment_method ? String(calculateActualAmount(amount, editFinancial.payment_method)) : '',
+                          });
+                        }}
                         className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
                       />
                       <input
@@ -6719,6 +7055,81 @@ function FinancialSection({
                         value={editFinancial.memo}
                         onChange={(e) => setEditFinancial({ ...editFinancial, memo: e.target.value })}
                         className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={editFinancial.partner_type}
+                        onChange={(e) => {
+                          const partnerType = e.target.value as 'company' | 'worker' | '';
+                          setEditFinancial({
+                            ...editFinancial,
+                            partner_type: partnerType,
+                            partner_company_id: partnerType === 'company' ? editFinancial.partner_company_id : '',
+                            partner_worker_id: partnerType === 'worker' ? editFinancial.partner_worker_id : '',
+                          });
+                        }}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      >
+                        <option value="">지급처 유형 선택</option>
+                        <option value="company">회사</option>
+                        <option value="worker">인력</option>
+                      </select>
+                      {editFinancial.partner_type === 'company' && (
+                        <select
+                          value={editFinancial.partner_company_id}
+                          onChange={(e) => setEditFinancial({ ...editFinancial, partner_company_id: e.target.value })}
+                          className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                        >
+                          <option value="">지급처 회사 선택</option>
+                          {(partnerCompanies || []).map((company: any) => (
+                            <option key={company.id} value={company.id}>
+                              {company.company_name_ko || company.company_name_en || `회사 #${company.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {editFinancial.partner_type === 'worker' && (
+                        <select
+                          value={editFinancial.partner_worker_id}
+                          onChange={(e) => setEditFinancial({ ...editFinancial, partner_worker_id: e.target.value })}
+                          className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                        >
+                          <option value="">지급처 인력 선택</option>
+                          {partnerWorkers.map((worker: any) => (
+                            <option key={worker.id} value={worker.id}>
+                              {formatPartnerWorkerName(worker)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {editFinancial.partner_type === '' && <div />}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={editFinancial.payment_method}
+                        onChange={(e) => {
+                          const paymentMethod = e.target.value as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
+                          setEditFinancial({
+                            ...editFinancial,
+                            payment_method: paymentMethod,
+                            actual_amount: paymentMethod && editFinancial.amount ? String(calculateActualAmount(editFinancial.amount, paymentMethod)) : '',
+                          });
+                        }}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      >
+                        <option value="">지급 방식 선택</option>
+                        <option value="vat_included">부가세 포함 10%</option>
+                        <option value="tax_free">면세 0%</option>
+                        <option value="withholding">원천징수 3.3%</option>
+                        <option value="actual_payment">실지급액</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="실지급액 (자동 계산)"
+                        value={editFinancial.actual_amount}
+                        readOnly
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
                       />
                     </div>
                     <div className="flex gap-2">
@@ -6752,6 +7163,30 @@ function FinancialSection({
                       </div>
                       <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                         {revenue.date} • {formatCurrency(revenue.amount)}
+                        {(revenue as any).partner_company_id || (revenue as any).partner_worker_id ? (
+                          <span className="ml-2">
+                            • 지급처: {(revenue as any).partner_company_id
+                              ? (partnerCompanies || []).find((c: any) => c.id === (revenue as any).partner_company_id)?.company_name_ko || 
+                                (partnerCompanies || []).find((c: any) => c.id === (revenue as any).partner_company_id)?.company_name_en || 
+                                `회사 #${(revenue as any).partner_company_id}`
+                              : formatPartnerWorkerName(partnerWorkers.find((w: any) => w.id === (revenue as any).partner_worker_id) || {})}
+                          </span>
+                        ) : null}
+                        {(revenue as any).payment_method ? (
+                          <span className="ml-2">
+                            • 지급방식: {
+                              (revenue as any).payment_method === 'vat_included' ? '부가세 포함 10%' :
+                              (revenue as any).payment_method === 'tax_free' ? '면세 0%' :
+                              (revenue as any).payment_method === 'withholding' ? '원천징수 3.3%' :
+                              (revenue as any).payment_method === 'actual_payment' ? '실지급액' : ''
+                            }
+                          </span>
+                        ) : null}
+                        {(revenue as any).actual_amount ? (
+                          <span className="ml-2">
+                            • 실지급액: {formatCurrency((revenue as any).actual_amount)}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -6815,7 +7250,14 @@ function FinancialSection({
                 type="number"
                 placeholder="금액"
                 value={newFinancial.amount}
-                onChange={(e) => setNewFinancial({ ...newFinancial, amount: e.target.value })}
+                onChange={(e) => {
+                  const amount = e.target.value;
+                  setNewFinancial({
+                    ...newFinancial,
+                    amount,
+                    actual_amount: newFinancial.payment_method ? String(calculateActualAmount(amount, newFinancial.payment_method)) : '',
+                  });
+                }}
                 className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
               />
               <input
@@ -6841,6 +7283,81 @@ function FinancialSection({
                 className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
               />
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={newFinancial.partner_type}
+                onChange={(e) => {
+                  const partnerType = e.target.value as 'company' | 'worker' | '';
+                  setNewFinancial({
+                    ...newFinancial,
+                    partner_type: partnerType,
+                    partner_company_id: '',
+                    partner_worker_id: '',
+                  });
+                }}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              >
+                <option value="">지급처 유형 선택</option>
+                <option value="company">회사</option>
+                <option value="worker">인력</option>
+              </select>
+              {newFinancial.partner_type === 'company' && (
+                <select
+                  value={newFinancial.partner_company_id}
+                  onChange={(e) => setNewFinancial({ ...newFinancial, partner_company_id: e.target.value })}
+                  className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                >
+                  <option value="">지급처 회사 선택</option>
+                  {(partnerCompanies || []).map((company: any) => (
+                    <option key={company.id} value={company.id}>
+                      {company.company_name_ko || company.company_name_en || `회사 #${company.id}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {newFinancial.partner_type === 'worker' && (
+                <select
+                  value={newFinancial.partner_worker_id}
+                  onChange={(e) => setNewFinancial({ ...newFinancial, partner_worker_id: e.target.value })}
+                  className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                >
+                  <option value="">지급처 인력 선택</option>
+                  {partnerWorkers.map((worker: any) => (
+                    <option key={worker.id} value={worker.id}>
+                      {formatPartnerWorkerName(worker)}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {newFinancial.partner_type === '' && <div />}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={newFinancial.payment_method}
+                onChange={(e) => {
+                  const paymentMethod = e.target.value as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
+                  setNewFinancial({
+                    ...newFinancial,
+                    payment_method: paymentMethod,
+                    actual_amount: paymentMethod && newFinancial.amount ? String(calculateActualAmount(newFinancial.amount, paymentMethod)) : '',
+                  });
+                }}
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+              >
+                <option value="">지급 방식 선택</option>
+                <option value="vat_included">부가세 포함 10%</option>
+                <option value="tax_free">면세 0%</option>
+                <option value="withholding">원천징수 3.3%</option>
+                <option value="actual_payment">실지급액</option>
+              </select>
+              <input
+                type="number"
+                placeholder="실지급액 (자동 계산)"
+                value={newFinancial.actual_amount}
+                readOnly
+                className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
+              />
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => handleCreateFinancial('expense')}
@@ -6851,7 +7368,20 @@ function FinancialSection({
               <button
                 onClick={() => {
                   setIsAddingExpense(false);
-                  setNewFinancial({ ...newFinancial, category: '', name: '', amount: '', memo: '' });
+                  setNewFinancial({
+                    kind: 'expense',
+                    category: '',
+                    name: '',
+                    amount: '',
+                    occurred_at: format(new Date(), 'yyyy-MM-dd'),
+                    status: 'planned',
+                    memo: '',
+                    partner_type: '',
+                    partner_company_id: '',
+                    partner_worker_id: '',
+                    payment_method: '',
+                    actual_amount: '',
+                  });
                 }}
                 className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
               >
@@ -6885,7 +7415,14 @@ function FinancialSection({
                       <input
                         type="number"
                         value={editFinancial.amount}
-                        onChange={(e) => setEditFinancial({ ...editFinancial, amount: e.target.value })}
+                        onChange={(e) => {
+                          const amount = e.target.value;
+                          setEditFinancial({
+                            ...editFinancial,
+                            amount,
+                            actual_amount: editFinancial.payment_method ? String(calculateActualAmount(amount, editFinancial.payment_method)) : '',
+                          });
+                        }}
                         className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
                       />
                       <input
@@ -6909,6 +7446,81 @@ function FinancialSection({
                         value={editFinancial.memo}
                         onChange={(e) => setEditFinancial({ ...editFinancial, memo: e.target.value })}
                         className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={editFinancial.partner_type}
+                        onChange={(e) => {
+                          const partnerType = e.target.value as 'company' | 'worker' | '';
+                          setEditFinancial({
+                            ...editFinancial,
+                            partner_type: partnerType,
+                            partner_company_id: partnerType === 'company' ? editFinancial.partner_company_id : '',
+                            partner_worker_id: partnerType === 'worker' ? editFinancial.partner_worker_id : '',
+                          });
+                        }}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      >
+                        <option value="">지급처 유형 선택</option>
+                        <option value="company">회사</option>
+                        <option value="worker">인력</option>
+                      </select>
+                      {editFinancial.partner_type === 'company' && (
+                        <select
+                          value={editFinancial.partner_company_id}
+                          onChange={(e) => setEditFinancial({ ...editFinancial, partner_company_id: e.target.value })}
+                          className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                        >
+                          <option value="">지급처 회사 선택</option>
+                          {(partnerCompanies || []).map((company: any) => (
+                            <option key={company.id} value={company.id}>
+                              {company.company_name_ko || company.company_name_en || `회사 #${company.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {editFinancial.partner_type === 'worker' && (
+                        <select
+                          value={editFinancial.partner_worker_id}
+                          onChange={(e) => setEditFinancial({ ...editFinancial, partner_worker_id: e.target.value })}
+                          className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                        >
+                          <option value="">지급처 인력 선택</option>
+                          {partnerWorkers.map((worker: any) => (
+                            <option key={worker.id} value={worker.id}>
+                              {formatPartnerWorkerName(worker)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {editFinancial.partner_type === '' && <div />}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={editFinancial.payment_method}
+                        onChange={(e) => {
+                          const paymentMethod = e.target.value as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
+                          setEditFinancial({
+                            ...editFinancial,
+                            payment_method: paymentMethod,
+                            actual_amount: paymentMethod && editFinancial.amount ? String(calculateActualAmount(editFinancial.amount, paymentMethod)) : '',
+                          });
+                        }}
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800"
+                      >
+                        <option value="">지급 방식 선택</option>
+                        <option value="vat_included">부가세 포함 10%</option>
+                        <option value="tax_free">면세 0%</option>
+                        <option value="withholding">원천징수 3.3%</option>
+                        <option value="actual_payment">실지급액</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="실지급액 (자동 계산)"
+                        value={editFinancial.actual_amount}
+                        readOnly
+                        className="text-xs border border-gray-300 dark:border-slate-700 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
                       />
                     </div>
                     <div className="flex gap-2">
@@ -6942,6 +7554,30 @@ function FinancialSection({
                       </div>
                       <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                         {expense.date} • {formatCurrency(expense.amount)}
+                        {(expense as any).partner_company_id || (expense as any).partner_worker_id ? (
+                          <span className="ml-2">
+                            • 지급처: {(expense as any).partner_company_id
+                              ? (partnerCompanies || []).find((c: any) => c.id === (expense as any).partner_company_id)?.company_name_ko || 
+                                (partnerCompanies || []).find((c: any) => c.id === (expense as any).partner_company_id)?.company_name_en || 
+                                `회사 #${(expense as any).partner_company_id}`
+                              : formatPartnerWorkerName(partnerWorkers.find((w: any) => w.id === (expense as any).partner_worker_id) || {})}
+                          </span>
+                        ) : null}
+                        {(expense as any).payment_method ? (
+                          <span className="ml-2">
+                            • 지급방식: {
+                              (expense as any).payment_method === 'vat_included' ? '부가세 포함 10%' :
+                              (expense as any).payment_method === 'tax_free' ? '면세 0%' :
+                              (expense as any).payment_method === 'withholding' ? '원천징수 3.3%' :
+                              (expense as any).payment_method === 'actual_payment' ? '실지급액' : ''
+                            }
+                          </span>
+                        ) : null}
+                        {(expense as any).actual_amount ? (
+                          <span className="ml-2">
+                            • 실지급액: {formatCurrency((expense as any).actual_amount)}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -6976,6 +7612,8 @@ function EditProjectModal({
   orgMembers,
   appUsers,
   externalWorkers,
+  partnerWorkers,
+  partnerCompanies,
   channels,
   onClose,
   onSubmit,
@@ -6989,17 +7627,21 @@ function EditProjectModal({
   orgMembers: any[];
   appUsers: any[];
   externalWorkers: any[];
+  partnerWorkers: any[];
+  partnerCompanies?: any[];
   channels: Channel[];
   onClose: () => void;
   onSubmit: (data: {
     bu: BU;
     name: string;
-    cat: string;
+    description?: string | null;
+    cat?: string | null;
+    channel_id?: number | null;
     startDate: string;
     endDate: string;
     status: string;
-    client_id?: number;
-    pm_name?: string | null;
+    client_id?: number | null;
+    pm_ids?: string[];
     active_steps?: ProjectStep[];
     release_date?: string | null;
     plan_date?: string | null;
@@ -7007,24 +7649,24 @@ function EditProjectModal({
     shoot_date?: string | null;
     edit1_date?: string | null;
     edit_final_date?: string | null;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role: string; is_pm: boolean }>;
+    participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role: string; is_pm: boolean }>;
   }) => void;
   onOpenClientModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
   onDeleteClient: (clientId: number) => void;
 }) {
-  const isExternal = !!(project as any).client_id;
   const projectParticipants = (project as any).participants || [];
+  const pmIds = (project as any).pm_ids || [];
   const [form, setForm] = useState({
-    projectType: isExternal ? 'external' as 'channel' | 'external' : 'channel' as 'channel' | 'external',
-    name: project.name,
-    cat: project.cat,
-    channel_id: isExternal ? '' : String(channels.find((c) => c.name === project.cat)?.id || ''),
+    name: project.name || '',
+    description: (project as any).description || '',
+    cat: project.cat || '',
+    channel_id: String((project as any).channel_id || ''),
     startDate: project.startDate,
     endDate: project.endDate,
     status: project.status,
     client_id: String((project as any).client_id || ''),
-    pm_name: (project as any).pm_name || '',
+    pm_ids: Array.isArray(pmIds) ? pmIds : [],
     active_steps: (project as any).active_steps || [] as ProjectStep[],
     plan_date: (project as any).plan_date || null,
     script_date: (project as any).script_date || null,
@@ -7034,19 +7676,26 @@ function EditProjectModal({
     release_date: (project as any).release_date || null,
     assets: (project as any).assets || {} as ProjectAssets,
   });
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'partner_worker' | 'partner_company'; id: string | number; name: string }>>(() => {
     return projectParticipants.map((p: any) => {
       if (p.user_id) {
         const user = appUsers.find((u: any) => u.id === p.user_id);
-        return user ? { type: 'user' as const, id: user.id, name: user.name || '' } : null;
-      } else if (p.external_worker_id) {
-        const worker = externalWorkers.find((w: any) => w.id === p.external_worker_id);
-        return worker ? { type: 'external' as const, id: worker.id, name: worker.name || '' } : null;
+        return user ? { type: 'user' as const, id: user.id, name: formatUserName(user) } : null;
+      } else if (p.partner_worker_id || p.external_worker_id) {
+        const workerId = p.partner_worker_id || p.external_worker_id;
+        const worker = partnerWorkers.find((w: any) => w.id === workerId) || externalWorkers.find((w: any) => w.id === workerId);
+        return worker ? { type: 'partner_worker' as const, id: worker.id, name: formatPartnerWorkerName(worker) } : null;
+      } else if (p.partner_company_id) {
+        const company = (partnerCompanies || []).find((c: any) => c.id === p.partner_company_id);
+        if (company) {
+          const companyName = company.company_name_ko || company.company_name_en || `회사 #${company.id}`;
+          return { type: 'partner_company' as const, id: company.id, name: companyName };
+        }
       }
       return null;
-    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
+    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'partner_worker' | 'partner_company'; id: string | number; name: string }>;
   });
-  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'partner_worker' | 'partner_company'>('user');
   const [participantSelectId, setParticipantSelectId] = useState<string>('');
 
   const handleAddParticipant = () => {
@@ -7055,13 +7704,20 @@ function EditProjectModal({
     if (participantSelectType === 'user') {
       const user = appUsers.find((u: any) => u.id === participantSelectId);
       if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name || '' }]);
+        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: formatUserName(user) }]);
         setParticipantSelectId('');
       }
-    } else {
-      const worker = externalWorkers.find((w: any) => w.id === Number(participantSelectId));
-      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name || '' }]);
+    } else if (participantSelectType === 'partner_worker') {
+      const worker = partnerWorkers.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'partner_worker', id: worker.id, name: formatPartnerWorkerName(worker) }]);
+        setParticipantSelectId('');
+      }
+    } else if (participantSelectType === 'partner_company') {
+      const company = (partnerCompanies || []).find((c: any) => c.id === Number(participantSelectId));
+      if (company && !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === company.id)) {
+        const companyName = company.company_name_ko || company.company_name_en || `회사 #${company.id}`;
+        setSelectedParticipants((prev) => [...prev, { type: 'partner_company', id: company.id, name: companyName }]);
         setParticipantSelectId('');
       }
     }
@@ -7101,21 +7757,30 @@ function EditProjectModal({
       actions={
         <ModalActions
           onPrimary={() => {
+            if (!form.name.trim()) {
+              alert('프로젝트 제목은 필수입니다.');
+              return;
+            }
+            
             const participants = selectedParticipants.map((p) => ({
               user_id: p.type === 'user' ? (p.id as string) : undefined,
-              external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+              partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
+              partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
               role: 'participant',
               is_pm: false,
             }));
+            
             onSubmit({
               bu,
-              name: form.name,
-              cat: form.cat || (selectedChannel?.name || ''),
+              name: form.name.trim(),
+              description: form.description.trim() || null,
+              cat: form.cat.trim() || null,
+              channel_id: form.channel_id ? Number(form.channel_id) : null,
               startDate: form.startDate,
               endDate: form.release_date || form.endDate,
               status: form.status,
-              client_id: form.client_id ? Number(form.client_id) : undefined,
-              pm_name: form.pm_name || null,
+              client_id: form.client_id ? Number(form.client_id) : null,
+              pm_ids: form.pm_ids,
               active_steps: form.active_steps,
               plan_date: form.plan_date,
               script_date: form.script_date,
@@ -7131,113 +7796,104 @@ function EditProjectModal({
         />
       }
     >
-      {/* 프로젝트 타입 표시 (수정 모드에서는 읽기 전용) */}
-      <div className="mb-6">
-        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 mb-2 block">프로젝트 유형</label>
-        <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
-          <div className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold ${
-            form.projectType === 'channel'
-              ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
-              : 'text-gray-400 dark:text-slate-500'
-          }`}>
-            <Youtube className="w-4 h-4" />
-            채널 프로젝트
-          </div>
-          <div className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold ${
-            form.projectType === 'external'
-              ? 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 shadow-sm border border-gray-200 dark:border-slate-700'
-              : 'text-gray-400 dark:text-slate-500'
-          }`}>
-            <Briefcase className="w-4 h-4" />
-            외주 프로젝트
-          </div>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {/* 채널 프로젝트인 경우 */}
-        {form.projectType === 'channel' && (
-          <div className="md:col-span-2">
-            <SelectField
-              label="채널 선택"
-              value={form.channel_id}
-              onChange={(val) => {
-                const channel = channels.find((c) => c.id === Number(val));
-                setForm((prev) => ({
-                  ...prev,
-                  channel_id: val,
-                  cat: channel?.name || prev.cat,
-                }));
-              }}
-              options={[
-                { value: '', label: '채널을 선택하세요' },
-                ...buChannels.map((c) => ({ value: String(c.id), label: c.name })),
-              ]}
+        {/* 프로젝트 제목 (필수) */}
+        <div className="md:col-span-2">
+          <InputField
+            label="프로젝트 제목 *"
+            placeholder="프로젝트 제목을 입력하세요"
+            value={form.name}
+            onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+          />
+        </div>
+        
+        {/* 프로젝트 설명 (선택사항) */}
+        <div className="md:col-span-2">
+          <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <span className="text-xs text-slate-500 dark:text-slate-400">프로젝트 설명 (선택사항)</span>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="프로젝트에 대한 설명을 입력하세요"
+              rows={3}
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 resize-none"
             />
-          </div>
-        )}
+          </label>
+        </div>
 
-        {/* 외주 프로젝트인 경우 */}
-        {form.projectType === 'external' && (
-          <div className="md:col-span-2">
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <SelectField
-                  label="클라이언트"
-                  value={form.client_id}
-                  onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
-                  options={[
-                    { value: '', label: '클라이언트를 선택하세요' },
-                    ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko || c.company_name_en || '' })),
-                  ]}
-                />
-              </div>
-              <div className="flex gap-2 pb-0.5">
-                <button
-                  type="button"
-                  onClick={onOpenClientModal}
-                  className="px-3 py-2 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3" />
-                  새로 만들기
-                </button>
-                {selectedClient && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onOpenEditClientModal(selectedClient)}
-                      className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-900 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1"
-                    >
-                      <Edit3 className="w-3 h-3" />
-                      수정
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteClient(selectedClient.id)}
-                      className="px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      삭제
-                    </button>
-                  </>
-                )}
-              </div>
+        {/* 채널 선택 (선택사항) */}
+        <div className="md:col-span-2">
+          <SelectField
+            label="채널 선택 (선택사항)"
+            value={form.channel_id}
+            onChange={(val) => {
+              const channel = channels.find((c) => c.id === Number(val));
+              setForm((prev) => ({
+                ...prev,
+                channel_id: val,
+                cat: channel?.name || prev.cat,
+              }));
+            }}
+            options={[
+              { value: '', label: '선택 안함' },
+              ...buChannels.map((c) => ({ value: String(c.id), label: c.name })),
+            ]}
+          />
+        </div>
+
+        {/* 클라이언트 선택 (선택사항) */}
+        <div className="md:col-span-2">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <SelectField
+                label="클라이언트 (선택사항)"
+                value={form.client_id}
+                onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
+                options={[
+                  { value: '', label: '선택 안함' },
+                  ...clients.map((c) => ({ value: String(c.id), label: c.company_name_ko || c.company_name_en || '' })),
+                ]}
+              />
+            </div>
+            <div className="flex gap-2 pb-0.5">
+              <button
+                type="button"
+                onClick={onOpenClientModal}
+                className="px-3 py-2 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" />
+                새로 만들기
+              </button>
+              {selectedClient && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onOpenEditClientModal(selectedClient)}
+                    className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-900 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteClient(selectedClient.id)}
+                    className="px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    삭제
+                  </button>
+                </>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
+        {/* 카테고리 (선택사항) */}
         <InputField
-          label="카테고리"
-          placeholder={form.projectType === 'channel' ? '채널 선택 시 자동 입력' : '예: 안무제작'}
+          label="카테고리 (선택사항)"
+          placeholder="예: 안무제작"
           value={form.cat}
           onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
-          disabled={form.projectType === 'channel' && !!form.channel_id}
-        />
-        <InputField
-          label="프로젝트명"
-          placeholder="프로젝트 이름"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
         />
         <div className="grid grid-cols-2 gap-2">
           <InputField
@@ -7265,15 +7921,55 @@ function EditProjectModal({
             { value: '완료', label: '완료' },
           ]}
         />
-        <SelectField
-          label="PM / 감독"
-          value={form.pm_name}
-          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...appUsers.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value),
-          ]}
-        />
+        {/* PM 선택 (다수 가능) */}
+        <div className="md:col-span-2">
+          <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 block">PM / 감독 (다수 선택 가능)</label>
+          <div className="space-y-2">
+            <select
+              value=""
+              onChange={(e) => {
+                const userId = e.target.value;
+                if (userId && !form.pm_ids.includes(userId)) {
+                  setForm((prev) => ({ ...prev, pm_ids: [...prev.pm_ids, userId] }));
+                  e.target.value = '';
+                }
+              }}
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
+            >
+              <option value="">PM을 선택하세요</option>
+              {appUsers
+                .filter((u: any) => !form.pm_ids.includes(u.id))
+                .map((u: any) => (
+                  <option key={u.id} value={u.id}>
+                    {formatUserName(u)}
+                  </option>
+                ))}
+            </select>
+            {form.pm_ids.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {form.pm_ids.map((pmId) => {
+                  const pm = appUsers.find((u: any) => u.id === pmId);
+                  if (!pm) return null;
+                  return (
+                    <span
+                      key={pmId}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
+                    >
+                      {formatUserName(pm)}
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, pm_ids: prev.pm_ids.filter((id) => id !== pmId) }))}
+                        className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 참여자 관리 */}
@@ -7285,13 +7981,14 @@ function EditProjectModal({
           <select
             value={participantSelectType}
             onChange={(e) => {
-              setParticipantSelectType(e.target.value as 'user' | 'external');
+              setParticipantSelectType(e.target.value as 'user' | 'partner_worker' | 'partner_company');
               setParticipantSelectId('');
             }}
             className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
           >
-            <option value="user">내부 사용자</option>
-            <option value="external">외주 인력</option>
+            <option value="user">내부 직원 (app_users)</option>
+            <option value="partner_worker">파트너 인력 (partner_worker)</option>
+            <option value="partner_company">파트너 회사 (partner_company)</option>
           </select>
           <select
             value={participantSelectId}
@@ -7304,16 +8001,24 @@ function EditProjectModal({
                   .filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id))
                   .map((u: any) => (
                     <option key={u.id} value={u.id}>
-                      {u.name}
+                      {formatUserName(u)}
                     </option>
                   ))
-              : externalWorkers
-                  .filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id))
-                  .map((w: any) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
+              : participantSelectType === 'partner_worker'
+                ? partnerWorkers
+                    .filter((w: any) => !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === w.id))
+                    .map((w: any) => (
+                      <option key={w.id} value={w.id}>
+                        {formatPartnerWorkerName(w)}
+                      </option>
+                    ))
+                : (partnerCompanies || [])
+                    .filter((c: any) => !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === c.id))
+                    .map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.company_name_ko || c.company_name_en || `회사 #${c.id}`}
+                      </option>
+                    ))}
           </select>
           <button
             type="button"

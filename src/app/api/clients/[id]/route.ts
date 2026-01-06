@@ -1,18 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// 하위 호환성을 위해 client_company 대신 partner_company 사용
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const supabase = await createPureClient();
+    const { id } = await params;
+
+    const { data, error } = await supabase
+      .from('partner_company')
+      .select('*')
+      .eq('id', id)
+      .eq('partner_type', 'client')
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const supabase = await createPureClient();
     const { id } = await params;
     const body = await request.json();
 
-    // 빈 문자열을 null로 변환하는 헬퍼 함수
-    const toNullIfEmpty = (value: any) => (value === '' || value === null || value === undefined ? null : value);
+    const toNullIfEmpty = (value: any) =>
+      value === '' || value === null || value === undefined ? null : value;
 
     const { data, error } = await supabase
-      .from('client_company')
+      .from('partner_company')
       .update({
+        bu_code: body.bu_code,
         company_name_en: toNullIfEmpty(body.company_name_en),
         company_name_ko: toNullIfEmpty(body.company_name_ko),
         industry: toNullIfEmpty(body.industry),
@@ -21,9 +49,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         status: body.status,
         last_meeting_date: toNullIfEmpty(body.last_meeting_date),
         business_registration_file: toNullIfEmpty(body.business_registration_file),
-        updated_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('partner_type', 'client')
       .select()
       .single();
 
@@ -35,12 +63,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const supabase = await createPureClient();
     const { id } = await params;
 
-    const { error } = await supabase.from('client_company').delete().eq('id', id);
+    const { error } = await supabase
+      .from('partner_company')
+      .delete()
+      .eq('id', id)
+      .eq('partner_type', 'client');
 
     if (error) throw error;
 
@@ -49,9 +84,3 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
-
-
-
-
-
-

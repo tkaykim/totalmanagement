@@ -3,6 +3,7 @@ export type ProjectStatus = '준비중' | '진행중' | '운영중' | '기획중
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 export type FinancialKind = 'revenue' | 'expense';
 export type FinancialStatus = 'planned' | 'paid' | 'canceled';
+export type PaymentMethod = 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment';
 export type ERPRole = 'admin' | 'manager' | 'member' | 'viewer' | 'artist';
 export type TaskPriority = 'high' | 'medium' | 'low';
 export type EquipmentStatus = 'available' | 'rented' | 'maintenance' | 'lost';
@@ -14,6 +15,8 @@ export type CreatorType = 'creator' | 'celebrity' | 'influencer';
 export type CreatorStatus = 'active' | 'inactive' | 'archived';
 export type AdStatus = 'active' | 'paused' | 'completed' | 'none';
 export type ExternalWorkerType = 'freelancer' | 'company' | 'contractor';
+export type PartnerType = 'client' | 'vendor' | 'contractor';
+export type PartnerWorkerType = 'employee' | 'freelancer' | 'contractor';
 export type ArtistStatus = 'Active' | 'Inactive' | 'Archived';
 export type ArtistType = 'individual' | 'team';
 export type ProjectStep = 'plan' | 'script' | 'shoot' | 'edit';
@@ -68,7 +71,9 @@ export interface ProjectFreelancer {
 
 export interface ProjectParticipant {
   user_id?: string;
-  external_worker_id?: number;
+  external_worker_id?: number; // 하위 호환성 유지
+  partner_worker_id?: number; // 파트너 인력 ID
+  partner_company_id?: number; // 파트너 회사 ID (새로 추가)
   dancer_id?: number;
   role: string;
   is_pm: boolean;
@@ -79,12 +84,15 @@ export interface Project {
   bu_code: BU;
   name: string;
   category: string;
+  description?: string | null; // 프로젝트 설명 (nullable)
   status: ProjectStatus;
   start_date: string;
   end_date: string;
   client_id?: number;
+  channel_id?: number | null; // 연결된 채널 ID (nullable, 선택사항)
   artist_id?: number;
-  pm_name?: string;
+  pm_name?: string; // 하위 호환성을 위해 유지 (deprecated)
+  pm_ids?: string[]; // PM 사용자 ID 배열 (JSONB, app_users.id 참조, 다수 가능)
   creators?: ProjectCreator[]; // JSONB
   freelancers?: ProjectFreelancer[]; // JSONB
   active_steps?: ProjectStep[]; // JSONB: 활성화된 단계 배열
@@ -128,6 +136,10 @@ export interface FinancialEntry {
   occurred_at: string;
   status: FinancialStatus;
   memo?: string;
+  partner_company_id?: number | null;
+  partner_worker_id?: number | null;
+  payment_method?: PaymentMethod | null;
+  actual_amount?: number | null;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -166,7 +178,7 @@ export interface AppUser {
   updated_at: string;
 }
 
-export interface ClientCompany {
+export interface PartnerCompany {
   id: number;
   bu_code: BU;
   company_name_en: string | null;
@@ -174,6 +186,7 @@ export interface ClientCompany {
   industry?: string | null;
   business_registration_number?: string | null;
   representative_name?: string | null;
+  partner_type: PartnerType;
   status: ClientStatus;
   last_meeting_date?: string | null;
   business_registration_file?: string | null;
@@ -181,19 +194,37 @@ export interface ClientCompany {
   updated_at: string;
 }
 
-export interface ClientWorker {
+export interface PartnerWorker {
   id: number;
-  client_company_id: number | null;
-  name_en: string | null;
-  name_ko: string | null;
+  partner_company_id: number | null;
+  bu_code: BU;
+  name_en?: string | null;
+  name_ko?: string | null;
+  name?: string | null;
+  worker_type: PartnerWorkerType;
   phone?: string | null;
   email?: string | null;
+  specialties?: string[];
+  notes?: string | null;
   business_card_file?: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 // 하위 호환성을 위한 타입 별칭 (기존 코드 호환)
+export interface ClientCompany extends Omit<PartnerCompany, 'partner_type'> {
+  partner_type?: never; // 타입 안전성을 위해 제거
+}
+export interface ClientWorker extends Omit<PartnerWorker, 'partner_company_id' | 'bu_code' | 'worker_type' | 'name' | 'specialties' | 'is_active'> {
+  client_company_id: number | null;
+  partner_company_id?: never;
+  bu_code?: never;
+  worker_type?: never;
+  name?: never;
+  specialties?: never;
+  is_active?: never;
+}
 export type Client = ClientCompany;
 
 export interface Equipment {
@@ -359,6 +390,19 @@ export interface Comment {
   author_id: string;
   author_name: string;
   mentioned_user_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectDocument {
+  id: number;
+  project_id: number;
+  file_name: string;
+  file_path: string;
+  file_type?: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_by?: string;
   created_at: string;
   updated_at: string;
 }

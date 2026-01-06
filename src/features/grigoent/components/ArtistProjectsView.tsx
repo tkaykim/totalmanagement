@@ -36,7 +36,8 @@ export function ArtistProjectsView({ projects, artist, onProjectClick, activePer
   const { data: myProfileData } = useMyArtistProfile();
   const { data: artists = [] } = useArtists('GRIGO');
   const { data: clients = [] } = useClients('GRIGO');
-  const { data: dancers = [] } = useDancers('GRIGO');
+  const { data: dancersData } = useDancers('GRIGO');
+  const dancers: Dancer[] = Array.isArray(dancersData) ? dancersData : (dancersData?.data || []);
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();

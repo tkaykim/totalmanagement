@@ -49,12 +49,22 @@ export async function POST(request: NextRequest) {
     const insertData: any = {
       bu_code: body.bu_code,
       name: body.name,
-      category: body.category,
+      category: body.category || '',
       status: body.status || '준비중',
       start_date: body.start_date || null,
       end_date: body.end_date || null,
       created_by: userId || body.created_by || null,
     };
+
+    // description이 있으면 추가
+    if (body.description !== undefined) {
+      insertData.description = body.description || null;
+    }
+
+    // channel_id가 있으면 추가
+    if (body.channel_id !== undefined && body.channel_id !== null) {
+      insertData.channel_id = body.channel_id;
+    }
 
     // client_id가 있으면 추가
     if (body.client_id !== undefined && body.client_id !== null) {
@@ -66,9 +76,46 @@ export async function POST(request: NextRequest) {
       insertData.artist_id = body.artist_id;
     }
 
-    // pm_name이 있으면 추가
+    // pm_name이 있으면 추가 (하위 호환성)
     if (body.pm_name !== undefined) {
       insertData.pm_name = body.pm_name || null;
+    }
+
+    // pm_ids가 있으면 추가
+    if (body.pm_ids !== undefined && Array.isArray(body.pm_ids)) {
+      insertData.pm_ids = body.pm_ids;
+    } else {
+      insertData.pm_ids = [];
+    }
+
+    // active_steps가 있으면 추가
+    if (body.active_steps !== undefined && Array.isArray(body.active_steps)) {
+      insertData.active_steps = body.active_steps;
+    }
+
+    // 일정 관련 필드 추가
+    if (body.plan_date !== undefined) {
+      insertData.plan_date = body.plan_date || null;
+    }
+    if (body.script_date !== undefined) {
+      insertData.script_date = body.script_date || null;
+    }
+    if (body.shoot_date !== undefined) {
+      insertData.shoot_date = body.shoot_date || null;
+    }
+    if (body.edit1_date !== undefined) {
+      insertData.edit1_date = body.edit1_date || null;
+    }
+    if (body.edit_final_date !== undefined) {
+      insertData.edit_final_date = body.edit_final_date || null;
+    }
+    if (body.release_date !== undefined) {
+      insertData.release_date = body.release_date || null;
+    }
+
+    // assets가 있으면 추가
+    if (body.assets !== undefined) {
+      insertData.assets = body.assets;
     }
 
     // participants JSONB 컬럼 추가

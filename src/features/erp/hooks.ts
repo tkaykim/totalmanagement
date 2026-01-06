@@ -547,6 +547,20 @@ export function useDeleteExternalWorker() {
   });
 }
 
+export function usePartnerCompanies(bu?: BU) {
+  return useQuery({
+    queryKey: ['partner-companies', bu],
+    queryFn: () => api.fetchPartnerCompanies(bu),
+  });
+}
+
+export function usePartnerWorkers(bu?: BU) {
+  return useQuery({
+    queryKey: ['partner-workers', bu],
+    queryFn: () => api.fetchPartnerWorkers(bu),
+  });
+}
+
 // Artists
 export function useArtists(bu?: BU) {
   return useQuery({
@@ -585,10 +599,10 @@ export function useDeleteArtist() {
   });
 }
 
-export function useDancers(bu?: BU) {
+export function useDancers(bu?: BU, page: number = 1, limit: number = 20, search?: string) {
   return useQuery({
-    queryKey: ['dancers', bu],
-    queryFn: () => api.fetchDancers(bu),
+    queryKey: ['dancers', bu, page, limit, search],
+    queryFn: () => api.fetchDancers(bu, page, limit, search),
   });
 }
 

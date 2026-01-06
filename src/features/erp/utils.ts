@@ -6,13 +6,16 @@ export function dbProjectToFrontend(p: Project): {
   id: string;
   bu: BU;
   name: string;
+  description?: string | null;
   cat: string;
+  channel_id?: number | null;
   startDate: string;
   endDate: string;
   status: string;
   client_id?: number;
   artist_id?: number;
   pm_name?: string;
+  pm_ids?: string[];
   active_steps?: ProjectStep[];
   plan_date?: string | null;
   script_date?: string | null;
@@ -21,19 +24,22 @@ export function dbProjectToFrontend(p: Project): {
   edit_final_date?: string | null;
   release_date?: string | null;
   assets?: ProjectAssets;
-  participants?: Array<{ user_id?: string; external_worker_id?: number; role: string; is_pm: boolean }>;
+  participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role: string; is_pm: boolean }>;
 } {
   return {
     id: String(p.id),
     bu: p.bu_code,
     name: p.name,
+    description: p.description,
     cat: p.category,
+    channel_id: p.channel_id,
     startDate: p.start_date,
     endDate: p.end_date,
     status: p.status,
     client_id: p.client_id,
     artist_id: p.artist_id,
     pm_name: p.pm_name,
+    pm_ids: p.pm_ids,
     active_steps: p.active_steps,
     plan_date: p.plan_date,
     script_date: p.script_date,
@@ -80,6 +86,10 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
   amount: number;
   date: string;
   status: 'planned' | 'paid' | 'canceled';
+  partner_company_id?: number | null;
+  partner_worker_id?: number | null;
+  payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
+  actual_amount?: number | null;
 } {
   return {
     id: String(f.id),
@@ -91,6 +101,10 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
     amount: f.amount,
     date: f.occurred_at,
     status: f.status,
+    partner_company_id: f.partner_company_id,
+    partner_worker_id: f.partner_worker_id,
+    payment_method: f.payment_method,
+    actual_amount: f.actual_amount,
   };
 }
 
@@ -98,12 +112,16 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
 export function frontendProjectToDb(p: {
   bu: BU;
   name: string;
-  cat: string;
+  description?: string | null;
+  cat?: string | null;
+  channel_id?: number | null;
   startDate: string;
   endDate: string;
   status?: string;
+  client_id?: number | null;
   artist_id?: number;
   pm_name?: string | null;
+  pm_ids?: string[];
   active_steps?: ProjectStep[];
   plan_date?: string | null;
   script_date?: string | null;
@@ -112,16 +130,20 @@ export function frontendProjectToDb(p: {
   edit_final_date?: string | null;
   release_date?: string | null;
   assets?: ProjectAssets;
-  participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
+  participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
 }): {
   bu_code: BU;
   name: string;
+  description?: string | null;
   category: string;
+  channel_id?: number | null;
   status: string;
   start_date: string;
   end_date: string;
+  client_id?: number | null;
   artist_id?: number;
   pm_name?: string | null;
+  pm_ids?: string[];
   active_steps?: ProjectStep[];
   plan_date?: string | null;
   script_date?: string | null;
@@ -130,18 +152,22 @@ export function frontendProjectToDb(p: {
   edit_final_date?: string | null;
   release_date?: string | null;
   assets?: ProjectAssets;
-  participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
+  participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
 } {
   const today = new Date().toISOString().split('T')[0];
   const result: {
     bu_code: BU;
     name: string;
+    description?: string | null;
     category: string;
+    channel_id?: number | null;
     status: string;
     start_date: string;
     end_date: string;
+    client_id?: number | null;
     artist_id?: number;
     pm_name?: string | null;
+    pm_ids?: string[];
     active_steps?: ProjectStep[];
     plan_date?: string | null;
     script_date?: string | null;
@@ -150,15 +176,27 @@ export function frontendProjectToDb(p: {
     edit_final_date?: string | null;
     release_date?: string | null;
     assets?: ProjectAssets;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
+    participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   } = {
     bu_code: p.bu,
     name: p.name,
-    category: p.cat,
+    category: p.cat || '',
     status: p.status || '준비중',
     start_date: p.startDate || today,
     end_date: p.endDate || today,
   };
+  
+  if (p.description !== undefined) {
+    result.description = p.description || null;
+  }
+  
+  if (p.channel_id !== undefined) {
+    result.channel_id = p.channel_id || null;
+  }
+  
+  if (p.client_id !== undefined) {
+    result.client_id = p.client_id || null;
+  }
   
   if (p.artist_id !== undefined) {
     result.artist_id = p.artist_id;
@@ -166,6 +204,10 @@ export function frontendProjectToDb(p: {
   
   if (p.pm_name !== undefined) {
     result.pm_name = p.pm_name || null;
+  }
+  
+  if (p.pm_ids !== undefined) {
+    result.pm_ids = p.pm_ids || [];
   }
 
   if (p.active_steps !== undefined) {
@@ -248,6 +290,10 @@ export function frontendFinancialToDb(f: {
   amount: number;
   date: string;
   status?: 'planned' | 'paid' | 'canceled';
+  partner_company_id?: number | null;
+  partner_worker_id?: number | null;
+  payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
+  actual_amount?: number | null;
 }): {
   project_id: number;
   bu_code: BU;
@@ -257,6 +303,10 @@ export function frontendFinancialToDb(f: {
   amount: number;
   occurred_at: string;
   status: 'planned' | 'paid' | 'canceled';
+  partner_company_id?: number | null;
+  partner_worker_id?: number | null;
+  payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
+  actual_amount?: number | null;
 } {
   const today = new Date().toISOString().split('T')[0];
   return {
@@ -268,6 +318,10 @@ export function frontendFinancialToDb(f: {
     amount: f.amount,
     occurred_at: f.date || today,
     status: f.status || 'planned',
+    partner_company_id: f.partner_company_id || null,
+    partner_worker_id: f.partner_worker_id || null,
+    payment_method: f.payment_method || null,
+    actual_amount: f.actual_amount || null,
   };
 }
 

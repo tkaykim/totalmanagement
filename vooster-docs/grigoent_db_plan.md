@@ -195,3 +195,5 @@ ALTER TABLE project_tasks ADD CONSTRAINT project_tasks_related_manual_id_fkey
 
 
 
+
+

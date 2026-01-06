@@ -1288,7 +1288,7 @@ export default function GrigoEntDashboard() {
             clients={partners}
             artists={artists}
             users={(usersData as any)?.users || []}
-            dancers={dancersData}
+            dancers={Array.isArray(dancersData) ? dancersData : (dancersData?.data || [])}
             onClose={() => setProjectModalOpen(false)}
             onSubmit={handleCreateProject}
           />
@@ -1301,7 +1301,7 @@ export default function GrigoEntDashboard() {
             clients={partners}
             artists={artists}
             users={(usersData as any)?.users || []}
-            dancers={dancersData}
+            dancers={Array.isArray(dancersData) ? dancersData : (dancersData?.data || [])}
             onClose={() => setEditProject(null)}
             onSubmit={(data) => handleUpdateProject(Number(editProject.id), data)}
           />

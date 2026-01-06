@@ -7,18 +7,56 @@ export async function GET(request: NextRequest) {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
     const bu = searchParams.get('bu') as BU | null;
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    const search = searchParams.get('search') || '';
+    const offset = (page - 1) * limit;
 
-    let query = supabase.from('dancers').select('*').order('created_at', { ascending: false });
+    // 검색 조건 생성
+    const buildSearchQuery = (query: any) => {
+      if (!search.trim()) return query;
+      
+      const searchPattern = `%${search}%`;
+      // Supabase의 or() 메서드는 필드명.연산자.값 형식으로 여러 조건을 OR로 연결
+      return query.or(
+        `name.ilike.${searchPattern},nickname_ko.ilike.${searchPattern},nickname_en.ilike.${searchPattern},real_name.ilike.${searchPattern},team_name.ilike.${searchPattern},company.ilike.${searchPattern},nationality.ilike.${searchPattern},contact.ilike.${searchPattern}`
+      );
+    };
+
+    // 전체 개수 조회 (검색 조건 포함)
+    let countQuery = supabase.from('dancers').select('*', { count: 'exact', head: true });
+    if (bu) {
+      countQuery = countQuery.eq('bu_code', bu);
+    }
+    countQuery = buildSearchQuery(countQuery);
+    const { count, error: countError } = await countQuery;
+    if (countError) throw countError;
+
+    // 페이지네이션된 데이터 조회 (검색 조건 포함)
+    let query = supabase
+      .from('dancers')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (bu) {
       query = query.eq('bu_code', bu);
     }
+    query = buildSearchQuery(query);
 
     const { data, error } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    return NextResponse.json({
+      data: data || [],
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

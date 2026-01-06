@@ -700,6 +700,20 @@ export async function fetchExternalWorkers(bu?: BU): Promise<ExternalWorker[]> {
   return res.json();
 }
 
+export async function fetchPartnerCompanies(bu?: BU): Promise<any[]> {
+  const url = bu ? `${API_BASE}/partners/companies?bu=${bu}` : `${API_BASE}/partners/companies`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch partner companies');
+  return res.json();
+}
+
+export async function fetchPartnerWorkers(bu?: BU): Promise<any[]> {
+  const url = bu ? `${API_BASE}/partners/workers?bu=${bu}` : `${API_BASE}/partners/workers`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch partner workers');
+  return res.json();
+}
+
 export async function createExternalWorker(data: {
   bu_code: BU;
   name: string;
@@ -798,8 +812,21 @@ export async function deleteArtist(id: number): Promise<void> {
 // Dancers API Functions
 // ============================================
 
-export async function fetchDancers(bu?: BU): Promise<Dancer[]> {
-  const url = bu ? `${API_BASE}/dancers?bu=${bu}` : `${API_BASE}/dancers`;
+export async function fetchDancers(
+  bu?: BU,
+  page: number = 1,
+  limit: number = 20,
+  search?: string
+): Promise<{ data: Dancer[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
+  const params = new URLSearchParams();
+  if (bu) params.append('bu', bu);
+  params.append('page', String(page));
+  params.append('limit', String(limit));
+  if (search && search.trim()) {
+    params.append('search', search.trim());
+  }
+  
+  const url = `${API_BASE}/dancers?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch dancers');
   return res.json();

@@ -183,12 +183,14 @@ export function ProjectDetailModal({ project, financialEntries, onClose }: Proje
   const [participantRole, setParticipantRole] = useState('댄서참여');
 
   const queryClient = useQueryClient();
-  const { data: dancers = [] } = useDancers('GRIGO');
+  const { data: dancersData = [] } = useDancers('GRIGO');
   const { data: artists = [] } = useArtists('GRIGO');
   const createFinancialMutation = useCreateFinancialEntry();
   const updateFinancialMutation = useUpdateFinancialEntry();
   const deleteFinancialMutation = useDeleteFinancialEntry();
   const updateProjectMutation = useUpdateProject();
+
+  const dancers: Dancer[] = Array.isArray(dancersData) ? dancersData : (dancersData?.data || []);
 
   const frontendEntries = financialEntries.map((entry) => dbFinancialToFrontend(entry));
   const participants = (project.participants as ProjectParticipant[]) || [];

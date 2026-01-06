@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Search, Edit3, Trash2, Phone, Mail, X, Check, Upload, Image as ImageIcon, Users } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, Phone, Mail, X, Check, Upload, Image as ImageIcon, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BU, Dancer } from '@/types/database';
 import {
@@ -754,27 +754,21 @@ export function DancersView({ bu }: { bu: BU }) {
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
   const [editDancer, setEditDancer] = useState<Dancer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
-  const { data: dancersData = [] } = useDancers(bu);
+  // 검색어가 변경되면 첫 페이지로 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const { data: dancersResponse, isLoading } = useDancers(bu, currentPage, pageSize, searchQuery);
+  const dancersData = dancersResponse?.data || [];
+  const pagination = dancersResponse?.pagination || { page: 1, limit: pageSize, total: 0, totalPages: 1 };
+  
   const createDancerMutation = useCreateDancer();
   const updateDancerMutation = useUpdateDancer();
   const deleteDancerMutation = useDeleteDancer();
-
-  const filteredDancers = useMemo(() => {
-    if (!searchQuery.trim()) return dancersData;
-    const query = searchQuery.toLowerCase();
-    return dancersData.filter(
-      (dancer) =>
-        dancer.name.toLowerCase().includes(query) ||
-        dancer.nickname_ko?.toLowerCase().includes(query) ||
-        dancer.nickname_en?.toLowerCase().includes(query) ||
-        dancer.real_name?.toLowerCase().includes(query) ||
-        dancer.team_name?.toLowerCase().includes(query) ||
-        dancer.company?.toLowerCase().includes(query) ||
-        dancer.nationality?.toLowerCase().includes(query) ||
-        dancer.contact?.toLowerCase().includes(query)
-    );
-  }, [dancersData, searchQuery]);
 
   const handleDelete = async (id: number) => {
     if (confirm('정말 삭제하시겠습니까?')) {
@@ -808,6 +802,8 @@ export function DancersView({ bu }: { bu: BU }) {
     try {
       await createDancerMutation.mutateAsync(data);
       setIsCreateModalOpen(false);
+      // 새 댄서가 추가되면 첫 페이지로 이동 (최신순 정렬이므로)
+      setCurrentPage(1);
     } catch (error) {
       console.error('Failed to create dancer:', error);
       alert('등록 중 오류가 발생했습니다.');
@@ -842,6 +838,8 @@ export function DancersView({ bu }: { bu: BU }) {
     for (const dancer of dancers) {
       await createDancerMutation.mutateAsync(dancer);
     }
+    // 대량 추가 후 첫 페이지로 이동
+    setCurrentPage(1);
   };
 
   return (
@@ -893,7 +891,7 @@ export function DancersView({ bu }: { bu: BU }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredDancers.map((dancer) => (
+              {dancersData.map((dancer) => (
                 <tr key={dancer.id} className="hover:bg-gray-50 dark:hover:bg-slate-900/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
@@ -961,7 +959,14 @@ export function DancersView({ bu }: { bu: BU }) {
                   </td>
                 </tr>
               ))}
-              {filteredDancers.length === 0 && (
+              {isLoading && (
+                <tr>
+                  <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">
+                    로딩 중...
+                  </td>
+                </tr>
+              )}
+              {!isLoading && dancersData.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">
                     {searchQuery ? '검색 결과가 없습니다.' : '등록된 댄서가 없습니다.'}
@@ -971,6 +976,74 @@ export function DancersView({ bu }: { bu: BU }) {
             </tbody>
           </table>
         </div>
+        
+        {/* 페이지네이션 */}
+        {pagination.totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/30 flex items-center justify-between">
+            <div className="text-xs text-gray-600 dark:text-slate-400">
+              전체 {pagination.total}명 중 {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, pagination.total)}명 표시
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className={cn(
+                  'flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors',
+                  currentPage === 1
+                    ? 'text-gray-400 dark:text-slate-600 cursor-not-allowed'
+                    : 'text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                )}
+              >
+                <ChevronLeft size={16} />
+                이전
+              </button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (pagination.totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= pagination.totalPages - 2) {
+                    pageNum = pagination.totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={cn(
+                        'px-3 py-2 rounded-lg text-xs font-medium transition-colors',
+                        currentPage === pageNum
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                      )}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+                disabled={currentPage === pagination.totalPages}
+                className={cn(
+                  'flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors',
+                  currentPage === pagination.totalPages
+                    ? 'text-gray-400 dark:text-slate-600 cursor-not-allowed'
+                    : 'text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                )}
+              >
+                다음
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isCreateModalOpen && (

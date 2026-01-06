@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Search, Check } from 'lucide-react';
-import type { BU, Artist, Client, Dancer, ProjectParticipant } from '@/types/database';
+import { X, Search, Check, Upload, File, Trash2, Download } from 'lucide-react';
+import type { BU, Artist, Client, Dancer, ProjectParticipant, ProjectDocument } from '@/types/database';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { cn } from '@/lib/utils';
 
@@ -599,6 +599,110 @@ export function ProjectModal({
   // forceMode가 설정되어 있으면 모드 변경 불가
   const effectiveMode = forceMode || mode;
 
+  // 파일 업로드 관련 상태
+  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileType, setSelectedFileType] = useState<string>('');
+
+  // 프로젝트가 있으면 문서 목록 로드
+  useEffect(() => {
+    if (project?.id) {
+      loadDocuments();
+    }
+  }, [project?.id]);
+
+  const loadDocuments = async () => {
+    if (!project?.id) return;
+    setIsLoadingDocuments(true);
+    try {
+      const response = await fetch(`/api/projects/${project.id}/documents`);
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data);
+      }
+    } catch (error) {
+      console.error('Failed to load documents:', error);
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !project?.id) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((file) => {
+        formData.append('files', file);
+      });
+      if (selectedFileType) {
+        formData.append('file_type', selectedFileType);
+      }
+
+      const response = await fetch(`/api/projects/${project.id}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const uploadedDocs = await response.json();
+        setDocuments((prev) => [...uploadedDocs, ...prev]);
+        setSelectedFileType('');
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } else {
+        const error = await response.json();
+        alert(`파일 업로드 실패: ${error.error || '알 수 없는 오류'}`);
+      }
+    } catch (error) {
+      console.error('Failed to upload files:', error);
+      alert('파일 업로드 중 오류가 발생했습니다.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: number) => {
+    if (!project?.id || !confirm('정말 이 파일을 삭제하시겠습니까?')) return;
+
+    try {
+      const response = await fetch(`/api/projects/${project.id}/documents/${documentId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+      } else {
+        const error = await response.json();
+        alert(`파일 삭제 실패: ${error.error || '알 수 없는 오류'}`);
+      }
+    } catch (error) {
+      console.error('Failed to delete document:', error);
+      alert('파일 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFileIcon = (mimeType?: string) => {
+    if (!mimeType) return <File size={16} />;
+    if (mimeType.startsWith('image/')) return <File size={16} className="text-blue-500" />;
+    if (mimeType.includes('pdf')) return <File size={16} className="text-red-500" />;
+    if (mimeType.includes('word') || mimeType.includes('document')) return <File size={16} className="text-blue-600" />;
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return <File size={16} className="text-green-600" />;
+    return <File size={16} />;
+  };
+
   return (
     <ModalShell title={project ? '프로젝트 수정' : '프로젝트 등록'} onClose={onClose}>
       {/* 모드 토글 - forceMode가 없을 때만 표시 */}
@@ -745,6 +849,115 @@ export function ProjectModal({
           </div>
         )}
       </div>
+
+      {/* 관련 서류 섹션 - 프로젝트가 있을 때만 표시 */}
+      {project?.id && (
+        <div className="md:col-span-2 space-y-3 border-t border-gray-200 dark:border-slate-700 pt-4 mt-4">
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">
+              관련 서류
+            </span>
+            
+            {/* 파일 업로드 영역 */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <select
+                  value={selectedFileType}
+                  onChange={(e) => setSelectedFileType(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 text-sm outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  <option value="">문서 유형 선택 (선택사항)</option>
+                  <option value="계약서">계약서</option>
+                  <option value="계산서">계산서</option>
+                  <option value="견적서">견적서</option>
+                  <option value="영수증">영수증</option>
+                  <option value="기타">기타</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className={cn(
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                    isUploading
+                      ? 'bg-gray-300 dark:bg-slate-700 text-gray-500 dark:text-slate-400 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  )}
+                >
+                  <Upload size={16} />
+                  {isUploading ? '업로드 중...' : '파일 선택'}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+
+              {/* 문서 목록 */}
+              {isLoadingDocuments ? (
+                <div className="text-sm text-gray-500 dark:text-slate-400 py-4 text-center">
+                  로딩 중...
+                </div>
+              ) : documents.length > 0 ? (
+                <div className="space-y-2">
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-slate-700"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {getFileIcon(doc.mime_type)}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">
+                            {doc.file_name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                            {doc.file_type && (
+                              <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-xs">
+                                {doc.file_type}
+                              </span>
+                            )}
+                            {formatFileSize(doc.file_size) && (
+                              <span>{formatFileSize(doc.file_size)}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/project-documents/${doc.file_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                          title="다운로드"
+                        >
+                          <Download size={16} className="text-gray-600 dark:text-slate-400" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDocument(doc.id)}
+                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          title="삭제"
+                        >
+                          <Trash2 size={16} className="text-red-600 dark:text-red-400" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-slate-400 py-4 text-center">
+                  등록된 문서가 없습니다
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <ModalActions
         onPrimary={() => {
           // 기존 participants 중 dancer_id가 없는 항목들 유지

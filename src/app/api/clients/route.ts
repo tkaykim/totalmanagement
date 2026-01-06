@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 import type { BU } from '@/types/database';
 
+// 하위 호환성을 위해 client_company 대신 partner_company 사용 (partner_type='client' 필터링)
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
     const bu = searchParams.get('bu') as BU | null;
 
-    let query = supabase.from('client_company').select('*').order('created_at', { ascending: false });
+    let query = supabase
+      .from('partner_company')
+      .select('*')
+      .eq('partner_type', 'client')
+      .order('created_at', { ascending: false });
 
     if (bu) {
       query = query.eq('bu_code', bu);
@@ -33,7 +38,7 @@ export async function POST(request: NextRequest) {
     const toNullIfEmpty = (value: any) => (value === '' || value === null || value === undefined ? null : value);
 
     const { data, error } = await supabase
-      .from('client_company')
+      .from('partner_company')
       .insert({
         bu_code: body.bu_code,
         company_name_en: toNullIfEmpty(body.company_name_en),
@@ -41,6 +46,7 @@ export async function POST(request: NextRequest) {
         industry: toNullIfEmpty(body.industry),
         business_registration_number: toNullIfEmpty(body.business_registration_number),
         representative_name: toNullIfEmpty(body.representative_name),
+        partner_type: 'client', // 클라이언트로 고정
         status: body.status || 'active',
         last_meeting_date: toNullIfEmpty(body.last_meeting_date),
         business_registration_file: toNullIfEmpty(body.business_registration_file),
