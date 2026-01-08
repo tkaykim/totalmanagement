@@ -4,9 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  BarChart3,
   Bell,
-  BookOpen,
   ChartLine,
   Check,
   CheckSquare,
@@ -60,83 +58,25 @@ import {
 import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { ProjectModal } from '@/features/erp/components/ProjectModal';
-
-type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
-type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio';
-
-type Project = {
-  id: string;
-  bu: BU;
-  name: string;
-  cat: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-  pm_id?: string | null;
-  participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role: string }>;
-};
-
-type FinancialEntryStatus = 'planned' | 'paid' | 'canceled';
-
-type FinancialEntry = {
-  id: string;
-  projectId: string;
-  bu: BU;
-  type: 'revenue' | 'expense';
-  category: string;
-  name: string;
-  amount: number;
-  date: string;
-  status: FinancialEntryStatus;
-  partner_company_id?: number | null;
-  partner_worker_id?: number | null;
-  payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
-  actual_amount?: number | null;
-};
-
-type Member = {
-  name: string;
-  role: string;
-  team: string;
-};
-
-type TaskItem = {
-  id: string;
-  bu: BU;
-  projectId: string;
-  title: string;
-  assignee: string;
-  dueDate: string;
-  status: 'todo' | 'in-progress' | 'done';
-};
-
-const BU_TITLES: Record<BU, string> = {
-  GRIGO: '그리고 엔터',
-  REACT: '리액트 스튜디오',
-  FLOW: '플로우메이커',
-  AST: '아스트 컴퍼니',
-  MODOO: '모두굿즈',
-  HEAD: '본사',
-};
-
-const BU_LABELS: Record<BU, string> = {
-  GRIGO: 'GRIGO',
-  REACT: 'REACT STUDIO',
-  FLOW: 'FLOWMAKER',
-  AST: 'AST',
-  MODOO: 'MODOO',
-  HEAD: 'HEAD',
-};
-
-// 사업부별 색상 스타일
-const BU_CHIP_STYLES: Record<BU, string> = {
-  GRIGO: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-  REACT: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-  FLOW: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
-  AST: 'bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800',
-  MODOO: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-  HEAD: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-};
+import { DashboardView } from '@/features/erp/components/DashboardView';
+import { StatCard } from '@/features/erp/components/StatCard';
+import { ProjectsView } from '@/features/erp/components/ProjectsView';
+import { SettlementView } from '@/features/erp/components/SettlementView';
+import { BuTabs } from '@/features/erp/components/BuTabs';
+import { FinanceRow } from '@/features/erp/components/FinanceRow';
+import {
+  BU,
+  View,
+  Project,
+  FinancialEntry,
+  FinancialEntryStatus,
+  Member,
+  TaskItem,
+  BU_TITLES,
+  BU_LABELS,
+  BU_CHIP_STYLES,
+  formatCurrency,
+} from '@/features/erp/types';
 
 const INITIAL_PROJECTS: Project[] = [
   {
@@ -251,9 +191,6 @@ const INITIAL_TASKS: TaskItem[] = [
 ];
 
 
-const formatCurrency = (value: number) =>
-  `₩ ${value.toLocaleString('ko-KR')}`;
-
 const isDateInRange = (date: string, start?: string, end?: string) => {
   if (!start || !end) return true;
   const target = parseISO(date);
@@ -315,6 +252,7 @@ export default function HomePage() {
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
   const [isFinanceModalOpen, setFinanceModalOpen] = useState<null | 'revenue' | 'expense'>(null);
+  const [financeDefaultProjectId, setFinanceDefaultProjectId] = useState<string | null>(null);
   const [isEditFinanceModalOpen, setEditFinanceModalOpen] = useState<FinancialEntry | null>(null);
   const [isEditTaskModalOpen, setEditTaskModalOpen] = useState<TaskItem | null>(null);
   const [isEditProjectModalOpen, setEditProjectModalOpen] = useState<Project | null>(null);
@@ -1373,6 +1311,11 @@ export default function HomePage() {
           usersData={usersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
+          placeholders={{
+            projectName: '예: 2025 신규 프로젝트',
+            category: '예: 기획, 제작, 운영',
+            description: '프로젝트 설명을 입력하세요',
+          }}
         />
       )}
       {isTaskModalOpen && (
@@ -1392,12 +1335,16 @@ export default function HomePage() {
       {isFinanceModalOpen && (
         <CreateFinanceModal
           mode={isFinanceModalOpen}
-          onClose={() => setFinanceModalOpen(null)}
+          onClose={() => {
+            setFinanceModalOpen(null);
+            setFinanceDefaultProjectId(null);
+          }}
           onSubmit={handleCreateFinance}
           projects={projects}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
           calculateActualAmount={calculateActualAmount}
+          defaultProjectId={financeDefaultProjectId}
         />
       )}
       {isEditFinanceModalOpen && (
@@ -1430,6 +1377,36 @@ export default function HomePage() {
           usersData={usersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
+          placeholders={{
+            projectName: '예: 2025 신규 프로젝트',
+            category: '예: 기획, 제작, 운영',
+            description: '프로젝트 설명을 입력하세요',
+          }}
+          financeData={allFinancial
+            .filter((f) => f.projectId === isEditProjectModalOpen.id)
+            .map((f) => ({
+              id: f.id,
+              kind: f.type,
+              category: f.category,
+              name: f.name,
+              amount: f.amount,
+              status: f.status,
+              occurred_at: f.date,
+            }))}
+          onAddRevenue={() => {
+            setFinanceDefaultProjectId(isEditProjectModalOpen.id);
+            setFinanceModalOpen('revenue');
+          }}
+          onAddExpense={() => {
+            setFinanceDefaultProjectId(isEditProjectModalOpen.id);
+            setFinanceModalOpen('expense');
+          }}
+          onViewFinanceDetail={(entry) => {
+            const matchedFinance = allFinancial.find((f) => f.id === entry.id);
+            if (matchedFinance) {
+              setEditFinanceModalOpen(matchedFinance);
+            }
+          }}
         />
       )}
       {deleteProjectId && (
@@ -1600,849 +1577,6 @@ function SidebarButton({
   );
 }
 
-function DashboardView({
-  totals,
-  buCards,
-  share,
-  tasks,
-  projects,
-  revenues,
-  expenses,
-  currentUser,
-  onProjectClick,
-  onTaskClick,
-  usersData,
-}: {
-  totals: { totalRev: number; totalExp: number; totalProfit: number };
-  buCards: { bu: BU; projects: number; revenue: number; expense: number; profit: number }[];
-  share: { bu: BU; amount: number; ratio: number }[];
-  tasks: TaskItem[];
-  projects: Project[];
-  revenues: FinancialEntry[];
-  expenses: FinancialEntry[];
-  currentUser?: any;
-  onProjectClick: (project: Project) => void;
-  onTaskClick: (task: TaskItem) => void;
-  usersData?: { users: any[]; currentUser: any };
-}) {
-  const [selectedBu, setSelectedBu] = useState<BU | 'ALL'>('ALL');
-  const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
-  const [projectAssigneeFilter, setProjectAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
-  const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
-  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
-
-  // 진행 예정 또는 진행 중인 프로젝트 필터링 (준비중, 기획중, 진행중, 운영중)
-  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
-  const completedProjectStatuses = ['완료'];
-  
-  const filteredProjects = useMemo(() => {
-    let filtered = projects;
-    
-    // 상태 필터링
-    if (projectFilter === 'active') {
-      filtered = filtered.filter((p) => activeProjectStatuses.includes(p.status));
-    } else {
-      filtered = filtered.filter((p) => completedProjectStatuses.includes(p.status));
-    }
-    
-    // 사업부 필터링
-    if (selectedBu !== 'ALL') {
-      filtered = filtered.filter((p) => p.bu === selectedBu);
-    }
-    
-    // 내 프로젝트 필터링 (PM이거나 참여자인 프로젝트)
-    if (projectAssigneeFilter === 'my' && currentUser) {
-      filtered = filtered.filter((p) => {
-        // PM으로 맡은 프로젝트
-        const isPM = p.pm_id === currentUser.id;
-        // 참여자로 포함된 프로젝트
-        const isParticipant = p.participants?.some(
-          (participant) => participant.user_id === currentUser.id
-        ) || false;
-        return isPM || isParticipant;
-      });
-    }
-    if (projectAssigneeFilter === 'unassigned') {
-      filtered = filtered.filter((p) => !p.pm_id || p.pm_id.trim() === '');
-    }
-    
-    return filtered;
-  }, [projects, selectedBu, projectFilter, projectAssigneeFilter, currentUser]);
-
-  // 필터링된 프로젝트에 연결된 할일 필터링
-  const filteredTasksByProject = useMemo(() => {
-    const projectIds = new Set(filteredProjects.map((p) => p.id));
-    return tasks.filter((t) => projectIds.has(t.projectId));
-  }, [tasks, filteredProjects]);
-
-  // 할일 상태 및 담당자 필터링
-  const filteredTasks = useMemo(() => {
-    let filtered = filteredTasksByProject;
-    
-    // 상태 필터링
-    if (taskFilter === 'active') {
-      filtered = filtered.filter((t) => t.status === 'todo' || t.status === 'in-progress');
-    } else {
-      filtered = filtered.filter((t) => t.status === 'done');
-    }
-    
-    // 담당자 필터링
-    if (taskAssigneeFilter === 'my' && currentUser?.profile?.name) {
-      filtered = filtered.filter((t) => t.assignee === currentUser.profile.name);
-    }
-    if (taskAssigneeFilter === 'unassigned') {
-      filtered = filtered.filter((t) => !t.assignee || t.assignee.trim() === '');
-    }
-    
-    return filtered;
-  }, [filteredTasksByProject, taskFilter, taskAssigneeFilter, currentUser]);
-
-  // 선택된 사업부에 따른 매출/지출/순이익 계산
-  const filteredTotals = useMemo(() => {
-    if (selectedBu === 'ALL') {
-      return totals;
-    }
-    
-    // 선택된 사업부의 프로젝트 ID 추출
-    const buProjectIds = new Set(projects.filter((p) => p.bu === selectedBu).map((p) => p.id));
-    
-    // 해당 프로젝트들의 매출과 지출 계산
-    const buRevenues = revenues.filter((r) => buProjectIds.has(r.projectId));
-    const buExpenses = expenses.filter((e) => buProjectIds.has(e.projectId));
-    
-    const totalRev = buRevenues.reduce((sum, r) => sum + r.amount, 0);
-    const totalExp = buExpenses.reduce((sum, e) => sum + e.amount, 0);
-    
-    return {
-      totalRev,
-      totalExp,
-      totalProfit: totalRev - totalExp,
-    };
-  }, [selectedBu, totals, revenues, expenses, projects]);
-
-  // 권한 체크: manager 또는 admin만 매출/지출/순이익 데이터 확인 가능
-  const canViewFinancialData = currentUser?.profile?.role === 'manager' || currentUser?.profile?.role === 'admin';
-
-  return (
-    <section className="space-y-8">
-      {/* 탭 전환 */}
-      <div className="flex w-fit overflow-x-auto rounded-2xl bg-slate-200/60 dark:bg-slate-700/60 p-1 sm:p-1.5">
-        <button
-          onClick={() => setSelectedBu('ALL')}
-          className={cn(
-            'px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-            selectedBu === 'ALL'
-              ? 'tab-active rounded-xl bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow'
-              : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100',
-          )}
-        >
-          전체
-        </button>
-        {(Object.keys(BU_TITLES) as BU[]).map((key) => (
-          <button
-            key={key}
-            onClick={() => setSelectedBu(key)}
-            className={cn(
-              'px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-              selectedBu === key
-                ? 'tab-active rounded-xl bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow'
-                : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100',
-            )}
-          >
-            {BU_TITLES[key]}
-          </button>
-        ))}
-      </div>
-
-      {canViewFinancialData && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <StatCard
-            title={selectedBu === 'ALL' ? '선택 기간 총 매출' : `${BU_TITLES[selectedBu]} 총 매출`}
-            value={filteredTotals.totalRev}
-            icon={<DollarSign className="h-5 w-5 text-blue-500" />}
-            accent="text-blue-600"
-          />
-          <StatCard
-            title={selectedBu === 'ALL' ? '선택 기간 총 지출' : `${BU_TITLES[selectedBu]} 총 지출`}
-            value={filteredTotals.totalExp}
-            icon={<Coins className="h-5 w-5 text-red-500" />}
-            accent="text-red-500"
-          />
-          <StatCard
-            title={selectedBu === 'ALL' ? '선택 기간 순이익' : `${BU_TITLES[selectedBu]} 순이익`}
-            value={filteredTotals.totalProfit}
-            icon={<ChartLine className="h-5 w-5 text-emerald-500" />}
-            accent="text-emerald-600"
-          />
-        </div>
-      )}
-
-      {/* 프로젝트와 할일을 좌우로 배치 */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* 프로젝트 목록 */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <FolderKanban className="h-5 w-5 text-blue-500" />
-              <h3 className="font-bold text-slate-800 dark:text-slate-200 dark:text-slate-200">
-                {selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]} 프로젝트
-              </h3>
-            </div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-400">
-              {filteredProjects.length}개
-            </span>
-          </div>
-          {/* 프로젝트 필터 토글 */}
-          <div className="mb-4 space-y-2">
-            {/* 상태 필터 */}
-            <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 p-1">
-              <button
-                onClick={() => setProjectFilter('active')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  projectFilter === 'active'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                진행예정/진행중
-              </button>
-              <button
-                onClick={() => setProjectFilter('completed')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  projectFilter === 'completed'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                완료
-              </button>
-            </div>
-            {/* PM 필터 */}
-            <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 p-1">
-              <button
-                onClick={() => setProjectAssigneeFilter('all')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  projectAssigneeFilter === 'all'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                전체 프로젝트 보기
-              </button>
-              <button
-                onClick={() => setProjectAssigneeFilter('my')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  projectAssigneeFilter === 'my'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                내 프로젝트
-              </button>
-              <button
-                onClick={() => setProjectAssigneeFilter('unassigned')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  projectAssigneeFilter === 'unassigned'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                담당자 미정 프로젝트
-              </button>
-            </div>
-          </div>
-          <div className="space-y-3 max-h-[600px] overflow-y-auto">
-            {filteredProjects.length === 0 ? (
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500 py-8">
-                {projectAssigneeFilter === 'my'
-                  ? '내 프로젝트가 없습니다.'
-                  : projectAssigneeFilter === 'unassigned'
-                    ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 담당자 미정인 프로젝트가 없습니다.`
-                    : projectFilter === 'active' 
-                      ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 진행 예정이거나 진행 중인 프로젝트가 없습니다.`
-                      : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 프로젝트가 없습니다.`
-                }
-              </p>
-            ) : (
-              filteredProjects.map((project) => {
-                const projectTasks = filteredTasks.filter((t) => t.projectId === project.id);
-                const todoCount = projectTasks.filter((t) => t.status === 'todo').length;
-                const inProgressCount = projectTasks.filter((t) => t.status === 'in-progress').length;
-                const doneCount = projectTasks.filter((t) => t.status === 'done').length;
-
-                return (
-                  <button
-                    key={project.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onProjectClick(project);
-                    }}
-                    className="flex flex-col rounded-2xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 dark:bg-slate-700/60 p-4 transition hover:border-blue-200 dark:hover:border-blue-600 hover:shadow-md text-left w-full cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-2">
-                          <span className={cn('rounded-md border px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold whitespace-nowrap', BU_CHIP_STYLES[project.bu])}>
-                            {BU_TITLES[project.bu]}
-                          </span>
-                          <p className="text-sm font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 truncate">{project.name}</p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="rounded bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-300 dark:text-slate-300 whitespace-nowrap">
-                            {project.cat}
-                          </span>
-                          <span
-                            className={cn(
-                              'rounded px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold whitespace-nowrap',
-                              project.status === '준비중'
-                                ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
-                                : project.status === '기획중'
-                                  ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300'
-                                  : project.status === '진행중'
-                                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                                    : project.status === '운영중'
-                                      ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
-                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300',
-                            )}
-                          >
-                            {project.status}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                          {project.startDate} ~ {project.endDate}
-                        </p>
-                        {project.pm_id && usersData?.users && (() => {
-                          const pmUser = usersData.users.find((u: any) => u.id === project.pm_id);
-                          return pmUser ? (
-                            <p className="mt-1 text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 dark:text-slate-400">PM: {pmUser.name}</p>
-                          ) : null;
-                        })()}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                        {todoCount > 0 && (
-                          <span className="rounded-full bg-slate-200 dark:bg-slate-600 px-2 py-0.5 text-[9px] font-semibold text-slate-700 dark:text-slate-300 dark:text-slate-300">
-                            TODO {todoCount}
-                          </span>
-                        )}
-                        {inProgressCount > 0 && (
-                          <span className="rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-[9px] font-semibold text-blue-700 dark:text-blue-300">
-                            진행중 {inProgressCount}
-                          </span>
-                        )}
-                        {doneCount > 0 && (
-                          <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 text-[9px] font-semibold text-emerald-700 dark:text-emerald-300">
-                            완료 {doneCount}
-                          </span>
-                        )}
-                        {projectTasks.length === 0 && (
-                          <span className="text-[9px] text-slate-400 dark:text-slate-500">할일 없음</span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* 할일 목록 */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-              <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200 dark:text-slate-200">
-                {selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]} 할일
-              </h3>
-            </div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              {filteredTasks.length}개
-            </span>
-          </div>
-          {/* 할일 필터 토글 */}
-          <div className="mb-4 space-y-2">
-            {/* 상태 필터 */}
-            <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 p-1">
-              <button
-                onClick={() => setTaskFilter('active')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  taskFilter === 'active'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                진행예정/진행중
-              </button>
-              <button
-                onClick={() => setTaskFilter('completed')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  taskFilter === 'completed'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                완료
-              </button>
-            </div>
-            {/* 담당자 필터 */}
-            <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 p-1">
-              <button
-                onClick={() => setTaskAssigneeFilter('all')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  taskAssigneeFilter === 'all'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                전체 할일 보기
-              </button>
-              <button
-                onClick={() => setTaskAssigneeFilter('my')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  taskAssigneeFilter === 'my'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                내 할일만 보기
-              </button>
-              <button
-                onClick={() => setTaskAssigneeFilter('unassigned')}
-                className={cn(
-                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-                  taskAssigneeFilter === 'unassigned'
-                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
-                )}
-              >
-                담당자 미지정 할일 보기
-              </button>
-            </div>
-          </div>
-          <div className="space-y-3 max-h-[600px] overflow-y-auto">
-            {filteredTasks.length === 0 ? (
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500 py-8">
-                {taskFilter === 'active'
-                  ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 진행 예정이거나 진행 중인 할일이 없습니다.`
-                  : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 할일이 없습니다.`
-                }
-              </p>
-            ) : (
-              filteredTasks.map((task) => (
-                <button
-                  key={task.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onTaskClick(task);
-                  }}
-                  className="flex items-center justify-between rounded-2xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:bg-slate-700/50 p-4 transition hover:border-blue-200 dark:hover:border-blue-600 hover:shadow-md text-left w-full cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-300 font-bold flex-shrink-0">
-                      {task.assignee[0]}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className={cn('rounded-md border px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold whitespace-nowrap', BU_CHIP_STYLES[task.bu])}>
-                          {BU_TITLES[task.bu]}
-                        </span>
-                        <p className="font-bold text-slate-800 dark:text-slate-200 dark:text-slate-200 text-xs sm:text-sm truncate">
-                          {task.title}
-                        </p>
-                      </div>
-                      <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 truncate">
-                        {task.assignee} •{' '}
-                        {projects.find((p) => p.id === task.projectId)?.name ?? '미지정 프로젝트'} •{' '}
-                        {task.dueDate}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-slate-900 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-tight text-white whitespace-nowrap flex-shrink-0">
-                    {task.status === 'todo' ? 'TODO' : task.status === 'in-progress' ? 'IN PROGRESS' : 'DONE'}
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {canViewFinancialData && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-            <div className="mb-6 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-500" />
-              <h3 className="font-bold text-slate-800 dark:text-slate-200">사업부별 성과 요약</h3>
-            </div>
-            <div className="space-y-4">
-              {buCards.map((item) => (
-                <div
-                  key={item.bu}
-                  className="flex items-center justify-between rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-700/60 p-5 transition hover:border-blue-200 dark:hover:border-blue-600"
-                >
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-tight text-slate-400 dark:text-slate-500">
-                      {BU_LABELS[item.bu]}
-                    </p>
-                    <p className="text-sm font-black text-slate-800 dark:text-slate-200">{BU_TITLES[item.bu]}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      {item.projects} Active Projects
-                    </p>
-          </div>
-                  <div className="text-right">
-                    <p className="text-xs font-black text-blue-600 dark:text-blue-400">{formatCurrency(item.revenue)}</p>
-                    <p className="mt-0.5 text-[10px] font-bold text-red-500 dark:text-red-400">- {formatCurrency(item.expense)}</p>
-                    <p className="mt-1 text-[11px] font-black text-emerald-600 dark:text-emerald-400">Net: {formatCurrency(item.profit)}</p>
-        </div>
-      </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <PieLikeIcon className="h-5 w-5 text-blue-500" />
-                <h3 className="font-bold text-slate-800 dark:text-slate-200">사업부별 매출 비율</h3>
-              </div>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">필터 적용 기준</span>
-            </div>
-            <div className="space-y-3">
-              {share.map((item) => (
-                <div key={item.bu}>
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    <span>{BU_TITLES[item.bu]}</span>
-                    <span className="text-slate-500 dark:text-slate-400">
-                      {item.ratio}% • {formatCurrency(item.amount)}
-                    </span>
-                  </div>
-                  <div className="mt-1 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                      style={{ width: `${item.ratio}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {share.every((s) => s.amount === 0) && (
-                <p className="text-center text-xs text-slate-400 dark:text-slate-500">매출 데이터가 없습니다.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  icon,
-  accent,
-}: {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  accent: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
-      <p className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 dark:text-slate-500">{title}</p>
-      <div className="mt-2 flex items-center justify-between">
-        <p className={cn('text-xl sm:text-2xl md:text-3xl font-black', accent)}>{formatCurrency(value)}</p>
-        <span className="rounded-full bg-slate-100 dark:bg-slate-800 p-2 sm:p-3 text-slate-500 dark:text-slate-400 flex-shrink-0">{icon}</span>
-      </div>
-    </div>
-  );
-}
-
-function ProjectsView({
-  bu,
-  onBuChange,
-  projects,
-  revenues,
-  expenses,
-  onOpenModal,
-  onOpenTaskModal,
-  onEditFinance,
-  onEditTask,
-  onEditProject,
-  onDeleteProject,
-  tasks,
-  usersData,
-}: {
-  bu: BU | 'ALL';
-  onBuChange: (bu: BU | 'ALL') => void;
-  projects: Project[];
-  revenues: FinancialEntry[];
-  expenses: FinancialEntry[];
-  onOpenModal: (id: string) => void;
-  onOpenTaskModal: (projectId: string) => void;
-  onEditFinance: (entry: FinancialEntry) => void;
-  onEditTask: (task: TaskItem) => void;
-  onEditProject: (project: Project) => void;
-  onDeleteProject: (id: string) => void;
-  tasks: TaskItem[];
-  usersData?: { users: any[]; currentUser: any };
-}) {
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
-
-  // 프로젝트 상태 필터링
-  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
-  const completedProjectStatuses = ['완료'];
-  
-  const filteredProjects = useMemo(() => {
-    if (projectFilter === 'active') {
-      return projects.filter((p) => activeProjectStatuses.includes(p.status));
-    } else {
-      return projects.filter((p) => completedProjectStatuses.includes(p.status));
-    }
-  }, [projects, projectFilter]);
-
-  return (
-    <section className="space-y-6">
-      <BuTabs bu={bu} onChange={onBuChange} prefix="BU" />
-
-      {/* 프로젝트 필터 토글 */}
-      <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
-        <button
-          onClick={() => setProjectFilter('active')}
-          className={cn(
-            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            projectFilter === 'active'
-              ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-          )}
-        >
-          진행예정/진행중
-        </button>
-        <button
-          onClick={() => setProjectFilter('completed')}
-          className={cn(
-            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            projectFilter === 'completed'
-              ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-          )}
-        >
-          완료
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        {filteredProjects.length === 0 ? (
-          <div className="overflow-hidden rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-            <div className="px-4 sm:px-6 py-8 sm:py-12 text-center">
-              <p className="text-xs sm:text-sm font-semibold text-slate-400 dark:text-slate-500">
-                {projectFilter === 'active'
-                  ? '현재 진행중인 프로젝트가 없습니다.'
-                  : '완료된 프로젝트가 없습니다.'}
-              </p>
-            </div>
-          </div>
-        ) : (
-          filteredProjects.map((p) => {
-            const projectTasks = tasks.filter((t) => t.projectId === p.id);
-            const projectRevenues = revenues.filter((r) => r.projectId === p.id);
-            const projectExpenses = expenses.filter((e) => e.projectId === p.id);
-            const revTotal = projectRevenues.reduce((sum, r) => sum + r.amount, 0);
-            const expTotal = projectExpenses.reduce((sum, e) => sum + e.amount, 0);
-            const profit = revTotal - expTotal;
-            const opened = openId === p.id;
-
-            return (
-            <div
-              key={p.id}
-              className="overflow-hidden rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm"
-            >
-              <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
-                <button
-                  onClick={() => setOpenId(opened ? null : p.id)}
-                  className="flex flex-1 items-center justify-between text-left"
-                >
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{p.name}</p>
-                      <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                        {p.cat}
-                      </span>
-                      <span className="rounded bg-emerald-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 whitespace-nowrap">
-                        할일 {projectTasks.length}개
-                      </span>
-                    </div>
-                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      {p.startDate} ~ {p.endDate}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
-                    <div className="text-right text-[9px] sm:text-[11px]">
-                      <p className="font-semibold text-blue-600 whitespace-nowrap">{formatCurrency(revTotal)}</p>
-                      <p className="text-red-500 whitespace-nowrap">- {formatCurrency(expTotal)}</p>
-                      <p className="font-semibold text-emerald-600 whitespace-nowrap">
-                        {profit >= 0 ? '+' : ''}
-                        {formatCurrency(profit)}
-                      </p>
-                    </div>
-                    <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                      {opened ? '접기 ▲' : '펼치기 ▼'}
-                    </span>
-                  </div>
-                </button>
-                <div className="ml-2 sm:ml-4 flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditProject(p);
-                    }}
-                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900 hover:text-blue-600"
-                    title="프로젝트 수정"
-                  >
-                    <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteProject(p.id);
-                    }}
-                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition hover:bg-red-50 hover:text-red-600"
-                    title="프로젝트 삭제"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {opened && (
-                <div className="border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-3 sm:px-6 py-4 sm:py-5">
-                  <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
-                    {/* Tasks column */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-emerald-600">
-                          Project Tasks
-                        </h4>
-                        <button
-                          onClick={() => onOpenTaskModal(p.id)}
-                          className="rounded-lg bg-emerald-500 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-semibold text-white hover:bg-emerald-600 whitespace-nowrap"
-                        >
-                          할일 추가
-                        </button>
-                      </div>
-                      <div className="space-y-1.5">
-                        {projectTasks.length === 0 && (
-                          <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">
-                            등록된 할 일이 없습니다.
-                          </p>
-                        )}
-                        {projectTasks.map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => onEditTask(t)}
-                            className="flex w-full items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 sm:px-3 py-2 text-left transition hover:bg-slate-50 dark:bg-slate-900"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[10px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                                {t.title}
-                              </p>
-                              <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 truncate">
-                                {t.assignee} • {t.dueDate}
-                              </p>
-                            </div>
-                            <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap flex-shrink-0 ml-2">
-                              {t.status === 'todo'
-                                ? 'TODO'
-                                : t.status === 'in-progress'
-                                  ? 'IN PROGRESS'
-                                  : 'DONE'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Revenue column */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-blue-600">
-                          매출 내역
-                        </h4>
-              <button
-                          onClick={() => onOpenModal(p.id)}
-                          className="rounded-lg border border-blue-200 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-semibold text-blue-600 hover:bg-blue-600 hover:text-white whitespace-nowrap"
-              >
-                          매출/지출 관리
-              </button>
-            </div>
-                      <div className="space-y-1.5">
-                        {projectRevenues.length === 0 && (
-                          <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">
-                            등록된 매출이 없습니다.
-                          </p>
-                        )}
-                        {projectRevenues.map((r, idx) => (
-                          <FinanceRow
-                            key={`${r.projectId}-rev-${idx}`}
-                            entry={r}
-                            tone="blue"
-                            onClick={() => onEditFinance(r)}
-                          />
-                        ))}
-          </div>
-                    </div>
-
-                    {/* Expense column */}
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-600">
-                        지출 내역
-                      </h4>
-                      <div className="space-y-1.5">
-                        {projectExpenses.length === 0 && (
-                          <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">
-                            등록된 지출이 없습니다.
-                          </p>
-                        )}
-                        {projectExpenses.map((e, idx) => (
-                          <FinanceRow
-                            key={`${e.projectId}-exp-${idx}`}
-                            entry={e}
-                            tone="red"
-                            onClick={() => onEditFinance(e)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-          })
-        )}
-      </div>
-    </section>
-  );
-}
-
 function TasksView({
   bu,
   onBuChange,
@@ -2561,177 +1695,6 @@ function TasksView({
           </table>
       </div>
     </div>
-    </section>
-  );
-}
-
-function SettlementView({
-  bu,
-  onBuChange,
-  rows,
-  projects,
-  onEditFinance,
-}: {
-  bu: BU | 'ALL';
-  onBuChange: (bu: BU | 'ALL') => void;
-  rows: { revRows: FinancialEntry[]; expRows: FinancialEntry[] };
-  projects: Project[];
-  onEditFinance: (entry: FinancialEntry) => void;
-}) {
-  const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
-
-  const getStatusLabel = (status: FinancialEntryStatus) => {
-    if (status === 'paid') return '지급완료';
-    if (status === 'planned') return '지급예정';
-    if (status === 'canceled') return '취소';
-    return status;
-  };
-
-  const getStatusClass = (status: FinancialEntryStatus) => {
-    if (status === 'paid') return 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300';
-    if (status === 'planned') return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300';
-    if (status === 'canceled') return 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300';
-    return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300';
-  };
-
-  // 합계 계산
-  const totalRevenue = useMemo(() => {
-    return rows.revRows.reduce((sum, r) => sum + r.amount, 0);
-  }, [rows.revRows]);
-
-  const totalExpense = useMemo(() => {
-    return rows.expRows.reduce((sum, e) => sum + e.amount, 0);
-  }, [rows.expRows]);
-
-  const totalProfit = useMemo(() => {
-    return totalRevenue - totalExpense;
-  }, [totalRevenue, totalExpense]);
-
-  return (
-    <section className="space-y-6">
-      <BuTabs bu={bu} onChange={onBuChange} prefix="SET" showAll={true} />
-
-      {/* 합계 카드 */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard
-          title="총 매출"
-          value={totalRevenue}
-          icon={<DollarSign className="h-5 w-5 text-blue-500" />}
-          accent="text-blue-600"
-        />
-        <StatCard
-          title="총 지출"
-          value={totalExpense}
-          icon={<Coins className="h-5 w-5 text-red-500" />}
-          accent="text-red-600"
-        />
-        <StatCard
-          title="순익"
-          value={totalProfit}
-          icon={<ChartLine className="h-5 w-5 text-emerald-500" />}
-          accent="text-emerald-600"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-          <table className="w-full text-left text-[10px] sm:text-[11px]">
-            <thead className="border-b border-slate-100 dark:border-slate-700 bg-blue-50/40 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-              <tr>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">프로젝트</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">구분</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight text-blue-600 dark:text-blue-400 whitespace-nowrap">금액</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">결제일</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">상태</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700 dark:divide-slate-700" id="revenue-list-body">
-              {rows.revRows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 sm:px-6 py-6 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
-                    등록된 매출이 없습니다.
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {rows.revRows.map((r, idx) => (
-                    <tr
-                      key={`${r.projectId}-${idx}`}
-                      onClick={() => onEditFinance(r)}
-                      className="cursor-pointer transition hover:bg-blue-50/30 dark:hover:bg-blue-900/20"
-                    >
-                      <td className="px-3 sm:px-6 py-4 font-bold text-slate-500 dark:text-slate-400 truncate max-w-[100px] sm:max-w-none">{findProject(r.projectId)}</td>
-                      <td className="px-3 sm:px-6 py-4 font-medium text-slate-700 dark:text-slate-300 truncate max-w-[80px] sm:max-w-none">{r.category}</td>
-                      <td className="px-3 sm:px-6 py-4 font-black text-blue-600 italic whitespace-nowrap">{formatCurrency(r.amount)}</td>
-                      <td className="px-3 sm:px-6 py-4 font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">{r.date}</td>
-                      <td className="px-3 sm:px-6 py-4">
-                        <span className={cn('px-2 py-0.5 rounded-full text-[9px] font-semibold whitespace-nowrap', getStatusClass(r.status))}>
-                          {getStatusLabel(r.status)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="bg-blue-50/20 dark:bg-blue-900/30 border-t-2 border-blue-200 dark:border-blue-700">
-                    <td colSpan={2} className="px-3 sm:px-6 py-4 font-bold text-slate-700 dark:text-slate-300">합계</td>
-                    <td className="px-3 sm:px-6 py-4 font-black text-blue-600 dark:text-blue-400 italic whitespace-nowrap">{formatCurrency(totalRevenue)}</td>
-                    <td className="px-3 sm:px-6 py-4"></td>
-                    <td className="px-3 sm:px-6 py-4"></td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="overflow-hidden rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-          <table className="w-full text-left text-[10px] sm:text-[11px]">
-            <thead className="border-b border-slate-100 dark:border-slate-700 bg-red-50/40 dark:bg-red-900/30 text-red-700 dark:text-red-300">
-              <tr>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">프로젝트</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">구분</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight text-red-500 dark:text-red-400 whitespace-nowrap">금액</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">결제일</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">상태</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700 dark:divide-slate-700" id="expense-list-body">
-              {rows.expRows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 sm:px-6 py-6 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
-                    등록된 지출이 없습니다.
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {rows.expRows.map((e, idx) => (
-                    <tr
-                      key={`${e.projectId}-${idx}`}
-                      onClick={() => onEditFinance(e)}
-                      className="cursor-pointer transition hover:bg-red-50/30 dark:hover:bg-red-900/20"
-                    >
-                      <td className="px-3 sm:px-6 py-4 font-bold text-slate-500 dark:text-slate-400 truncate max-w-[100px] sm:max-w-none">{findProject(e.projectId)}</td>
-                      <td className="px-3 sm:px-6 py-4 font-medium text-slate-700 dark:text-slate-300 truncate max-w-[80px] sm:max-w-none">{e.category}</td>
-                      <td className="px-3 sm:px-6 py-4 font-black text-red-500 italic whitespace-nowrap">{formatCurrency(e.amount)}</td>
-                      <td className="px-3 sm:px-6 py-4 font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">{e.date}</td>
-                      <td className="px-3 sm:px-6 py-4">
-                        <span className={cn('px-2 py-0.5 rounded-full text-[9px] font-semibold whitespace-nowrap', getStatusClass(e.status))}>
-                          {getStatusLabel(e.status)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="bg-red-50/20 dark:bg-red-900/30 border-t-2 border-red-200 dark:border-red-700">
-                    <td colSpan={2} className="px-3 sm:px-6 py-4 font-bold text-slate-700 dark:text-slate-300">합계</td>
-                    <td className="px-3 sm:px-6 py-4 font-black text-red-500 dark:text-red-400 italic whitespace-nowrap">{formatCurrency(totalExpense)}</td>
-                    <td className="px-3 sm:px-6 py-4"></td>
-                    <td className="px-3 sm:px-6 py-4"></td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </section>
   );
 }
@@ -3221,41 +2184,6 @@ function OrganizationView({
         </div>
       )}
     </section>
-  );
-}
-
-function BuTabs({ bu, onChange, prefix, showAll }: { bu: BU | 'ALL'; onChange: (bu: BU | 'ALL') => void; prefix: string; showAll?: boolean }) {
-  const buKeys = (Object.keys(BU_TITLES) as BU[]);
-  const grigoIndex = buKeys.indexOf('GRIGO');
-  
-  return (
-    <div className="flex w-fit overflow-x-auto rounded-2xl bg-slate-200/60 p-1 sm:p-1.5">
-      {showAll && (
-        <button
-          onClick={() => onChange('ALL')}
-          className={cn(
-            'px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-            bu === 'ALL' ? 'tab-active rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
-          )}
-          id={`tab-${prefix}-ALL`}
-        >
-          전체
-        </button>
-      )}
-      {buKeys.map((key) => (
-        <button
-          key={key}
-          onClick={() => onChange(key)}
-          className={cn(
-            'px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-            bu === key ? 'tab-active rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
-          )}
-          id={`tab-${prefix}-${key}`}
-        >
-          {BU_TITLES[key]}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -4172,6 +3100,7 @@ function CreateFinanceModal({
   partnerCompaniesData,
   partnerWorkersData,
   calculateActualAmount,
+  defaultProjectId,
 }: {
   mode: 'revenue' | 'expense';
   onClose: () => void;
@@ -4193,10 +3122,14 @@ function CreateFinanceModal({
   partnerCompaniesData?: any[];
   partnerWorkersData?: any[];
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
+  defaultProjectId?: string | null;
 }) {
+  const defaultProject = defaultProjectId
+    ? projects.find((p) => p.id === defaultProjectId)
+    : projects[0];
   const [form, setForm] = useState({
-    projectId: projects[0]?.id ?? '',
-    bu: projects[0]?.bu ?? 'GRIGO',
+    projectId: defaultProject?.id ?? '',
+    bu: defaultProject?.bu ?? 'GRIGO',
     cat: '',
     name: '',
     amount: '',
@@ -4394,7 +3327,7 @@ function ModalShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="modal-container active fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+    <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
       <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 px-6 py-4">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
@@ -4523,15 +3456,6 @@ function ModalActions({
   );
 }
 
-function PieLikeIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
-      <path d="M12 3v9l7.8 4.5A9 9 0 1 1 12 3Z" />
-      <path d="M12 12 21 9a9 9 0 0 0-9-6" />
-    </svg>
-  );
-}
-
 function MetricBox({ title, value, tone }: { title: string; value: number; tone: 'blue' | 'red' | 'emerald' }) {
   const palette =
     tone === 'blue'
@@ -4581,55 +3505,6 @@ function EntryCard({
         <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">{entry.date}</p>
       </div>
       <span className={cn('text-sm font-black', palette.text)}>{formatCurrency(entry.amount)}</span>
-    </button>
-  );
-}
-
-function FinanceRow({
-  entry,
-  tone,
-  onClick,
-}: {
-  entry: FinancialEntry;
-  tone: 'blue' | 'red';
-  onClick?: () => void;
-}) {
-  const isBlue = tone === 'blue';
-  const statusLabel =
-    entry.status === 'planned' ? '지급예정' : entry.status === 'paid' ? '지급완료' : '취소';
-  const statusColor =
-    entry.status === 'planned'
-      ? 'bg-amber-50 text-amber-700'
-      : entry.status === 'paid'
-        ? 'bg-emerald-50 text-emerald-700'
-        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400';
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center justify-between rounded-xl border px-2 sm:px-3 py-2 text-left transition hover:bg-slate-50 dark:bg-slate-900',
-        isBlue ? 'border-blue-100 bg-white dark:bg-slate-800' : 'border-red-100 bg-white dark:bg-slate-800',
-      )}
-    >
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] sm:text-[11px] font-semibold text-slate-800 dark:text-slate-200 truncate">{entry.name}</p>
-        <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 truncate">
-          {entry.date} • {entry.category}
-        </p>
-        <span
-          className={cn(
-            'mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold whitespace-nowrap',
-            statusColor,
-          )}
-        >
-          {statusLabel}
-        </span>
-      </div>
-      <span className={cn('text-[10px] sm:text-xs font-bold whitespace-nowrap flex-shrink-0 ml-2', isBlue ? 'text-blue-600' : 'text-red-500')}>
-        {formatCurrency(entry.amount)}
-      </span>
     </button>
   );
 }

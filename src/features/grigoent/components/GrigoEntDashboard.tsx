@@ -82,7 +82,7 @@ import {
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendFinancialToDb, frontendTaskToDb } from '@/features/erp/utils';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { MentionedCommentsSection } from '@/features/comments/components/MentionedCommentsSection';
-import { ProjectModal } from './ProjectModal';
+import { ProjectModal } from '@/features/erp/components/ProjectModal';
 import { DancersView } from './DancersView';
 import { ArtistsView } from './ArtistsView';
 
@@ -1284,26 +1284,80 @@ export default function GrigoEntDashboard() {
         {/* 프로젝트 모달들 */}
         {isProjectModalOpen && (
           <ProjectModal
-            bu={bu}
-            clients={partners}
-            artists={artists}
-            users={(usersData as any)?.users || []}
-            dancers={Array.isArray(dancersData) ? dancersData : (dancersData?.data || [])}
+            defaultBu={bu}
+            usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+            partnerCompaniesData={partners}
+            partnerWorkersData={[]}
+            placeholders={{
+              projectName: '예: 2025 콘서트 안무',
+              category: '예: 안무제작, 뮤직비디오, 콘서트',
+              description: '안무/콘서트/뮤비 프로젝트 설명을 입력하세요',
+            }}
             onClose={() => setProjectModalOpen(false)}
-            onSubmit={handleCreateProject}
+            onSubmit={async (data) => {
+              await handleCreateProject({
+                bu: data.bu,
+                name: data.name,
+                cat: data.cat,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                status: data.status || '준비중',
+                client_id: data.partner_company_id || undefined,
+                artist_id: data.artist_id || undefined,
+                pm_name: null,
+                participants: data.participants?.map((p) => ({
+                  user_id: p.user_id,
+                  external_worker_id: p.partner_worker_id,
+                  role: p.role || 'participant',
+                  is_pm: false,
+                })),
+              });
+            }}
           />
         )}
 
         {editProject && (
           <ProjectModal
-            project={editProject}
-            bu={bu}
-            clients={partners}
-            artists={artists}
-            users={(usersData as any)?.users || []}
-            dancers={Array.isArray(dancersData) ? dancersData : (dancersData?.data || [])}
+            project={{
+              id: editProject.id,
+              bu: editProject.bu || bu,
+              name: editProject.name,
+              cat: editProject.cat,
+              startDate: editProject.startDate,
+              endDate: editProject.endDate,
+              status: editProject.status,
+              pm_id: editProject.pm_id,
+              participants: editProject.participants,
+            }}
+            defaultBu={bu}
+            usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+            partnerCompaniesData={partners}
+            partnerWorkersData={[]}
+            placeholders={{
+              projectName: '예: 2025 콘서트 안무',
+              category: '예: 안무제작, 뮤직비디오, 콘서트',
+              description: '안무/콘서트/뮤비 프로젝트 설명을 입력하세요',
+            }}
             onClose={() => setEditProject(null)}
-            onSubmit={(data) => handleUpdateProject(Number(editProject.id), data)}
+            onSubmit={async (data) => {
+              await handleUpdateProject(Number(editProject.id), {
+                bu: data.bu,
+                name: data.name,
+                cat: data.cat,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                status: data.status || '준비중',
+                client_id: data.partner_company_id || undefined,
+                artist_id: data.artist_id || undefined,
+                pm_name: null,
+                participants: data.participants?.map((p) => ({
+                  user_id: p.user_id,
+                  external_worker_id: p.partner_worker_id,
+                  role: p.role || 'participant',
+                  is_pm: false,
+                })),
+              });
+            }}
           />
         )}
 

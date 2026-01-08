@@ -7,9 +7,9 @@ import { FolderKanban, Plus, Edit3, Trash2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project, Artist, Dancer, ProjectParticipant } from '@/types/database';
 import { dbProjectToFrontend, frontendProjectToDb } from '@/features/erp/utils';
-import { ProjectModal } from './ProjectModal';
+import { ProjectModal } from '@/features/erp/components/ProjectModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
-import { useArtists, useClients, useDancers, useCreateProject, useUpdateProject, useDeleteProject } from '@/features/erp/hooks';
+import { useArtists, useClients, useDancers, useCreateProject, useUpdateProject, useDeleteProject, useOrgMembers } from '@/features/erp/hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMyArtistProfile } from '@/features/erp/hooks';
 
@@ -38,6 +38,12 @@ export function ArtistProjectsView({ projects, artist, onProjectClick, activePer
   const { data: clients = [] } = useClients('GRIGO');
   const { data: dancersData } = useDancers('GRIGO');
   const dancers: Dancer[] = Array.isArray(dancersData) ? dancersData : (dancersData?.data || []);
+  const { data: orgData = [] } = useOrgMembers();
+  
+  const usersData = useMemo(() => ({
+    users: orgData || [],
+    currentUser: null,
+  }), [orgData]);
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
@@ -363,20 +369,67 @@ export function ArtistProjectsView({ projects, artist, onProjectClick, activePer
       {/* 프로젝트 생성/수정 모달 */}
       {(projectModalOpen || editingProject) && (
         <ProjectModal
-          project={projectForModal || undefined}
-          bu="GRIGO"
-          clients={clients}
-          artists={artists}
-          users={[]}
-          dancers={dancers}
+          project={projectForModal ? {
+            id: projectForModal.id,
+            bu: projectForModal.bu || 'GRIGO',
+            name: projectForModal.name,
+            cat: projectForModal.cat,
+            startDate: projectForModal.startDate,
+            endDate: projectForModal.endDate,
+            status: projectForModal.status,
+            pm_id: projectForModal.pm_id,
+            participants: projectForModal.participants,
+          } : undefined}
+          defaultBu="GRIGO"
+          usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+          partnerCompaniesData={clients}
+          partnerWorkersData={[]}
+          placeholders={{
+            projectName: '예: 2025 아티스트 콘서트',
+            category: '예: 콘서트, 뮤직비디오, 안무',
+            description: '아티스트 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => {
             setProjectModalOpen(false);
             setEditingProject(null);
           }}
-          onSubmit={editingProject ? handleUpdateProject : handleCreateProject}
-          forceMode="artist"
-          defaultArtistId={!projectForModal ? artist.id : undefined}
-          defaultPmName={!projectForModal ? artist.name : undefined}
+          onSubmit={async (data) => {
+            if (editingProject) {
+              await handleUpdateProject({
+                bu: data.bu,
+                name: data.name,
+                cat: data.cat,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                status: data.status || '준비중',
+                artist_id: artist.id,
+                pm_name: artist.name,
+                participants: data.participants?.map((p) => ({
+                  user_id: p.user_id,
+                  external_worker_id: p.partner_worker_id,
+                  role: p.role || 'participant',
+                  is_pm: false,
+                })),
+              });
+            } else {
+              await handleCreateProject({
+                bu: data.bu,
+                name: data.name,
+                cat: data.cat,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                status: data.status || '준비중',
+                artist_id: artist.id,
+                pm_name: artist.name,
+                participants: data.participants?.map((p) => ({
+                  user_id: p.user_id,
+                  external_worker_id: p.partner_worker_id,
+                  role: p.role || 'participant',
+                  is_pm: false,
+                })),
+              });
+            }
+          }}
         />
       )}
 

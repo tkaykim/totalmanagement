@@ -115,6 +115,7 @@ import {
   useDeleteManual,
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
+import { ProjectModal } from '@/features/erp/components/ProjectModal';
 
 type ReactStudioView =
   | 'dashboard'
@@ -4143,149 +4144,88 @@ export default function ReactStudioDashboard({ bu }: ReactStudioDashboardProps) 
 
       {/* Modals */}
       {isProjectModalOpen && (
-        <CreateProjectModal
-          bu={bu}
-          clients={clientsData}
-          orgMembers={orgData}
-          appUsers={usersData?.users || []}
-          externalWorkers={externalWorkersData}
-          partnerWorkers={partnerWorkersData}
-          partnerCompanies={partnerCompaniesData}
-          channels={channelsData}
+        <ProjectModal
+          defaultBu={bu}
+          usersData={{ users: usersData?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+          partnerCompaniesData={partnerCompaniesData}
+          partnerWorkersData={partnerWorkersData}
+          placeholders={{
+            projectName: '예: 2025 브이로그 시리즈',
+            category: '예: 콘텐츠제작, 영상편집, 스트리밍',
+            description: '콘텐츠/영상 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
             try {
-              const createdProject = await createProjectMutation.mutateAsync({
-                ...frontendProjectToDb(data),
+              await createProjectMutation.mutateAsync({
+                ...frontendProjectToDb({
+                  bu: data.bu,
+                  name: data.name,
+                  cat: data.cat,
+                  startDate: data.startDate,
+                  endDate: data.endDate,
+                  status: data.status || '준비중',
+                  description: data.description,
+                  pm_id: data.pm_id,
+                  partner_company_id: data.partner_company_id,
+                  partner_worker_id: data.partner_worker_id,
+                  participants: data.participants,
+                }),
               } as any);
-              
-              // 프로젝트 생성 후 active_steps에 따라 할일 목록 생성 (저장 시점에 생성)
-              if (data.active_steps && data.active_steps.length > 0) {
-                const projectId = createdProject.id.toString();
-                const schedule = {
-                  plan_date: data.plan_date || null,
-                  script_date: data.script_date || null,
-                  shoot_date: data.shoot_date || null,
-                  edit1_date: data.edit1_date || null,
-                  edit_final_date: data.edit_final_date || null,
-                  release_date: data.release_date || null,
-                };
-                
-                for (const step of data.active_steps) {
-                  const templates = DEFAULT_TASKS_BY_STEP[step] || [];
-                  for (const tmpl of templates) {
-                    try {
-                      // 마감일이 없으면 일정에 맞춰 자동 계산
-                      const dueDate = calculateTaskDueDate(tmpl.title, step, schedule);
-                      
-                      await createTaskMutation.mutateAsync({
-                        project_id: Number(projectId),
-                        bu_code: bu,
-                        title: tmpl.title,
-                        assignee: '',
-                        due_date: dueDate,
-                        status: 'todo',
-                        priority: tmpl.priority,
-                        tag: '',
-                      } as any);
-                    } catch (error) {
-                      console.error(`Failed to create task for step ${step}:`, error);
-                    }
-                  }
-                }
-              }
-              
               setProjectModalOpen(false);
             } catch (error) {
               console.error('Failed to create project:', error);
             }
           }}
-          onOpenClientModal={() => {
-            setClientModalOpen(true);
-          }}
-          onOpenEditClientModal={(client) => {
-            setEditClientModalOpen(client);
-          }}
-          onDeleteClient={(clientId) => {
-            setDeleteClientId(clientId);
-          }}
         />
       )}
       {isEditProjectModalOpen && (
-        <EditProjectModal
-          project={isEditProjectModalOpen}
-          bu={bu}
-          clients={clientsData}
-          orgMembers={orgData}
-          appUsers={usersData?.users || []}
-          externalWorkers={externalWorkersData}
-          partnerWorkers={partnerWorkersData}
-          partnerCompanies={partnerCompaniesData}
-          channels={channelsData}
+        <ProjectModal
+          project={{
+            id: isEditProjectModalOpen.id,
+            bu: isEditProjectModalOpen.bu || bu,
+            name: isEditProjectModalOpen.name,
+            cat: isEditProjectModalOpen.cat,
+            startDate: isEditProjectModalOpen.startDate,
+            endDate: isEditProjectModalOpen.endDate,
+            status: isEditProjectModalOpen.status,
+            pm_id: isEditProjectModalOpen.pm_id,
+            participants: isEditProjectModalOpen.participants,
+          }}
+          defaultBu={bu}
+          usersData={{ users: usersData?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+          partnerCompaniesData={partnerCompaniesData}
+          partnerWorkersData={partnerWorkersData}
+          placeholders={{
+            projectName: '예: 2025 브이로그 시리즈',
+            category: '예: 콘텐츠제작, 영상편집, 스트리밍',
+            description: '콘텐츠/영상 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
             try {
-              const previousProject = isEditProjectModalOpen;
-              const previousSteps = (previousProject as any).active_steps || [];
-              const newSteps = data.active_steps || [];
-              
               await updateProjectMutation.mutateAsync({
                 id: Number(isEditProjectModalOpen.id),
                 data: {
-                  ...frontendProjectToDb(data),
+                  ...frontendProjectToDb({
+                    bu: data.bu,
+                    name: data.name,
+                    cat: data.cat,
+                    startDate: data.startDate,
+                    endDate: data.endDate,
+                    status: data.status || '준비중',
+                    description: data.description,
+                    pm_id: data.pm_id,
+                    partner_company_id: data.partner_company_id,
+                    partner_worker_id: data.partner_worker_id,
+                    participants: data.participants,
+                  }),
                 } as any,
               });
-              
-              // 저장 시점에 새로 추가된 단계에 대한 할일 목록 생성
-              const addedSteps = newSteps.filter((step) => !previousSteps.includes(step));
-              if (addedSteps.length > 0) {
-                const projectId = isEditProjectModalOpen.id.toString();
-                const schedule = {
-                  plan_date: data.plan_date || null,
-                  script_date: data.script_date || null,
-                  shoot_date: data.shoot_date || null,
-                  edit1_date: data.edit1_date || null,
-                  edit_final_date: data.edit_final_date || null,
-                  release_date: data.release_date || null,
-                };
-                
-                for (const step of addedSteps) {
-                  const templates = DEFAULT_TASKS_BY_STEP[step] || [];
-                  for (const tmpl of templates) {
-                    try {
-                      // 마감일이 없으면 일정에 맞춰 자동 계산
-                      const dueDate = calculateTaskDueDate(tmpl.title, step, schedule);
-                      
-                      await createTaskMutation.mutateAsync({
-                        project_id: Number(projectId),
-                        bu_code: bu,
-                        title: tmpl.title,
-                        assignee: '',
-                        due_date: dueDate,
-                        status: 'todo',
-                        priority: tmpl.priority,
-                        tag: '',
-                      } as any);
-                    } catch (error) {
-                      console.error(`Failed to create task for step ${step}:`, error);
-                    }
-                  }
-                }
-              }
-              
               setEditProjectModalOpen(null);
             } catch (error) {
               console.error('Failed to update project:', error);
             }
-          }}
-          onOpenClientModal={() => {
-            setClientModalOpen(true);
-          }}
-          onOpenEditClientModal={(client) => {
-            setEditClientModalOpen(client);
-          }}
-          onDeleteClient={(clientId) => {
-            setDeleteClientId(clientId);
           }}
         />
       )}

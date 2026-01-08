@@ -1,10 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, TrendingUp, TrendingDown, Plus, Eye, EyeOff, Lock } from 'lucide-react';
 import { ModalShell, InputField, SelectField, ModalActions } from './modal-components';
+import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
+import type { AppUser, Project as ProjectType } from '@/types/database';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+type FinancePermission = 'none' | 'view' | 'edit';
+
+type FinanceEntry = {
+  id: string;
+  kind: 'revenue' | 'expense';
+  category: string;
+  name: string;
+  amount: number;
+  status: string;
+  occurred_at: string;
+};
 
 const BU_TITLES: Record<BU, string> = {
   GRIGO: '그리고 엔터',
@@ -55,7 +68,16 @@ type ProjectModalProps = {
     category?: string;
     description?: string;
   };
+  financeData?: FinanceEntry[];
+  financePermission?: FinancePermission;
+  onAddRevenue?: () => void;
+  onAddExpense?: () => void;
+  onViewFinanceDetail?: (entry: FinanceEntry) => void;
 };
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('ko-KR').format(amount);
+}
 
 export function ProjectModal({
   project,
@@ -66,8 +88,86 @@ export function ProjectModal({
   partnerCompaniesData,
   partnerWorkersData,
   placeholders,
+  financeData,
+  financePermission: externalFinancePermission,
+  onAddRevenue,
+  onAddExpense,
+  onViewFinanceDetail,
 }: ProjectModalProps) {
   const isEditMode = !!project;
+  const currentUser = usersData?.currentUser as AppUser | null;
+
+  // 재무 권한 자동 계산 (외부에서 전달된 값이 없으면 currentUser 기반으로 계산)
+  const computedFinancePermission: FinancePermission = useMemo(() => {
+    // 외부에서 명시적으로 전달된 경우 그 값 사용
+    if (externalFinancePermission !== undefined) {
+      return externalFinancePermission;
+    }
+
+    // currentUser가 없으면 권한 없음
+    if (!currentUser) {
+      return 'none';
+    }
+
+    // 프로젝트 정보를 ProjectType 형태로 변환
+    const projectData: ProjectType | null = project ? {
+      id: parseInt(project.id) || 0,
+      bu_code: project.bu,
+      name: project.name,
+      category: project.cat,
+      status: project.status as any,
+      start_date: project.startDate,
+      end_date: project.endDate,
+      pm_id: project.pm_id,
+      participants: project.participants?.map(p => ({
+        user_id: p.user_id,
+        partner_worker_id: p.partner_worker_id,
+        partner_company_id: p.partner_company_id,
+        role: p.role,
+        is_pm: false,
+      })),
+      created_at: '',
+      updated_at: '',
+    } : null;
+
+    // 권한 체크
+    const permission = checkFinancePermission({
+      currentUser,
+      entry: null,
+      project: projectData,
+      targetBu: project?.bu || defaultBu,
+    });
+
+    // viewer 또는 접근 불가
+    if (!permission.canRead) {
+      return 'none';
+    }
+
+    // 수정 가능 (admin, manager, 또는 PM/참여자)
+    if (permission.canCreate || permission.canUpdate) {
+      return 'edit';
+    }
+
+    // 열람만 가능
+    return 'view';
+  }, [currentUser, project, defaultBu, externalFinancePermission]);
+
+  const canViewFinance = computedFinancePermission === 'view' || computedFinancePermission === 'edit';
+  const canEditFinance = computedFinancePermission === 'edit';
+
+  const financeSummary = financeData?.reduce(
+    (acc, entry) => {
+      if (entry.kind === 'revenue') {
+        acc.totalRevenue += entry.amount;
+        acc.revenueCount += 1;
+      } else {
+        acc.totalExpense += entry.amount;
+        acc.expenseCount += 1;
+      }
+      return acc;
+    },
+    { totalRevenue: 0, totalExpense: 0, revenueCount: 0, expenseCount: 0 }
+  ) || { totalRevenue: 0, totalExpense: 0, revenueCount: 0, expenseCount: 0 };
   const projectParticipants = (project as any)?.participants || [];
 
   const [form, setForm] = useState({
@@ -201,7 +301,26 @@ export function ProjectModal({
   };
 
   return (
-    <ModalShell title={isEditMode ? '프로젝트 수정' : '프로젝트 등록'} onClose={onClose}>
+    <ModalShell
+      title={isEditMode ? '프로젝트 수정' : '프로젝트 등록'}
+      onClose={onClose}
+      footer={
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900"
+          >
+            닫기
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+          >
+            {isEditMode ? '수정' : '등록'}
+          </button>
+        </div>
+      }
+    >
       <div className="space-y-4">
         {error && (
           <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-600 dark:text-red-400">
@@ -381,8 +500,144 @@ export function ProjectModal({
             </div>
           )}
         </div>
+
+        {/* 8. 재무 현황 섹션 - 수정 모드일 때만 표시 */}
+        {isEditMode && (
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <TrendingUp className="h-4 w-4 text-green-500" />
+                재무 현황
+              </label>
+              {computedFinancePermission === 'none' && (
+                <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                  <Lock className="h-3 w-3" />
+                  열람 권한 없음
+                </span>
+              )}
+            </div>
+
+            {computedFinancePermission === 'none' ? (
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 p-4 text-center">
+                <EyeOff className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  재무 정보 열람 권한이 없습니다.
+                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                  관리자에게 문의하세요.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* 재무 요약 */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">매출</span>
+                    </div>
+                    <p className="text-lg font-bold text-green-700 dark:text-green-300">
+                      ₩{formatCurrency(financeSummary.totalRevenue)}
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-400">{financeSummary.revenueCount}건</p>
+                  </div>
+                  <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <span className="text-xs font-medium text-red-600 dark:text-red-400">지출</span>
+                    </div>
+                    <p className="text-lg font-bold text-red-700 dark:text-red-300">
+                      ₩{formatCurrency(financeSummary.totalExpense)}
+                    </p>
+                    <p className="text-xs text-red-600 dark:text-red-400">{financeSummary.expenseCount}건</p>
+                  </div>
+                </div>
+
+                {/* 손익 */}
+                <div className={`rounded-lg p-3 mb-4 ${
+                  financeSummary.totalRevenue - financeSummary.totalExpense >= 0
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                    : 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">손익</span>
+                    <span className={`text-lg font-bold ${
+                      financeSummary.totalRevenue - financeSummary.totalExpense >= 0
+                        ? 'text-blue-700 dark:text-blue-300'
+                        : 'text-orange-700 dark:text-orange-300'
+                    }`}>
+                      {financeSummary.totalRevenue - financeSummary.totalExpense >= 0 ? '+' : ''}
+                      ₩{formatCurrency(financeSummary.totalRevenue - financeSummary.totalExpense)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 최근 거래 내역 */}
+                {financeData && financeData.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">최근 거래 (최대 5건)</p>
+                    <div className="space-y-1">
+                      {financeData.slice(0, 5).map((entry) => (
+                        <button
+                          key={entry.id}
+                          type="button"
+                          onClick={() => onViewFinanceDetail?.(entry)}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            {entry.kind === 'revenue' ? (
+                              <TrendingUp className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3 text-red-500" />
+                            )}
+                            <span className="text-xs text-slate-600 dark:text-slate-400">{entry.category}</span>
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{entry.name}</span>
+                          </div>
+                          <span className={`text-xs font-semibold ${
+                            entry.kind === 'revenue' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {entry.kind === 'revenue' ? '+' : '-'}₩{formatCurrency(entry.amount)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 재무 등록 버튼 - 편집 권한이 있을 때만 */}
+                {canEditFinance && (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={onAddRevenue}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
+                    >
+                      <Plus className="h-4 w-4" />
+                      매출 등록
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onAddExpense}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
+                    >
+                      <Plus className="h-4 w-4" />
+                      지출 등록
+                    </button>
+                  </div>
+                )}
+
+                {/* 열람만 가능한 경우 안내 */}
+                {computedFinancePermission === 'view' && (
+                  <div className="flex items-center justify-center gap-1 text-xs text-slate-400 dark:text-slate-500 mt-2">
+                    <Eye className="h-3 w-3" />
+                    열람만 가능 (등록/수정 권한 없음)
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
-      <ModalActions onPrimary={handleSubmit} onClose={onClose} primaryLabel={isEditMode ? '수정' : '등록'} />
     </ModalShell>
   );
 }

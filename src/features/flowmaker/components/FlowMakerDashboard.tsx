@@ -105,6 +105,7 @@ import {
   useDeleteManual,
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
+import { ProjectModal } from '@/features/erp/components/ProjectModal';
 
 type FlowMakerView =
   | 'dashboard'
@@ -257,6 +258,12 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
   const { data: manualsData = [] } = useManuals(bu);
   const { data: orgData = [] } = useOrgMembers();
   const { data: externalWorkersData = [] } = useExternalWorkers(bu);
+
+  // Create usersData from orgData
+  const usersData = useMemo(() => ({
+    users: orgData || [],
+    currentUser: null,
+  }), [orgData]);
 
   // Mutation hooks
   const createProjectMutation = useCreateProject();
@@ -3316,60 +3323,90 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
 
       {/* Modals */}
       {isProjectModalOpen && (
-        <CreateProjectModal
-          bu={bu}
-          clients={clientsData}
+        <ProjectModal
+          defaultBu={bu}
+          usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+          partnerCompaniesData={clientsData}
+          partnerWorkersData={[]}
+          placeholders={{
+            projectName: '예: 2025 싱글앨범 작업',
+            category: '예: 음악제작, 작곡, 믹싱/마스터링',
+            description: '음악/오디오 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
             try {
               await createProjectMutation.mutateAsync({
-                ...frontendProjectToDb(data),
-                client_id: data.client_id,
+                ...frontendProjectToDb({
+                  bu: data.bu,
+                  name: data.name,
+                  cat: data.cat,
+                  startDate: data.startDate,
+                  endDate: data.endDate,
+                  status: data.status || '준비중',
+                  description: data.description,
+                  pm_id: data.pm_id,
+                  partner_company_id: data.partner_company_id,
+                  partner_worker_id: data.partner_worker_id,
+                  participants: data.participants,
+                }),
+                client_id: data.partner_company_id,
               } as any);
               setProjectModalOpen(false);
             } catch (error) {
               console.error('Failed to create project:', error);
             }
           }}
-          onOpenClientModal={() => {
-            setClientModalOpen(true);
-          }}
-          onOpenEditClientModal={(client) => {
-            setEditClientModalOpen(client);
-          }}
-          onDeleteClient={(clientId) => {
-            setDeleteClientId(clientId);
-          }}
         />
       )}
       {isEditProjectModalOpen && (
-        <EditProjectModal
-          project={isEditProjectModalOpen}
-          bu={bu}
-          clients={clientsData}
+        <ProjectModal
+          project={{
+            id: isEditProjectModalOpen.id,
+            bu: isEditProjectModalOpen.bu || bu,
+            name: isEditProjectModalOpen.name,
+            cat: isEditProjectModalOpen.cat,
+            startDate: isEditProjectModalOpen.startDate,
+            endDate: isEditProjectModalOpen.endDate,
+            status: isEditProjectModalOpen.status,
+            pm_id: isEditProjectModalOpen.pm_id,
+            participants: isEditProjectModalOpen.participants,
+          }}
+          defaultBu={bu}
+          usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+          partnerCompaniesData={clientsData}
+          partnerWorkersData={[]}
+          placeholders={{
+            projectName: '예: 2025 싱글앨범 작업',
+            category: '예: 음악제작, 작곡, 믹싱/마스터링',
+            description: '음악/오디오 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
             try {
               await updateProjectMutation.mutateAsync({
                 id: Number(isEditProjectModalOpen.id),
                 data: {
-                  ...frontendProjectToDb(data),
-                  client_id: data.client_id,
+                  ...frontendProjectToDb({
+                    bu: data.bu,
+                    name: data.name,
+                    cat: data.cat,
+                    startDate: data.startDate,
+                    endDate: data.endDate,
+                    status: data.status || '준비중',
+                    description: data.description,
+                    pm_id: data.pm_id,
+                    partner_company_id: data.partner_company_id,
+                    partner_worker_id: data.partner_worker_id,
+                    participants: data.participants,
+                  }),
+                  client_id: data.partner_company_id,
                 } as any,
               });
               setEditProjectModalOpen(null);
             } catch (error) {
               console.error('Failed to update project:', error);
             }
-          }}
-          onOpenClientModal={() => {
-            setClientModalOpen(true);
-          }}
-          onOpenEditClientModal={(client) => {
-            setEditClientModalOpen(client);
-          }}
-          onDeleteClient={(clientId) => {
-            setDeleteClientId(clientId);
           }}
         />
       )}

@@ -118,6 +118,7 @@ import {
   useUsers,
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
+import { ProjectModal } from '@/features/erp/components/ProjectModal';
 
 type ASTCompanyView =
   | 'dashboard'
@@ -3603,62 +3604,90 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
 
       {/* Modals */}
       {isProjectModalOpen && (
-        <CreateProjectModal
-          bu={bu}
-          clients={clientsData}
-          users={(usersData as any)?.users || []}
+        <ProjectModal
+          defaultBu={bu}
+          usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+          partnerCompaniesData={clientsData}
+          partnerWorkersData={[]}
+          placeholders={{
+            projectName: '예: 2025 매니지먼트 계약',
+            category: '예: 매니지먼트, 아티스트활동, 행사/공연',
+            description: '매니지먼트/아티스트 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
             try {
               await createProjectMutation.mutateAsync({
-                ...frontendProjectToDb(data),
-                client_id: data.client_id,
+                ...frontendProjectToDb({
+                  bu: data.bu,
+                  name: data.name,
+                  cat: data.cat,
+                  startDate: data.startDate,
+                  endDate: data.endDate,
+                  status: data.status || '준비중',
+                  description: data.description,
+                  pm_id: data.pm_id,
+                  partner_company_id: data.partner_company_id,
+                  partner_worker_id: data.partner_worker_id,
+                  participants: data.participants,
+                }),
+                client_id: data.partner_company_id,
               } as any);
               setProjectModalOpen(false);
             } catch (error) {
               console.error('Failed to create project:', error);
             }
           }}
-          onOpenClientModal={() => {
-            setClientModalOpen(true);
-          }}
-          onOpenEditClientModal={(client) => {
-            setEditClientModalOpen(client);
-          }}
-          onDeleteClient={(clientId) => {
-            setDeleteClientId(clientId);
-          }}
         />
       )}
       {isEditProjectModalOpen && (
-        <EditProjectModal
-          project={isEditProjectModalOpen}
-          bu={bu}
-          clients={clientsData}
-          users={(usersData as any)?.users || []}
+        <ProjectModal
+          project={{
+            id: isEditProjectModalOpen.id,
+            bu: isEditProjectModalOpen.bu || bu,
+            name: isEditProjectModalOpen.name,
+            cat: isEditProjectModalOpen.cat,
+            startDate: isEditProjectModalOpen.startDate,
+            endDate: isEditProjectModalOpen.endDate,
+            status: isEditProjectModalOpen.status,
+            pm_id: isEditProjectModalOpen.pm_id,
+            participants: isEditProjectModalOpen.participants,
+          }}
+          defaultBu={bu}
+          usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
+          partnerCompaniesData={clientsData}
+          partnerWorkersData={[]}
+          placeholders={{
+            projectName: '예: 2025 매니지먼트 계약',
+            category: '예: 매니지먼트, 아티스트활동, 행사/공연',
+            description: '매니지먼트/아티스트 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
             try {
               await updateProjectMutation.mutateAsync({
                 id: Number(isEditProjectModalOpen.id),
                 data: {
-                  ...frontendProjectToDb(data),
-                  client_id: data.client_id,
+                  ...frontendProjectToDb({
+                    bu: data.bu,
+                    name: data.name,
+                    cat: data.cat,
+                    startDate: data.startDate,
+                    endDate: data.endDate,
+                    status: data.status || '준비중',
+                    description: data.description,
+                    pm_id: data.pm_id,
+                    partner_company_id: data.partner_company_id,
+                    partner_worker_id: data.partner_worker_id,
+                    participants: data.participants,
+                  }),
+                  client_id: data.partner_company_id,
                 } as any,
               });
               setEditProjectModalOpen(null);
             } catch (error) {
               console.error('Failed to update project:', error);
             }
-          }}
-          onOpenClientModal={() => {
-            setClientModalOpen(true);
-          }}
-          onOpenEditClientModal={(client) => {
-            setEditClientModalOpen(client);
-          }}
-          onDeleteClient={(clientId) => {
-            setDeleteClientId(clientId);
           }}
         />
       )}

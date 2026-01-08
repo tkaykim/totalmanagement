@@ -2318,7 +2318,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
       {isProjectModalOpen && (
         <ProjectModal
           defaultBu={bu}
-          usersData={{ users: (usersData as any)?.users || [], currentUser: null }}
+          usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
           partnerCompaniesData={[]}
           partnerWorkersData={externalWorkersData}
           placeholders={{
@@ -2358,7 +2358,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
             status: isEditProjectModalOpen.status,
           }}
           defaultBu={bu}
-          usersData={{ users: (usersData as any)?.users || [], currentUser: null }}
+          usersData={{ users: (usersData as any)?.users || [], currentUser: (usersData as any)?.currentUser || null }}
           partnerCompaniesData={[]}
           partnerWorkersData={externalWorkersData}
           placeholders={{
