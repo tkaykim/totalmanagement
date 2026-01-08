@@ -143,8 +143,8 @@ export function DashboardView({
   const canViewFinancialData = currentUser?.profile?.role === 'manager' || currentUser?.profile?.role === 'admin';
 
   return (
-    <section className="space-y-8">
-      <div className="flex w-fit overflow-x-auto rounded-2xl bg-slate-200/60 dark:bg-slate-700/60 p-1 sm:p-1.5">
+    <section className="space-y-4 sm:space-y-8">
+      <div className="flex w-fit overflow-x-auto rounded-xl sm:rounded-2xl bg-slate-200/60 dark:bg-slate-700/60 p-1 sm:p-1.5">
         <button
           onClick={() => setSelectedBu('ALL')}
           className={cn(
@@ -173,7 +173,7 @@ export function DashboardView({
       </div>
 
       {canViewFinancialData && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
           <StatCard
             title={selectedBu === 'ALL' ? '선택 기간 총 매출' : `${BU_TITLES[selectedBu]} 총 매출`}
             value={filteredTotals.totalRev}
@@ -195,8 +195,8 @@ export function DashboardView({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-6 shadow-sm">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <FolderKanban className="h-5 w-5 text-blue-500" />
@@ -370,11 +370,11 @@ export function DashboardView({
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
+          <div className="mb-3 sm:mb-4 flex items-center justify-between flex-wrap gap-2 sm:gap-3">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-              <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200 dark:text-slate-200">
+              <h3 className="text-sm sm:text-base lg:text-lg font-bold text-slate-800 dark:text-slate-200 dark:text-slate-200">
                 {selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]} 할일
               </h3>
             </div>
@@ -494,8 +494,8 @@ export function DashboardView({
       </div>
 
       {canViewFinancialData && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-blue-500" />
               <h3 className="font-bold text-slate-800 dark:text-slate-200">사업부별 성과 요약</h3>

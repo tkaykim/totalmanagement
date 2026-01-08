@@ -18,7 +18,15 @@ import {
   Pencil,
   Trash2,
   LogOut,
+  Menu,
 } from 'lucide-react';
+import {
+  useWorkStatus,
+  WorkStatusHeader,
+  WorkStatusWelcomeModal,
+  WorkStatusLogoutModal,
+} from '@/components/WorkStatusHeader';
+import { WorkStatusFullScreen } from '@/components/WorkStatusFullScreen';
 import { createClient } from '@/lib/supabase/client';
 import { format, isWithinInterval, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { cn, buToSlug } from '@/lib/utils';
@@ -64,6 +72,12 @@ import { ProjectsView } from '@/features/erp/components/ProjectsView';
 import { SettlementView } from '@/features/erp/components/SettlementView';
 import { BuTabs } from '@/features/erp/components/BuTabs';
 import { FinanceRow } from '@/features/erp/components/FinanceRow';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   BU,
   View,
@@ -201,6 +215,7 @@ export default function HomePage() {
   const router = useRouter();
   const [view, setView] = useState<View>('dashboard');
   const [bu, setBu] = useState<BU | 'ALL'>('GRIGO');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // BU 변경 핸들러 - 모든 BU 버튼은 동일하게 BU만 변경하고 뷰는 유지
   const handleBuChange = (newBu: BU | 'ALL') => {
@@ -218,6 +233,8 @@ export default function HomePage() {
   const [customRange, setCustomRange] = useState<{ start?: string; end?: string }>({});
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const workStatusHook = useWorkStatus(user);
 
   // API 데이터 로딩
   const { data: projectsData = [], isLoading: projectsLoading } = useProjects();
@@ -847,212 +864,362 @@ export default function HomePage() {
     );
   }
 
+  // OFF_WORK 또는 BREAK 상태일 때는 전체 화면 페이지만 표시
+  if (workStatusHook.workStatus === 'OFF_WORK' || workStatusHook.workStatus === 'BREAK') {
+    return (
+      <>
+        <WorkStatusFullScreen
+          workStatus={workStatusHook.workStatus}
+          currentTime={workStatusHook.currentTime}
+          userName={workStatusHook.userName}
+          userInitials={workStatusHook.userInitials}
+          isChanging={workStatusHook.isChanging}
+          onStatusChange={(status) => {
+            workStatusHook.handleStatusChange(status, async (status, previousStatus) => {
+              try {
+                // OFF_WORK에서 WORKING으로 변경할 때만 check-in
+                if (status === 'WORKING' && previousStatus === 'OFF_WORK') {
+                  const res = await fetch('/api/attendance/check-in', { method: 'POST' });
+                  if (!res.ok) throw new Error('Failed to check in');
+                } else if (status === 'OFF_WORK') {
+                  const res = await fetch('/api/attendance/check-out', { method: 'POST' });
+                  if (!res.ok) throw new Error('Failed to check out');
+                }
+                // BREAK에서 WORKING으로 변경할 때는 API 호출 없이 상태만 변경
+              } catch (error) {
+                console.error('Status change error:', error);
+                throw error;
+              }
+            });
+          }}
+          formatTimeDetail={workStatusHook.formatTimeDetail}
+          formatDateDetail={workStatusHook.formatDateDetail}
+        />
+        <WorkStatusWelcomeModal
+          showWelcome={workStatusHook.showWelcome}
+          welcomeTitle={workStatusHook.welcomeTitle}
+          welcomeMsg={workStatusHook.welcomeMsg}
+        />
+        <WorkStatusLogoutModal
+          showLogoutConfirm={workStatusHook.showLogoutConfirm}
+          isChanging={workStatusHook.isChanging}
+          onCancel={() => workStatusHook.setShowLogoutConfirm(false)}
+          onConfirm={() => {
+            workStatusHook.confirmLogout(
+              async (status) => {
+                try {
+                  if (status === 'OFF_WORK') {
+                    const res = await fetch('/api/attendance/check-out', { method: 'POST' });
+                    if (!res.ok) {
+                      const data = await res.json().catch(() => ({}));
+                      // 이미 퇴근 처리된 경우는 성공으로 처리
+                      if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
+                        return;
+                      }
+                      throw new Error(data.error || 'Failed to check out');
+                    }
+                  }
+                } catch (error) {
+                  console.error('Status change error:', error);
+                  throw error;
+                }
+              },
+              handleLogout
+            );
+          }}
+        />
+      </>
+    );
+  }
+
   // ReactStudio 뷰일 때는 별도 레이아웃 사용
   if (view === 'reactstudio' && bu === 'REACT') {
     return <ReactStudioDashboard bu={bu} />;
   }
 
+  const SidebarContent = ({ onItemClick }: { onItemClick?: () => void }) => (
+    <>
+      <div className="p-4 sm:p-8">
+        <button
+          onClick={() => {
+            setView('dashboard');
+            onItemClick?.();
+          }}
+          className="text-left"
+        >
+          <p className="text-lg sm:text-xl font-bold tracking-tighter text-blue-300">GRIGO ERP</p>
+          <p className="mt-1 text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            Management System
+          </p>
+        </button>
+      </div>
+      <nav className="flex-1 space-y-2 px-2 sm:px-4">
+        <SidebarButton
+          label="대시보드"
+          icon={<LayoutDashboard className="h-4 w-4" />}
+          active={view === 'dashboard'}
+          onClick={() => {
+            setView('dashboard');
+            onItemClick?.();
+          }}
+        />
+        <SidebarButton
+          label="프로젝트 관리"
+          icon={<FolderKanban className="h-4 w-4" />}
+          active={view === 'projects'}
+          onClick={() => {
+            setView('projects');
+            onItemClick?.();
+          }}
+        />
+        <SidebarButton
+          label="정산 관리"
+          icon={<Coins className="h-4 w-4" />}
+          active={view === 'settlement'}
+          onClick={() => {
+            setView('settlement');
+            onItemClick?.();
+          }}
+        />
+        <SidebarButton
+          label="할일 관리"
+          icon={<CheckSquare className="h-4 w-4" />}
+          active={view === 'tasks'}
+          onClick={() => {
+            setView('tasks');
+            onItemClick?.();
+          }}
+        />
+        <SidebarButton
+          label="조직 현황"
+          icon={<Users className="h-4 w-4" />}
+          active={view === 'organization'}
+          onClick={() => {
+            setView('organization');
+            onItemClick?.();
+          }}
+        />
+      </nav>
+      <div className="mt-auto space-y-4 p-4 sm:p-6">
+        <div className="border-t border-slate-700"></div>
+        <div className="space-y-2">
+          <p className="px-2 sm:px-3 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            사업부별 대시보드
+          </p>
+          {(Object.keys(BU_TITLES) as BU[]).map((buKey) => (
+            <Link
+              key={buKey}
+              href={
+                buKey === 'AST' 
+                  ? '/astcompany' 
+                  : buKey === 'GRIGO' 
+                  ? '/grigoent' 
+                  : buKey === 'FLOW'
+                  ? '/flowmaker'
+                  : buKey === 'MODOO'
+                  ? '/modoogoods'
+                  : `/${buToSlug(buKey)}`
+              }
+              onClick={() => onItemClick?.()}
+              className={cn(
+                'flex w-full items-center gap-2 sm:gap-3 rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-left text-xs sm:text-sm transition',
+                'text-slate-300 hover:bg-slate-800 hover:text-white'
+              )}
+            >
+              <span className="w-4 sm:w-5 text-center">
+                <FolderKanban className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </span>
+              <span>{BU_TITLES[buKey]}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+      <div className="p-4 sm:p-6 pt-0">
+        <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-3 sm:p-4">
+          <p className="mb-1 text-[9px] sm:text-[10px] uppercase tracking-tighter text-slate-500 dark:text-slate-400">
+            Signed in as
+          </p>
+          <p className="text-xs sm:text-sm font-semibold text-blue-100">
+            {user?.profile?.name || user?.email || '사용자'}
+          </p>
+          {user?.profile?.position && (
+            <p className="mt-1 text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500">{user.profile.position}</p>
+          )}
+        </div>
+        <button
+          onClick={() => {
+            handleLogout();
+            onItemClick?.();
+          }}
+          className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-slate-300 transition hover:bg-slate-700/60 flex items-center justify-center gap-2"
+        >
+          <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          로그아웃
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 dark:bg-slate-900 text-slate-900 dark:text-slate-100 dark:text-slate-100">
+      {/* 데스크톱 사이드바 */}
       <aside className="hidden h-screen w-64 flex-shrink-0 flex-col border-r border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-slate-900 text-white lg:flex">
-        <div className="p-8">
-          <button
-            onClick={() => setView('dashboard')}
-            className="text-left"
-          >
-            <p className="text-xl font-bold tracking-tighter text-blue-300">GRIGO ERP</p>
-            <p className="mt-1 text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">
-              Management System
-            </p>
-          </button>
-        </div>
-        <nav className="flex-1 space-y-2 px-4">
-          <SidebarButton
-            label="대시보드"
-            icon={<LayoutDashboard className="h-4 w-4" />}
-            active={view === 'dashboard'}
-            onClick={() => setView('dashboard')}
-          />
-          <SidebarButton
-            label="프로젝트 관리"
-            icon={<FolderKanban className="h-4 w-4" />}
-            active={view === 'projects'}
-            onClick={() => setView('projects')}
-          />
-          <SidebarButton
-            label="정산 관리"
-            icon={<Coins className="h-4 w-4" />}
-            active={view === 'settlement'}
-            onClick={() => setView('settlement')}
-          />
-          <SidebarButton
-            label="할일 관리"
-            icon={<CheckSquare className="h-4 w-4" />}
-            active={view === 'tasks'}
-            onClick={() => setView('tasks')}
-          />
-          <SidebarButton
-            label="조직 현황"
-            icon={<Users className="h-4 w-4" />}
-            active={view === 'organization'}
-            onClick={() => setView('organization')}
-          />
-        </nav>
-        <div className="mt-auto space-y-4 p-6">
-          <div className="border-t border-slate-700"></div>
-          <div className="space-y-2">
-            <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-              사업부별 대시보드
-            </p>
-            {(Object.keys(BU_TITLES) as BU[]).map((buKey) => (
-              <Link
-                key={buKey}
-                href={
-                  buKey === 'AST' 
-                    ? '/astcompany' 
-                    : buKey === 'GRIGO' 
-                    ? '/grigoent' 
-                    : buKey === 'FLOW'
-                    ? '/flowmaker'
-                    : buKey === 'MODOO'
-                    ? '/modoogoods'
-                    : `/${buToSlug(buKey)}`
-                }
-                className={cn(
-                  'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition',
-                  'text-slate-300 hover:bg-slate-800 hover:text-white'
-                )}
-              >
-                <span className="w-5 text-center">
-                  <FolderKanban className="h-4 w-4" />
-                </span>
-                <span>{BU_TITLES[buKey]}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-        <div className="p-6 pt-0">
-          <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-4">
-            <p className="mb-1 text-[10px] uppercase tracking-tighter text-slate-500 dark:text-slate-400">
-              Signed in as
-            </p>
-            <p className="text-sm font-semibold text-blue-100">
-              {user?.profile?.name || user?.email || '사용자'}
-            </p>
-            {user?.profile?.position && (
-              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">{user.profile.position}</p>
-            )}
-          </div>
-          <button
-            onClick={handleLogout}
-            className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-700/60 flex items-center justify-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            로그아웃
-          </button>
-        </div>
+        <SidebarContent />
       </aside>
 
+      {/* 모바일 사이드바 */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="w-[280px] sm:w-[320px] bg-slate-900 text-white p-0 border-slate-700">
+          <SheetHeader className="sr-only">
+            <SheetTitle>메뉴</SheetTitle>
+          </SheetHeader>
+          <div className="flex h-full flex-col">
+            <SidebarContent onItemClick={() => setMobileMenuOpen(false)} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-24 items-center justify-between border-b border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800/90 dark:bg-slate-800/90 px-6 backdrop-blur">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 dark:text-slate-200">
-              {view === 'dashboard'
-                ? '대시보드'
-                : view === 'projects'
-                  ? '프로젝트 관리'
-                  : view === 'settlement'
-                    ? '정산 관리'
-                    : view === 'tasks'
-                      ? '할일 관리'
-                      : '조직 현황'}
-            </h2>
-            <div className="mt-2 flex flex-col gap-3">
-              {/* 토글 버튼 */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePeriodTypeChange('month')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'month'
-                      ? 'bg-slate-900 dark:bg-slate-700 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 dark:bg-slate-800 text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  )}
-                >
-                  월별
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('quarter')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'quarter'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  분기별
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('year')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'year'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  연도별
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('custom')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'custom'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  직접선택
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('all')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'all'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  전체 기간
-                </button>
+        <header className="sticky top-0 z-20 flex flex-col gap-3 sm:gap-4 min-h-[64px] sm:h-auto items-stretch border-b border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800/90 dark:bg-slate-800/90 px-3 sm:px-6 py-3 sm:py-4 backdrop-blur">
+          <div className="flex items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-0">
+              {/* 모바일 햄버거 버튼 */}
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="lg:hidden flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                aria-label="메뉴 열기"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200 dark:text-slate-200">
+                  {view === 'dashboard'
+                    ? '대시보드'
+                    : view === 'projects'
+                      ? '프로젝트 관리'
+                      : view === 'settlement'
+                        ? '정산 관리'
+                        : view === 'tasks'
+                          ? '할일 관리'
+                          : '조직 현황'}
+                </h2>
+              </div>
+            </div>
+
+            {/* 근무 상태 헤더 */}
+            <div className="flex-1 flex justify-end">
+              <WorkStatusHeader
+                workStatus={workStatusHook.workStatus}
+                currentTime={workStatusHook.currentTime}
+                userName={workStatusHook.userName}
+                userPosition={workStatusHook.userPosition}
+                userInitials={workStatusHook.userInitials}
+                isChanging={workStatusHook.isChanging}
+                onStatusChange={(status) => {
+                  workStatusHook.handleStatusChange(status, async (status, previousStatus) => {
+                    try {
+                      // OFF_WORK에서 WORKING으로 변경할 때만 check-in
+                      if (status === 'WORKING' && previousStatus === 'OFF_WORK') {
+                        const res = await fetch('/api/attendance/check-in', { method: 'POST' });
+                        if (!res.ok) {
+                          const data = await res.json().catch(() => ({}));
+                          // 이미 출근 처리된 경우는 성공으로 처리
+                          if (data.error && data.error.includes('이미 출근 처리되었습니다')) {
+                            return;
+                          }
+                          throw new Error(data.error || 'Failed to check in');
+                        }
+                      } else if (status === 'OFF_WORK') {
+                        const res = await fetch('/api/attendance/check-out', { method: 'POST' });
+                        if (!res.ok) {
+                          const data = await res.json().catch(() => ({}));
+                          // 이미 퇴근 처리된 경우는 성공으로 처리
+                          if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
+                            return;
+                          }
+                          throw new Error(data.error || 'Failed to check out');
+                        }
+                      }
+                      // BREAK에서 WORKING으로 변경할 때는 API 호출 없이 상태만 변경
+                    } catch (error) {
+                      console.error('Status change error:', error);
+                      throw error;
+                    }
+                  });
+                }}
+                formatTimeDetail={workStatusHook.formatTimeDetail}
+                formatDateDetail={workStatusHook.formatDateDetail}
+              />
+            </div>
+          </div>
+          <div className="mt-1 sm:mt-2 flex flex-col gap-2 sm:gap-3">
+                {/* 토글 버튼 */}
+                <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1">
+                  <button
+                    onClick={() => handlePeriodTypeChange('month')}
+                    className={cn(
+                      'rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold transition whitespace-nowrap',
+                      periodType === 'month'
+                        ? 'bg-slate-900 dark:bg-slate-700 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 dark:bg-slate-800 text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    )}
+                  >
+                    월별
+                  </button>
+                  <button
+                    onClick={() => handlePeriodTypeChange('quarter')}
+                    className={cn(
+                      'rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold transition whitespace-nowrap',
+                      periodType === 'quarter'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    )}
+                  >
+                    분기별
+                  </button>
+                  <button
+                    onClick={() => handlePeriodTypeChange('year')}
+                    className={cn(
+                      'rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold transition whitespace-nowrap',
+                      periodType === 'year'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    )}
+                  >
+                    연도별
+                  </button>
+                  <button
+                    onClick={() => handlePeriodTypeChange('custom')}
+                    className={cn(
+                      'rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold transition whitespace-nowrap',
+                      periodType === 'custom'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    )}
+                  >
+                    직접선택
+                  </button>
+                  <button
+                    onClick={() => handlePeriodTypeChange('all')}
+                    className={cn(
+                      'rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold transition whitespace-nowrap',
+                      periodType === 'all'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    )}
+                  >
+                    전체 기간
+                  </button>
               </div>
 
-              {/* 조건부 선택 UI */}
-              {periodType === 'year' && (
-                <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 dark:text-slate-300">연도:</label>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {yearOptions.map((year) => (
-                      <option key={year} value={year}>
-                        {year}년
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {periodType === 'quarter' && (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 dark:text-slate-300">연도:</label>
+                {/* 조건부 선택 UI */}
+                {periodType === 'year' && (
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <label className="text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-slate-300 dark:text-slate-300 whitespace-nowrap">연도:</label>
                     <select
-                      value={selectedQuarterYear}
-                      onChange={(e) => setSelectedQuarterYear(Number(e.target.value))}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(Number(e.target.value))}
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {yearOptions.map((year) => (
                         <option key={year} value={year}>
@@ -1061,85 +1228,139 @@ export default function HomePage() {
                       ))}
                     </select>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 dark:text-slate-300">분기:</label>
+                )}
+
+                {periodType === 'quarter' && (
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <label className="text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-slate-300 dark:text-slate-300 whitespace-nowrap">연도:</label>
+                      <select
+                        value={selectedQuarterYear}
+                        onChange={(e) => setSelectedQuarterYear(Number(e.target.value))}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {yearOptions.map((year) => (
+                          <option key={year} value={year}>
+                            {year}년
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <label className="text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-slate-300 dark:text-slate-300 whitespace-nowrap">분기:</label>
+                      <select
+                        value={selectedQuarter}
+                        onChange={(e) => setSelectedQuarter(Number(e.target.value))}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value={1}>1분기</option>
+                        <option value={2}>2분기</option>
+                        <option value={3}>3분기</option>
+                        <option value={4}>4분기</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {periodType === 'month' && (
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <label className="text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-slate-300 dark:text-slate-300 whitespace-nowrap">월:</label>
                     <select
-                      value={selectedQuarter}
-                      onChange={(e) => setSelectedQuarter(Number(e.target.value))}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value={1}>1분기 (1-3월)</option>
-                      <option value={2}>2분기 (4-6월)</option>
-                      <option value={3}>3분기 (7-9월)</option>
-                      <option value={4}>4분기 (10-12월)</option>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                        <option key={month} value={month}>
+                          {month}월
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(Number(e.target.value))}
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {yearOptions.map((year) => (
+                        <option key={year} value={year}>
+                          {year}년
+                        </option>
+                      ))}
                     </select>
                   </div>
-                </div>
-              )}
+                )}
 
-              {periodType === 'month' && (
-                <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 dark:text-slate-300">월:</label>
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                      <option key={month} value={month}>
-                        {month}월
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {yearOptions.map((year) => (
-                      <option key={year} value={year}>
-                        {year}년
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {periodType === 'custom' && (
-                <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">시작일:</label>
-                  <input
-                    type="date"
-                    value={customRange.start ?? ''}
-                    onChange={(e) => handleDateChange('start', e.target.value)}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-[11px]"
-                  />
-                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">종료일:</label>
-                  <input
-                    type="date"
-                    value={customRange.end ?? ''}
-                    onChange={(e) => handleDateChange('end', e.target.value)}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-[11px]"
-                  />
-                </div>
-              )}
-            </div>
+                {periodType === 'custom' && (
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <label className="text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">시작일:</label>
+                    <input
+                      type="date"
+                      value={customRange.start ?? ''}
+                      onChange={(e) => handleDateChange('start', e.target.value)}
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px]"
+                    />
+                    <label className="text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">종료일:</label>
+                    <input
+                      type="date"
+                      value={customRange.end ?? ''}
+                      onChange={(e) => handleDateChange('end', e.target.value)}
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px]"
+                    />
+                  </div>
+                )}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden sm:flex items-center gap-2 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/30 px-2 sm:px-3 py-1 sm:py-1.5">
               <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
-              <span className="text-[11px] font-bold uppercase tracking-tight text-blue-700 dark:text-blue-300">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-tight text-blue-700 dark:text-blue-300">
                 System Monitoring Active
               </span>
             </div>
-            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 dark:bg-slate-800 transition hover:bg-slate-200 dark:hover:bg-slate-700">
-              <Bell className="h-4 w-4 text-slate-600 dark:text-slate-300 dark:text-slate-300" />
+            <button className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 dark:bg-slate-800 transition hover:bg-slate-200 dark:hover:bg-slate-700">
+              <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-600 dark:text-slate-300 dark:text-slate-300" />
             </button>
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-7xl px-4 py-8 space-y-6">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+        {/* 환영 모달 */}
+        <WorkStatusWelcomeModal
+          showWelcome={workStatusHook.showWelcome}
+          welcomeTitle={workStatusHook.welcomeTitle}
+          welcomeMsg={workStatusHook.welcomeMsg}
+        />
+
+        {/* 퇴근 확인 모달 */}
+        <WorkStatusLogoutModal
+          showLogoutConfirm={workStatusHook.showLogoutConfirm}
+          isChanging={workStatusHook.isChanging}
+          onCancel={() => workStatusHook.setShowLogoutConfirm(false)}
+          onConfirm={() => {
+            workStatusHook.confirmLogout(
+              async (status) => {
+                try {
+                  if (status === 'OFF_WORK') {
+                    const res = await fetch('/api/attendance/check-out', { method: 'POST' });
+                    if (!res.ok) {
+                      const data = await res.json().catch(() => ({}));
+                      // 이미 퇴근 처리된 경우는 성공으로 처리
+                      if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
+                        return;
+                      }
+                      throw new Error(data.error || 'Failed to check out');
+                    }
+                  }
+                } catch (error) {
+                  console.error('Status change error:', error);
+                  throw error;
+                }
+              },
+              handleLogout
+            );
+          }}
+        />
+
+        <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             <QuickAction
               title="프로젝트 등록"
               icon={<FolderKanban className="h-4 w-4" />}
@@ -1565,14 +1786,14 @@ function SidebarButton({
     <button
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition',
+        'flex w-full items-center gap-2 sm:gap-3 rounded-xl px-2 sm:px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm transition',
         active
           ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
           : 'text-slate-300 dark:text-slate-400 hover:bg-slate-800 dark:hover:bg-slate-700 hover:text-white',
       )}
     >
-      <span className="w-5 text-center">{icon}</span>
-      <span>{label}</span>
+      <span className="w-4 sm:w-5 text-center flex-shrink-0">{icon}</span>
+      <span className="truncate">{label}</span>
     </button>
   );
 }
@@ -1619,7 +1840,7 @@ function TasksView({
         <button
           onClick={() => setTaskFilter('active')}
           className={cn(
-            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+            'px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg',
             taskFilter === 'active'
               ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
               : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
@@ -1630,7 +1851,7 @@ function TasksView({
         <button
           onClick={() => setTaskFilter('completed')}
           className={cn(
-            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+            'px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg',
             taskFilter === 'completed'
               ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
               : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
@@ -1640,12 +1861,13 @@ function TasksView({
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">{BU_TITLES[bu]} 할일 관리</h3>
-          <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">{rows.length}건</span>
+      <div className="overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 p-3 sm:p-4 lg:p-6">
+          <h3 className="text-sm sm:text-base lg:text-lg font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{BU_TITLES[bu]} 할일 관리</h3>
+          <span className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap flex-shrink-0">{rows.length}건</span>
         </div>
-        <div className="overflow-x-auto">
+        {/* 모바일: 카드 형태, 데스크톱: 테이블 */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-[10px] sm:text-[11px]">
             <thead className="bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500">
               <tr>
@@ -1693,8 +1915,47 @@ function TasksView({
               )}
             </tbody>
           </table>
+        </div>
+        {/* 모바일 카드 뷰 */}
+        <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-700">
+          {rows.length === 0 ? (
+            <div className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+              {taskFilter === 'active'
+                ? '현재 선택한 사업부에 진행 예정이거나 진행 중인 할일이 없습니다.'
+                : '현재 선택한 사업부에 완료된 할일이 없습니다.'}
+            </div>
+          ) : (
+            rows.map((task) => (
+              <button
+                key={task.id}
+                onClick={() => onEditTask(task)}
+                className="w-full px-4 py-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900"
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mb-1">{task.title}</p>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-300 truncate">{findProject(task.projectId)}</p>
+                  </div>
+                  <select
+                    value={task.status}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => onStatusChange(task.id, e.target.value as TaskItem['status'])}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-[9px] outline-none flex-shrink-0"
+                  >
+                    <option value="todo">TODO</option>
+                    <option value="in-progress">진행중</option>
+                    <option value="done">완료</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="whitespace-nowrap">담당자: {task.assignee}</span>
+                  <span className="whitespace-nowrap">마감일: {task.dueDate}</span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
       </div>
-    </div>
     </section>
   );
 }
@@ -1774,15 +2035,15 @@ function OrganizationView({
   }, [users, partnerWorkersData, partnerCompaniesData]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4 sm:space-y-6">
       {/* 탭 메뉴 */}
-      <div className="flex w-fit overflow-x-auto rounded-2xl bg-slate-200/60 p-1.5">
+      <div className="flex w-fit overflow-x-auto rounded-xl sm:rounded-2xl bg-slate-200/60 p-1 sm:p-1.5">
         <button
           onClick={() => onTabChange('org')}
           className={cn(
-            'px-6 py-2.5 text-sm font-semibold transition',
+            'px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
             orgViewTab === 'org'
-              ? 'tab-active rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
+              ? 'tab-active rounded-lg sm:rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
               : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
           )}
         >
@@ -1791,9 +2052,9 @@ function OrganizationView({
         <button
           onClick={() => onTabChange('external')}
           className={cn(
-            'px-6 py-2.5 text-sm font-semibold transition',
+            'px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
             orgViewTab === 'external'
-              ? 'tab-active rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
+              ? 'tab-active rounded-lg sm:rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
               : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
           )}
         >
@@ -1802,9 +2063,9 @@ function OrganizationView({
         <button
           onClick={() => onTabChange('users')}
           className={cn(
-            'px-6 py-2.5 text-sm font-semibold transition',
+            'px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
             orgViewTab === 'users'
-              ? 'tab-active rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
+              ? 'tab-active rounded-lg sm:rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
               : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
           )}
         >
@@ -1813,19 +2074,19 @@ function OrganizationView({
       </div>
 
       {orgViewTab === 'org' && (
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 sm:p-6 shadow-sm">
+            <div className="mb-3 sm:mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">내부 직원</h3>
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">내부 직원</h3>
               </div>
-              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+              <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">
                 총 {internalEmployees.length}명
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-[11px]">
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <table className="w-full text-left text-[10px] sm:text-[11px]">
                 <thead className="bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500">
                   <tr>
                     <th className="px-4 py-3 font-bold uppercase tracking-tight">이름</th>
@@ -2191,11 +2452,11 @@ function QuickAction({ title, icon, onClick }: { title: string; icon: React.Reac
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-left shadow-sm transition hover:border-blue-200 hover:shadow"
+      className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 sm:px-4 py-2.5 sm:py-3 text-left shadow-sm transition hover:border-blue-200 hover:shadow"
     >
-      <div>
-        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500">모달을 열어 즉시 등록</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{title}</p>
+        <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">모달을 열어 즉시 등록</p>
       </div>
       <span className="rounded-full bg-blue-50 dark:bg-blue-900/50 p-3 text-blue-600 dark:text-blue-300">{icon}</span>
     </button>

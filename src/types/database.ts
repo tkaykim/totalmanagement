@@ -22,6 +22,11 @@ export type ArtistType = 'individual' | 'team';
 export type ProjectStep = 'plan' | 'script' | 'shoot' | 'edit';
 export type AssetStatus = 'completed' | 'in-progress' | 'pending' | 'none';
 
+// Attendance System Types
+export type AttendanceType = 'present' | 'late' | 'early_leave' | 'absent' | 'vacation' | 'remote' | 'external';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type WorkRequestType = 'external_work' | 'remote_work' | 'overtime' | 'attendance_correction';
+
 export interface ProjectAsset {
   status: AssetStatus;
   version?: string;
@@ -404,6 +409,46 @@ export interface ProjectDocument {
   file_size?: number;
   mime_type?: string;
   uploaded_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OfficeIP {
+  id: number;
+  name: string;
+  ip_address: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface WorkRequest {
+  id: string;
+  requester_id: string;
+  approver_id?: string | null;
+  request_type: WorkRequestType;
+  start_date: string;
+  end_date: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  reason: string;
+  status: ApprovalStatus;
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AttendanceLog {
+  id: string;
+  user_id: string;
+  work_date: string;
+  check_in_at?: string | null;
+  check_out_at?: string | null;
+  check_in_ip?: string | null;
+  check_out_ip?: string | null;
+  status: AttendanceType;
+  is_modified: boolean;
+  modification_reason?: string | null;
+  is_verified_location: boolean;
   created_at: string;
   updated_at: string;
 }
