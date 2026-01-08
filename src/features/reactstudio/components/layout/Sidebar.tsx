@@ -102,3 +102,5 @@ export function Sidebar({ activeTab, onTabChange, user, onLogout }: SidebarProps
   );
 }
 
+
+

@@ -28,7 +28,13 @@ export async function PATCH(
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // org_members 테이블이 존재하지 않는 경우
+      return NextResponse.json(
+        { error: 'org_members 테이블이 존재하지 않습니다. 이 기능을 사용하려면 테이블을 생성해야 합니다.' },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json(data);
   } catch (error) {
@@ -49,7 +55,13 @@ export async function DELETE(
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      // org_members 테이블이 존재하지 않는 경우
+      return NextResponse.json(
+        { error: 'org_members 테이블이 존재하지 않습니다. 이 기능을 사용하려면 테이블을 생성해야 합니다.' },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

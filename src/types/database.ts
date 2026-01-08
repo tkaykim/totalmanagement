@@ -91,6 +91,7 @@ export interface Project {
   client_id?: number;
   channel_id?: number | null; // 연결된 채널 ID (nullable, 선택사항)
   artist_id?: number;
+  pm_id?: string | null; // 단일 PM ID (하위 호환성)
   pm_name?: string; // 하위 호환성을 위해 유지 (deprecated)
   pm_ids?: string[]; // PM 사용자 ID 배열 (JSONB, app_users.id 참조, 다수 가능)
   creators?: ProjectCreator[]; // JSONB

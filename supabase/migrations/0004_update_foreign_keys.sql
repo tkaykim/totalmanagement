@@ -33,3 +33,5 @@ WHERE participants IS NOT NULL
     WHERE p->>'external_worker_id' IS NOT NULL
   );
 
+
+

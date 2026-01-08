@@ -9,21 +9,15 @@ export function dbProjectToFrontend(p: Project): {
   description?: string | null;
   cat: string;
   channel_id?: number | null;
+  client_id?: number | null;
   startDate: string;
   endDate: string;
   status: string;
-  client_id?: number;
+  partner_company_id?: number | null;
+  partner_worker_id?: number | null;
   artist_id?: number;
-  pm_name?: string;
-  pm_ids?: string[];
-  active_steps?: ProjectStep[];
-  plan_date?: string | null;
-  script_date?: string | null;
-  shoot_date?: string | null;
-  edit1_date?: string | null;
-  edit_final_date?: string | null;
-  release_date?: string | null;
-  assets?: ProjectAssets;
+  pm_id?: string | null;
+  pm_name?: string | null;
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role: string; is_pm: boolean }>;
 } {
   return {
@@ -33,21 +27,15 @@ export function dbProjectToFrontend(p: Project): {
     description: p.description,
     cat: p.category,
     channel_id: p.channel_id,
+    client_id: p.client_id || null,
     startDate: p.start_date,
     endDate: p.end_date,
     status: p.status,
-    client_id: p.client_id,
+    partner_company_id: (p as any).partner_company_id || null,
+    partner_worker_id: (p as any).partner_worker_id || null,
     artist_id: p.artist_id,
-    pm_name: p.pm_name,
-    pm_ids: p.pm_ids,
-    active_steps: p.active_steps,
-    plan_date: p.plan_date,
-    script_date: p.script_date,
-    shoot_date: p.shoot_date,
-    edit1_date: p.edit1_date,
-    edit_final_date: p.edit_final_date,
-    release_date: p.release_date,
-    assets: p.assets,
+    pm_id: (p as any).pm_id || null,
+    pm_name: p.pm_name || null,
     participants: p.participants,
   };
 }
@@ -118,18 +106,11 @@ export function frontendProjectToDb(p: {
   startDate: string;
   endDate: string;
   status?: string;
-  client_id?: number | null;
+  partner_company_id?: number | null;
+  partner_worker_id?: number | null;
   artist_id?: number;
+  pm_id?: string | null;
   pm_name?: string | null;
-  pm_ids?: string[];
-  active_steps?: ProjectStep[];
-  plan_date?: string | null;
-  script_date?: string | null;
-  shoot_date?: string | null;
-  edit1_date?: string | null;
-  edit_final_date?: string | null;
-  release_date?: string | null;
-  assets?: ProjectAssets;
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
 }): {
   bu_code: BU;
@@ -140,18 +121,11 @@ export function frontendProjectToDb(p: {
   status: string;
   start_date: string;
   end_date: string;
-  client_id?: number | null;
+  partner_company_id?: number | null;
+  partner_worker_id?: number | null;
   artist_id?: number;
+  pm_id?: string | null;
   pm_name?: string | null;
-  pm_ids?: string[];
-  active_steps?: ProjectStep[];
-  plan_date?: string | null;
-  script_date?: string | null;
-  shoot_date?: string | null;
-  edit1_date?: string | null;
-  edit_final_date?: string | null;
-  release_date?: string | null;
-  assets?: ProjectAssets;
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
 } {
   const today = new Date().toISOString().split('T')[0];
@@ -164,18 +138,11 @@ export function frontendProjectToDb(p: {
     status: string;
     start_date: string;
     end_date: string;
-    client_id?: number | null;
+    partner_company_id?: number | null;
+    partner_worker_id?: number | null;
     artist_id?: number;
+    pm_id?: string | null;
     pm_name?: string | null;
-    pm_ids?: string[];
-    active_steps?: ProjectStep[];
-    plan_date?: string | null;
-    script_date?: string | null;
-    shoot_date?: string | null;
-    edit1_date?: string | null;
-    edit_final_date?: string | null;
-    release_date?: string | null;
-    assets?: ProjectAssets;
     participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   } = {
     bu_code: p.bu,
@@ -194,52 +161,24 @@ export function frontendProjectToDb(p: {
     result.channel_id = p.channel_id || null;
   }
   
-  if (p.client_id !== undefined) {
-    result.client_id = p.client_id || null;
+  if (p.partner_company_id !== undefined) {
+    result.partner_company_id = p.partner_company_id || null;
+  }
+  
+  if (p.partner_worker_id !== undefined) {
+    result.partner_worker_id = p.partner_worker_id || null;
   }
   
   if (p.artist_id !== undefined) {
     result.artist_id = p.artist_id;
   }
   
+  if (p.pm_id !== undefined) {
+    result.pm_id = p.pm_id || null;
+  }
+
   if (p.pm_name !== undefined) {
     result.pm_name = p.pm_name || null;
-  }
-  
-  if (p.pm_ids !== undefined) {
-    result.pm_ids = p.pm_ids || [];
-  }
-
-  if (p.active_steps !== undefined) {
-    result.active_steps = p.active_steps;
-  }
-
-  if (p.plan_date !== undefined) {
-    result.plan_date = p.plan_date || null;
-  }
-
-  if (p.script_date !== undefined) {
-    result.script_date = p.script_date || null;
-  }
-
-  if (p.shoot_date !== undefined) {
-    result.shoot_date = p.shoot_date || null;
-  }
-
-  if (p.edit1_date !== undefined) {
-    result.edit1_date = p.edit1_date || null;
-  }
-
-  if (p.edit_final_date !== undefined) {
-    result.edit_final_date = p.edit_final_date || null;
-  }
-
-  if (p.release_date !== undefined) {
-    result.release_date = p.release_date || null;
-  }
-
-  if (p.assets !== undefined) {
-    result.assets = p.assets;
   }
 
   if (p.participants !== undefined) {

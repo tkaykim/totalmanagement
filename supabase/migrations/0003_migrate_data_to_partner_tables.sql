@@ -88,3 +88,5 @@ SELECT
 FROM public.external_workers ew
 ON CONFLICT DO NOTHING;
 
+
+

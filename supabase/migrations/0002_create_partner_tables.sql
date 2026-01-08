@@ -107,3 +107,5 @@ COMMENT ON COLUMN public.partner_worker.partner_company_id IS '소속 파트너 
 COMMENT ON COLUMN public.partner_worker.worker_type IS '인력 타입: employee(직원), freelancer(프리랜서), contractor(계약직)';
 COMMENT ON COLUMN public.partner_worker.name IS '이름 (name_en 또는 name_ko가 없을 경우 사용)';
 
+
+

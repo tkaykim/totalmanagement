@@ -59,6 +59,7 @@ import {
 } from '@/features/erp/utils';
 import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
 import { CommentSection } from '@/features/comments/components/CommentSection';
+import { ProjectModal } from '@/features/erp/components/ProjectModal';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio';
@@ -71,8 +72,8 @@ type Project = {
   startDate: string;
   endDate: string;
   status: string;
-  pm_name?: string;
-  participants?: Array<{ user_id?: string; external_worker_id?: number; role: string; is_pm: boolean }>;
+  pm_id?: string | null;
+  participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role: string }>;
 };
 
 type FinancialEntryStatus = 'planned' | 'paid' | 'canceled';
@@ -669,8 +670,14 @@ export default function HomePage() {
     cat: string;
     startDate: string;
     endDate: string;
-    pm_name?: string | null;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
+    description?: string | null;
+    pm_id?: string | null;
+    partner_company_id?: number | null;
+    partner_worker_id?: number | null;
+    artist_id?: number | null;
+    channel_id?: number | null;
+    status?: string;
+    participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role?: string }>;
   }) => {
     if (!payload.name || !payload.cat) return;
     try {
@@ -683,17 +690,22 @@ export default function HomePage() {
   };
 
   const handleUpdateProject = async (payload: {
-    id: string;
+    id?: string;
     name: string;
     bu: BU;
     cat: string;
     startDate: string;
     endDate: string;
+    description?: string | null;
+    pm_id?: string | null;
+    partner_company_id?: number | null;
+    partner_worker_id?: number | null;
+    artist_id?: number | null;
+    channel_id?: number | null;
     status?: string;
-    pm_name?: string | null;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
+    participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role?: string }>;
   }) => {
-    if (!payload.name || !payload.cat) return;
+    if (!payload.name || !payload.cat || !payload.id) return;
     try {
       const dbData = frontendProjectToDb({
         bu: payload.bu,
@@ -702,7 +714,12 @@ export default function HomePage() {
         startDate: payload.startDate,
         endDate: payload.endDate,
         status: payload.status,
-        pm_name: payload.pm_name,
+        description: payload.description,
+        pm_id: payload.pm_id,
+        partner_company_id: payload.partner_company_id,
+        partner_worker_id: payload.partner_worker_id,
+        artist_id: payload.artist_id,
+        channel_id: payload.channel_id,
         participants: payload.participants,
       });
       await updateProjectMutation.mutateAsync({ id: Number(payload.id), data: dbData });
@@ -1226,6 +1243,7 @@ export default function HomePage() {
               onTaskClick={(task) => {
                 setEditTaskModalOpen(task);
               }}
+              usersData={usersData}
             />
           )}
 
@@ -1246,6 +1264,7 @@ export default function HomePage() {
               onEditProject={setEditProjectModalOpen}
               onDeleteProject={(id) => setDeleteProjectId(id)}
               tasks={tasks}
+              usersData={usersData}
             />
           )}
 
@@ -1341,19 +1360,19 @@ export default function HomePage() {
           projects={projects}
           orgData={orgData}
           usersData={usersData}
-          externalWorkersData={externalWorkersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
           calculateActualAmount={calculateActualAmount}
         />
       )}
       {isProjectModalOpen && (
-        <CreateProjectModal
+        <ProjectModal
           onClose={() => setProjectModalOpen(false)}
           onSubmit={handleCreateProject}
           defaultBu={bu === 'ALL' ? 'GRIGO' : bu}
           usersData={usersData}
-          externalWorkersData={externalWorkersData}
+          partnerCompaniesData={partnerCompaniesData}
+          partnerWorkersData={partnerWorkersData}
         />
       )}
       {isTaskModalOpen && (
@@ -1403,12 +1422,14 @@ export default function HomePage() {
         />
       )}
       {isEditProjectModalOpen && (
-        <EditProjectModal
+        <ProjectModal
           project={isEditProjectModalOpen}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={handleUpdateProject}
+          defaultBu={bu === 'ALL' ? 'GRIGO' : bu}
           usersData={usersData}
-          externalWorkersData={externalWorkersData}
+          partnerCompaniesData={partnerCompaniesData}
+          partnerWorkersData={partnerWorkersData}
         />
       )}
       {deleteProjectId && (
@@ -1590,6 +1611,7 @@ function DashboardView({
   currentUser,
   onProjectClick,
   onTaskClick,
+  usersData,
 }: {
   totals: { totalRev: number; totalExp: number; totalProfit: number };
   buCards: { bu: BU; projects: number; revenue: number; expense: number; profit: number }[];
@@ -1601,6 +1623,7 @@ function DashboardView({
   currentUser?: any;
   onProjectClick: (project: Project) => void;
   onTaskClick: (task: TaskItem) => void;
+  usersData?: { users: any[]; currentUser: any };
 }) {
   const [selectedBu, setSelectedBu] = useState<BU | 'ALL'>('ALL');
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
@@ -1631,7 +1654,7 @@ function DashboardView({
     if (projectAssigneeFilter === 'my' && currentUser) {
       filtered = filtered.filter((p) => {
         // PM으로 맡은 프로젝트
-        const isPM = currentUser.profile?.name && p.pm_name === currentUser.profile.name;
+        const isPM = p.pm_id === currentUser.id;
         // 참여자로 포함된 프로젝트
         const isParticipant = p.participants?.some(
           (participant) => participant.user_id === currentUser.id
@@ -1640,7 +1663,7 @@ function DashboardView({
       });
     }
     if (projectAssigneeFilter === 'unassigned') {
-      filtered = filtered.filter((p) => !p.pm_name || p.pm_name.trim() === '');
+      filtered = filtered.filter((p) => !p.pm_id || p.pm_id.trim() === '');
     }
     
     return filtered;
@@ -1899,9 +1922,12 @@ function DashboardView({
                         <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                           {project.startDate} ~ {project.endDate}
                         </p>
-                        {project.pm_name && (
-                          <p className="mt-1 text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 dark:text-slate-400">PM: {project.pm_name}</p>
-                        )}
+                        {project.pm_id && usersData?.users && (() => {
+                          const pmUser = usersData.users.find((u: any) => u.id === project.pm_id);
+                          return pmUser ? (
+                            <p className="mt-1 text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 dark:text-slate-400">PM: {pmUser.name}</p>
+                          ) : null;
+                        })()}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                         {todoCount > 0 && (
@@ -2161,6 +2187,7 @@ function ProjectsView({
   onEditProject,
   onDeleteProject,
   tasks,
+  usersData,
 }: {
   bu: BU | 'ALL';
   onBuChange: (bu: BU | 'ALL') => void;
@@ -2174,6 +2201,7 @@ function ProjectsView({
   onEditProject: (project: Project) => void;
   onDeleteProject: (id: string) => void;
   tasks: TaskItem[];
+  usersData?: { users: any[]; currentUser: any };
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
@@ -3264,7 +3292,6 @@ function ModalProject({
   projects,
   orgData,
   usersData,
-  externalWorkersData,
   partnerCompaniesData,
   partnerWorkersData,
   calculateActualAmount,
@@ -3318,34 +3345,41 @@ function ModalProject({
     cat: string;
     startDate: string;
     endDate: string;
+    description?: string | null;
     status?: string;
-    pm_name?: string | null;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
+    pm_id?: string | null;
+    partner_company_id?: number | null;
+    partner_worker_id?: number | null;
+    artist_id?: number | null;
+    channel_id?: number | null;
+    participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role?: string }>;
   }) => void;
   onAddTask: (projectId: string) => void;
   tasks: TaskItem[];
   projects: Project[];
   orgData: any[];
   usersData?: { users: any[]; currentUser: any };
-  externalWorkersData?: any[];
   partnerCompaniesData?: any[];
   partnerWorkersData?: any[];
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
 }) {
   const projectParticipants = (project as any).participants || [];
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
+  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'partner_worker' | 'partner_company'; id: string | number; name: string }>>(() => {
     return projectParticipants.map((p: any) => {
       if (p.user_id) {
         const user = usersData?.users.find((u: any) => u.id === p.user_id);
         return user ? { type: 'user' as const, id: user.id, name: user.name } : null;
-      } else if (p.external_worker_id) {
-        const worker = externalWorkersData?.find((w: any) => w.id === p.external_worker_id);
-        return worker ? { type: 'external' as const, id: worker.id, name: worker.name } : null;
+      } else if (p.partner_worker_id) {
+        const worker = partnerWorkersData?.find((w: any) => w.id === p.partner_worker_id);
+        return worker ? { type: 'partner_worker' as const, id: worker.id, name: worker.name_ko || worker.name_en || worker.name || '' } : null;
+      } else if (p.partner_company_id) {
+        const company = partnerCompaniesData?.find((c: any) => c.id === p.partner_company_id);
+        return company ? { type: 'partner_company' as const, id: company.id, name: company.company_name_ko || company.company_name_en || '' } : null;
       }
       return null;
-    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
+    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'partner_worker' | 'partner_company'; id: string | number; name: string }>;
   });
-  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
+  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'partner_worker' | 'partner_company'>('user');
   const [participantSelectId, setParticipantSelectId] = useState<string>('');
   const [statusValue, setStatusValue] = useState(project.status);
 
@@ -3358,10 +3392,16 @@ function ModalProject({
         setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name }]);
         setParticipantSelectId('');
       }
-    } else {
-      const worker = externalWorkersData?.find((w: any) => w.id === Number(participantSelectId));
-      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name }]);
+    } else if (participantSelectType === 'partner_worker') {
+      const worker = partnerWorkersData?.find((w: any) => w.id === Number(participantSelectId));
+      if (worker && !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === worker.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'partner_worker', id: worker.id, name: worker.name_ko || worker.name_en || worker.name || '' }]);
+        setParticipantSelectId('');
+      }
+    } else if (participantSelectType === 'partner_company') {
+      const company = partnerCompaniesData?.find((c: any) => c.id === Number(participantSelectId));
+      if (company && !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === company.id)) {
+        setSelectedParticipants((prev) => [...prev, { type: 'partner_company', id: company.id, name: company.company_name_ko || company.company_name_en || '' }]);
         setParticipantSelectId('');
       }
     }
@@ -3374,9 +3414,9 @@ function ModalProject({
   const handleSaveParticipants = () => {
     const participants = selectedParticipants.map((p) => ({
       user_id: p.type === 'user' ? (p.id as string) : undefined,
-      external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+      partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
+      partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
       role: 'participant',
-      is_pm: false,
     }));
     onUpdateProject({
       id: project.id,
@@ -3386,8 +3426,18 @@ function ModalProject({
       startDate: project.startDate,
       endDate: project.endDate,
       status: project.status,
-      pm_name: project.pm_name || null,
-      participants,
+      description: (project as any).description || null,
+      pm_id: (project as any).pm_id || null,
+      partner_company_id: (project as any).partner_company_id || null,
+      partner_worker_id: (project as any).partner_worker_id || null,
+      artist_id: (project as any).artist_id || null,
+      channel_id: (project as any).channel_id || null,
+      participants: selectedParticipants.map((p) => ({
+        user_id: p.type === 'user' ? (p.id as string) : undefined,
+        partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
+        partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
+        role: 'participant',
+      })),
     });
   };
   const statusOptions = [
@@ -3424,12 +3474,17 @@ function ModalProject({
                     startDate: project.startDate,
                     endDate: project.endDate,
                     status: newStatus,
-                    pm_name: project.pm_name || null,
+                    description: (project as any).description || null,
+                    pm_id: (project as any).pm_id || null,
+                    partner_company_id: (project as any).partner_company_id || null,
+                    partner_worker_id: (project as any).partner_worker_id || null,
+                    artist_id: (project as any).artist_id || null,
+                    channel_id: (project as any).channel_id || null,
                     participants: selectedParticipants.map((p) => ({
                       user_id: p.type === 'user' ? (p.id as string) : undefined,
-                      external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
+                      partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
+                      partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
                       role: 'participant',
-                      is_pm: false,
                     })),
                   });
                 }}
@@ -3577,13 +3632,14 @@ function ModalProject({
               <select
                 value={participantSelectType}
                 onChange={(e) => {
-                  setParticipantSelectType(e.target.value as 'user' | 'external');
+                  setParticipantSelectType(e.target.value as 'user' | 'partner_worker' | 'partner_company');
                   setParticipantSelectId('');
                 }}
                 className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
               >
                 <option value="user">내부 사용자</option>
-                <option value="external">외주 인력</option>
+                <option value="partner_worker">파트너 인력</option>
+                <option value="partner_company">파트너 회사</option>
               </select>
               <select
                 value={participantSelectId}
@@ -3597,11 +3653,17 @@ function ModalProject({
                         {u.name}
                       </option>
                     ))
-                  : (externalWorkersData ?? []).filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id)).map((w: any) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
+                  : participantSelectType === 'partner_worker'
+                    ? (partnerWorkersData ?? []).filter((w: any) => !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === w.id)).map((w: any) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name_ko || w.name_en || w.name || ''}
+                        </option>
+                      ))
+                    : (partnerCompaniesData ?? []).filter((c: any) => !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === c.id)).map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.company_name_ko || c.company_name_en || ''}
+                        </option>
+                      ))}
               </select>
               <button
                 type="button"
@@ -3920,185 +3982,6 @@ function ModalProject({
   );
 }
 
-function CreateProjectModal({
-  onClose,
-  onSubmit,
-  defaultBu,
-  usersData,
-  externalWorkersData,
-}: {
-  onClose: () => void;
-  onSubmit: (payload: { name: string; bu: BU; cat: string; startDate: string; endDate: string; pm_name?: string | null; participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }> }) => void;
-  defaultBu: BU;
-  usersData?: { users: any[]; currentUser: any };
-  externalWorkersData?: any[];
-}) {
-  const [form, setForm] = useState({
-    name: '',
-    bu: defaultBu,
-    cat: '',
-    startDate: '',
-    endDate: '',
-    pm_name: '',
-  });
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>([]);
-  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
-  const [participantSelectId, setParticipantSelectId] = useState<string>('');
-
-  const handleAddParticipant = () => {
-    if (!participantSelectId) return;
-
-    if (participantSelectType === 'user') {
-      const user = usersData?.users.find((u: any) => u.id === participantSelectId);
-      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name }]);
-        setParticipantSelectId('');
-      }
-    } else {
-      const worker = externalWorkersData?.find((w: any) => w.id === Number(participantSelectId));
-      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name }]);
-        setParticipantSelectId('');
-      }
-    }
-  };
-
-  const handleRemoveParticipant = (index: number) => {
-    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  return (
-    <ModalShell title="프로젝트 등록" onClose={onClose}>
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <SelectField
-            label="사업부"
-            value={form.bu}
-            onChange={(val) => setForm((prev) => ({ ...prev, bu: val as BU }))}
-            options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
-          />
-          <InputField
-            label="카테고리"
-            placeholder="예: 안무제작"
-            value={form.cat}
-            onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
-          />
-          <InputField
-            label="프로젝트명"
-            placeholder="프로젝트 이름"
-            value={form.name}
-            onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-          />
-          <SelectField
-            label="PM"
-            value={form.pm_name}
-            onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
-            options={[
-              { value: '', label: '선택 안함' },
-              ...((usersData?.users ?? [])
-                .map((u: any) => ({ value: u.name || '', label: u.name || '' }))
-                .filter((o: any) => o.value)),
-            ]}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <InputField
-              label="시작일"
-              type="date"
-              value={form.startDate}
-              onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
-            />
-            <InputField
-              label="종료일"
-              type="date"
-              value={form.endDate}
-              onChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
-            />
-          </div>
-        </div>
-
-        {/* 참여자 선택 섹션 */}
-        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            참여자 추가
-          </label>
-          <div className="flex gap-2 mb-3">
-            <select
-              value={participantSelectType}
-              onChange={(e) => {
-                setParticipantSelectType(e.target.value as 'user' | 'external');
-                setParticipantSelectId('');
-              }}
-              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-            >
-              <option value="user">내부 사용자</option>
-              <option value="external">외주 인력</option>
-            </select>
-            <select
-              value={participantSelectId}
-              onChange={(e) => setParticipantSelectId(e.target.value)}
-              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-            >
-              <option value="">선택하세요</option>
-              {participantSelectType === 'user'
-                ? (usersData?.users ?? []).map((u: any) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))
-                : (externalWorkersData ?? []).map((w: any) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-            </select>
-            <button
-              type="button"
-              onClick={handleAddParticipant}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-            >
-              추가
-            </button>
-          </div>
-          {selectedParticipants.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
-              <div className="flex flex-wrap gap-2">
-                {selectedParticipants.map((p, index) => (
-                  <span
-                    key={`${p.type}-${p.id}`}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
-                  >
-                    {p.name}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveParticipant(index)}
-                      className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      <ModalActions
-        onPrimary={() => {
-          const participants = selectedParticipants.map((p) => ({
-            user_id: p.type === 'user' ? (p.id as string) : undefined,
-            external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
-            role: 'participant',
-            is_pm: false,
-          }));
-          onSubmit({ ...form, pm_name: form.pm_name || null, participants });
-        }}
-        onClose={onClose}
-        primaryLabel="등록"
-      />
-    </ModalShell>
-  );
-}
 
 function CreateTaskModal({
   onClose,
@@ -4799,238 +4682,6 @@ function CalendarIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function EditProjectModal({
-  project,
-  onClose,
-  onSubmit,
-  usersData,
-  externalWorkersData,
-}: {
-  project: Project;
-  onClose: () => void;
-  onSubmit: (payload: {
-    id: string;
-    name: string;
-    bu: BU;
-    cat: string;
-    startDate: string;
-    endDate: string;
-    status?: string;
-    pm_name?: string | null;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
-  }) => void;
-  usersData?: { users: any[]; currentUser: any };
-  externalWorkersData?: any[];
-}) {
-  const projectParticipants = (project as any).participants || [];
-  const [form, setForm] = useState({
-    name: project.name,
-    bu: project.bu,
-    cat: project.cat,
-    startDate: project.startDate,
-    endDate: project.endDate,
-    status: project.status,
-    pm_name: (project as any).pm_name || '',
-  });
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
-    return projectParticipants.map((p: any) => {
-      if (p.user_id) {
-        const user = usersData?.users.find((u: any) => u.id === p.user_id);
-        return user ? { type: 'user' as const, id: user.id, name: user.name } : null;
-      } else if (p.external_worker_id) {
-        const worker = externalWorkersData?.find((w: any) => w.id === p.external_worker_id);
-        return worker ? { type: 'external' as const, id: worker.id, name: worker.name } : null;
-      }
-      return null;
-    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
-  });
-  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
-  const [participantSelectId, setParticipantSelectId] = useState<string>('');
-  const [error, setError] = useState<string>('');
-
-  const handleAddParticipant = () => {
-    if (!participantSelectId) return;
-
-    if (participantSelectType === 'user') {
-      const user = usersData?.users.find((u: any) => u.id === participantSelectId);
-      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name }]);
-        setParticipantSelectId('');
-      }
-    } else {
-      const worker = externalWorkersData?.find((w: any) => w.id === Number(participantSelectId));
-      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name }]);
-        setParticipantSelectId('');
-      }
-    }
-  };
-
-  const handleRemoveParticipant = (index: number) => {
-    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  return (
-    <ModalShell title="프로젝트 수정" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="사업부"
-          value={form.bu}
-          onChange={(val) => setForm((prev) => ({ ...prev, bu: val as BU }))}
-          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
-        />
-        <InputField
-          label="카테고리"
-          placeholder="예: 안무제작"
-          value={form.cat}
-          onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
-        />
-        <InputField
-          label="프로젝트명"
-          placeholder="프로젝트 이름"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <InputField
-            label="시작일"
-            type="date"
-            value={form.startDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
-          />
-          <InputField
-            label="종료일"
-            type="date"
-            value={form.endDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
-          />
-        </div>
-        <SelectField
-          label="상태"
-          value={form.status}
-          onChange={(val) => setForm((prev) => ({ ...prev, status: val }))}
-          options={[
-            { value: '준비중', label: '준비중' },
-            { value: '진행중', label: '진행중' },
-            { value: '운영중', label: '운영중' },
-            { value: '기획중', label: '기획중' },
-            { value: '완료', label: '완료' },
-          ]}
-        />
-        <SelectField
-          label="PM"
-          value={form.pm_name}
-          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...((usersData?.users ?? [])
-              .map((u: any) => ({ value: u.name || '', label: u.name || '' }))
-              .filter((o: any) => o.value)),
-          ]}
-        />
-      </div>
-
-      {/* 참여자 선택 섹션 */}
-      <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-          참여자 관리
-        </label>
-        <div className="flex gap-2 mb-3">
-          <select
-            value={participantSelectType}
-            onChange={(e) => {
-              setParticipantSelectType(e.target.value as 'user' | 'external');
-              setParticipantSelectId('');
-            }}
-            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-          >
-            <option value="user">내부 사용자</option>
-            <option value="external">외주 인력</option>
-          </select>
-          <select
-            value={participantSelectId}
-            onChange={(e) => setParticipantSelectId(e.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-          >
-            <option value="">선택하세요</option>
-            {participantSelectType === 'user'
-              ? (usersData?.users ?? []).filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id)).map((u: any) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))
-              : (externalWorkersData ?? []).filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id)).map((w: any) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-          </select>
-          <button
-            type="button"
-            onClick={handleAddParticipant}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-          >
-            추가
-          </button>
-        </div>
-        {selectedParticipants.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
-            <div className="flex flex-wrap gap-2">
-              {selectedParticipants.map((p, index) => (
-                <span
-                  key={`${p.type}-${p.id}`}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
-                >
-                  {p.name}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveParticipant(index)}
-                    className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-          <p className="text-xs font-semibold text-red-600">{error}</p>
-        </div>
-      )}
-      <ModalActions
-        onPrimary={() => {
-          const missingFields: string[] = [];
-          if (!form.name) missingFields.push('프로젝트명');
-          if (!form.cat) missingFields.push('카테고리');
-          
-          if (missingFields.length > 0) {
-            setError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
-            return;
-          }
-          
-          setError('');
-          const participants = selectedParticipants.map((p) => ({
-            user_id: p.type === 'user' ? (p.id as string) : undefined,
-            external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
-            role: 'participant',
-            is_pm: false,
-          }));
-          onSubmit({ ...form, id: project.id, pm_name: form.pm_name || null, participants });
-        }}
-        onClose={onClose}
-        primaryLabel="수정"
-      />
-      <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
-        <CommentSection entityType="project" entityId={Number(project.id)} />
-      </div>
-    </ModalShell>
-  );
-}
 
 function DeleteConfirmModal({
   title,

@@ -47,7 +47,7 @@ type ProjectItem = {
   startDate: string;
   endDate: string;
   status: string;
-  pm_name?: string;
+  pm_id?: string | null;
 };
 
 type TaskItem = {
@@ -114,6 +114,7 @@ export default function MyWorksPage() {
   const [view, setView] = useState<View>('projects');
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const { data, isLoading, error } = useMyWorks();
+  const { data: usersData } = useUsers();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -316,7 +317,7 @@ export default function MyWorksPage() {
 
         <div className="mx-auto w-full max-w-7xl px-4 py-8 space-y-6">
           {view === 'projects' && (
-            <ProjectsView projects={projects} onProjectClick={setSelectedProject} data={data} />
+            <ProjectsView projects={projects} onProjectClick={setSelectedProject} data={data} usersData={usersData} />
           )}
 
           {view === 'tasks' && (
@@ -368,10 +369,12 @@ function ProjectsView({
   projects,
   onProjectClick,
   data,
+  usersData,
 }: {
   projects: ProjectItem[];
   onProjectClick: (project: ProjectItem) => void;
   data?: { projects?: Project[]; tasks?: ProjectTask[]; user?: any };
+  usersData?: { users: any[]; currentUser: any };
 }) {
   return (
     <section>
@@ -438,12 +441,15 @@ function ProjectsView({
                       <span>{format(parseISO(project.endDate), 'yyyy-MM-dd', { locale: ko })}</span>
                     </div>
                   )}
-                  {project.pm_name && (
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">PM:</span>
-                      <span>{project.pm_name}</span>
-                    </div>
-                  )}
+                  {project.pm_id && usersData?.users && (() => {
+                    const pmUser = usersData.users.find((u: any) => u.id === project.pm_id);
+                    return pmUser ? (
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">PM:</span>
+                        <span>{pmUser.name}</span>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               </button>
             );
@@ -915,6 +921,7 @@ function ProjectDetailModal({
   onClose,
   onProjectUpdate,
   onTasksUpdate,
+  usersData,
 }: {
   project: ProjectItem;
   originalProject?: Project;
@@ -925,6 +932,7 @@ function ProjectDetailModal({
   onClose: () => void;
   onProjectUpdate: (updatedProject: ProjectItem) => void;
   onTasksUpdate: () => void;
+  usersData?: { users: any[]; currentUser: any };
 }) {
   const isReactProject = originalProject?.bu_code === 'REACT';
   const { data: channelsData } = useChannels(isReactProject ? 'REACT' : undefined);
@@ -937,7 +945,7 @@ function ProjectDetailModal({
     status: project.status,
     startDate: project.startDate,
     endDate: project.endDate,
-    pm_name: project.pm_name || '',
+    pm_id: project.pm_id || '',
     projectType: (originalProject as any)?.client_id ? 'external' as 'channel' | 'external' : 'channel' as 'channel' | 'external',
     channel_id: '',
     client_id: String((originalProject as any)?.client_id || ''),
@@ -980,7 +988,6 @@ function ProjectDetailModal({
   }, [tasks]);
 
   const queryClient = useQueryClient();
-  const { data: usersData } = useUsers();
   const updateProjectMutation = useUpdateProject();
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
@@ -993,7 +1000,7 @@ function ProjectDetailModal({
     const userName = user.name;
 
     // PM인 경우
-    if (originalProject.pm_name === userName) {
+    if (originalProject.pm_id === userId) {
       return true;
     }
 
@@ -1064,7 +1071,7 @@ function ProjectDetailModal({
         startDate: editForm.startDate,
         endDate: editForm.release_date || editForm.endDate,
         status: editForm.status,
-        pm_name: editForm.pm_name || null,
+        pm_id: (editForm as any).pm_id || null,
       });
       
       // REACT 프로젝트인 경우 추가 필드 포함
@@ -1281,21 +1288,30 @@ function ProjectDetailModal({
             )}
           </div>
 
-          {project.pm_name && (
-            <div>
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">PM</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editForm.pm_name}
-                  onChange={(e) => setEditForm({ ...editForm, pm_name: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-slate-900 dark:text-slate-100">{project.pm_name}</p>
-              )}
-            </div>
-          )}
+          {project.pm_id && usersData?.users && (() => {
+            const pmUser = usersData.users.find((u: any) => u.id === project.pm_id);
+            return pmUser ? (
+              <div>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">PM</label>
+                {isEditing ? (
+                  <select
+                    value={editForm.pm_id}
+                    onChange={(e) => setEditForm({ ...editForm, pm_id: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  >
+                    <option value="">선택 안함</option>
+                    {usersData.users.map((u: any) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="mt-1 text-sm text-slate-900 dark:text-slate-100">{pmUser.name}</p>
+                )}
+              </div>
+            ) : null;
+          })()}
 
           {/* REACT 프로젝트 전용 섹션 */}
           {isReactProject && (
@@ -1654,7 +1670,7 @@ function ProjectDetailModal({
                     status: project.status,
                     startDate: project.startDate,
                     endDate: project.endDate,
-                    pm_name: project.pm_name || '',
+                    pm_id: project.pm_id || '',
                     projectType: (originalProject as any)?.client_id ? 'external' as 'channel' | 'external' : 'channel' as 'channel' | 'external',
                     channel_id: '',
                     client_id: String((originalProject as any)?.client_id || ''),

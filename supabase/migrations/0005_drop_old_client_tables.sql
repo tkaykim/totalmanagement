@@ -15,3 +15,5 @@ DROP SEQUENCE IF EXISTS public.client_company_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS public.client_worker_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS public.external_workers_id_seq CASCADE;
 
+
+

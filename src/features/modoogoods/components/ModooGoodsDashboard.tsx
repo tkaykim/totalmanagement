@@ -66,6 +66,7 @@ import {
   useDeleteManual,
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
+import { ProjectModal } from '@/features/erp/components/ProjectModal';
 
 type ModooGoodsView =
   | 'dashboard'
@@ -2315,17 +2316,28 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
 
       {/* Project Modals */}
       {isProjectModalOpen && (
-        <CreateProjectModal
-          bu={bu}
-          clients={clientsData}
-          appUsers={(usersData as any)?.users || []}
-          externalWorkers={externalWorkersData}
+        <ProjectModal
+          defaultBu={bu}
+          usersData={{ users: (usersData as any)?.users || [], currentUser: null }}
+          partnerCompaniesData={[]}
+          partnerWorkersData={externalWorkersData}
+          placeholders={{
+            projectName: '예: 2026 봄시즌 단체복',
+            category: '예: 단체복, IP굿즈',
+            description: '단체복/굿즈 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => setProjectModalOpen(false)}
           onSubmit={async (data) => {
             try {
               await createProjectMutation.mutateAsync({
-                ...frontendProjectToDb(data),
-                client_id: data.client_id,
+                ...frontendProjectToDb({
+                  bu: data.bu,
+                  name: data.name,
+                  cat: data.cat,
+                  startDate: data.startDate,
+                  endDate: data.endDate,
+                  status: data.status || '준비중',
+                }),
               } as any);
               setProjectModalOpen(false);
             } catch (error) {
@@ -2335,20 +2347,39 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         />
       )}
       {isEditProjectModalOpen && (
-        <EditProjectModal
-          project={isEditProjectModalOpen}
-          bu={bu}
-          clients={clientsData}
-          appUsers={(usersData as any)?.users || []}
-          externalWorkers={externalWorkersData}
+        <ProjectModal
+          project={{
+            id: isEditProjectModalOpen.id,
+            bu: isEditProjectModalOpen.bu || bu,
+            name: isEditProjectModalOpen.name,
+            cat: isEditProjectModalOpen.cat,
+            startDate: isEditProjectModalOpen.startDate,
+            endDate: isEditProjectModalOpen.endDate,
+            status: isEditProjectModalOpen.status,
+          }}
+          defaultBu={bu}
+          usersData={{ users: (usersData as any)?.users || [], currentUser: null }}
+          partnerCompaniesData={[]}
+          partnerWorkersData={externalWorkersData}
+          placeholders={{
+            projectName: '예: 2026 봄시즌 단체복',
+            category: '예: 단체복, IP굿즈',
+            description: '단체복/굿즈 프로젝트 설명을 입력하세요',
+          }}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={async (data) => {
             try {
               await updateProjectMutation.mutateAsync({
                 id: Number(isEditProjectModalOpen.id),
                 data: {
-                  ...frontendProjectToDb(data),
-                  client_id: data.client_id,
+                  ...frontendProjectToDb({
+                    bu: data.bu,
+                    name: data.name,
+                    cat: data.cat,
+                    startDate: data.startDate,
+                    endDate: data.endDate,
+                    status: data.status || '준비중',
+                  }),
                 } as any,
               });
               setEditProjectModalOpen(null);
@@ -3320,388 +3351,6 @@ function EditClientModal({
       )}
       <ModalActions
         onPrimary={handleSubmit}
-        onClose={onClose}
-        primaryLabel="수정"
-      />
-    </ModalShell>
-  );
-}
-
-// Project Modals
-function CreateProjectModal({
-  bu,
-  clients,
-  appUsers,
-  externalWorkers,
-  onClose,
-  onSubmit,
-}: {
-  bu: BU;
-  clients: Client[];
-  appUsers: any[];
-  externalWorkers: any[];
-  onClose: () => void;
-  onSubmit: (data: {
-    bu: BU;
-    name: string;
-    cat: string;
-    startDate: string;
-    endDate: string;
-    status: string;
-    client_id?: number;
-    pm_name?: string | null;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
-  }) => void;
-}) {
-  const [form, setForm] = useState({
-    name: '',
-    cat: '단체복',
-    startDate: '',
-    endDate: '',
-    status: '준비중',
-    client_id: '',
-    pm_name: '',
-  });
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>([]);
-  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
-  const [participantSelectId, setParticipantSelectId] = useState<string>('');
-
-  const handleAddParticipant = () => {
-    if (!participantSelectId) return;
-
-    if (participantSelectType === 'user') {
-      const user = appUsers.find((u: any) => u.id === participantSelectId);
-      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name }]);
-        setParticipantSelectId('');
-      }
-    } else {
-      const worker = externalWorkers.find((w: any) => w.id === Number(participantSelectId));
-      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name }]);
-        setParticipantSelectId('');
-      }
-    }
-  };
-
-  const handleRemoveParticipant = (index: number) => {
-    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  return (
-    <ModalShell title="프로젝트 등록" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="카테고리"
-          value={form.cat}
-          onChange={(val) => setForm((prev) => ({ ...prev, cat: val }))}
-          options={[
-            { value: '단체복', label: '단체복' },
-            { value: '굿즈', label: '굿즈' },
-          ]}
-        />
-        <InputField
-          label="프로젝트명"
-          placeholder="프로젝트 이름"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <InputField
-            label="시작일"
-            type="date"
-            value={form.startDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
-          />
-          <InputField
-            label="종료일"
-            type="date"
-            value={form.endDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
-          />
-        </div>
-        <SelectField
-          label="상태"
-          value={form.status}
-          onChange={(val) => setForm((prev) => ({ ...prev, status: val }))}
-          options={[
-            { value: '준비중', label: '준비중' },
-            { value: '기획중', label: '기획중' },
-            { value: '진행중', label: '진행중' },
-            { value: '운영중', label: '운영중' },
-            { value: '완료', label: '완료' },
-          ]}
-        />
-        <SelectField
-          label="클라이언트"
-          value={form.client_id}
-          onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...clients.map((c) => ({
-              value: String(c.id),
-              label: c.company_name_ko || c.company_name_en || '',
-            })),
-          ]}
-        />
-        <SelectField
-          label="PM / 감독"
-          value={form.pm_name}
-          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...(Array.isArray(appUsers) ? appUsers.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value) : []),
-          ]}
-        />
-      </div>
-      <ModalActions
-        onPrimary={() =>
-          onSubmit({
-            bu,
-            name: form.name,
-            cat: form.cat,
-            startDate: form.startDate,
-            endDate: form.endDate,
-            status: form.status,
-            client_id: form.client_id ? Number(form.client_id) : undefined,
-            pm_name: form.pm_name || null,
-          })
-        }
-        onClose={onClose}
-        primaryLabel="등록"
-      />
-    </ModalShell>
-  );
-}
-
-function EditProjectModal({
-  project,
-  bu,
-  clients,
-  appUsers,
-  externalWorkers,
-  onClose,
-  onSubmit,
-}: {
-  project: any;
-  bu: BU;
-  clients: Client[];
-  appUsers: any[];
-  externalWorkers: any[];
-  onClose: () => void;
-  onSubmit: (data: {
-    bu: BU;
-    name: string;
-    cat: string;
-    startDate: string;
-    endDate: string;
-    status: string;
-    client_id?: number;
-    pm_name?: string | null;
-    participants?: Array<{ user_id?: string; external_worker_id?: number; role?: string; is_pm?: boolean }>;
-  }) => void;
-}) {
-  const projectParticipants = (project as any).participants || [];
-  const [form, setForm] = useState({
-    name: project.name || '',
-    cat: project.cat || '단체복',
-    startDate: project.startDate || '',
-    endDate: project.endDate || '',
-    status: project.status || '준비중',
-    client_id: project.client_id ? String(project.client_id) : '',
-    pm_name: project.pm_name || '',
-  });
-  const [selectedParticipants, setSelectedParticipants] = useState<Array<{ type: 'user' | 'external'; id: string | number; name: string }>>(() => {
-    return projectParticipants.map((p: any) => {
-      if (p.user_id) {
-        const user = appUsers.find((u: any) => u.id === p.user_id);
-        return user ? { type: 'user' as const, id: user.id, name: user.name } : null;
-      } else if (p.external_worker_id) {
-        const worker = externalWorkers.find((w: any) => w.id === p.external_worker_id);
-        return worker ? { type: 'external' as const, id: worker.id, name: worker.name } : null;
-      }
-      return null;
-    }).filter((p: any) => p !== null) as Array<{ type: 'user' | 'external'; id: string | number; name: string }>;
-  });
-  const [participantSelectType, setParticipantSelectType] = useState<'user' | 'external'>('user');
-  const [participantSelectId, setParticipantSelectId] = useState<string>('');
-
-  const handleAddParticipant = () => {
-    if (!participantSelectId) return;
-
-    if (participantSelectType === 'user') {
-      const user = appUsers.find((u: any) => u.id === participantSelectId);
-      if (user && !selectedParticipants.some((p) => p.type === 'user' && p.id === user.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'user', id: user.id, name: user.name }]);
-        setParticipantSelectId('');
-      }
-    } else {
-      const worker = externalWorkers.find((w: any) => w.id === Number(participantSelectId));
-      if (worker && !selectedParticipants.some((p) => p.type === 'external' && p.id === worker.id)) {
-        setSelectedParticipants((prev) => [...prev, { type: 'external', id: worker.id, name: worker.name }]);
-        setParticipantSelectId('');
-      }
-    }
-  };
-
-  const handleRemoveParticipant = (index: number) => {
-    setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  return (
-    <ModalShell title="프로젝트 수정" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="카테고리"
-          value={form.cat}
-          onChange={(val) => setForm((prev) => ({ ...prev, cat: val }))}
-          options={[
-            { value: '단체복', label: '단체복' },
-            { value: '굿즈', label: '굿즈' },
-          ]}
-        />
-        <InputField
-          label="프로젝트명"
-          placeholder="프로젝트 이름"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <InputField
-            label="시작일"
-            type="date"
-            value={form.startDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
-          />
-          <InputField
-            label="종료일"
-            type="date"
-            value={form.endDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
-          />
-        </div>
-        <SelectField
-          label="상태"
-          value={form.status}
-          onChange={(val) => setForm((prev) => ({ ...prev, status: val }))}
-          options={[
-            { value: '준비중', label: '준비중' },
-            { value: '기획중', label: '기획중' },
-            { value: '진행중', label: '진행중' },
-            { value: '운영중', label: '운영중' },
-            { value: '완료', label: '완료' },
-          ]}
-        />
-        <SelectField
-          label="클라이언트"
-          value={form.client_id}
-          onChange={(val) => setForm((prev) => ({ ...prev, client_id: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...clients.map((c) => ({
-              value: String(c.id),
-              label: c.company_name_ko || c.company_name_en || '',
-            })),
-          ]}
-        />
-        <SelectField
-          label="PM / 감독"
-          value={form.pm_name}
-          onChange={(val) => setForm((prev) => ({ ...prev, pm_name: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...(Array.isArray(appUsers) ? appUsers.map((u) => ({ value: u.name || '', label: u.name || '' })).filter((o) => o.value) : []),
-          ]}
-        />
-      </div>
-
-      {/* 참여자 선택 섹션 */}
-      <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-          참여자 관리
-        </label>
-        <div className="flex gap-2 mb-3">
-          <select
-            value={participantSelectType}
-            onChange={(e) => {
-              setParticipantSelectType(e.target.value as 'user' | 'external');
-              setParticipantSelectId('');
-            }}
-            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-          >
-            <option value="user">내부 사용자</option>
-            <option value="external">외주 인력</option>
-          </select>
-          <select
-            value={participantSelectId}
-            onChange={(e) => setParticipantSelectId(e.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-          >
-            <option value="">선택하세요</option>
-            {participantSelectType === 'user'
-              ? (appUsers ?? []).filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id)).map((u: any) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))
-              : (externalWorkers ?? []).filter((w: any) => !selectedParticipants.some((p) => p.type === 'external' && p.id === w.id)).map((w: any) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-          </select>
-          <button
-            type="button"
-            onClick={handleAddParticipant}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-          >
-            추가
-          </button>
-        </div>
-        {selectedParticipants.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs text-slate-500 dark:text-slate-400">선택된 참여자:</p>
-            <div className="flex flex-wrap gap-2">
-              {selectedParticipants.map((p, index) => (
-                <span
-                  key={`${p.type}-${p.id}`}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium"
-                >
-                  {p.name}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveParticipant(index)}
-                    className="ml-1 hover:text-blue-900 dark:hover:text-blue-100"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <ModalActions
-        onPrimary={() => {
-          const participants = selectedParticipants.map((p) => ({
-            user_id: p.type === 'user' ? (p.id as string) : undefined,
-            external_worker_id: p.type === 'external' ? (p.id as number) : undefined,
-            role: 'participant',
-            is_pm: false,
-          }));
-          onSubmit({
-            bu,
-            name: form.name,
-            cat: form.cat,
-            startDate: form.startDate,
-            endDate: form.endDate,
-            status: form.status,
-            client_id: form.client_id ? Number(form.client_id) : undefined,
-            pm_name: form.pm_name || null,
-            participants,
-          });
-        }}
         onClose={onClose}
         primaryLabel="수정"
       />

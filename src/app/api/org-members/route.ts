@@ -12,12 +12,21 @@ export async function GET() {
 
     if (unitsError) throw unitsError;
 
+    // org_members 테이블이 존재하지 않을 수 있으므로 에러 처리
     const { data: members, error: membersError } = await supabase
       .from('org_members')
       .select('*')
       .order('is_leader', { ascending: false });
 
-    if (membersError) throw membersError;
+    // org_members 테이블이 없을 경우 빈 배열로 처리
+    if (membersError) {
+      // 테이블이 존재하지 않는 경우 빈 결과 반환
+      const result = units?.map((unit) => ({
+        ...unit,
+        members: [],
+      })) || [];
+      return NextResponse.json(result);
+    }
 
     const result = units?.map((unit) => ({
       ...unit,
@@ -63,7 +72,13 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // org_members 테이블이 존재하지 않는 경우
+      return NextResponse.json(
+        { error: 'org_members 테이블이 존재하지 않습니다. 이 기능을 사용하려면 테이블을 생성해야 합니다.' },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json(data);
   } catch (error) {
