@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import GrigoEntDashboard from '@/features/grigoent/components/GrigoEntDashboard';
+import { WorkStatusWrapper } from '@/components/WorkStatusWrapper';
 
 export default function GrigoEntPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -23,7 +25,7 @@ export default function GrigoEntPage() {
 
       const { data: appUser } = await supabase
         .from('app_users')
-        .select('bu_code, role')
+        .select('*')
         .eq('id', user.id)
         .single();
 
@@ -44,11 +46,19 @@ export default function GrigoEntPage() {
         return;
       }
 
+      setCurrentUser({ ...user, profile: appUser });
       setLoading(false);
     };
 
     checkAuth();
   }, [router]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   if (loading) {
     return (
@@ -61,7 +71,11 @@ export default function GrigoEntPage() {
     );
   }
 
-  return <GrigoEntDashboard />;
+  return (
+    <WorkStatusWrapper currentUser={currentUser} onLogout={handleLogout}>
+      <GrigoEntDashboard />
+    </WorkStatusWrapper>
+  );
 }
 
 

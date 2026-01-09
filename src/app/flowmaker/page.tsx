@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import FlowMakerDashboard from '@/features/flowmaker/components/FlowMakerDashboard';
+import { WorkStatusWrapper } from '@/components/WorkStatusWrapper';
 import type { BU } from '@/types/database';
 
 export default function FlowMakerPage() {
   const router = useRouter();
   const [bu, setBu] = useState<BU>('FLOW');
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -25,7 +27,7 @@ export default function FlowMakerPage() {
 
       const { data: appUser } = await supabase
         .from('app_users')
-        .select('bu_code, role')
+        .select('*')
         .eq('id', user.id)
         .single();
 
@@ -46,11 +48,19 @@ export default function FlowMakerPage() {
         return;
       }
 
+      setCurrentUser({ ...user, profile: appUser });
       setLoading(false);
     };
 
     checkAuth();
   }, [router]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   if (loading) {
     return (
@@ -63,7 +73,11 @@ export default function FlowMakerPage() {
     );
   }
 
-  return <FlowMakerDashboard bu={bu} />;
+  return (
+    <WorkStatusWrapper currentUser={currentUser} onLogout={handleLogout}>
+      <FlowMakerDashboard bu={bu} />
+    </WorkStatusWrapper>
+  );
 }
 
 

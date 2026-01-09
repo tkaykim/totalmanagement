@@ -5,6 +5,13 @@ import { Monitor, Users, MapPin, Coffee, LogOut, Play, Zap, Sparkles, Clock } fr
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export type WorkStatus = 'OFF_WORK' | 'WORKING' | 'MEETING' | 'OUTSIDE' | 'BREAK';
 
@@ -62,10 +69,12 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
   const [currentTime, setCurrentTime] = useState(new Date());
   const [workStatus, setWorkStatus] = useState<WorkStatus>('OFF_WORK');
   const [isChanging, setIsChanging] = useState(false);
+  const [isStatusLoading, setIsStatusLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeMsg, setWelcomeMsg] = useState('');
   const [welcomeTitle, setWelcomeTitle] = useState('환영합니다!');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showOvertimeConfirm, setShowOvertimeConfirm] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -74,18 +83,25 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
 
   useEffect(() => {
     const fetchStatus = async () => {
+      setIsStatusLoading(true);
       try {
         const res = await fetch('/api/attendance/status');
         if (res.ok) {
           const data = await res.json();
           if (data.isCheckedIn && !data.isCheckedOut) {
             setWorkStatus('WORKING');
+          } else if (data.hasCheckedOut) {
+            // 이미 퇴근한 상태에서 재접속
+            setShowOvertimeConfirm(true);
+            setWorkStatus('OFF_WORK');
           } else {
             setWorkStatus('OFF_WORK');
           }
         }
       } catch (error) {
         console.error('Failed to fetch status:', error);
+      } finally {
+        setIsStatusLoading(false);
       }
     };
     fetchStatus();
@@ -171,11 +187,16 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
     userPosition,
     userInitials,
     isChanging,
+    isStatusLoading,
     showWelcome,
     welcomeTitle,
     welcomeMsg,
     showLogoutConfirm,
+    showOvertimeConfirm,
     setShowLogoutConfirm,
+    setShowOvertimeConfirm,
+    setWorkStatus,
+    triggerWelcome,
     handleStatusChange,
     confirmLogout,
     formatTimeDetail,
@@ -204,34 +225,70 @@ export function WorkStatusHeader({
   formatTimeDetail: (date: Date) => string;
   formatDateDetail: (date: Date) => string;
 }) {
+  const currentStatusConfig = STATUS_CONFIG[workStatus as keyof typeof STATUS_CONFIG];
+  const CurrentIcon = currentStatusConfig?.icon || Monitor;
+
   return (
-    <div className="flex items-center gap-4 flex-wrap">
-      <div className="hidden md:flex flex-col justify-center px-4 py-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm min-w-[140px]">
+    <div className="flex items-center gap-2 flex-wrap">
+      <div className="hidden md:flex flex-col justify-center px-3 py-1.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm min-w-[130px]">
         <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
           {formatDateDetail(currentTime)}
         </span>
-        <span className="text-2xl font-bold text-slate-800 dark:text-slate-200 font-mono tabular-nums tracking-tight flex items-center gap-1">
-          <Clock size={16} className="text-slate-500 dark:text-slate-400" />
+        <span className="text-xl font-bold text-slate-800 dark:text-slate-200 font-mono tabular-nums tracking-tight flex items-center gap-1">
+          <Clock size={14} className="text-slate-500 dark:text-slate-400" />
           {formatTimeDetail(currentTime)}
         </span>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center gap-2 md:gap-4 overflow-x-auto">
-        <div className="flex items-center gap-3 px-2 min-w-max">
-          <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-sm shadow-md">
+      <div className="bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center gap-1.5 md:gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 px-1.5 min-w-max">
+          <div className="w-9 h-9 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shadow-md">
             {userInitials}
           </div>
-          <div className="hidden md:block pr-2">
-            <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{userName}</div>
+          <div className="hidden md:block">
+            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">{userName}</div>
             {userPosition && (
-              <div className="text-xs text-slate-500 dark:text-slate-400">{userPosition}</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">{userPosition}</div>
             )}
           </div>
         </div>
 
-        <div className="hidden md:block h-8 w-px bg-slate-100 dark:bg-slate-700"></div>
+        <div className="hidden md:block h-7 w-px bg-slate-100 dark:bg-slate-700"></div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto p-1 overflow-x-auto no-scrollbar">
+        {/* 모바일: 드롭다운 */}
+        <div className="md:hidden w-full">
+          <Select
+            value={workStatus}
+            onValueChange={(value) => onStatusChange(value as WorkStatus)}
+            disabled={isChanging}
+          >
+            <SelectTrigger className="w-full h-9 text-sm">
+              <div className="flex items-center gap-2">
+                <CurrentIcon size={14} />
+                <SelectValue>
+                  {currentStatusConfig?.label || '상태 선택'}
+                </SelectValue>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => {
+                const status = key as WorkStatus;
+                const Icon = config.icon;
+                return (
+                  <SelectItem key={key} value={key}>
+                    <div className="flex items-center gap-2">
+                      <Icon size={14} />
+                      {config.label}
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* PC: 버튼들 */}
+        <div className="hidden md:flex items-center gap-1 p-0.5">
           {Object.entries(STATUS_CONFIG).map(([key, config]) => {
             const status = key as WorkStatus;
             const isActive = workStatus === status;
@@ -243,27 +300,27 @@ export function WorkStatusHeader({
                 onClick={() => onStatusChange(status)}
                 disabled={isChanging}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap',
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap',
                   isActive ? config.activeColor : config.inactiveColor,
                   !isActive && 'border',
                   isChanging && 'opacity-50 cursor-not-allowed',
                 )}
               >
-                <Icon size={16} className={isActive ? 'animate-pulse' : 'text-slate-400 dark:text-slate-500'} />
+                <Icon size={14} className={isActive ? 'animate-pulse' : 'text-slate-400 dark:text-slate-500'} />
                 {config.label}
               </button>
             );
           })}
         </div>
 
-        <div className="hidden md:block h-8 w-px bg-slate-100 dark:bg-slate-700"></div>
+        <div className="hidden md:block h-7 w-px bg-slate-100 dark:bg-slate-700"></div>
 
         <button
           onClick={() => onStatusChange('OFF_WORK')}
           disabled={isChanging}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors whitespace-nowrap ml-auto md:ml-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors whitespace-nowrap ml-auto md:ml-0 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <LogOut size={16} />
+          <LogOut size={14} />
           <span className="hidden md:inline">퇴근</span>
         </button>
       </div>
@@ -335,6 +392,54 @@ export function WorkStatusLogoutModal({
               className="flex-1 py-3 text-sm font-bold text-white bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               네, 퇴근합니다
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function WorkStatusOvertimeModal({
+  show,
+  isChanging,
+  onCancel,
+  onConfirm,
+}: {
+  show: boolean;
+  isChanging: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[101] backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="p-6 text-center">
+          <div className="w-16 h-16 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Zap size={32} />
+          </div>
+          <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100 mb-2">연장근무 재개</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">
+            이미 퇴근처리 하셨습니다.<br />
+            다시 근무를 재개하시나요?
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              disabled={isChanging}
+              className="flex-1 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              취소
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isChanging}
+              className="flex-1 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              예, 재개하기
             </button>
           </div>
         </div>

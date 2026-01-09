@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
+import { WorkStatusWrapper } from '@/components/WorkStatusWrapper';
 import type { BU } from '@/types/database';
 
 export default function ReactStudioPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -24,7 +26,7 @@ export default function ReactStudioPage() {
 
       const { data: appUser } = await supabase
         .from('app_users')
-        .select('bu_code, role')
+        .select('*')
         .eq('id', user.id)
         .single();
 
@@ -45,11 +47,19 @@ export default function ReactStudioPage() {
         return;
       }
 
+      setCurrentUser({ ...user, profile: appUser });
       setLoading(false);
     };
 
     checkAuth();
   }, [router]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   if (loading) {
     return (
@@ -62,7 +72,11 @@ export default function ReactStudioPage() {
     );
   }
 
-  return <ReactStudioDashboard bu="REACT" />;
+  return (
+    <WorkStatusWrapper currentUser={currentUser} onLogout={handleLogout}>
+      <ReactStudioDashboard bu="REACT" />
+    </WorkStatusWrapper>
+  );
 }
 
 

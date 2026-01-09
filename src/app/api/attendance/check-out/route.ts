@@ -14,31 +14,29 @@ export async function POST(request: NextRequest) {
     const today = format(new Date(), 'yyyy-MM-dd');
     const now = new Date().toISOString();
 
-    const { data: existingLog, error: checkError } = await supabase
+    // 같은 날짜의 모든 출근 기록 조회 (최신순)
+    const { data: existingLogs, error: checkError } = await supabase
       .from('attendance_logs')
       .select('*')
       .eq('user_id', user.id)
       .eq('work_date', today)
-      .single();
+      .order('check_in_at', { ascending: false });
 
     if (checkError) {
-      if (checkError.code === 'PGRST116') {
-        return NextResponse.json(
-          { error: '출근 기록이 없습니다. 먼저 출근해주세요.' },
-          { status: 400 }
-        );
-      }
       throw checkError;
     }
 
-    if (!existingLog.check_in_at) {
+    if (!existingLogs || existingLogs.length === 0) {
       return NextResponse.json(
         { error: '출근 기록이 없습니다. 먼저 출근해주세요.' },
         { status: 400 }
       );
     }
 
-    if (existingLog.check_out_at) {
+    // 가장 최근 출근 기록 중 퇴근 기록이 없는 것 찾기
+    const activeLog = existingLogs.find(log => log.check_in_at && !log.check_out_at);
+
+    if (!activeLog) {
       return NextResponse.json(
         { error: '이미 퇴근 처리되었습니다.' },
         { status: 400 }
@@ -50,7 +48,7 @@ export async function POST(request: NextRequest) {
       .update({
         check_out_at: now,
       })
-      .eq('id', existingLog.id)
+      .eq('id', activeLog.id)
       .select()
       .single();
 
