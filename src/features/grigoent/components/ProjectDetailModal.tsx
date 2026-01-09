@@ -5,6 +5,7 @@ import { X, Users, Plus, TrendingUp, TrendingDown, Edit3, Trash2, UserCircle, Do
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getTodayKST } from '@/lib/timezone';
 import type { Project, FinancialEntry, ProjectParticipant, Dancer, BU } from '@/types/database';
 import { dbFinancialToFrontend, frontendFinancialToDb } from '@/features/erp/utils';
 import { useDancers, useArtists, useCreateFinancialEntry, useUpdateFinancialEntry, useDeleteFinancialEntry, useUpdateProject } from '@/features/erp/hooks';
@@ -253,7 +254,7 @@ export function ProjectDetailModal({ project, financialEntries, onClose }: Proje
     cat: '',
     name: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayKST(),
     status: 'planned' as FinancialEntryStatus,
   });
 
@@ -273,7 +274,7 @@ export function ProjectDetailModal({ project, financialEntries, onClose }: Proje
         category: '참여자 페이',
         name: `${participantName} 페이`,
         amount: parseFormattedNumber(payment.amount),
-        date: payment.date || new Date().toISOString().split('T')[0],
+        date: payment.date || getTodayKST(),
         status: payment.status || 'planned',
       });
       await createFinancialMutation.mutateAsync(dbData);
@@ -310,7 +311,7 @@ export function ProjectDetailModal({ project, financialEntries, onClose }: Proje
         cat: '',
         name: '',
         amount: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayKST(),
         status: 'planned',
       });
       queryClient.invalidateQueries({ queryKey: ['my-artist-profile'] });
@@ -345,7 +346,7 @@ export function ProjectDetailModal({ project, financialEntries, onClose }: Proje
         cat: '',
         name: '',
         amount: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayKST(),
         status: 'planned',
       });
       queryClient.invalidateQueries({ queryKey: ['my-artist-profile'] });
@@ -378,7 +379,7 @@ export function ProjectDetailModal({ project, financialEntries, onClose }: Proje
       cat: '',
       name: '',
       amount: '',
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayKST(),
       status: 'planned',
     });
   };
@@ -683,7 +684,7 @@ export function ProjectDetailModal({ project, financialEntries, onClose }: Proje
                 {participantDetails.map((participant, index) => {
                   const payment = participantPayments[participant.id] || {
                     amount: '',
-                    date: new Date().toISOString().split('T')[0],
+                    date: getTodayKST(),
                     status: 'planned' as FinancialEntryStatus,
                   };
                   const originalParticipant = participants[index];

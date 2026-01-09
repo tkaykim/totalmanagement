@@ -1,5 +1,6 @@
 import type { Project, ProjectTask, FinancialEntry, ProjectStep, ProjectAssets } from '@/types/database';
 import type { BU } from '@/types/database';
+import { getTodayKST } from '@/lib/timezone';
 
 // DB 타입 -> 프론트 타입 변환
 export function dbProjectToFrontend(p: Project): {
@@ -128,7 +129,7 @@ export function frontendProjectToDb(p: {
   pm_name?: string | null;
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
 } {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayKST();
   const result: {
     bu_code: BU;
     name: string;
@@ -207,7 +208,7 @@ export function frontendTaskToDb(t: {
   priority?: 'high' | 'medium' | 'low';
   tag?: string;
 } {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayKST();
   return {
     project_id: Number(t.projectId),
     bu_code: t.bu,
@@ -247,7 +248,7 @@ export function frontendFinancialToDb(f: {
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
   actual_amount?: number | null;
 } {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayKST();
   return {
     project_id: Number(f.projectId),
     bu_code: f.bu,

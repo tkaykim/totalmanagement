@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { getTodayKST } from '@/lib/timezone';
 import type {
   BU,
   Client,
@@ -6594,7 +6595,7 @@ function FinancialSection({
     category: '',
     name: '',
     amount: '',
-    occurred_at: format(new Date(), 'yyyy-MM-dd'),
+    occurred_at: getTodayKST(),
     status: 'planned' as 'planned' | 'paid' | 'canceled',
     memo: '',
     partner_type: '' as 'company' | 'worker' | '',
@@ -6667,7 +6668,7 @@ function FinancialSection({
         category: '',
         name: '',
         amount: '',
-        occurred_at: format(new Date(), 'yyyy-MM-dd'),
+        occurred_at: getTodayKST(),
         status: 'planned',
         memo: '',
         partner_type: '',
@@ -6927,7 +6928,7 @@ function FinancialSection({
                     category: '',
                     name: '',
                     amount: '',
-                    occurred_at: format(new Date(), 'yyyy-MM-dd'),
+                    occurred_at: getTodayKST(),
                     status: 'planned',
                     memo: '',
                     partner_type: '',
@@ -7318,7 +7319,7 @@ function FinancialSection({
                     category: '',
                     name: '',
                     amount: '',
-                    occurred_at: format(new Date(), 'yyyy-MM-dd'),
+                    occurred_at: getTodayKST(),
                     status: 'planned',
                     memo: '',
                     partner_type: '',
@@ -9308,7 +9309,7 @@ function CreateFinanceModal({
     category: '',
     name: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayKST(),
     status: 'planned' as 'planned' | 'paid' | 'canceled',
   });
 

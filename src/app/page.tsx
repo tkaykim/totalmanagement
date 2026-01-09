@@ -32,6 +32,7 @@ import type { PeriodType } from '@/components/PeriodSelector';
 import { createClient } from '@/lib/supabase/client';
 import { format, isWithinInterval, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { cn, buToSlug } from '@/lib/utils';
+import { getTodayKST } from '@/lib/timezone';
 import {
   useProjects,
   useTasks,
@@ -593,7 +594,7 @@ export default function HomePage() {
         category: formState.cat,
         name: formState.name,
         amount: amount,
-        date: formState.date || new Date().toISOString().split('T')[0],
+        date: formState.date || getTodayKST(),
         status: 'planned',
         partner_company_id: formState.partnerType === 'company' && formState.partnerCompanyId 
           ? Number(formState.partnerCompanyId) 
@@ -802,7 +803,7 @@ export default function HomePage() {
   }) => {
     if (!payload.cat || !payload.name || !payload.amount) return;
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKST();
       const amount = Number(payload.amount);
       const actualAmount = payload.paymentMethod 
         ? calculateActualAmount(amount, payload.paymentMethod)

@@ -6,6 +6,7 @@ import { ModalShell, InputField, SelectField, ModalActions } from '@/features/er
 import { createWorkRequest, createCorrectionRequest } from '../api';
 import type { WorkRequestFormData, CorrectionRequestFormData } from '../types';
 import { cn } from '@/lib/utils';
+import { getTodayKST } from '@/lib/timezone';
 
 interface WorkRequestModalProps {
   isOpen: boolean;
@@ -13,16 +14,17 @@ interface WorkRequestModalProps {
 }
 
 export function WorkRequestModal({ isOpen, onClose }: WorkRequestModalProps) {
+  const todayKST = getTodayKST();
   const [activeTab, setActiveTab] = useState<'work' | 'correction'>('work');
   const [workForm, setWorkForm] = useState<WorkRequestFormData>({
     request_type: 'external_work',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date().toISOString().split('T')[0],
+    start_date: todayKST,
+    end_date: todayKST,
     reason: '',
   });
   const [correctionForm, setCorrectionForm] = useState<CorrectionRequestFormData>({
     correction_type: 'missing_check_in',
-    work_date: new Date().toISOString().split('T')[0],
+    work_date: todayKST,
     reason: '',
   });
 

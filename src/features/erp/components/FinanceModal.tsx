@@ -5,6 +5,7 @@ import { Calculator, TrendingUp, TrendingDown, Building2, User, Lock, AlertTrian
 import { ModalShell, InputField, SelectField, ModalActions } from './modal-components';
 import { checkFinancePermission, type FinancePermission } from '@/features/erp/lib/financePermissions';
 import type { AppUser, Project } from '@/types/database';
+import { getTodayKST } from '@/lib/timezone';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type PaymentMethod = 'vat_supply' | 'vat_total' | 'tax_free' | 'withholding' | 'card_payment';
@@ -336,7 +337,7 @@ export function FinanceModal({
       category: form.category,
       name: form.name,
       amount: parseInt(form.amount),
-      occurred_at: form.occurred_at || new Date().toISOString().split('T')[0],
+      occurred_at: form.occurred_at || getTodayKST(),
       status: form.status,
       partner_company_id: form.partnerType === 'company' && form.partner_company_id ? parseInt(form.partner_company_id) : null,
       partner_worker_id: form.partnerType === 'worker' && form.partner_worker_id ? parseInt(form.partner_worker_id) : null,

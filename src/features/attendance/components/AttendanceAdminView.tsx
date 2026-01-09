@@ -20,6 +20,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getTodayKST } from '@/lib/timezone';
 import { ApprovalQueue } from './ApprovalQueue';
 import { getApprovalQueue } from '../api';
 import type { ApprovalQueueItem } from '../types';
@@ -123,7 +124,7 @@ async function fetchOverview(date: string, buCode?: string): Promise<OverviewRes
 }
 
 export function AttendanceAdminView() {
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedDate, setSelectedDate] = useState(getTodayKST());
   const [selectedBu, setSelectedBu] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [showApprovalQueue, setShowApprovalQueue] = useState(false);
@@ -186,11 +187,11 @@ export function AttendanceAdminView() {
   };
 
   const handleToday = () => {
-    setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
+    setSelectedDate(getTodayKST());
   };
 
   const formattedDate = format(parseISO(selectedDate), 'yyyy년 M월 d일 (EEEE)', { locale: ko });
-  const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
+  const isToday = selectedDate === getTodayKST();
 
   if (error) {
     return (

@@ -37,6 +37,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { dbProjectToFrontend, dbTaskToFrontend, frontendTaskToDb, frontendProjectToDb } from '@/features/erp/utils';
 import type { Project, ProjectTask, BU, ProjectStep, Channel, Client } from '@/types/database';
 import { cn } from '@/lib/utils';
+import { getTodayKST } from '@/lib/timezone';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 
 type ProjectItem = {
@@ -498,7 +499,7 @@ function TasksView({
               {sortedDates.map((date) => {
                 const dateTasks = tasksByDate[date];
                 const isPast = new Date(date) < new Date();
-                const isToday = format(new Date(date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                const isToday = format(new Date(date), 'yyyy-MM-dd') === getTodayKST();
 
                 return (
                   <div
@@ -1112,7 +1113,7 @@ function ProjectDetailModal({
         bu: project.bu as BU,
         title: newTaskForm.title,
         assignee: newTaskForm.assignee,
-        dueDate: newTaskForm.dueDate || new Date().toISOString().split('T')[0],
+        dueDate: newTaskForm.dueDate || getTodayKST(),
         status: newTaskForm.status,
       });
       const createdTask = await createTaskMutation.mutateAsync(dbData);

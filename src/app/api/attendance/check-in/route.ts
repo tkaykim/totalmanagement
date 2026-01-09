@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { format } from 'date-fns';
+import { getTodayKST, getNowKSTISO } from '@/lib/timezone.server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const now = new Date().toISOString();
+    const today = getTodayKST();
+    const now = getNowKSTISO();
 
     // 같은 날짜의 모든 출근 기록 조회 (최신순)
     const { data: existingLogs, error: checkError } = await supabase

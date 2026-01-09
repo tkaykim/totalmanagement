@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { canViewAllAttendance } from '@/features/attendance/lib/permissions';
 import type { AppUser } from '@/types/database';
-import { format } from 'date-fns';
+import { getTodayKST } from '@/lib/timezone.server';
 
 export type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME';
 
@@ -32,8 +32,9 @@ export async function GET(request: NextRequest) {
 
     const dateParam = searchParams.get('date');
     const buCodeParam = searchParams.get('bu_code');
-    const targetDate = dateParam || format(new Date(), 'yyyy-MM-dd');
-    const isToday = targetDate === format(new Date(), 'yyyy-MM-dd');
+    const todayKST = getTodayKST();
+    const targetDate = dateParam || todayKST;
+    const isToday = targetDate === todayKST;
 
     const { data: allUsers, error: usersError } = await supabase
       .from('app_users')

@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { getTodayKST } from '@/lib/timezone';
 import type {
   BU,
   Channel,
@@ -5387,7 +5388,7 @@ function CreateFinanceModal({
     category: '',
     name: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayKST(),
     status: 'planned' as 'planned' | 'paid' | 'canceled',
   });
 

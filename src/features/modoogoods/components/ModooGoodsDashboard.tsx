@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { getTodayKST } from '@/lib/timezone';
 import type { BU, Client, Event, ProjectTask, ExternalWorker, Manual } from '@/types/database';
 import {
   useProjects,
@@ -3394,7 +3395,7 @@ function CreateTaskModal({
     projectId: defaultProjectId || projects[0]?.id || '',
     title: '',
     assignee: '',
-    dueDate: new Date().toISOString().split('T')[0],
+    dueDate: getTodayKST(),
     status: 'todo' as 'todo' | 'in-progress' | 'done',
     priority: 'medium' as 'high' | 'medium' | 'low',
     tag: '',
@@ -3816,7 +3817,7 @@ function CreateFinanceModal({
     category: '',
     name: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayKST(),
     status: 'planned' as 'planned' | 'paid' | 'canceled',
   });
 

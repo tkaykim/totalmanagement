@@ -45,6 +45,7 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getTodayKST } from '@/lib/timezone';
 import type { BU, Artist, Project, ProjectTask, Client, ClientStatus, Event, Manual, ExternalWorker, ExternalWorkerType, FinancialEntry, ArtistStatus, ArtistType } from '@/types/database';
 import {
   useArtists,
@@ -1471,7 +1472,7 @@ export default function GrigoEntDashboard() {
       category: entry?.category || '',
       name: entry?.name || '',
       amount: entry?.amount ? String(entry.amount) : '',
-      date: entry?.date || new Date().toISOString().split('T')[0],
+      date: entry?.date || getTodayKST(),
       status: entry?.status || 'planned',
     });
 
