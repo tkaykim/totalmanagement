@@ -85,18 +85,42 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
     const fetchStatus = async () => {
       setIsStatusLoading(true);
       try {
-        const res = await fetch('/api/attendance/status');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.isCheckedIn && !data.isCheckedOut) {
-            setWorkStatus('WORKING');
-          } else if (data.hasCheckedOut) {
-            // 이미 퇴근한 상태에서 재접속
-            setShowOvertimeConfirm(true);
-            setWorkStatus('OFF_WORK');
-          } else {
-            setWorkStatus('OFF_WORK');
+        // 출퇴근 상태 가져오기
+        const attendanceRes = await fetch('/api/attendance/status');
+        let isCheckedIn = false;
+        let isCheckedOut = false;
+        let hasCheckedOut = false;
+
+        if (attendanceRes.ok) {
+          const attendanceData = await attendanceRes.json();
+          isCheckedIn = attendanceData.isCheckedIn;
+          isCheckedOut = attendanceData.isCheckedOut;
+          hasCheckedOut = attendanceData.hasCheckedOut;
+        }
+
+        // 실시간 근무 상태 가져오기
+        const workStatusRes = await fetch('/api/attendance/work-status');
+        let realtimeStatus: WorkStatus = 'OFF_WORK';
+        if (workStatusRes.ok) {
+          const workStatusData = await workStatusRes.json();
+          if (workStatusData.status && workStatusData.status !== 'OFF_WORK') {
+            realtimeStatus = workStatusData.status as WorkStatus;
           }
+        }
+
+        // 상태 결정 로직
+        if (isCheckedIn && !isCheckedOut) {
+          // 출근 중인 경우, 실시간 상태 사용
+          if (realtimeStatus !== 'OFF_WORK') {
+            setWorkStatus(realtimeStatus);
+          } else {
+            setWorkStatus('WORKING');
+          }
+        } else if (hasCheckedOut) {
+          setShowOvertimeConfirm(true);
+          setWorkStatus('OFF_WORK');
+        } else {
+          setWorkStatus('OFF_WORK');
         }
       } catch (error) {
         console.error('Failed to fetch status:', error);
@@ -137,6 +161,13 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
         await onStatusChange(newStatus, previousStatus);
       }
 
+      // 실시간 상태를 user_work_status 테이블에 저장
+      await fetch('/api/attendance/work-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
       if (previousStatus === 'OFF_WORK' && newStatus === 'WORKING') {
         triggerWelcome('출근 완료!', WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)]);
       }
@@ -159,6 +190,14 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
       if (onStatusChange) {
         await onStatusChange('OFF_WORK');
       }
+      
+      // 실시간 상태를 OFF_WORK로 업데이트
+      await fetch('/api/attendance/work-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'OFF_WORK' }),
+      });
+      
       setWorkStatus('OFF_WORK');
       setShowLogoutConfirm(false);
       if (onLogout) {

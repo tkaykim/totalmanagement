@@ -6,7 +6,6 @@ import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import {
   Users,
-  Clock,
   Monitor,
   LogOut as LogOutIcon,
   Coffee,
@@ -15,8 +14,12 @@ import {
   Building2,
   Zap,
   RefreshCw,
+  UserX,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME';
 
 interface UserAttendance {
   user_id: string;
@@ -25,7 +28,8 @@ interface UserAttendance {
   role: string;
   bu_code: string | null;
   position: string | null;
-  work_status: 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT';
+  display_status: DisplayWorkStatus;
+  realtime_status: string | null;
   first_check_in: string | null;
   last_check_out: string | null;
   is_overtime: boolean;
@@ -37,11 +41,13 @@ interface OverviewStats {
   working: number;
   checked_out: number;
   off_work: number;
+  away: number;
   overtime: number;
 }
 
 interface OverviewResponse {
   date: string;
+  is_today: boolean;
   stats: OverviewStats;
   users: UserAttendance[];
 }
@@ -55,7 +61,13 @@ const BU_LABELS: Record<string, string> = {
   HEAD: '본사',
 };
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<DisplayWorkStatus, {
+  label: string;
+  icon: any;
+  bgColor: string;
+  textColor: string;
+  dotColor: string;
+}> = {
   WORKING: {
     label: '근무중',
     icon: Monitor,
@@ -72,10 +84,24 @@ const STATUS_CONFIG = {
   },
   OFF_WORK: {
     label: '미출근',
+    icon: UserX,
+    bgColor: 'bg-red-100 dark:bg-red-900/30',
+    textColor: 'text-red-700 dark:text-red-400',
+    dotColor: 'bg-red-500',
+  },
+  AWAY: {
+    label: '자리비움',
     icon: Coffee,
     bgColor: 'bg-orange-100 dark:bg-orange-900/30',
     textColor: 'text-orange-700 dark:text-orange-400',
     dotColor: 'bg-orange-500',
+  },
+  OVERTIME: {
+    label: '연장근무중',
+    icon: Zap,
+    bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+    textColor: 'text-purple-700 dark:text-purple-400',
+    dotColor: 'bg-purple-500',
   },
 };
 
@@ -105,7 +131,7 @@ export function AttendanceAdminView() {
   const filteredUsers = useMemo(() => {
     if (!data?.users) return [];
     if (!statusFilter) return data.users;
-    return data.users.filter((u) => u.work_status === statusFilter);
+    return data.users.filter((u) => u.display_status === statusFilter);
   }, [data?.users, statusFilter]);
 
   const groupedByBu = useMemo(() => {
@@ -209,7 +235,8 @@ export function AttendanceAdminView() {
 
       {/* Stats Cards */}
       {data?.stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          {/* 전체 */}
           <div
             onClick={() => setStatusFilter('')}
             className={cn(
@@ -228,6 +255,7 @@ export function AttendanceAdminView() {
             </p>
           </div>
 
+          {/* 근무중 */}
           <div
             onClick={() => setStatusFilter('WORKING')}
             className={cn(
@@ -246,12 +274,13 @@ export function AttendanceAdminView() {
             </p>
           </div>
 
+          {/* 퇴근 */}
           <div
             onClick={() => setStatusFilter('CHECKED_OUT')}
             className={cn(
               'rounded-2xl p-4 border cursor-pointer transition',
               statusFilter === 'CHECKED_OUT'
-                ? 'bg-slate-100 dark:bg-slate-700 border-slate-400 dark:border-slate-500'
+                ? 'bg-slate-200 dark:bg-slate-600 border-slate-400 dark:border-slate-500'
                 : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-400'
             )}
           >
@@ -264,25 +293,54 @@ export function AttendanceAdminView() {
             </p>
           </div>
 
+          {/* 미출근 */}
           <div
             onClick={() => setStatusFilter('OFF_WORK')}
             className={cn(
               'rounded-2xl p-4 border cursor-pointer transition',
               statusFilter === 'OFF_WORK'
+                ? 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700'
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-red-300'
+            )}
+          >
+            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
+              <UserX className="h-4 w-4" />
+              <span className="text-xs font-medium">미출근</span>
+            </div>
+            <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+              {data.stats.off_work}명
+            </p>
+          </div>
+
+          {/* 자리비움 */}
+          <div
+            onClick={() => setStatusFilter('AWAY')}
+            className={cn(
+              'rounded-2xl p-4 border cursor-pointer transition',
+              statusFilter === 'AWAY'
                 ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700'
                 : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-orange-300'
             )}
           >
             <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-1">
               <Coffee className="h-4 w-4" />
-              <span className="text-xs font-medium">미출근</span>
+              <span className="text-xs font-medium">자리비움</span>
             </div>
             <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">
-              {data.stats.off_work}명
+              {data.stats.away}명
             </p>
           </div>
 
-          <div className="rounded-2xl p-4 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700">
+          {/* 연장근무 */}
+          <div
+            onClick={() => setStatusFilter('OVERTIME')}
+            className={cn(
+              'rounded-2xl p-4 border cursor-pointer transition',
+              statusFilter === 'OVERTIME'
+                ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700'
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-purple-300'
+            )}
+          >
             <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-1">
               <Zap className="h-4 w-4" />
               <span className="text-xs font-medium">연장근무</span>
@@ -333,7 +391,7 @@ export function AttendanceAdminView() {
 
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {users.map((user) => {
-                  const statusConfig = STATUS_CONFIG[user.work_status];
+                  const statusConfig = STATUS_CONFIG[user.display_status];
                   const StatusIcon = statusConfig.icon;
 
                   return (
@@ -356,11 +414,6 @@ export function AttendanceAdminView() {
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-slate-100">
                             {user.name}
-                            {user.is_overtime && (
-                              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold">
-                                연장
-                              </span>
-                            )}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
                             {user.position || user.role}
@@ -383,7 +436,7 @@ export function AttendanceAdminView() {
                         </div>
                         <div
                           className={cn(
-                            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold',
+                            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold min-w-[90px] justify-center',
                             statusConfig.bgColor,
                             statusConfig.textColor
                           )}

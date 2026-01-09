@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { canViewAllAttendance } from '@/features/attendance/lib/permissions';
 import type { AppUser } from '@/types/database';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
+
+export type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,6 +33,7 @@ export async function GET(request: NextRequest) {
     const dateParam = searchParams.get('date');
     const buCodeParam = searchParams.get('bu_code');
     const targetDate = dateParam || format(new Date(), 'yyyy-MM-dd');
+    const isToday = targetDate === format(new Date(), 'yyyy-MM-dd');
 
     const { data: allUsers, error: usersError } = await supabase
       .from('app_users')
@@ -52,6 +55,20 @@ export async function GET(request: NextRequest) {
 
     if (logsError) throw logsError;
 
+    // 오늘인 경우에만 실시간 상태 조회
+    let workStatusByUserId: Record<string, string> = {};
+    if (isToday) {
+      const { data: workStatuses, error: statusError } = await supabase
+        .from('user_work_status')
+        .select('user_id, status');
+
+      if (!statusError && workStatuses) {
+        workStatuses.forEach((ws) => {
+          workStatusByUserId[ws.user_id] = ws.status;
+        });
+      }
+    }
+
     const logsByUserId: Record<string, any[]> = {};
     todayLogs?.forEach((log) => {
       if (!logsByUserId[log.user_id]) {
@@ -65,6 +82,7 @@ export async function GET(request: NextRequest) {
       const hasCheckedIn = userLogs.some((l) => l.check_in_at);
       const hasCheckedOut = userLogs.every((l) => l.check_out_at) && userLogs.length > 0;
       const isOvertime = userLogs.some((l) => l.is_overtime);
+      const realtimeStatus = workStatusByUserId[u.id];
 
       let firstCheckIn: string | null = null;
       let lastCheckOut: string | null = null;
@@ -82,11 +100,24 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      let workStatus: 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' = 'OFF_WORK';
-      if (hasCheckedIn && !hasCheckedOut) {
-        workStatus = 'WORKING';
-      } else if (hasCheckedIn && hasCheckedOut) {
-        workStatus = 'CHECKED_OUT';
+      // 상태 결정 로직:
+      // 1. 출근 데이터 없음 → 미출근 (OFF_WORK)
+      // 2. 출근+퇴근 완료 → 퇴근 (CHECKED_OUT)
+      // 3. 출근 중 + 실시간 상태가 BREAK/MEETING → 자리비움 (AWAY)
+      // 4. 출근 중 + is_overtime → 연장근무중 (OVERTIME)
+      // 5. 출근 중 → 근무중 (WORKING)
+      let displayStatus: DisplayWorkStatus = 'OFF_WORK';
+      
+      if (!hasCheckedIn) {
+        displayStatus = 'OFF_WORK';
+      } else if (hasCheckedOut) {
+        displayStatus = 'CHECKED_OUT';
+      } else if (isToday && (realtimeStatus === 'BREAK' || realtimeStatus === 'MEETING')) {
+        displayStatus = 'AWAY';
+      } else if (isOvertime && !hasCheckedOut) {
+        displayStatus = 'OVERTIME';
+      } else {
+        displayStatus = 'WORKING';
       }
 
       return {
@@ -96,7 +127,8 @@ export async function GET(request: NextRequest) {
         role: u.role,
         bu_code: u.bu_code,
         position: u.position,
-        work_status: workStatus,
+        display_status: displayStatus,
+        realtime_status: realtimeStatus || null,
         first_check_in: firstCheckIn,
         last_check_out: lastCheckOut,
         is_overtime: isOvertime,
@@ -106,14 +138,16 @@ export async function GET(request: NextRequest) {
 
     const stats = {
       total: overview?.length || 0,
-      working: overview?.filter((o) => o.work_status === 'WORKING').length || 0,
-      checked_out: overview?.filter((o) => o.work_status === 'CHECKED_OUT').length || 0,
-      off_work: overview?.filter((o) => o.work_status === 'OFF_WORK').length || 0,
-      overtime: overview?.filter((o) => o.is_overtime).length || 0,
+      working: overview?.filter((o) => o.display_status === 'WORKING').length || 0,
+      checked_out: overview?.filter((o) => o.display_status === 'CHECKED_OUT').length || 0,
+      off_work: overview?.filter((o) => o.display_status === 'OFF_WORK').length || 0,
+      away: overview?.filter((o) => o.display_status === 'AWAY').length || 0,
+      overtime: overview?.filter((o) => o.display_status === 'OVERTIME').length || 0,
     };
 
     return NextResponse.json({
       date: targetDate,
+      is_today: isToday,
       stats,
       users: overview,
     });
