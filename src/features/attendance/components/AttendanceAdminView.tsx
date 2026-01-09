@@ -15,9 +15,12 @@ import {
   Zap,
   RefreshCw,
   UserX,
-  Clock,
+  ClipboardCheck,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ApprovalQueue } from './ApprovalQueue';
 
 type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME';
 
@@ -121,6 +124,7 @@ export function AttendanceAdminView() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedBu, setSelectedBu] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [showApprovalQueue, setShowApprovalQueue] = useState(true);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['attendance-admin-overview', selectedDate, selectedBu],
@@ -351,6 +355,34 @@ export function AttendanceAdminView() {
           </div>
         </div>
       )}
+
+      {/* Approval Queue Section */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <button
+          onClick={() => setShowApprovalQueue(!showApprovalQueue)}
+          className="w-full px-6 py-4 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition"
+        >
+          <div className="flex items-center gap-3">
+            <ClipboardCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              결재 대기함
+            </h2>
+            <span className="text-sm text-slate-500 dark:text-slate-400">
+              (근무 생성/수정 요청 승인 및 반려)
+            </span>
+          </div>
+          {showApprovalQueue ? (
+            <ChevronUp className="h-5 w-5 text-slate-500" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-slate-500" />
+          )}
+        </button>
+        {showApprovalQueue && (
+          <div className="p-6 border-t border-slate-200 dark:border-slate-700">
+            <ApprovalQueue />
+          </div>
+        )}
+      </div>
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
