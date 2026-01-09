@@ -33,6 +33,15 @@ import {
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { getTodayKST } from '@/lib/timezone';
+import { DashboardHeader, useWorkStatus } from '@/components/DashboardHeader';
+import type { PeriodType } from '@/components/PeriodSelector';
+import {
+  WorkStatusWelcomeModal,
+  WorkStatusLogoutModal,
+  WorkStatusOvertimeModal,
+  WorkStatus,
+} from '@/components/WorkStatusHeader';
+import { checkIn, checkOut } from '@/features/attendance/api';
 import type { BU, Client, Event, ProjectTask, ExternalWorker, Manual } from '@/types/database';
 import {
   useProjects,
@@ -94,9 +103,13 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ModooGoodsView>('dashboard');
   const [user, setUser] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Work status hook
+  const workStatusHook = useWorkStatus(user);
   
   // Date filtering state
-  const [periodType, setPeriodType] = useState<'year' | 'quarter' | 'month' | 'custom'>('month');
+  const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedQuarter, setSelectedQuarter] = useState<number>(Math.floor(new Date().getMonth() / 3) + 1);
   const [selectedQuarterYear, setSelectedQuarterYear] = useState<number>(new Date().getFullYear());
@@ -239,10 +252,20 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
     router.push('/login');
   };
 
-  const handlePeriodTypeChange = (type: 'year' | 'quarter' | 'month' | 'custom') => {
+  const handlePeriodTypeChange = (type: PeriodType) => {
     setPeriodType(type);
     if (type !== 'custom') {
       setCustomRange({ start: undefined, end: undefined });
+    }
+  };
+
+  const handleStatusChange = async (newStatus: WorkStatus, previousStatus?: WorkStatus) => {
+    if (newStatus === 'WORKING' && previousStatus === 'OFF_WORK') {
+      await checkIn();
+      workStatusHook.triggerWelcome('출근 완료!', '오늘도 좋은 하루 되세요.');
+    } else if (newStatus === 'OFF_WORK' && previousStatus === 'WORKING') {
+      await checkOut();
+      workStatusHook.triggerWelcome('퇴근 완료!', '수고하셨습니다. 내일 봐요!');
     }
   };
 
@@ -1945,191 +1968,58 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
       </aside>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
-        <header className="bg-white dark:bg-slate-800 border-b border-gray-200 shadow-sm z-10">
-          <div className="flex flex-col px-4 lg:px-8 py-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold text-gray-800 capitalize">
-                {menuItems.find((m) => m.id === activeTab)?.label}
-              </h2>
-              {activeTab === 'dashboard' && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setProjectModalOpen(true)}
-                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> 프로젝트
-                  </button>
-                  <button
-                    onClick={() => setTaskModalOpen(true)}
-                    className="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> 할일
-                  </button>
-                  <button
-                    onClick={() => setFinanceModalOpen({ mode: 'revenue' })}
-                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> 매출
-                  </button>
-                  <button
-                    onClick={() => setFinanceModalOpen({ mode: 'expense' })}
-                    className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> 지출
-                  </button>
-                </div>
-              )}
-            </div>
-            {activeTab === 'dashboard' && (
-              <div className="flex flex-col gap-3">
-                {/* Period type buttons */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handlePeriodTypeChange('month')}
-                    className={cn(
-                      'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                      periodType === 'month'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    )}
-                  >
-                    월별
-                  </button>
-                  <button
-                    onClick={() => handlePeriodTypeChange('quarter')}
-                    className={cn(
-                      'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                      periodType === 'quarter'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    )}
-                  >
-                    분기별
-                  </button>
-                  <button
-                    onClick={() => handlePeriodTypeChange('year')}
-                    className={cn(
-                      'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                      periodType === 'year'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    )}
-                  >
-                    연도별
-                  </button>
-                  <button
-                    onClick={() => handlePeriodTypeChange('custom')}
-                    className={cn(
-                      'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                      periodType === 'custom'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    )}
-                  >
-                    기간설정
-                  </button>
-                </div>
+        <DashboardHeader
+          title={menuItems.find((m) => m.id === activeTab)?.label || '대시보드'}
+          onMenuClick={() => setMobileMenuOpen(true)}
+          showMobileMenu={true}
+          periodType={periodType}
+          onPeriodTypeChange={handlePeriodTypeChange}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+          selectedQuarter={selectedQuarter}
+          onQuarterChange={setSelectedQuarter}
+          selectedQuarterYear={selectedQuarterYear}
+          onQuarterYearChange={setSelectedQuarterYear}
+          customRange={customRange}
+          onCustomRangeChange={handleDateChange}
+          yearOptions={yearOptions}
+          workStatusHook={workStatusHook}
+          onStatusChange={(status) => workStatusHook.handleStatusChange(status, handleStatusChange)}
+          showMonitoring={true}
+          showNotification={true}
+        />
 
-                {/* Period selection UI */}
-                {periodType === 'year' && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-gray-600">연도:</label>
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(Number(e.target.value))}
-                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {yearOptions.map((year) => (
-                        <option key={year} value={year}>
-                          {year}년
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {periodType === 'quarter' && (
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <label className="text-[11px] font-semibold text-gray-600">연도:</label>
-                      <select
-                        value={selectedQuarterYear}
-                        onChange={(e) => setSelectedQuarterYear(Number(e.target.value))}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        {yearOptions.map((year) => (
-                          <option key={year} value={year}>
-                            {year}년
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-[11px] font-semibold text-gray-600">분기:</label>
-                      <select
-                        value={selectedQuarter}
-                        onChange={(e) => setSelectedQuarter(Number(e.target.value))}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value={1}>1분기 (1-3월)</option>
-                        <option value={2}>2분기 (4-6월)</option>
-                        <option value={3}>3분기 (7-9월)</option>
-                        <option value={4}>4분기 (10-12월)</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {periodType === 'month' && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-gray-600">월:</label>
-                    <select
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                        <option key={month} value={month}>
-                          {month}월
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(Number(e.target.value))}
-                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {yearOptions.map((year) => (
-                        <option key={year} value={year}>
-                          {year}년
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {periodType === 'custom' && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-gray-600">시작일:</label>
-                    <input
-                      type="date"
-                      value={customRange.start ?? ''}
-                      onChange={(e) => handleDateChange('start', e.target.value)}
-                      className="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px]"
-                    />
-                    <label className="text-[11px] font-semibold text-gray-600">종료일:</label>
-                    <input
-                      type="date"
-                      value={customRange.end ?? ''}
-                      onChange={(e) => handleDateChange('end', e.target.value)}
-                      className="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px]"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+        {/* Quick action buttons for dashboard */}
+        {activeTab === 'dashboard' && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setProjectModalOpen(true)}
+              className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> 프로젝트
+            </button>
+            <button
+              onClick={() => setTaskModalOpen(true)}
+              className="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> 할일
+            </button>
+            <button
+              onClick={() => setFinanceModalOpen({ mode: 'revenue' })}
+              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> 매출
+            </button>
+            <button
+              onClick={() => setFinanceModalOpen({ mode: 'expense' })}
+              className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> 지출
+            </button>
           </div>
-        </header>
+        )}
 
         <main className="flex-1 overflow-hidden p-4 lg:p-8">
           {renderView()}
@@ -2612,6 +2502,28 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
           }}
         />
       )}
+
+      {/* WorkStatus Modals */}
+      <WorkStatusWelcomeModal
+        showWelcome={workStatusHook.showWelcome}
+        welcomeTitle={workStatusHook.welcomeTitle}
+        welcomeMsg={workStatusHook.welcomeMsg}
+      />
+      <WorkStatusLogoutModal
+        showLogoutConfirm={workStatusHook.showLogoutConfirm}
+        onConfirm={() => workStatusHook.confirmLogout(undefined, handleLogout)}
+        onCancel={() => workStatusHook.setShowLogoutConfirm(false)}
+        isChanging={workStatusHook.isChanging}
+      />
+      <WorkStatusOvertimeModal
+        show={workStatusHook.showOvertimeConfirm}
+        onConfirm={async () => {
+          workStatusHook.setShowOvertimeConfirm(false);
+          await workStatusHook.handleStatusChange('OVERTIME', handleStatusChange);
+        }}
+        onCancel={() => workStatusHook.setShowOvertimeConfirm(false)}
+        isChanging={workStatusHook.isChanging}
+      />
     </div>
   );
 }

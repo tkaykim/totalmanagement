@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export type WorkStatus = 'OFF_WORK' | 'WORKING' | 'MEETING' | 'OUTSIDE' | 'BREAK';
+export type WorkStatus = 'OFF_WORK' | 'WORKING' | 'MEETING' | 'OUTSIDE' | 'BREAK' | 'OVERTIME';
 
 interface WorkStatusHeaderProps {
   currentUser?: {
