@@ -33,12 +33,14 @@ import { createClient } from '@/lib/supabase/client';
 import { format, isWithinInterval, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { cn, buToSlug } from '@/lib/utils';
 import { getTodayKST } from '@/lib/timezone';
+import { getVisibleMenus, canViewAllBuStats, canCreateProject, type AppUser as PermAppUser } from '@/lib/permissions';
 import {
   useProjects,
   useTasks,
   useFinancialEntries,
   useCreateProject,
   useCreateTask,
+  useDeleteTask,
   useCreateFinancialEntry,
   useUpdateTask,
   useUpdateProject,
@@ -67,8 +69,7 @@ import {
   frontendFinancialToDb,
 } from '@/features/erp/utils';
 import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
-import { CommentSection } from '@/features/comments/components/CommentSection';
-import { ProjectModal } from '@/features/erp/components/ProjectModal';
+import { UnifiedProjectModal } from '@/features/erp/components/UnifiedProjectModal';
 import { DashboardView } from '@/features/erp/components/DashboardView';
 import { StatCard } from '@/features/erp/components/StatCard';
 import { ProjectsView } from '@/features/erp/components/ProjectsView';
@@ -77,6 +78,14 @@ import { AttendanceManagementView } from '@/features/attendance/components/Atten
 import { AttendanceAdminView } from '@/features/attendance/components/AttendanceAdminView';
 import { BuTabs } from '@/features/erp/components/BuTabs';
 import { FinanceRow } from '@/features/erp/components/FinanceRow';
+import { DeleteConfirmModal } from '@/features/erp/components/modal-components';
+import { UnifiedTaskModal } from '@/features/erp/components/UnifiedTaskModal';
+import { CreateOrgMemberModal, EditOrgMemberModal, CreateExternalWorkerModal, EditExternalWorkerModal } from '@/features/erp/components/OrgModals';
+import { EditUserModal, CreateUserModal } from '@/features/erp/components/UserModals';
+import { TasksView } from '@/features/erp/components/TasksView';
+import { OrganizationView } from '@/features/erp/components/OrganizationView';
+import { CreateFinanceModal, EditFinanceModal } from '@/features/erp/components/FinanceFormModals';
+import { CommentSection } from '@/features/comments/components/CommentSection';
 import {
   Sheet,
   SheetContent,
@@ -96,119 +105,6 @@ import {
   BU_CHIP_STYLES,
   formatCurrency,
 } from '@/features/erp/types';
-
-const INITIAL_PROJECTS: Project[] = [
-  {
-    id: 'p1',
-    bu: 'GRIGO',
-    name: 'S그룹 아이돌 안무 제작',
-    cat: '안무제작',
-    startDate: '2025-01-10',
-    endDate: '2025-06-30',
-    status: '진행중',
-  },
-  {
-    id: 'p2',
-    bu: 'GRIGO',
-    name: '음료 브랜드 CF 정산',
-    cat: '출연료',
-    startDate: '2025-03-01',
-    endDate: '2025-05-30',
-    status: '완료',
-  },
-  {
-    id: 'p3',
-    bu: 'REACT',
-    name: '외부 광고 홍보 영상',
-    cat: '외주제작',
-    startDate: '2025-05-01',
-    endDate: '2025-07-31',
-    status: '준비중',
-  },
-  {
-    id: 'p4',
-    bu: 'FLOW',
-    name: '여름 댄스 페스티벌 2025',
-    cat: '자체행사',
-    startDate: '2025-06-01',
-    endDate: '2025-08-31',
-    status: '기획중',
-  },
-  {
-    id: 'p5',
-    bu: 'AST',
-    name: '뷰티 브랜드 캠페인',
-    cat: '광고대행',
-    startDate: '2025-02-01',
-    endDate: '2025-06-30',
-    status: '운영중',
-  },
-  {
-    id: 'p6',
-    bu: 'MODOO',
-    name: '공식 굿즈 티셔츠 1차',
-    cat: '자체판매',
-    startDate: '2025-04-10',
-    endDate: '2025-05-15',
-    status: '제작중',
-  },
-];
-
-const INITIAL_REVENUES: FinancialEntry[] = [
-  { id: 'r1', projectId: 'p1', bu: 'GRIGO', type: 'revenue', category: '안무제작', name: '선금 수금', amount: 8_000_000, date: '2025-01-15', status: 'paid' },
-  { id: 'r2', projectId: 'p1', bu: 'GRIGO', type: 'revenue', category: '안무제작', name: '잔금 정산', amount: 7_000_000, date: '2025-05-28', status: 'planned' },
-  { id: 'r3', projectId: 'p2', bu: 'GRIGO', type: 'revenue', category: '출연료', name: 'CF 모델료', amount: 35_000_000, date: '2025-05-25', status: 'paid' },
-  { id: 'r4', projectId: 'p5', bu: 'AST', type: 'revenue', category: '대행료', name: '2분기 정산', amount: 15_000_000, date: '2025-04-30', status: 'paid' },
-];
-
-const INITIAL_EXPENSES: FinancialEntry[] = [
-  { id: 'e1', projectId: 'p1', bu: 'GRIGO', type: 'expense', category: '인건비', name: '안무팀 급여', amount: 4_500_000, date: '2025-05-30', status: 'paid' },
-  { id: 'e2', projectId: 'p5', bu: 'AST', type: 'expense', category: '매체비', name: '유튜브 광고비', amount: 15_000_000, date: '2025-05-15', status: 'planned' },
-  { id: 'e3', projectId: 'p6', bu: 'MODOO', type: 'expense', category: '원자재', name: '면 원단 구매', amount: 3_000_000, date: '2025-04-12', status: 'paid' },
-];
-
-const MEMBERS: Member[] = [
-  // 그리고엔터테인먼트
-  { name: '김현준', role: '대표', team: '그리고엔터테인먼트' },
-  { name: '오동현', role: '실장', team: '그리고엔터테인먼트' },
-  { name: '장선우', role: '대리', team: '그리고엔터테인먼트' },
-  { name: 'O유진', role: '인턴', team: '그리고엔터테인먼트' },
-  // 플로우메이커
-  { name: '홍철화', role: '대표', team: '플로우메이커' },
-  { name: '권혁준', role: '대리', team: '플로우메이커' },
-  { name: '황여경', role: '사원', team: '플로우메이커' },
-  { name: '맹채원', role: '사원', team: '플로우메이커' },
-  // 리액트 스튜디오
-  { name: '김현준PD', role: 'PD', team: '리액트 스튜디오' },
-  // 모두굿즈
-  { name: '김동현', role: '사원', team: '모두굿즈' },
-  { name: '박여진', role: '인턴', team: '모두굿즈' },
-  // AST COMPANY
-  { name: '조현욱', role: '대표', team: 'AST COMPANY' },
-  { name: '정현수', role: '이사', team: 'AST COMPANY' },
-];
-
-const INITIAL_TASKS: TaskItem[] = [
-  {
-    id: 't1',
-    bu: 'GRIGO',
-    projectId: 'p1',
-    title: '안무 제작 큐시트 검수',
-    assignee: '강준오',
-    dueDate: '2025-05-28',
-    status: 'in-progress',
-  },
-  {
-    id: 't2',
-    bu: 'FLOW',
-    projectId: 'p4',
-    title: '페스티벌 MD 견적 수집',
-    assignee: '김민정',
-    dueDate: '2025-06-05',
-    status: 'todo',
-  },
-];
-
 
 const isDateInRange = (date: string, start?: string, end?: string) => {
   if (!start || !end) return true;
@@ -239,7 +135,42 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const workStatusHook = useWorkStatus(user);
+  const workStatusHook = useWorkStatus();
+
+  // 권한에 따른 메뉴 표시 설정
+  const visibleMenus = useMemo(() => {
+    if (!user?.profile) return ['dashboard', 'tasks', 'attendance'];
+    const permUser: PermAppUser = {
+      id: user.id,
+      role: user.profile.role,
+      bu_code: user.profile.bu_code,
+      name: user.profile.name,
+      position: user.profile.position,
+    };
+    return getVisibleMenus(permUser);
+  }, [user]);
+
+  // 전체 BU 통계 조회 권한 (admin만)
+  const canViewAllStats = useMemo(() => {
+    if (!user?.profile) return false;
+    const permUser: PermAppUser = {
+      id: user.id,
+      role: user.profile.role,
+      bu_code: user.profile.bu_code,
+    };
+    return canViewAllBuStats(permUser);
+  }, [user]);
+
+  // 프로젝트 생성 권한
+  const canCreateProjectFlag = useMemo(() => {
+    if (!user?.profile) return false;
+    const permUser: PermAppUser = {
+      id: user.id,
+      role: user.profile.role,
+      bu_code: user.profile.bu_code,
+    };
+    return canCreateProject(permUser);
+  }, [user]);
 
   // API 데이터 로딩
   const { data: projectsData = [], isLoading: projectsLoading } = useProjects();
@@ -259,6 +190,7 @@ export default function HomePage() {
   // Mutations
   const createProjectMutation = useCreateProject();
   const createTaskMutation = useCreateTask();
+  const deleteTaskMutation = useDeleteTask();
   const createFinancialMutation = useCreateFinancialEntry();
   const updateTaskMutation = useUpdateTask();
   const updateProjectMutation = useUpdateProject();
@@ -344,20 +276,10 @@ export default function HomePage() {
         return;
       }
 
-      // 본사(HEAD)가 아닌 경우 해당 사업부 ERP로 리디렉션
+      // 모든 사용자가 루트 페이지에 접근 가능 (권한에 따라 UI가 달라짐)
+      // HEAD가 아닌 사용자는 기본 BU를 본인 BU로 설정
       if (appUser.bu_code !== 'HEAD') {
-        if (appUser.bu_code === 'AST') {
-          router.push('/astcompany');
-        } else if (appUser.bu_code === 'GRIGO') {
-          router.push('/grigoent');
-        } else if (appUser.bu_code === 'REACT') {
-          router.push('/reactstudio');
-        } else if (appUser.bu_code === 'FLOW') {
-          router.push('/flow');
-        } else if (appUser.bu_code === 'MODOO') {
-          router.push('/modoogoods');
-        }
-        return;
+        setBu(appUser.bu_code as BU);
       }
 
       setUser({ ...user, profile: appUser });
@@ -441,7 +363,7 @@ export default function HomePage() {
   );
 
   const currentProjects = useMemo(
-    () => projects.filter((p) => p.bu === bu),
+    () => bu === 'ALL' ? projects : projects.filter((p) => p.bu === bu),
     [bu, projects],
   );
 
@@ -704,24 +626,26 @@ export default function HomePage() {
 
   const handleCreateTask = async (payload: {
     title: string;
+    description?: string;
     bu: BU;
     projectId: string;
     assignee: string;
     dueDate: string;
+    status: TaskItem['status'];
+    priority: TaskItem['priority'];
   }): Promise<string | null> => {
-    const missingFields: string[] = [];
-    if (!payload.title?.trim()) missingFields.push('제목');
-    if (!payload.projectId?.trim()) missingFields.push('프로젝트');
-    if (!payload.assignee?.trim()) missingFields.push('담당자');
-    
-    if (missingFields.length > 0) {
-      return `다음 항목을 입력해주세요: ${missingFields.join(', ')}`;
+    if (!payload.title?.trim()) {
+      return '제목을 입력해주세요.';
+    }
+    if (!payload.projectId?.trim()) {
+      return '프로젝트를 선택해주세요.';
     }
     
     try {
       const dbData = frontendTaskToDb(payload);
       await createTaskMutation.mutateAsync(dbData);
       setTaskModalOpen(false);
+      setTaskModalProjectId(undefined);
       return null;
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -833,28 +757,37 @@ export default function HomePage() {
   };
 
   const handleUpdateTask = async (payload: {
-    id: string;
+    id?: string;
     title: string;
+    description?: string;
     bu: BU;
     projectId: string;
     assignee: string;
     dueDate: string;
     status: TaskItem['status'];
-  }) => {
-    if (!payload.title || !payload.assignee || !payload.projectId) return;
+    priority: TaskItem['priority'];
+  }): Promise<string | null> => {
+    if (!payload.id) return '할 일 ID가 없습니다.';
+    if (!payload.title?.trim()) return '제목을 입력해주세요.';
+    if (!payload.projectId) return '프로젝트를 선택해주세요.';
+    
     try {
       const dbData = frontendTaskToDb({
         projectId: payload.projectId,
         bu: payload.bu,
         title: payload.title,
+        description: payload.description,
         assignee: payload.assignee,
         dueDate: payload.dueDate,
         status: payload.status,
+        priority: payload.priority,
       });
       await updateTaskMutation.mutateAsync({ id: Number(payload.id), data: dbData });
       setEditTaskModalOpen(null);
+      return null;
     } catch (error) {
       console.error('Failed to update task:', error);
+      return '수정 중 오류가 발생했습니다.';
     }
   };
 
@@ -889,24 +822,7 @@ export default function HomePage() {
           userName={workStatusHook.userName}
           userInitials={workStatusHook.userInitials}
           isChanging={workStatusHook.isChanging}
-          onStatusChange={(status) => {
-            workStatusHook.handleStatusChange(status, async (status, previousStatus) => {
-              try {
-                // OFF_WORK에서 WORKING으로 변경할 때만 check-in
-                if (status === 'WORKING' && previousStatus === 'OFF_WORK') {
-                  const res = await fetch('/api/attendance/check-in', { method: 'POST' });
-                  if (!res.ok) throw new Error('Failed to check in');
-                } else if (status === 'OFF_WORK') {
-                  const res = await fetch('/api/attendance/check-out', { method: 'POST' });
-                  if (!res.ok) throw new Error('Failed to check out');
-                }
-                // BREAK에서 WORKING으로 변경할 때는 API 호출 없이 상태만 변경
-              } catch (error) {
-                console.error('Status change error:', error);
-                throw error;
-              }
-            });
-          }}
+          onStatusChange={workStatusHook.handleStatusChange}
           formatTimeDetail={workStatusHook.formatTimeDetail}
           formatDateDetail={workStatusHook.formatDateDetail}
         />
@@ -919,29 +835,7 @@ export default function HomePage() {
           showLogoutConfirm={workStatusHook.showLogoutConfirm}
           isChanging={workStatusHook.isChanging}
           onCancel={() => workStatusHook.setShowLogoutConfirm(false)}
-          onConfirm={() => {
-            workStatusHook.confirmLogout(
-              async (status) => {
-                try {
-                  if (status === 'OFF_WORK') {
-                    const res = await fetch('/api/attendance/check-out', { method: 'POST' });
-                    if (!res.ok) {
-                      const data = await res.json().catch(() => ({}));
-                      // 이미 퇴근 처리된 경우는 성공으로 처리
-                      if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
-                        return;
-                      }
-                      throw new Error(data.error || 'Failed to check out');
-                    }
-                  }
-                } catch (error) {
-                  console.error('Status change error:', error);
-                  throw error;
-                }
-              },
-              handleLogout
-            );
-          }}
+          onConfirm={workStatusHook.confirmLogout}
         />
 
         {/* 연장근무 확인 모달 */}
@@ -970,7 +864,7 @@ export default function HomePage() {
 
   // ReactStudio 뷰일 때는 별도 레이아웃 사용
   if (view === 'reactstudio' && bu === 'REACT') {
-    return <ReactStudioDashboard bu={bu} />;
+    return <ReactStudioDashboard />;
   }
 
   const SidebarContent = ({ onItemClick }: { onItemClick?: () => void }) => (
@@ -990,63 +884,81 @@ export default function HomePage() {
         </button>
       </div>
       <nav className="flex-1 space-y-2 px-2 sm:px-4">
-        <SidebarButton
-          label="대시보드"
-          icon={<LayoutDashboard className="h-4 w-4" />}
-          active={view === 'dashboard'}
-          onClick={() => {
-            setView('dashboard');
-            onItemClick?.();
-          }}
-        />
-        <SidebarButton
-          label="프로젝트 관리"
-          icon={<FolderKanban className="h-4 w-4" />}
-          active={view === 'projects'}
-          onClick={() => {
-            setView('projects');
-            onItemClick?.();
-          }}
-        />
-        <SidebarButton
-          label="정산 관리"
-          icon={<Coins className="h-4 w-4" />}
-          active={view === 'settlement'}
-          onClick={() => {
-            setView('settlement');
-            onItemClick?.();
-          }}
-        />
-        <SidebarButton
-          label="할일 관리"
-          icon={<CheckSquare className="h-4 w-4" />}
-          active={view === 'tasks'}
-          onClick={() => {
-            setView('tasks');
-            onItemClick?.();
-          }}
-        />
-        <SidebarButton
-          label="조직 현황"
-          icon={<Users className="h-4 w-4" />}
-          active={view === 'organization'}
-          onClick={() => {
-            setView('organization');
-            onItemClick?.();
-          }}
-        />
-        <SidebarButton
-          label="근무시간 관리"
-          icon={<Clock className="h-4 w-4" />}
-          active={view === 'attendance'}
-          onClick={() => {
-            setView('attendance');
-            onItemClick?.();
-          }}
-        />
+        {/* 대시보드 - 모든 사용자 */}
+        {visibleMenus.includes('dashboard') && (
+          <SidebarButton
+            label="대시보드"
+            icon={<LayoutDashboard className="h-4 w-4" />}
+            active={view === 'dashboard'}
+            onClick={() => {
+              setView('dashboard');
+              onItemClick?.();
+            }}
+          />
+        )}
+        {/* 프로젝트 관리 - admin, leader, manager */}
+        {visibleMenus.includes('projects') && (
+          <SidebarButton
+            label="프로젝트 관리"
+            icon={<FolderKanban className="h-4 w-4" />}
+            active={view === 'projects'}
+            onClick={() => {
+              setView('projects');
+              onItemClick?.();
+            }}
+          />
+        )}
+        {/* 정산 관리 - admin, leader, manager */}
+        {visibleMenus.includes('settlement') && (
+          <SidebarButton
+            label="정산 관리"
+            icon={<Coins className="h-4 w-4" />}
+            active={view === 'settlement'}
+            onClick={() => {
+              setView('settlement');
+              onItemClick?.();
+            }}
+          />
+        )}
+        {/* 할일 관리 - 모든 사용자 */}
+        {visibleMenus.includes('tasks') && (
+          <SidebarButton
+            label="할일 관리"
+            icon={<CheckSquare className="h-4 w-4" />}
+            active={view === 'tasks'}
+            onClick={() => {
+              setView('tasks');
+              onItemClick?.();
+            }}
+          />
+        )}
+        {/* 조직 현황 - admin, leader */}
+        {visibleMenus.includes('organization') && (
+          <SidebarButton
+            label="조직 현황"
+            icon={<Users className="h-4 w-4" />}
+            active={view === 'organization'}
+            onClick={() => {
+              setView('organization');
+              onItemClick?.();
+            }}
+          />
+        )}
+        {/* 근무시간 관리 - 모든 사용자 */}
+        {visibleMenus.includes('attendance') && (
+          <SidebarButton
+            label="근무시간 관리"
+            icon={<Clock className="h-4 w-4" />}
+            active={view === 'attendance'}
+            onClick={() => {
+              setView('attendance');
+              onItemClick?.();
+            }}
+          />
+        )}
       </nav>
-      {/* 관리자 전용 메뉴 */}
-      {user?.profile?.role === 'admin' && (
+      {/* 관리자/리더 전용 메뉴 */}
+      {visibleMenus.includes('attendanceAdmin') && (
         <div className="px-2 sm:px-4 pb-2">
           <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
             관리자 전용
@@ -1165,106 +1077,6 @@ export default function HomePage() {
                         : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
-          periodType={periodType}
-          onPeriodTypeChange={handlePeriodTypeChange}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-          selectedMonth={selectedMonth}
-          onMonthChange={setSelectedMonth}
-          selectedQuarter={selectedQuarter}
-          onQuarterChange={setSelectedQuarter}
-          selectedQuarterYear={selectedQuarterYear}
-          onQuarterYearChange={setSelectedQuarterYear}
-          customRange={customRange}
-          onCustomRangeChange={handleDateChange}
-          yearOptions={yearOptions}
-          workStatusHook={workStatusHook}
-          onStatusChange={(status) => {
-            workStatusHook.handleStatusChange(status, async (newStatus, previousStatus) => {
-              try {
-                if (newStatus === 'WORKING' && previousStatus === 'OFF_WORK') {
-                  const res = await fetch('/api/attendance/check-in', { method: 'POST' });
-                  if (!res.ok) {
-                    const data = await res.json().catch(() => ({}));
-                    if (data.error && data.error.includes('이미 출근 처리되었습니다')) {
-                      return;
-                    }
-                    throw new Error(data.error || 'Failed to check in');
-                  }
-                } else if (newStatus === 'OFF_WORK') {
-                  const res = await fetch('/api/attendance/check-out', { method: 'POST' });
-                  if (!res.ok) {
-                    const data = await res.json().catch(() => ({}));
-                    if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
-                      return;
-                    }
-                    throw new Error(data.error || 'Failed to check out');
-                  }
-                }
-              } catch (error) {
-                console.error('Status change error:', error);
-                throw error;
-              }
-            });
-          }}
-        />
-
-        {/* 환영 모달 */}
-        <WorkStatusWelcomeModal
-          showWelcome={workStatusHook.showWelcome}
-          welcomeTitle={workStatusHook.welcomeTitle}
-          welcomeMsg={workStatusHook.welcomeMsg}
-        />
-
-        {/* 퇴근 확인 모달 */}
-        <WorkStatusLogoutModal
-          showLogoutConfirm={workStatusHook.showLogoutConfirm}
-          isChanging={workStatusHook.isChanging}
-          onCancel={() => workStatusHook.setShowLogoutConfirm(false)}
-          onConfirm={() => {
-            workStatusHook.confirmLogout(
-              async (status) => {
-                try {
-                  if (status === 'OFF_WORK') {
-                    const res = await fetch('/api/attendance/check-out', { method: 'POST' });
-                    if (!res.ok) {
-                      const data = await res.json().catch(() => ({}));
-                      // 이미 퇴근 처리된 경우는 성공으로 처리
-                      if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
-                        return;
-                      }
-                      throw new Error(data.error || 'Failed to check out');
-                    }
-                  }
-                } catch (error) {
-                  console.error('Status change error:', error);
-                  throw error;
-                }
-              },
-              handleLogout
-            );
-          }}
-        />
-
-        {/* 연장근무 확인 모달 */}
-        <WorkStatusOvertimeModal
-          show={workStatusHook.showOvertimeConfirm}
-          isChanging={workStatusHook.isChanging}
-          onCancel={() => workStatusHook.setShowOvertimeConfirm(false)}
-          onConfirm={async () => {
-            try {
-              const res = await fetch('/api/attendance/check-in', { method: 'POST' });
-              if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.error || 'Failed to check in');
-              }
-              workStatusHook.setShowOvertimeConfirm(false);
-              workStatusHook.setWorkStatus('WORKING');
-              workStatusHook.triggerWelcome('연장근무 시작!', '오늘도 수고하셨습니다. 연장근무를 시작합니다. 💪');
-            } catch (error) {
-              console.error('Overtime check-in error:', error);
-            }
-          }}
         />
 
         <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
@@ -1278,7 +1090,7 @@ export default function HomePage() {
               title="할 일 등록"
               icon={<Check className="h-4 w-4" />}
               onClick={() => {
-                setTaskModalProjectId(currentProjects[0]?.id);
+                setTaskModalProjectId(undefined);
                 setTaskModalOpen(true);
               }}
             />
@@ -1342,6 +1154,8 @@ export default function HomePage() {
               rows={settlementRows}
               projects={projects}
               onEditFinance={setEditFinanceModalOpen}
+              canViewAllBu={canViewAllStats}
+              canViewNetProfit={user?.profile?.role === 'admin' || user?.profile?.role === 'leader' || user?.profile?.role === 'manager'}
             />
           )}
 
@@ -1441,22 +1255,18 @@ export default function HomePage() {
         />
       )}
       {isProjectModalOpen && (
-        <ProjectModal
+        <UnifiedProjectModal
           onClose={() => setProjectModalOpen(false)}
           onSubmit={handleCreateProject}
-          defaultBu={bu === 'ALL' ? 'GRIGO' : bu}
+          defaultBu={(user?.profile?.bu_code as BU) || (bu === 'ALL' ? 'GRIGO' : bu)}
           usersData={usersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
-          placeholders={{
-            projectName: '예: 2025 신규 프로젝트',
-            category: '예: 기획, 제작, 운영',
-            description: '프로젝트 설명을 입력하세요',
-          }}
         />
       )}
       {isTaskModalOpen && (
-        <CreateTaskModal
+        <UnifiedTaskModal
+          mode="create"
           onClose={() => {
             setTaskModalOpen(false);
             setTaskModalProjectId(undefined);
@@ -1464,7 +1274,7 @@ export default function HomePage() {
           onSubmit={handleCreateTask}
           defaultBu={bu === 'ALL' ? 'GRIGO' : bu}
           projects={projects}
-          defaultProjectId={taskModalProjectId ?? modalProjectId ?? currentProjects[0]?.id}
+          defaultProjectId={taskModalProjectId ?? undefined}
           orgData={orgData}
           usersData={usersData}
         />
@@ -1496,29 +1306,38 @@ export default function HomePage() {
         />
       )}
       {isEditTaskModalOpen && (
-        <EditTaskModal
+        <UnifiedTaskModal
+          mode="view"
           task={isEditTaskModalOpen}
           onClose={() => setEditTaskModalOpen(null)}
           onSubmit={handleUpdateTask}
+          onDelete={async (id) => {
+            try {
+              await deleteTaskMutation.mutateAsync(Number(id));
+              setEditTaskModalOpen(null);
+            } catch (error) {
+              console.error('Failed to delete task:', error);
+            }
+          }}
+          defaultBu={isEditTaskModalOpen.bu}
           projects={projects}
           orgData={orgData}
           usersData={usersData}
         />
       )}
       {isEditProjectModalOpen && (
-        <ProjectModal
+        <UnifiedProjectModal
           project={isEditProjectModalOpen}
           onClose={() => setEditProjectModalOpen(null)}
           onSubmit={handleUpdateProject}
-          defaultBu={bu === 'ALL' ? 'GRIGO' : bu}
+          onDelete={(id) => {
+            setEditProjectModalOpen(null);
+            setDeleteProjectId(id);
+          }}
+          defaultBu={(user?.profile?.bu_code as BU) || (bu === 'ALL' ? 'GRIGO' : bu)}
           usersData={usersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
-          placeholders={{
-            projectName: '예: 2025 신규 프로젝트',
-            category: '예: 기획, 제작, 운영',
-            description: '프로젝트 설명을 입력하세요',
-          }}
           financeData={allFinancial
             .filter((f) => f.projectId === isEditProjectModalOpen.id)
             .map((f) => ({
@@ -1529,6 +1348,16 @@ export default function HomePage() {
               amount: f.amount,
               status: f.status,
               occurred_at: f.date,
+            }))}
+          tasksData={tasks
+            .filter((t) => t.projectId === isEditProjectModalOpen.id)
+            .map((t) => ({
+              id: t.id,
+              title: t.title,
+              assignee: t.assignee,
+              assigneeName: usersData?.users.find((u: any) => u.id === t.assignee)?.name,
+              dueDate: t.dueDate,
+              status: t.status,
             }))}
           onAddRevenue={() => {
             setFinanceDefaultProjectId(isEditProjectModalOpen.id);
@@ -1542,6 +1371,16 @@ export default function HomePage() {
             const matchedFinance = allFinancial.find((f) => f.id === entry.id);
             if (matchedFinance) {
               setEditFinanceModalOpen(matchedFinance);
+            }
+          }}
+          onAddTask={() => {
+            setTaskModalProjectId(isEditProjectModalOpen.id);
+            setTaskModalOpen(true);
+          }}
+          onViewTaskDetail={(task) => {
+            const matchedTask = tasks.find((t) => t.id === task.id);
+            if (matchedTask) {
+              setEditTaskModalOpen(matchedTask);
             }
           }}
         />
@@ -1711,656 +1550,6 @@ function SidebarButton({
       <span className="w-4 sm:w-5 text-center flex-shrink-0">{icon}</span>
       <span className="truncate">{label}</span>
     </button>
-  );
-}
-
-function TasksView({
-  bu,
-  onBuChange,
-  tasks,
-  projects,
-  onStatusChange,
-  onEditTask,
-}: {
-  bu: BU | 'ALL';
-  onBuChange: (bu: BU | 'ALL') => void;
-  tasks: TaskItem[];
-  projects: Project[];
-  onStatusChange: (id: string, status: TaskItem['status']) => void;
-  onEditTask: (task: TaskItem) => void;
-}) {
-  const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
-
-  // 현재 선택된 bu에 해당하는 프로젝트만 필터링
-  const buProjects = projects.filter((p) => p.bu === bu);
-  const buProjectIds = buProjects.map((p) => p.id);
-  const buTasks = tasks.filter((t) => buProjectIds.includes(t.projectId));
-
-  // 할일 상태 필터링
-  const rows = useMemo(() => {
-    if (taskFilter === 'active') {
-      return buTasks.filter((t) => t.status === 'todo' || t.status === 'in-progress');
-    } else {
-      return buTasks.filter((t) => t.status === 'done');
-    }
-  }, [buTasks, taskFilter]);
-
-  const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
-
-  return (
-    <section className="space-y-6">
-      <BuTabs bu={bu} onChange={onBuChange} prefix="TASK" />
-
-      {/* 할일 필터 토글 */}
-      <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
-        <button
-          onClick={() => setTaskFilter('active')}
-          className={cn(
-            'px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            taskFilter === 'active'
-              ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-          )}
-        >
-          진행예정/진행중
-        </button>
-        <button
-          onClick={() => setTaskFilter('completed')}
-          className={cn(
-            'px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            taskFilter === 'completed'
-              ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-          )}
-        >
-          완료
-        </button>
-      </div>
-
-      <div className="overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 p-3 sm:p-4 lg:p-6">
-          <h3 className="text-sm sm:text-base lg:text-lg font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{BU_TITLES[bu]} 할일 관리</h3>
-          <span className="text-[9px] sm:text-[10px] lg:text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap flex-shrink-0">{rows.length}건</span>
-        </div>
-        {/* 모바일: 카드 형태, 데스크톱: 테이블 */}
-        <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full text-left text-[10px] sm:text-[11px]">
-            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500">
-              <tr>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">프로젝트</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">할일</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">담당자</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">마감일</th>
-                <th className="px-3 sm:px-6 py-3 font-bold uppercase tracking-tight whitespace-nowrap">상태</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {rows.map((task) => (
-                <tr
-                  key={task.id}
-                  onClick={() => onEditTask(task)}
-                  className="cursor-pointer transition hover:bg-slate-50 dark:bg-slate-900"
-                >
-                  <td className="px-3 sm:px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 truncate max-w-[120px] sm:max-w-none">
-                    {findProject(task.projectId)}
-                  </td>
-                  <td className="px-3 sm:px-6 py-3 text-slate-800 dark:text-slate-200 truncate max-w-[150px] sm:max-w-none">{task.title}</td>
-                  <td className="px-3 sm:px-6 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">{task.assignee}</td>
-                  <td className="px-3 sm:px-6 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{task.dueDate}</td>
-                  <td className="px-3 sm:px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={task.status}
-                      onChange={(e) => onStatusChange(task.id, e.target.value as TaskItem['status'])}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-[10px] sm:text-[11px] outline-none w-full"
-                    >
-                      <option value="todo">TODO</option>
-                      <option value="in-progress">IN PROGRESS</option>
-                      <option value="done">DONE</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                    {taskFilter === 'active'
-                      ? '현재 선택한 사업부에 진행 예정이거나 진행 중인 할일이 없습니다.'
-                      : '현재 선택한 사업부에 완료된 할일이 없습니다.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {/* 모바일 카드 뷰 */}
-        <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-700">
-          {rows.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-              {taskFilter === 'active'
-                ? '현재 선택한 사업부에 진행 예정이거나 진행 중인 할일이 없습니다.'
-                : '현재 선택한 사업부에 완료된 할일이 없습니다.'}
-            </div>
-          ) : (
-            rows.map((task) => (
-              <button
-                key={task.id}
-                onClick={() => onEditTask(task)}
-                className="w-full px-4 py-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900"
-              >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mb-1">{task.title}</p>
-                    <p className="text-[10px] text-slate-600 dark:text-slate-300 truncate">{findProject(task.projectId)}</p>
-                  </div>
-                  <select
-                    value={task.status}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => onStatusChange(task.id, e.target.value as TaskItem['status'])}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-[9px] outline-none flex-shrink-0"
-                  >
-                    <option value="todo">TODO</option>
-                    <option value="in-progress">진행중</option>
-                    <option value="done">완료</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
-                  <span className="whitespace-nowrap">담당자: {task.assignee}</span>
-                  <span className="whitespace-nowrap">마감일: {task.dueDate}</span>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function OrganizationView({
-  bu,
-  orgData,
-  externalWorkersData,
-  partnerWorkersData,
-  partnerCompaniesData,
-  usersData,
-  currentUser,
-  orgViewTab,
-  onTabChange,
-  onAddMember,
-  onEditMember,
-  onDeleteMember,
-  onAddExternalWorker,
-  onEditExternalWorker,
-  onDeleteExternalWorker,
-  onEditUser,
-  onAddUser,
-}: {
-  bu: BU | 'ALL';
-  orgData: any[];
-  externalWorkersData: any[];
-  partnerWorkersData: any[];
-  partnerCompaniesData: any[];
-  usersData?: { users: any[]; currentUser: any };
-  currentUser?: any;
-  orgViewTab: 'org' | 'external' | 'users';
-  onTabChange: (tab: 'org' | 'external' | 'users') => void;
-  onAddMember: (orgUnitId: number) => void;
-  onEditMember: (member: any) => void;
-  onDeleteMember: (id: number) => void;
-  onAddExternalWorker: () => void;
-  onEditExternalWorker: (worker: any) => void;
-  onDeleteExternalWorker: (id: number) => void;
-  onEditUser: (user: any) => void;
-  onAddUser: () => void;
-}) {
-  const isAdmin = currentUser?.profile?.role === 'admin';
-  const users = usersData?.users || [];
-
-  // 내부 직원: app_users 중 bu_code가 NULL이 아닌 사람
-  const internalEmployees = useMemo(() => {
-    return users.filter((u: any) => u.bu_code != null);
-  }, [users]);
-
-  // 외주 인원: app_users 중 bu_code가 null인 사람 + partner_worker 목록
-  const externalWorkers = useMemo(() => {
-    const usersWithoutBu = users.filter((u: any) => u.bu_code == null);
-    // partner_worker를 app_users 형식에 맞게 변환
-    const partnerWorkersAsUsers = partnerWorkersData.map((pw: any) => {
-      const company = partnerCompaniesData.find((pc: any) => pc.id === pw.partner_company_id);
-      return {
-        id: `partner_${pw.id}`,
-        name: pw.name_ko || pw.name_en || pw.name || '-',
-        email: pw.email || null,
-        role: 'viewer' as const,
-        bu_code: pw.bu_code || null,
-        position: null,
-        created_at: pw.created_at,
-        updated_at: pw.updated_at,
-        artist_id: null,
-        is_partner_worker: true,
-        partner_worker_id: pw.id,
-        worker_type: pw.worker_type,
-        partner_company_id: pw.partner_company_id,
-        partner_company_name: company ? (company.company_name_ko || company.company_name_en || '-') : null,
-        phone: pw.phone,
-        specialties: pw.specialties,
-        is_active: pw.is_active !== false,
-      };
-    });
-    return [...usersWithoutBu, ...partnerWorkersAsUsers];
-  }, [users, partnerWorkersData, partnerCompaniesData]);
-
-  return (
-    <section className="space-y-4 sm:space-y-6">
-      {/* 탭 메뉴 */}
-      <div className="flex w-fit overflow-x-auto rounded-xl sm:rounded-2xl bg-slate-200/60 p-1 sm:p-1.5">
-        <button
-          onClick={() => onTabChange('org')}
-          className={cn(
-            'px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-            orgViewTab === 'org'
-              ? 'tab-active rounded-lg sm:rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
-          )}
-        >
-          내부 직원
-        </button>
-        <button
-          onClick={() => onTabChange('external')}
-          className={cn(
-            'px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-            orgViewTab === 'external'
-              ? 'tab-active rounded-lg sm:rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
-          )}
-        >
-          외주 인력
-        </button>
-        <button
-          onClick={() => onTabChange('users')}
-          className={cn(
-            'px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-            orgViewTab === 'users'
-              ? 'tab-active rounded-lg sm:rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
-          )}
-        >
-          회원 관리
-        </button>
-      </div>
-
-      {orgViewTab === 'org' && (
-        <div className="space-y-4 sm:space-y-6">
-          <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 sm:p-6 shadow-sm">
-            <div className="mb-3 sm:mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">내부 직원</h3>
-              </div>
-              <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                총 {internalEmployees.length}명
-              </span>
-            </div>
-
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <table className="w-full text-left text-[10px] sm:text-[11px]">
-                <thead className="bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">이름</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">소속사업부</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">직급</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">역할</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">이메일</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">가입일</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">관리</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {internalEmployees.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                        등록된 내부 직원이 없습니다.
-                      </td>
-                    </tr>
-                  ) : (
-                    internalEmployees.map((user: any) => (
-                      <tr key={user.id} className="transition hover:bg-slate-50 dark:bg-slate-900">
-                        <td className="px-4 py-3">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">{user.name}</span>
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                          {user.bu_code ? BU_TITLES[user.bu_code] || user.bu_code : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{user.position || '-'}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-[9px] font-semibold',
-                              user.role === 'admin'
-                                ? 'bg-red-100 text-red-700'
-                                : user.role === 'manager'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : user.role === 'member'
-                                    ? 'bg-emerald-100 text-emerald-700'
-                                    : user.role === 'artist'
-                                      ? 'bg-purple-100 text-purple-700'
-                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
-                            )}
-                          >
-                            {user.role === 'admin'
-                              ? '관리자'
-                              : user.role === 'manager'
-                                ? '매니저'
-                                : user.role === 'member'
-                                  ? '멤버'
-                                  : user.role === 'artist'
-                                    ? '아티스트'
-                                    : '뷰어'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{user.email || '-'}</td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                          {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => onEditUser(user)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900 hover:text-blue-600"
-                            title="수정"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {orgViewTab === 'external' && (
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">외주 인력 관리</h3>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
-                  총 {externalWorkers.length}명
-                </span>
-                <button
-                  onClick={onAddExternalWorker}
-                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  외주 인력 추가
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-[11px]">
-                <thead className="bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">구분</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">이름</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">타입</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">회사명</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">소속사업부</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">전문분야</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">연락처</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">이메일</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">활성화</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">관리</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {externalWorkers.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                        등록된 외주 인력이 없습니다.
-                      </td>
-                    </tr>
-                  ) : (
-                    externalWorkers.map((w: any) => (
-                      <tr key={w.id} className="transition hover:bg-slate-50 dark:bg-slate-900">
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-[9px] font-semibold',
-                              w.is_partner_worker
-                                ? 'bg-orange-100 text-orange-700'
-                                : 'bg-blue-100 text-blue-700',
-                            )}
-                          >
-                            {w.is_partner_worker ? '파트너' : '사용자'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">{w.name}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {w.is_partner_worker ? (
-                            <span
-                              className={cn(
-                                'rounded-full px-2 py-0.5 text-[9px] font-semibold',
-                                w.worker_type === 'freelancer'
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : w.worker_type === 'employee'
-                                    ? 'bg-indigo-100 text-indigo-700'
-                                    : 'bg-slate-100 text-slate-700',
-                              )}
-                            >
-                              {w.worker_type === 'freelancer'
-                                ? '프리랜서'
-                                : w.worker_type === 'employee'
-                                  ? '직원'
-                                  : w.worker_type === 'contractor'
-                                    ? '계약직'
-                                    : '-'}
-                            </span>
-                          ) : (
-                            <span
-                              className={cn(
-                                'rounded-full px-2 py-0.5 text-[9px] font-semibold',
-                                w.role === 'admin'
-                                  ? 'bg-red-100 text-red-700'
-                                  : w.role === 'manager'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : w.role === 'member'
-                                      ? 'bg-emerald-100 text-emerald-700'
-                                      : w.role === 'artist'
-                                        ? 'bg-purple-100 text-purple-700'
-                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
-                              )}
-                            >
-                              {w.role === 'admin'
-                                ? '관리자'
-                                : w.role === 'manager'
-                                  ? '매니저'
-                                  : w.role === 'member'
-                                    ? '멤버'
-                                    : w.role === 'artist'
-                                      ? '아티스트'
-                                      : '뷰어'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                          {w.is_partner_worker
-                            ? w.partner_company_id
-                              ? w.partner_company_name || '-'
-                              : '개인'
-                            : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                          {w.bu_code ? BU_TITLES[w.bu_code] || w.bu_code : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                          {w.specialties && Array.isArray(w.specialties) && w.specialties.length > 0
-                            ? w.specialties.join(', ')
-                            : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{w.phone || '-'}</td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{w.email || '-'}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-[9px] font-semibold',
-                              w.is_active !== false
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
-                            )}
-                          >
-                            {w.is_active !== false ? '활성' : '비활성'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {w.is_partner_worker ? (
-                              <>
-                                <button
-                                  onClick={() => onEditExternalWorker(w)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900 hover:text-blue-600"
-                                  title="수정"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => onDeleteExternalWorker(w.partner_worker_id)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition hover:bg-red-50 hover:text-red-600"
-                                  title="삭제"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => onEditUser(w)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900 hover:text-blue-600"
-                                title="수정"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {orgViewTab === 'users' && (
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">회원 관리</h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500">전체 회원 리스트</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">총 {users.length}명</span>
-              {isAdmin && (
-                <button
-                  onClick={onAddUser}
-                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  회원 추가
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[11px]">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 font-bold uppercase tracking-tight">이름</th>
-                  <th className="px-4 py-3 font-bold uppercase tracking-tight">이메일</th>
-                  <th className="px-4 py-3 font-bold uppercase tracking-tight">역할</th>
-                  <th className="px-4 py-3 font-bold uppercase tracking-tight">소속사업부</th>
-                  <th className="px-4 py-3 font-bold uppercase tracking-tight">직급</th>
-                  <th className="px-4 py-3 font-bold uppercase tracking-tight">가입일</th>
-                  {isAdmin && (
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">관리</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan={isAdmin ? 7 : 6} className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                      등록된 회원이 없습니다.
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((u: any) => (
-                    <tr key={u.id} className="transition hover:bg-slate-50 dark:bg-slate-900">
-                      <td className="px-4 py-3">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">{u.name}</span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{u.email || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-[9px] font-semibold',
-                            u.role === 'admin'
-                              ? 'bg-red-100 text-red-700'
-                              : u.role === 'manager'
-                                ? 'bg-blue-100 text-blue-700'
-                                : u.role === 'member'
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : u.role === 'artist'
-                                    ? 'bg-purple-100 text-purple-700'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
-                          )}
-                        >
-                          {u.role === 'admin'
-                            ? '관리자'
-                            : u.role === 'manager'
-                              ? '매니저'
-                              : u.role === 'member'
-                                ? '멤버'
-                                : u.role === 'artist'
-                                  ? '아티스트'
-                                  : '뷰어'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                        {u.bu_code ? BU_TITLES[u.bu_code] || u.bu_code : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{u.position || '-'}</td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                        {u.created_at ? new Date(u.created_at).toLocaleDateString('ko-KR') : '-'}
-                      </td>
-                      {isAdmin && (
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => onEditUser(u)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900 hover:text-blue-600"
-                            title="수정"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -3087,552 +2276,6 @@ function ModalProject({
   );
 }
 
-
-function CreateTaskModal({
-  onClose,
-  onSubmit,
-  defaultBu,
-  projects,
-  defaultProjectId,
-  orgData,
-  usersData,
-}: {
-  onClose: () => void;
-  onSubmit: (payload: { title: string; bu: BU; projectId: string; assignee: string; dueDate: string }) => Promise<string | null>;
-  defaultBu: BU;
-  projects: Project[];
-  defaultProjectId?: string;
-  orgData: any[];
-  usersData?: { users: any[]; currentUser: any };
-}) {
-  const [form, setForm] = useState({
-    title: '',
-    bu: defaultBu,
-    projectId: defaultProjectId ?? projects[0]?.id ?? '',
-    assignee: '',
-    dueDate: '',
-  });
-  const [assigneeMode, setAssigneeMode] = useState<'select' | 'custom'>('select');
-  const [error, setError] = useState<string>('');
-
-  // 회원 목록 추출 (권한, 사업부 관계 없이 모든 회원 포함, 자기 자신 포함)
-  const memberNames = useMemo(() => {
-    const names = new Set<string>();
-    
-    // 조직 멤버에서 추출
-    orgData.forEach((unit) => {
-      (unit.members || []).forEach((m: any) => {
-        if (m.name) names.add(m.name);
-      });
-    });
-    
-    // app_users에서 추출 (권한, 사업부 관계 없이 모든 사용자)
-    if (usersData?.users) {
-      usersData.users.forEach((user: any) => {
-        if (user.name) names.add(user.name);
-      });
-    }
-    
-    return Array.from(names).sort();
-  }, [orgData, usersData]);
-
-  // 담당자 선택 옵션 (회원 목록 + '직접 입력')
-  const assigneeOptions = useMemo(() => {
-    return [
-      ...memberNames.map((name) => ({ value: name, label: name })),
-      { value: '__CUSTOM__', label: '직접 입력' },
-    ];
-  }, [memberNames]);
-
-  return (
-    <ModalShell title="할 일 등록" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <InputField
-          label="제목"
-          placeholder="할 일 제목"
-          value={form.title}
-          onChange={(v) => setForm((prev) => ({ ...prev, title: v }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <SelectField
-            label="사업부"
-            value={form.bu}
-            onChange={(val) => {
-              const nextBu = val as BU;
-              const firstProjectInBu =
-                projects.find((p) => p.bu === nextBu)?.id ?? '';
-              setForm((prev) => ({
-                ...prev,
-                bu: nextBu,
-                projectId: firstProjectInBu || prev.projectId,
-              }));
-            }}
-            options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-              value: k,
-              label: BU_TITLES[k],
-            }))}
-          />
-          <SelectField
-            label="프로젝트"
-            value={form.projectId}
-            onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
-            options={projects
-              .filter((p) => p.bu === form.bu)
-              .map((p) => ({ value: p.id, label: p.name }))}
-          />
-        </div>
-        {assigneeMode === 'select' ? (
-          <div className="space-y-1">
-            <SelectField
-              label="담당자"
-              value={form.assignee || '__PLACEHOLDER__'}
-              onChange={(val) => {
-                if (val === '__CUSTOM__') {
-                  setAssigneeMode('custom');
-                  setForm((prev) => ({ ...prev, assignee: '' }));
-                } else if (val === '__PLACEHOLDER__') {
-                  setForm((prev) => ({ ...prev, assignee: '' }));
-                } else {
-                  // 실제 담당자 이름이 선택된 경우
-                  setForm((prev) => ({ ...prev, assignee: val.trim() }));
-                }
-              }}
-              options={[
-                { value: '__PLACEHOLDER__', label: '담당자를 선택하세요' },
-                ...assigneeOptions,
-              ]}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setAssigneeMode('custom');
-                setForm((prev) => ({ ...prev, assignee: '' }));
-              }}
-              className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              직접 입력하기
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            <InputField
-              label="담당자"
-              placeholder="이름을 직접 입력"
-              value={form.assignee}
-              onChange={(v) => setForm((prev) => ({ ...prev, assignee: v }))}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setAssigneeMode('select');
-                if (memberNames.includes(form.assignee)) {
-                  // 현재 입력값이 회원 목록에 있으면 그대로 유지
-                } else {
-                  setForm((prev) => ({ ...prev, assignee: '' }));
-                }
-              }}
-              className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              목록에서 선택
-            </button>
-          </div>
-        )}
-        <InputField
-          label="마감일"
-          type="date"
-          value={form.dueDate}
-          onChange={(v) => setForm((prev) => ({ ...prev, dueDate: v }))}
-        />
-      </div>
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-          <p className="text-xs font-semibold text-red-600">{error}</p>
-        </div>
-      )}
-      <ModalActions
-        onPrimary={async () => {
-          setError('');
-          // 담당자 필드 trim 처리
-          const trimmedForm = {
-            ...form,
-            assignee: form.assignee?.trim() || '',
-          };
-          const result = await onSubmit(trimmedForm);
-          if (result) {
-            setError(result);
-          }
-        }}
-        onClose={onClose}
-        primaryLabel="등록"
-      />
-    </ModalShell>
-  );
-}
-
-function CreateFinanceModal({
-  mode,
-  onClose,
-  onSubmit,
-  projects,
-  partnerCompaniesData,
-  partnerWorkersData,
-  calculateActualAmount,
-  defaultProjectId,
-}: {
-  mode: 'revenue' | 'expense';
-  onClose: () => void;
-  onSubmit: (payload: {
-    type: 'revenue' | 'expense';
-    projectId: string;
-    bu: BU;
-    cat: string;
-    name: string;
-    amount: string;
-    date: string;
-    status: FinancialEntryStatus;
-    partnerType?: 'company' | 'worker' | '';
-    partnerCompanyId?: string;
-    partnerWorkerId?: string;
-    paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
-  }) => Promise<string | null>;
-  projects: Project[];
-  partnerCompaniesData?: any[];
-  partnerWorkersData?: any[];
-  calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
-  defaultProjectId?: string | null;
-}) {
-  const defaultProject = defaultProjectId
-    ? projects.find((p) => p.id === defaultProjectId)
-    : projects[0];
-  const [form, setForm] = useState({
-    projectId: defaultProject?.id ?? '',
-    bu: defaultProject?.bu ?? 'GRIGO',
-    cat: '',
-    name: '',
-    amount: '',
-    date: '',
-    status: 'planned' as FinancialEntryStatus,
-    partnerType: '' as 'company' | 'worker' | '',
-    partnerCompanyId: '',
-    partnerWorkerId: '',
-    paymentMethod: '' as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
-  });
-  const [error, setError] = useState<string>('');
-
-  return (
-    <ModalShell title={mode === 'revenue' ? '매출 등록' : '지출 등록'} onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="사업부"
-          value={form.bu}
-          onChange={(val) => {
-            const nextBu = val as BU;
-            const firstProject = projects.find((p) => p.bu === nextBu)?.id ?? '';
-            setForm((prev) => ({
-              ...prev,
-              bu: nextBu,
-              projectId: firstProject || prev.projectId,
-            }));
-          }}
-          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-            value: k,
-            label: BU_TITLES[k],
-          }))}
-        />
-        <SelectField
-          label="프로젝트"
-          value={form.projectId}
-          onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
-          options={projects
-            .filter((p) => p.bu === form.bu)
-            .map((p) => ({ value: p.id, label: p.name }))}
-        />
-        <InputField
-          label="구분"
-          placeholder="예: 선금 / 광고비"
-          value={form.cat}
-          onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
-        />
-        <InputField
-          label="항목명"
-          placeholder="항목명을 입력"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <InputField
-          label="금액"
-          type="number"
-          value={form.amount}
-          onChange={(v) => setForm((prev) => ({ ...prev, amount: v }))}
-        />
-        <InputField
-          label="결제일"
-          type="date"
-          value={form.date}
-          onChange={(v) => setForm((prev) => ({ ...prev, date: v }))}
-        />
-        <SelectField
-          label="상태"
-          value={form.status}
-          onChange={(v) => setForm((prev) => ({ ...prev, status: v as FinancialEntryStatus }))}
-          options={[
-            { value: 'planned', label: '지급예정' },
-            { value: 'paid', label: '지급완료' },
-            { value: 'canceled', label: '취소' },
-          ]}
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 border-t border-slate-200 dark:border-slate-700 pt-4">
-        <div className="space-y-1">
-          <label className="text-xs text-slate-500 dark:text-slate-400">지급처 유형</label>
-          <select
-            value={form.partnerType}
-            onChange={(e) => {
-              const newType = e.target.value as 'company' | 'worker' | '';
-              setForm((prev) => ({ 
-                ...prev, 
-                partnerType: newType,
-                partnerCompanyId: newType !== 'company' ? '' : prev.partnerCompanyId,
-                partnerWorkerId: newType !== 'worker' ? '' : prev.partnerWorkerId,
-              }));
-            }}
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-          >
-            <option value="">선택 안함</option>
-            <option value="company">회사</option>
-            <option value="worker">인력</option>
-          </select>
-        </div>
-        
-        {form.partnerType === 'company' && (
-          <div className="space-y-1">
-            <label className="text-xs text-slate-500 dark:text-slate-400">지급처 회사</label>
-            <select
-              value={form.partnerCompanyId}
-              onChange={(e) => setForm((prev) => ({ ...prev, partnerCompanyId: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-            >
-              <option value="">선택하세요</option>
-              {(partnerCompaniesData || []).map((company: any) => (
-                <option key={company.id} value={company.id}>
-                  {company.company_name_ko || company.company_name_en || `회사 #${company.id}`}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        
-        {form.partnerType === 'worker' && (
-          <div className="space-y-1">
-            <label className="text-xs text-slate-500 dark:text-slate-400">지급처 인력</label>
-            <select
-              value={form.partnerWorkerId}
-              onChange={(e) => setForm((prev) => ({ ...prev, partnerWorkerId: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-            >
-              <option value="">선택하세요</option>
-              {(partnerWorkersData || []).map((worker: any) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.name_ko || worker.name_en || worker.name || `인력 #${worker.id}`}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        
-        <div className="space-y-1">
-          <label className="text-xs text-slate-500 dark:text-slate-400">지급 방식</label>
-          <select
-            value={form.paymentMethod}
-            onChange={(e) => setForm((prev) => ({ ...prev, paymentMethod: e.target.value as any }))}
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-          >
-            <option value="">선택하세요</option>
-            <option value="vat_included">부가세 포함 (10% 증액)</option>
-            <option value="tax_free">면세 (0%)</option>
-            <option value="withholding">원천징수 (3.3% 제외)</option>
-            <option value="actual_payment">실지급액</option>
-          </select>
-        </div>
-        
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <label className="text-xs text-slate-500 dark:text-slate-400">실지급액</label>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500">자동계산</span>
-          </div>
-          <input
-            type="text"
-            readOnly
-            value={
-              form.amount && form.paymentMethod
-                ? calculateActualAmount(Number(form.amount), form.paymentMethod)?.toLocaleString() || '-'
-                : '-'
-            }
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm font-bold outline-none"
-          />
-        </div>
-      </div>
-      
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-          <p className="text-xs font-semibold text-red-600">{error}</p>
-        </div>
-      )}
-      <ModalActions
-        onPrimary={async () => {
-          setError('');
-          const result = await onSubmit({ ...form, type: mode });
-          if (result) {
-            setError(result);
-          }
-        }}
-        onClose={onClose}
-        primaryLabel="등록"
-      />
-    </ModalShell>
-  );
-}
-
-function ModalShell({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-      <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 px-6 py-4">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
-          <button
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-300"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="space-y-4 px-6 py-5">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function InputField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-}) {
-  if (type === 'date') {
-    return (
-      <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className={cn(
-              'text-[10px] font-semibold px-2 py-0.5 rounded transition',
-              value === '' 
-                ? 'bg-blue-100 text-blue-600' 
-                : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-800'
-            )}
-          >
-            미정
-          </button>
-        </div>
-        <input
-          type="date"
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-        />
-      </label>
-    );
-  }
-  
-  return (
-    <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
-      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-      />
-    </label>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <label className="space-y-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
-      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
-      <select
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value} disabled={opt.value === '__PLACEHOLDER__'}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function ModalActions({
-  onPrimary,
-  onClose,
-  primaryLabel,
-}: {
-  onPrimary: () => void;
-  onClose: () => void;
-  primaryLabel: string;
-}) {
-  return (
-    <div className="flex items-center justify-end gap-2 pt-2">
-      <button
-        onClick={onClose}
-        className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900"
-      >
-        닫기
-      </button>
-      <button
-        onClick={onPrimary}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-      >
-        {primaryLabel}
-      </button>
-    </div>
-  );
-}
-
 function MetricBox({ title, value, tone }: { title: string; value: number; tone: 'blue' | 'red' | 'emerald' }) {
   const palette =
     tone === 'blue'
@@ -3735,1361 +2378,3 @@ function CalendarIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 
-function DeleteConfirmModal({
-  title,
-  message,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div className="modal-container active fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
-        <div className="p-6">
-          <h3 className="mb-2 text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
-          <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">{message}</p>
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={onCancel}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900"
-            >
-              취소
-            </button>
-            <button
-              onClick={onConfirm}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
-            >
-              삭제
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EditFinanceModal({
-  entry,
-  onClose,
-  onSubmit,
-  projects,
-  partnerCompaniesData,
-  partnerWorkersData,
-  calculateActualAmount,
-}: {
-  entry: FinancialEntry;
-  onClose: () => void;
-  onSubmit: (payload: {
-    id: string;
-    type: 'revenue' | 'expense';
-    projectId: string;
-    bu: BU;
-    cat: string;
-    name: string;
-    amount: string;
-    date: string;
-    status: FinancialEntryStatus;
-    partnerType?: 'company' | 'worker' | '';
-    partnerCompanyId?: string;
-    partnerWorkerId?: string;
-    paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
-  }) => void;
-  projects: Project[];
-  partnerCompaniesData?: any[];
-  partnerWorkersData?: any[];
-  calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
-}) {
-  const entryData = entry as any;
-  const [form, setForm] = useState({
-    projectId: entry.projectId,
-    bu: entry.bu,
-    type: entry.type,
-    cat: entry.category,
-    name: entry.name,
-    amount: String(entry.amount),
-    date: entry.date,
-    status: entry.status,
-    partnerType: (entryData.partner_company_id ? 'company' : entryData.partner_worker_id ? 'worker' : '') as 'company' | 'worker' | '',
-    partnerCompanyId: entryData.partner_company_id ? String(entryData.partner_company_id) : '',
-    partnerWorkerId: entryData.partner_worker_id ? String(entryData.partner_worker_id) : '',
-    paymentMethod: (entryData.payment_method || '') as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
-  });
-
-  return (
-    <ModalShell title="매출/지출 수정" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="사업부"
-          value={form.bu}
-          onChange={(val) => {
-            const nextBu = val as BU;
-            const firstProject = projects.find((p) => p.bu === nextBu)?.id ?? '';
-            setForm((prev) => ({
-              ...prev,
-              bu: nextBu,
-              projectId: firstProject || prev.projectId,
-            }));
-          }}
-          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-            value: k,
-            label: BU_TITLES[k],
-          }))}
-        />
-        <SelectField
-          label="프로젝트"
-          value={form.projectId}
-          onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
-          options={projects
-            .filter((p) => p.bu === form.bu)
-            .map((p) => ({ value: p.id, label: p.name }))}
-        />
-        <SelectField
-          label="구분"
-          value={form.type}
-          onChange={(val) => setForm((prev) => ({ ...prev, type: val as 'revenue' | 'expense' }))}
-          options={[
-            { value: 'revenue', label: '매출' },
-            { value: 'expense', label: '지출' },
-          ]}
-        />
-        <InputField
-          label="카테고리"
-          placeholder="예: 선금 / 광고비"
-          value={form.cat}
-          onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))}
-        />
-        <InputField
-          label="항목명"
-          placeholder="항목명을 입력"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <InputField
-          label="금액"
-          type="number"
-          value={form.amount}
-          onChange={(v) => setForm((prev) => ({ ...prev, amount: v }))}
-        />
-        <InputField
-          label="결제일"
-          type="date"
-          value={form.date}
-          onChange={(v) => setForm((prev) => ({ ...prev, date: v }))}
-        />
-        <SelectField
-          label="상태"
-          value={form.status}
-          onChange={(v) => setForm((prev) => ({ ...prev, status: v as FinancialEntryStatus }))}
-          options={[
-            { value: 'planned', label: '지급예정' },
-            { value: 'paid', label: '지급완료' },
-            { value: 'canceled', label: '취소' },
-          ]}
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 border-t border-slate-200 dark:border-slate-700 pt-4">
-        <div className="space-y-1">
-          <label className="text-xs text-slate-500 dark:text-slate-400">지급처 유형</label>
-          <select
-            value={form.partnerType}
-            onChange={(e) => {
-              const newType = e.target.value as 'company' | 'worker' | '';
-              setForm((prev) => ({ 
-                ...prev, 
-                partnerType: newType,
-                partnerCompanyId: newType !== 'company' ? '' : prev.partnerCompanyId,
-                partnerWorkerId: newType !== 'worker' ? '' : prev.partnerWorkerId,
-              }));
-            }}
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-          >
-            <option value="">선택 안함</option>
-            <option value="company">회사</option>
-            <option value="worker">인력</option>
-          </select>
-        </div>
-        
-        {form.partnerType === 'company' && (
-          <div className="space-y-1">
-            <label className="text-xs text-slate-500 dark:text-slate-400">지급처 회사</label>
-            <select
-              value={form.partnerCompanyId}
-              onChange={(e) => setForm((prev) => ({ ...prev, partnerCompanyId: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-            >
-              <option value="">선택하세요</option>
-              {(partnerCompaniesData || []).map((company: any) => (
-                <option key={company.id} value={company.id}>
-                  {company.company_name_ko || company.company_name_en || `회사 #${company.id}`}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        
-        {form.partnerType === 'worker' && (
-          <div className="space-y-1">
-            <label className="text-xs text-slate-500 dark:text-slate-400">지급처 인력</label>
-            <select
-              value={form.partnerWorkerId}
-              onChange={(e) => setForm((prev) => ({ ...prev, partnerWorkerId: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-            >
-              <option value="">선택하세요</option>
-              {(partnerWorkersData || []).map((worker: any) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.name_ko || worker.name_en || worker.name || `인력 #${worker.id}`}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        
-        <div className="space-y-1">
-          <label className="text-xs text-slate-500 dark:text-slate-400">지급 방식</label>
-          <select
-            value={form.paymentMethod}
-            onChange={(e) => setForm((prev) => ({ ...prev, paymentMethod: e.target.value as any }))}
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-          >
-            <option value="">선택하세요</option>
-            <option value="vat_included">부가세 포함 (10% 증액)</option>
-            <option value="tax_free">면세 (0%)</option>
-            <option value="withholding">원천징수 (3.3% 제외)</option>
-            <option value="actual_payment">실지급액</option>
-          </select>
-        </div>
-        
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <label className="text-xs text-slate-500 dark:text-slate-400">실지급액</label>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500">자동계산</span>
-          </div>
-          <input
-            type="text"
-            readOnly
-            value={
-              form.amount && form.paymentMethod
-                ? calculateActualAmount(Number(form.amount), form.paymentMethod)?.toLocaleString() || '-'
-                : '-'
-            }
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm font-bold outline-none"
-          />
-        </div>
-      </div>
-      
-      <ModalActions
-        onPrimary={() => onSubmit({ ...form, id: entry.id })}
-        onClose={onClose}
-        primaryLabel="수정"
-      />
-    </ModalShell>
-  );
-}
-
-function EditTaskModal({
-  task,
-  onClose,
-  onSubmit,
-  projects,
-  orgData,
-  usersData,
-}: {
-  task: TaskItem;
-  onClose: () => void;
-  onSubmit: (payload: {
-    id: string;
-    title: string;
-    bu: BU;
-    projectId: string;
-    assignee: string;
-    dueDate: string;
-    status: TaskItem['status'];
-  }) => void;
-  projects: Project[];
-  orgData: any[];
-  usersData?: { users: any[]; currentUser: any };
-}) {
-  // 회원 목록 추출 (권한, 사업부 관계 없이 모든 회원 포함, 자기 자신 포함)
-  const memberNames = useMemo(() => {
-    const names = new Set<string>();
-    
-    // 조직 멤버에서 추출
-    orgData.forEach((unit) => {
-      (unit.members || []).forEach((m: any) => {
-        if (m.name) names.add(m.name);
-      });
-    });
-    
-    // app_users에서 추출 (권한, 사업부 관계 없이 모든 사용자)
-    if (usersData?.users) {
-      usersData.users.forEach((user: any) => {
-        if (user.name) names.add(user.name);
-      });
-    }
-    
-    // 현재 사용자 명시적으로 추가
-    if (usersData?.currentUser?.name) {
-      names.add(usersData.currentUser.name);
-    }
-    
-    return Array.from(names).sort();
-  }, [orgData, usersData]);
-
-  // 현재 담당자가 회원 목록에 있는지 확인
-  const isAssigneeInList = memberNames.includes(task.assignee);
-  const [assigneeMode, setAssigneeMode] = useState<'select' | 'custom'>(isAssigneeInList ? 'select' : 'custom');
-
-  const [form, setForm] = useState({
-    title: task.title,
-    bu: task.bu,
-    projectId: task.projectId,
-    assignee: task.assignee,
-    dueDate: task.dueDate,
-    status: task.status,
-  });
-
-  // 담당자 선택 옵션 (회원 목록 + '직접 입력')
-  const assigneeOptions = useMemo(() => {
-    return [
-      ...memberNames.map((name) => ({ value: name, label: name })),
-      { value: '__CUSTOM__', label: '직접 입력' },
-    ];
-  }, [memberNames]);
-
-  return (
-    <ModalShell title="할 일 수정" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <InputField
-          label="제목"
-          placeholder="할 일 제목"
-          value={form.title}
-          onChange={(v) => setForm((prev) => ({ ...prev, title: v }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <SelectField
-            label="사업부"
-            value={form.bu}
-            onChange={(val) => {
-              const nextBu = val as BU;
-              const firstProjectInBu =
-                projects.find((p) => p.bu === nextBu)?.id ?? '';
-              setForm((prev) => ({
-                ...prev,
-                bu: nextBu,
-                projectId: firstProjectInBu || prev.projectId,
-              }));
-            }}
-            options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-              value: k,
-              label: BU_TITLES[k],
-            }))}
-          />
-          <SelectField
-            label="프로젝트"
-            value={form.projectId}
-            onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
-            options={projects
-              .filter((p) => p.bu === form.bu)
-              .map((p) => ({ value: p.id, label: p.name }))}
-          />
-        </div>
-        {assigneeMode === 'select' ? (
-          <div className="space-y-1">
-            <SelectField
-              label="담당자"
-              value={form.assignee || '__PLACEHOLDER__'}
-              onChange={(val) => {
-                if (val === '__CUSTOM__') {
-                  setAssigneeMode('custom');
-                  setForm((prev) => ({ ...prev, assignee: '' }));
-                } else if (val === '__PLACEHOLDER__') {
-                  setForm((prev) => ({ ...prev, assignee: '' }));
-                } else {
-                  // 실제 담당자 이름이 선택된 경우
-                  setForm((prev) => ({ ...prev, assignee: val.trim() }));
-                }
-              }}
-              options={[
-                { value: '__PLACEHOLDER__', label: '담당자를 선택하세요' },
-                ...assigneeOptions,
-              ]}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setAssigneeMode('custom');
-                setForm((prev) => ({ ...prev, assignee: '' }));
-              }}
-              className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              직접 입력하기
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            <InputField
-              label="담당자"
-              placeholder="이름을 직접 입력"
-              value={form.assignee}
-              onChange={(v) => setForm((prev) => ({ ...prev, assignee: v }))}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setAssigneeMode('select');
-                if (memberNames.includes(form.assignee)) {
-                  // 현재 입력값이 회원 목록에 있으면 그대로 유지
-                } else {
-                  setForm((prev) => ({ ...prev, assignee: '' }));
-                }
-              }}
-              className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              목록에서 선택
-            </button>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-2">
-          <InputField
-            label="마감일"
-            type="date"
-            value={form.dueDate}
-            onChange={(v) => setForm((prev) => ({ ...prev, dueDate: v }))}
-          />
-          <SelectField
-            label="상태"
-            value={form.status}
-            onChange={(v) => setForm((prev) => ({ ...prev, status: v as TaskItem['status'] }))}
-            options={[
-              { value: 'todo', label: 'TODO' },
-              { value: 'in-progress', label: 'IN PROGRESS' },
-              { value: 'done', label: 'DONE' },
-            ]}
-          />
-        </div>
-      </div>
-      <ModalActions
-        onPrimary={() => {
-          // 담당자 필드 trim 처리
-          const trimmedForm = {
-            ...form,
-            assignee: form.assignee?.trim() || '',
-          };
-          onSubmit({ ...trimmedForm, id: task.id });
-        }}
-        onClose={onClose}
-        primaryLabel="수정"
-      />
-      <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
-        <CommentSection entityType="task" entityId={Number(task.id)} />
-      </div>
-    </ModalShell>
-  );
-}
-
-function CreateOrgMemberModal({
-  onClose,
-  onSubmit,
-  orgUnits,
-  defaultOrgUnitId,
-}: {
-  onClose: () => void;
-  onSubmit: (payload: {
-    org_unit_id: number;
-    name: string;
-    title: string;
-    bu_code?: string;
-    phone?: string;
-    email?: string;
-    is_active?: boolean;
-    is_leader?: boolean;
-  }) => Promise<void>;
-  orgUnits: any[];
-  defaultOrgUnitId?: number | null;
-}) {
-  const [form, setForm] = useState({
-    org_unit_id: defaultOrgUnitId || orgUnits[0]?.id || 0,
-    name: '',
-    title: '',
-    bu_code: '',
-    phone: '',
-    email: '',
-    is_active: true,
-    is_leader: false,
-  });
-  const [error, setError] = useState<string>('');
-
-  return (
-    <ModalShell title="조직 멤버 추가" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="소속 조직"
-          value={String(form.org_unit_id)}
-          onChange={(val) => setForm((prev) => ({ ...prev, org_unit_id: Number(val) }))}
-          options={orgUnits.map((unit) => ({
-            value: String(unit.id),
-            label: unit.name,
-          }))}
-        />
-        <InputField
-          label="이름"
-          placeholder="이름을 입력하세요"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <InputField
-          label="직급"
-          placeholder="예: 대표, 실장, 대리"
-          value={form.title}
-          onChange={(v) => setForm((prev) => ({ ...prev, title: v }))}
-        />
-        <SelectField
-          label="소속사업부"
-          value={form.bu_code}
-          onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-              value: k,
-              label: BU_TITLES[k],
-            })),
-          ]}
-        />
-        <InputField
-          label="연락처"
-          placeholder="전화번호를 입력하세요"
-          value={form.phone}
-          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
-        />
-        <InputField
-          label="이메일주소"
-          type="email"
-          placeholder="이메일을 입력하세요"
-          value={form.email}
-          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <SelectField
-            label="활성화 여부"
-            value={form.is_active ? 'true' : 'false'}
-            onChange={(val) => setForm((prev) => ({ ...prev, is_active: val === 'true' }))}
-            options={[
-              { value: 'true', label: '활성' },
-              { value: 'false', label: '비활성' },
-            ]}
-          />
-          <SelectField
-            label="리더 여부"
-            value={form.is_leader ? 'true' : 'false'}
-            onChange={(val) => setForm((prev) => ({ ...prev, is_leader: val === 'true' }))}
-            options={[
-              { value: 'false', label: '일반' },
-              { value: 'true', label: '리더' },
-            ]}
-          />
-        </div>
-      </div>
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-          <p className="text-xs font-semibold text-red-600">{error}</p>
-        </div>
-      )}
-      <ModalActions
-        onPrimary={async () => {
-          const missingFields: string[] = [];
-          if (!form.name) missingFields.push('이름');
-          if (!form.title) missingFields.push('직급');
-          if (!form.org_unit_id) missingFields.push('소속 조직');
-
-          if (missingFields.length > 0) {
-            setError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
-            return;
-          }
-
-          setError('');
-          await onSubmit({
-            org_unit_id: form.org_unit_id,
-            name: form.name,
-            title: form.title,
-            bu_code: form.bu_code || undefined,
-            phone: form.phone || undefined,
-            email: form.email || undefined,
-            is_active: form.is_active,
-            is_leader: form.is_leader,
-          });
-        }}
-        onClose={onClose}
-        primaryLabel="등록"
-      />
-    </ModalShell>
-  );
-}
-
-function EditOrgMemberModal({
-  member,
-  onClose,
-  onSubmit,
-  orgUnits,
-}: {
-  member: any;
-  onClose: () => void;
-  onSubmit: (payload: {
-    org_unit_id?: number;
-    name?: string;
-    title?: string;
-    bu_code?: string;
-    phone?: string;
-    email?: string;
-    is_active?: boolean;
-    is_leader?: boolean;
-  }) => Promise<void>;
-  orgUnits: any[];
-}) {
-  const [form, setForm] = useState({
-    org_unit_id: member.org_unit_id || 0,
-    name: member.name || '',
-    title: member.title || '',
-    bu_code: member.bu_code || '',
-    phone: member.phone || '',
-    email: member.email || '',
-    is_active: member.is_active !== undefined ? member.is_active : true,
-    is_leader: member.is_leader || false,
-  });
-  const [error, setError] = useState<string>('');
-
-  return (
-    <ModalShell title="조직 멤버 수정" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="소속 조직"
-          value={String(form.org_unit_id)}
-          onChange={(val) => setForm((prev) => ({ ...prev, org_unit_id: Number(val) }))}
-          options={orgUnits.map((unit) => ({
-            value: String(unit.id),
-            label: unit.name,
-          }))}
-        />
-        <InputField
-          label="이름"
-          placeholder="이름을 입력하세요"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <InputField
-          label="직급"
-          placeholder="예: 대표, 실장, 대리"
-          value={form.title}
-          onChange={(v) => setForm((prev) => ({ ...prev, title: v }))}
-        />
-        <SelectField
-          label="소속사업부"
-          value={form.bu_code}
-          onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-              value: k,
-              label: BU_TITLES[k],
-            })),
-          ]}
-        />
-        <InputField
-          label="연락처"
-          placeholder="전화번호를 입력하세요"
-          value={form.phone}
-          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
-        />
-        <InputField
-          label="이메일주소"
-          type="email"
-          placeholder="이메일을 입력하세요"
-          value={form.email}
-          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <SelectField
-            label="활성화 여부"
-            value={form.is_active ? 'true' : 'false'}
-            onChange={(val) => setForm((prev) => ({ ...prev, is_active: val === 'true' }))}
-            options={[
-              { value: 'true', label: '활성' },
-              { value: 'false', label: '비활성' },
-            ]}
-          />
-          <SelectField
-            label="리더 여부"
-            value={form.is_leader ? 'true' : 'false'}
-            onChange={(val) => setForm((prev) => ({ ...prev, is_leader: val === 'true' }))}
-            options={[
-              { value: 'false', label: '일반' },
-              { value: 'true', label: '리더' },
-            ]}
-          />
-        </div>
-      </div>
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-          <p className="text-xs font-semibold text-red-600">{error}</p>
-        </div>
-      )}
-      <ModalActions
-        onPrimary={async () => {
-          const missingFields: string[] = [];
-          if (!form.name) missingFields.push('이름');
-          if (!form.title) missingFields.push('직급');
-          if (!form.org_unit_id) missingFields.push('소속 조직');
-
-          if (missingFields.length > 0) {
-            setError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
-            return;
-          }
-
-          setError('');
-          await onSubmit({
-            org_unit_id: form.org_unit_id,
-            name: form.name,
-            title: form.title,
-            bu_code: form.bu_code || undefined,
-            phone: form.phone || undefined,
-            email: form.email || undefined,
-            is_active: form.is_active,
-            is_leader: form.is_leader,
-          });
-        }}
-        onClose={onClose}
-        primaryLabel="수정"
-      />
-    </ModalShell>
-  );
-}
-
-function CreateExternalWorkerModal({
-  onClose,
-  onSubmit,
-  defaultBu,
-}: {
-  onClose: () => void;
-  onSubmit: (payload: {
-    bu_code: BU;
-    name: string;
-    company_name?: string;
-    worker_type?: 'freelancer' | 'company' | 'contractor';
-    phone?: string;
-    email?: string;
-    specialties?: string[];
-    notes?: string;
-    is_active?: boolean;
-  }) => Promise<void>;
-  defaultBu?: BU;
-}) {
-  const [form, setForm] = useState({
-    bu_code: defaultBu || 'GRIGO',
-    name: '',
-    company_name: '',
-    worker_type: 'freelancer' as 'freelancer' | 'company' | 'contractor',
-    phone: '',
-    email: '',
-    specialties: [] as string[],
-    specialtyInput: '',
-    notes: '',
-    is_active: true,
-  });
-  const [error, setError] = useState<string>('');
-
-  const handleAddSpecialty = () => {
-    if (form.specialtyInput.trim()) {
-      setForm((prev) => ({
-        ...prev,
-        specialties: [...prev.specialties, prev.specialtyInput.trim()],
-        specialtyInput: '',
-      }));
-    }
-  };
-
-  const handleRemoveSpecialty = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      specialties: prev.specialties.filter((_, i) => i !== index),
-    }));
-  };
-
-  return (
-    <ModalShell title="외주 인력 추가" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="소속사업부"
-          value={form.bu_code}
-          onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val as BU }))}
-          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-            value: k,
-            label: BU_TITLES[k],
-          }))}
-        />
-        <InputField
-          label="이름"
-          placeholder="이름을 입력하세요"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <SelectField
-          label="인력 타입"
-          value={form.worker_type}
-          onChange={(val) =>
-            setForm((prev) => ({ ...prev, worker_type: val as typeof form.worker_type }))
-          }
-          options={[
-            { value: 'freelancer', label: '프리랜서' },
-            { value: 'company', label: '외주회사' },
-            { value: 'contractor', label: '계약직' },
-          ]}
-        />
-        {form.worker_type === 'company' && (
-          <InputField
-            label="회사명"
-            placeholder="외주회사명을 입력하세요"
-            value={form.company_name}
-            onChange={(v) => setForm((prev) => ({ ...prev, company_name: v }))}
-          />
-        )}
-        <InputField
-          label="연락처"
-          placeholder="전화번호를 입력하세요"
-          value={form.phone}
-          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
-        />
-        <InputField
-          label="이메일주소"
-          type="email"
-          placeholder="이메일을 입력하세요"
-          value={form.email}
-          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-        />
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">전문 분야</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="전문 분야를 입력하고 추가 버튼을 클릭하세요"
-              value={form.specialtyInput}
-              onChange={(e) => setForm((prev) => ({ ...prev, specialtyInput: e.target.value }))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddSpecialty();
-                }
-              }}
-              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleAddSpecialty}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
-            >
-              추가
-            </button>
-          </div>
-          {form.specialties.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {form.specialties.map((specialty, index) => (
-                <span
-                  key={index}
-                  className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
-                >
-                  {specialty}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSpecialty(index)}
-                    className="text-blue-700 hover:text-blue-900"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">비고</label>
-          <textarea
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-            rows={3}
-            placeholder="추가 정보를 입력하세요"
-            value={form.notes}
-            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-          />
-        </div>
-        <div className="md:col-span-2">
-          <SelectField
-            label="활성화 상태"
-            value={form.is_active ? 'active' : 'inactive'}
-            onChange={(val) => setForm((prev) => ({ ...prev, is_active: val === 'active' }))}
-            options={[
-              { value: 'active', label: '활성' },
-              { value: 'inactive', label: '비활성' },
-            ]}
-          />
-        </div>
-      </div>
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-      <ModalActions
-        onPrimary={async () => {
-          if (!form.name.trim()) {
-            setError('이름을 입력해주세요.');
-            return;
-          }
-          setError('');
-          await onSubmit({
-            bu_code: form.bu_code,
-            name: form.name,
-            company_name: form.company_name || undefined,
-            worker_type: form.worker_type,
-            phone: form.phone || undefined,
-            email: form.email || undefined,
-            specialties: form.specialties.length > 0 ? form.specialties : undefined,
-            notes: form.notes || undefined,
-            is_active: form.is_active,
-          });
-        }}
-        onClose={onClose}
-        primaryLabel="등록"
-      />
-    </ModalShell>
-  );
-}
-
-function EditExternalWorkerModal({
-  worker,
-  onClose,
-  onSubmit,
-}: {
-  worker: any;
-  onClose: () => void;
-  onSubmit: (payload: {
-    bu_code?: BU;
-    name?: string;
-    company_name?: string;
-    worker_type?: 'freelancer' | 'company' | 'contractor';
-    phone?: string;
-    email?: string;
-    specialties?: string[];
-    notes?: string;
-    is_active?: boolean;
-  }) => Promise<void>;
-}) {
-  const [form, setForm] = useState({
-    bu_code: worker.bu_code || 'GRIGO',
-    name: worker.name || '',
-    company_name: worker.company_name || '',
-    worker_type: (worker.worker_type || 'freelancer') as 'freelancer' | 'company' | 'contractor',
-    phone: worker.phone || '',
-    email: worker.email || '',
-    specialties: (worker.specialties || []) as string[],
-    specialtyInput: '',
-    notes: worker.notes || '',
-    is_active: worker.is_active !== undefined ? worker.is_active : true,
-  });
-  const [error, setError] = useState<string>('');
-
-  const handleAddSpecialty = () => {
-    if (form.specialtyInput.trim()) {
-      setForm((prev) => ({
-        ...prev,
-        specialties: [...prev.specialties, prev.specialtyInput.trim()],
-        specialtyInput: '',
-      }));
-    }
-  };
-
-  const handleRemoveSpecialty = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      specialties: prev.specialties.filter((_, i) => i !== index),
-    }));
-  };
-
-  return (
-    <ModalShell title="외주 인력 수정" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SelectField
-          label="소속사업부"
-          value={form.bu_code}
-          onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val as BU }))}
-          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-            value: k,
-            label: BU_TITLES[k],
-          }))}
-        />
-        <InputField
-          label="이름"
-          placeholder="이름을 입력하세요"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <SelectField
-          label="인력 타입"
-          value={form.worker_type}
-          onChange={(val) =>
-            setForm((prev) => ({ ...prev, worker_type: val as typeof form.worker_type }))
-          }
-          options={[
-            { value: 'freelancer', label: '프리랜서' },
-            { value: 'company', label: '외주회사' },
-            { value: 'contractor', label: '계약직' },
-          ]}
-        />
-        {form.worker_type === 'company' && (
-          <InputField
-            label="회사명"
-            placeholder="외주회사명을 입력하세요"
-            value={form.company_name}
-            onChange={(v) => setForm((prev) => ({ ...prev, company_name: v }))}
-          />
-        )}
-        <InputField
-          label="연락처"
-          placeholder="전화번호를 입력하세요"
-          value={form.phone}
-          onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
-        />
-        <InputField
-          label="이메일주소"
-          type="email"
-          placeholder="이메일을 입력하세요"
-          value={form.email}
-          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-        />
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">전문 분야</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="전문 분야를 입력하고 추가 버튼을 클릭하세요"
-              value={form.specialtyInput}
-              onChange={(e) => setForm((prev) => ({ ...prev, specialtyInput: e.target.value }))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddSpecialty();
-                }
-              }}
-              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleAddSpecialty}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
-            >
-              추가
-            </button>
-          </div>
-          {form.specialties.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {form.specialties.map((specialty, index) => (
-                <span
-                  key={index}
-                  className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
-                >
-                  {specialty}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSpecialty(index)}
-                    className="text-blue-700 hover:text-blue-900"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">비고</label>
-          <textarea
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-            rows={3}
-            placeholder="추가 정보를 입력하세요"
-            value={form.notes}
-            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-          />
-        </div>
-        <div className="md:col-span-2">
-          <SelectField
-            label="활성화 상태"
-            value={form.is_active ? 'active' : 'inactive'}
-            onChange={(val) => setForm((prev) => ({ ...prev, is_active: val === 'active' }))}
-            options={[
-              { value: 'active', label: '활성' },
-              { value: 'inactive', label: '비활성' },
-            ]}
-          />
-        </div>
-      </div>
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-      <ModalActions
-        onPrimary={async () => {
-          if (!form.name.trim()) {
-            setError('이름을 입력해주세요.');
-            return;
-          }
-          setError('');
-          await onSubmit({
-            bu_code: form.bu_code,
-            name: form.name,
-            company_name: form.company_name || undefined,
-            worker_type: form.worker_type,
-            phone: form.phone || undefined,
-            email: form.email || undefined,
-            specialties: form.specialties.length > 0 ? form.specialties : undefined,
-            notes: form.notes || undefined,
-            is_active: form.is_active,
-          });
-        }}
-        onClose={onClose}
-        primaryLabel="수정"
-      />
-    </ModalShell>
-  );
-}
-
-function EditUserModal({
-  user,
-  onClose,
-  onSubmit,
-}: {
-  user: any;
-  onClose: () => void;
-  onSubmit: (payload: {
-    name?: string;
-    email?: string;
-    role?: string;
-    bu_code?: string;
-    position?: string;
-  }) => Promise<void>;
-}) {
-  const [form, setForm] = useState({
-    name: user.name || '',
-    email: user.email || '',
-    role: user.role || 'member',
-    bu_code: user.bu_code || '',
-    position: user.position || '',
-  });
-  const [error, setError] = useState<string>('');
-
-  return (
-    <ModalShell title="회원 정보 수정" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <InputField
-          label="이름"
-          placeholder="이름을 입력하세요"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <InputField
-          label="이메일"
-          type="email"
-          placeholder="이메일을 입력하세요"
-          value={form.email}
-          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-        />
-        <SelectField
-          label="역할"
-          value={form.role}
-          onChange={(val) => setForm((prev) => ({ ...prev, role: val }))}
-          options={[
-            { value: 'admin', label: '관리자' },
-            { value: 'manager', label: '매니저' },
-            { value: 'member', label: '멤버' },
-            { value: 'viewer', label: '뷰어' },
-            { value: 'artist', label: '아티스트' },
-          ]}
-        />
-        <SelectField
-          label="소속사업부"
-          value={form.bu_code}
-          onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-              value: k,
-              label: BU_TITLES[k],
-            })),
-          ]}
-        />
-        <InputField
-          label="직급"
-          placeholder="예: 대표, 실장, 대리"
-          value={form.position}
-          onChange={(v) => setForm((prev) => ({ ...prev, position: v }))}
-        />
-      </div>
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-          <p className="text-xs font-semibold text-red-600">{error}</p>
-        </div>
-      )}
-      <ModalActions
-        onPrimary={async () => {
-          const missingFields: string[] = [];
-          if (!form.name) missingFields.push('이름');
-
-          if (missingFields.length > 0) {
-            setError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
-            return;
-          }
-
-          setError('');
-          await onSubmit({
-            name: form.name,
-            email: form.email || undefined,
-            role: form.role,
-            bu_code: form.bu_code || undefined,
-            position: form.position || undefined,
-          });
-        }}
-        onClose={onClose}
-        primaryLabel="수정"
-      />
-    </ModalShell>
-  );
-}
-
-function CreateUserModal({
-  onClose,
-  onSubmit,
-}: {
-  onClose: () => void;
-  onSubmit: (payload: {
-    name: string;
-    email: string;
-    password: string;
-    role?: string;
-    bu_code?: string;
-    position?: string;
-  }) => Promise<void>;
-}) {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'member',
-    bu_code: '',
-    position: '',
-  });
-  const [error, setError] = useState<string>('');
-
-  return (
-    <ModalShell title="회원 생성" onClose={onClose}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <InputField
-          label="이름"
-          placeholder="이름을 입력하세요"
-          value={form.name}
-          onChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
-        />
-        <InputField
-          label="이메일"
-          type="email"
-          placeholder="이메일을 입력하세요"
-          value={form.email}
-          onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-        />
-        <InputField
-          label="비밀번호"
-          type="password"
-          placeholder="비밀번호를 입력하세요 (최소 6자)"
-          value={form.password}
-          onChange={(v) => setForm((prev) => ({ ...prev, password: v }))}
-        />
-        <InputField
-          label="비밀번호 확인"
-          type="password"
-          placeholder="비밀번호를 다시 입력하세요"
-          value={form.confirmPassword}
-          onChange={(v) => setForm((prev) => ({ ...prev, confirmPassword: v }))}
-        />
-        <SelectField
-          label="역할"
-          value={form.role}
-          onChange={(val) => setForm((prev) => ({ ...prev, role: val }))}
-          options={[
-            { value: 'admin', label: '관리자' },
-            { value: 'manager', label: '매니저' },
-            { value: 'member', label: '멤버' },
-            { value: 'viewer', label: '뷰어' },
-            { value: 'artist', label: '아티스트' },
-          ]}
-        />
-        <SelectField
-          label="소속사업부"
-          value={form.bu_code}
-          onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val }))}
-          options={[
-            { value: '', label: '선택 안함' },
-            ...(Object.keys(BU_TITLES) as BU[]).map((k) => ({
-              value: k,
-              label: BU_TITLES[k],
-            })),
-          ]}
-        />
-        <InputField
-          label="직급"
-          placeholder="예: 대표, 실장, 대리"
-          value={form.position}
-          onChange={(v) => setForm((prev) => ({ ...prev, position: v }))}
-        />
-      </div>
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-          <p className="text-xs font-semibold text-red-600">{error}</p>
-        </div>
-      )}
-      <ModalActions
-        onPrimary={async () => {
-          const missingFields: string[] = [];
-          if (!form.name) missingFields.push('이름');
-          if (!form.email) missingFields.push('이메일');
-          if (!form.password) missingFields.push('비밀번호');
-          if (!form.confirmPassword) missingFields.push('비밀번호 확인');
-
-          if (missingFields.length > 0) {
-            setError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
-            return;
-          }
-
-          if (form.password !== form.confirmPassword) {
-            setError('비밀번호가 일치하지 않습니다.');
-            return;
-          }
-
-          if (form.password.length < 6) {
-            setError('비밀번호는 최소 6자 이상이어야 합니다.');
-            return;
-          }
-
-          setError('');
-          try {
-            await onSubmit({
-              name: form.name,
-              email: form.email,
-              password: form.password,
-              role: form.role,
-              bu_code: form.bu_code || undefined,
-              position: form.position || undefined,
-            });
-          } catch (err: any) {
-            setError(err.message || '회원 생성 중 오류가 발생했습니다.');
-          }
-        }}
-        onClose={onClose}
-        primaryLabel="생성"
-      />
-    </ModalShell>
-  );
-}

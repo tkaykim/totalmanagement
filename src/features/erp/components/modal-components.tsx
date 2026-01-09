@@ -15,7 +15,7 @@ export function ModalShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="modal-container active fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+    <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
       <div className="w-full max-w-2xl max-h-[calc(100vh-2rem)] flex flex-col rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
         <div className="flex-shrink-0 flex items-center justify-between border-b border-slate-100 dark:border-slate-700 px-6 py-4">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
@@ -163,6 +163,43 @@ export function ModalActions({
       >
         {primaryLabel}
       </button>
+    </div>
+  );
+}
+
+export function DeleteConfirmModal({
+  title,
+  message,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="modal-container active fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
+        <div className="p-6">
+          <h3 className="mb-2 text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
+          <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">{message}</p>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={onCancel}
+              className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:bg-slate-900"
+            >
+              취소
+            </button>
+            <button
+              onClick={onConfirm}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+            >
+              삭제
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

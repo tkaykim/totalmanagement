@@ -14,8 +14,32 @@ export async function POST(request: NextRequest) {
     const today = getTodayKST();
     const now = getNowKSTISO();
 
-    // 같은 날짜의 모든 출근 기록 조회 (최신순)
-    const { data: existingLogs, error: checkError } = await supabase
+    // 먼저 날짜와 상관없이 미완료된(퇴근하지 않은) 출근 기록이 있는지 확인
+    // 자정이 지나서도 근무 중인 케이스를 처리하기 위함
+    const { data: activeLog, error: activeError } = await supabase
+      .from('attendance_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .is('check_out_at', null)
+      .not('check_in_at', 'is', null)
+      .order('check_in_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (activeError) {
+      throw activeError;
+    }
+
+    // 미완료 출근 기록이 있으면 이미 출근 처리된 것으로 간주
+    if (activeLog) {
+      return NextResponse.json(
+        { error: '이미 출근 처리되었습니다. (진행 중인 근무가 있습니다)' },
+        { status: 400 }
+      );
+    }
+
+    // 오늘 날짜의 출근 기록 조회 (최신순) - 연장근무 판단용
+    const { data: todayLogs, error: checkError } = await supabase
       .from('attendance_logs')
       .select('*')
       .eq('user_id', user.id)
@@ -26,39 +50,9 @@ export async function POST(request: NextRequest) {
       throw checkError;
     }
 
-    // 가장 최근 출근 기록 확인
-    const latestLog = existingLogs && existingLogs.length > 0 ? existingLogs[0] : null;
-
-    // 이미 출근 기록이 있고 퇴근 기록도 있는 경우 = 연장근무
-    if (latestLog && latestLog.check_in_at && latestLog.check_out_at) {
-      // 연장근무로 새 출근 기록 생성
-      const logData: any = {
-        user_id: user.id,
-        work_date: today,
-        check_in_at: now,
-        status: 'present',
-        is_modified: false,
-        is_verified_location: false,
-        is_overtime: true,
-      };
-
-      const { data, error } = await supabase
-        .from('attendance_logs')
-        .insert(logData)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return NextResponse.json(data);
-    }
-
-    // 이미 출근 기록이 있고 퇴근 기록이 없는 경우
-    if (latestLog && latestLog.check_in_at && !latestLog.check_out_at) {
-      return NextResponse.json(
-        { error: '이미 출근 처리되었습니다.' },
-        { status: 400 }
-      );
-    }
+    // 오늘 이미 출퇴근 완료된 기록이 있으면 연장근무로 처리
+    const completedTodayLog = todayLogs?.find(log => log.check_in_at && log.check_out_at);
+    const isOvertime = !!completedTodayLog;
 
     // 새로운 출근 기록 생성
     const logData: any = {
@@ -68,7 +62,7 @@ export async function POST(request: NextRequest) {
       status: 'present',
       is_modified: false,
       is_verified_location: false,
-      is_overtime: false,
+      is_overtime: isOvertime,
     };
 
     const { data, error } = await supabase

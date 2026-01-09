@@ -141,7 +141,32 @@ export function checkFinancePermission({
     };
   }
 
-  // 4. manager는 본인 BU(또는 HEAD면 전체) 접근
+  // 4. leader는 본인 BU(또는 HEAD면 전체) 전체 접근 + PM/참여 프로젝트도 접근
+  if (role === 'leader') {
+    // 본인 BU이거나 PM/참여자인 프로젝트면 전체 권한
+    const isPm = isProjectPm(userId, project);
+    const isParticipant = isProjectParticipant(userId, project);
+    const hasBuAccess = entryBu ? canAccessBu(userBu, entryBu) : true;
+    
+    if (hasBuAccess || isPm || isParticipant) {
+      return {
+        canRead: true,
+        canCreate: true,
+        canUpdate: true,
+        canDelete: true,
+      };
+    }
+    
+    return {
+      canRead: false,
+      canCreate: false,
+      canUpdate: false,
+      canDelete: false,
+      reason: '해당 프로젝트의 재무 정보에 접근할 수 없습니다.',
+    };
+  }
+
+  // 5. manager는 본인 BU(또는 HEAD면 전체) 접근
   if (role === 'manager') {
     return {
       canRead: true,
@@ -151,7 +176,7 @@ export function checkFinancePermission({
     };
   }
 
-  // 5. member 권한 세분화
+  // 6. member 권한 세분화
   if (role === 'member') {
     const isPm = isProjectPm(userId, project);
     const isCreator = isEntryCreator(userId, entry);
@@ -188,7 +213,7 @@ export function checkFinancePermission({
     };
   }
 
-  // 6. artist 역할 (별도 정책 필요시 여기서 처리)
+  // 7. artist 역할 (별도 정책 필요시 여기서 처리)
   if (role === 'artist') {
     return {
       canRead: false,
@@ -220,7 +245,7 @@ export function canViewFinanceForBu(currentUser: AppUser | null, targetBu: BU): 
   if (role === 'viewer' || role === 'artist') return false;
   if (role === 'admin') return true;
   
-  // manager, member는 BU 체크
+  // leader, manager, member는 BU 체크
   return canAccessBu(userBu, targetBu);
 }
 
@@ -233,6 +258,12 @@ export function filterFinanceEntriesForMember(
   currentUser: AppUser,
   project: Project | null
 ): FinancialEntry[] {
+  // admin, leader, manager는 전체 반환
+  if (currentUser.role === 'admin' || currentUser.role === 'leader' || currentUser.role === 'manager') {
+    return entries;
+  }
+  
+  // member만 필터링
   if (currentUser.role !== 'member') return entries;
   
   const isPm = isProjectPm(currentUser.id, project);

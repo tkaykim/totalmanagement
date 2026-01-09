@@ -5,11 +5,9 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import FlowMakerDashboard from '@/features/flowmaker/components/FlowMakerDashboard';
 import { WorkStatusWrapper } from '@/components/WorkStatusWrapper';
-import type { BU } from '@/types/database';
 
 export default function FlowMakerPage() {
   const router = useRouter();
-  const [bu, setBu] = useState<BU>('FLOW');
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -75,7 +73,7 @@ export default function FlowMakerPage() {
 
   return (
     <WorkStatusWrapper currentUser={currentUser} onLogout={handleLogout}>
-      <FlowMakerDashboard bu={bu} />
+      <FlowMakerDashboard />
     </WorkStatusWrapper>
   );
 }

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import ASTCompanyDashboard from '@/features/astcompany/components/ASTCompanyDashboard';
 import { WorkStatusWrapper } from '@/components/WorkStatusWrapper';
-import type { BU } from '@/types/database';
 
 export default function ASTCompanyPage() {
   const router = useRouter();
@@ -74,7 +73,7 @@ export default function ASTCompanyPage() {
 
   return (
     <WorkStatusWrapper currentUser={currentUser} onLogout={handleLogout}>
-      <ASTCompanyDashboard bu="AST" />
+      <ASTCompanyDashboard />
     </WorkStatusWrapper>
   );
 }

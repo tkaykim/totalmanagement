@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { canViewAllAttendance } from '@/features/attendance/lib/permissions';
+import { canViewAllAttendance, isLeader, isAdmin, isHeadLeader } from '@/features/attendance/lib/permissions';
 import type { AppUser } from '@/types/database';
 import { getTodayKST } from '@/lib/timezone.server';
 
@@ -26,8 +26,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
-    if (!canViewAllAttendance(currentUser as AppUser)) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // 권한 체크: admin 또는 leader
+    const isAdminUser = canViewAllAttendance(currentUser as AppUser);
+    const isLeaderUser = isLeader(currentUser as AppUser);
+
+    if (!isAdminUser && !isLeaderUser) {
+      return NextResponse.json({ error: 'Forbidden: Admin or Leader access required' }, { status: 403 });
     }
 
     const dateParam = searchParams.get('date');
@@ -35,6 +39,11 @@ export async function GET(request: NextRequest) {
     const todayKST = getTodayKST();
     const targetDate = dateParam || todayKST;
     const isToday = targetDate === todayKST;
+
+    // leader인 경우 본인 BU로 강제 필터링
+    const effectiveBuCode = isLeaderUser && !isAdminUser 
+      ? currentUser.bu_code 
+      : buCodeParam;
 
     const { data: allUsers, error: usersError } = await supabase
       .from('app_users')
@@ -45,8 +54,9 @@ export async function GET(request: NextRequest) {
 
     if (usersError) throw usersError;
 
-    const filteredUsers = buCodeParam
-      ? allUsers?.filter((u) => u.bu_code === buCodeParam)
+    // BU 필터링 적용
+    const filteredUsers = effectiveBuCode
+      ? allUsers?.filter((u) => u.bu_code === effectiveBuCode)
       : allUsers;
 
     const { data: todayLogs, error: logsError } = await supabase
@@ -101,12 +111,6 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      // 상태 결정 로직:
-      // 1. 출근 데이터 없음 → 미출근 (OFF_WORK)
-      // 2. 출근+퇴근 완료 → 퇴근 (CHECKED_OUT)
-      // 3. 출근 중 + 실시간 상태가 BREAK/MEETING → 자리비움 (AWAY)
-      // 4. 출근 중 + is_overtime → 연장근무중 (OVERTIME)
-      // 5. 출근 중 → 근무중 (WORKING)
       let displayStatus: DisplayWorkStatus = 'OFF_WORK';
       
       if (!hasCheckedIn) {
@@ -146,11 +150,20 @@ export async function GET(request: NextRequest) {
       overtime: overview?.filter((o) => o.display_status === 'OVERTIME').length || 0,
     };
 
+    // 직접 수정 권한: admin 또는 HEAD leader만 가능
+    const canEdit = isAdmin(currentUser as AppUser) || isHeadLeader(currentUser as AppUser);
+
     return NextResponse.json({
       date: targetDate,
       is_today: isToday,
       stats,
       users: overview,
+      currentUser: {
+        id: currentUser.id,
+        role: currentUser.role,
+        bu_code: currentUser.bu_code,
+        canEdit,
+      },
     });
   } catch (error: any) {
     console.error('Admin overview error:', error);

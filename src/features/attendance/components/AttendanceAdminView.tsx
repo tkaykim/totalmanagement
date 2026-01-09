@@ -11,17 +11,17 @@ import {
   Coffee,
   ChevronLeft,
   ChevronRight,
-  Building2,
   Zap,
-  RefreshCw,
   UserX,
   ClipboardCheck,
   ChevronDown,
   ChevronUp,
+  Edit3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getTodayKST } from '@/lib/timezone';
 import { ApprovalQueue } from './ApprovalQueue';
+import { AdminAttendanceEditModal } from './AdminAttendanceEditModal';
 import { getApprovalQueue } from '../api';
 import type { ApprovalQueueItem } from '../types';
 
@@ -51,11 +51,19 @@ interface OverviewStats {
   overtime: number;
 }
 
+interface CurrentUserInfo {
+  id: string;
+  role: string;
+  bu_code: string | null;
+  canEdit: boolean;
+}
+
 interface OverviewResponse {
   date: string;
   is_today: boolean;
   stats: OverviewStats;
   users: UserAttendance[];
+  currentUser: CurrentUserInfo;
 }
 
 const BU_LABELS: Record<string, string> = {
@@ -128,6 +136,8 @@ export function AttendanceAdminView() {
   const [selectedBu, setSelectedBu] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [showApprovalQueue, setShowApprovalQueue] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserAttendance | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // 결재 대기 항목 쿼리
   const { data: approvalQueueData } = useQuery<ApprovalQueueItem[]>({
@@ -190,6 +200,22 @@ export function AttendanceAdminView() {
     setSelectedDate(getTodayKST());
   };
 
+  const handleUserClick = (user: UserAttendance) => {
+    // canEdit 권한이 있는 경우에만 모달 열기
+    if (data?.currentUser?.canEdit) {
+      setSelectedUser(user);
+      setShowEditModal(true);
+    }
+  };
+
+  const canEdit = data?.currentUser?.canEdit ?? false;
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedUser(null);
+    refetch();
+  };
+
   const formattedDate = format(parseISO(selectedDate), 'yyyy년 M월 d일 (EEEE)', { locale: ko });
   const isToday = selectedDate === getTodayKST();
 
@@ -202,243 +228,146 @@ export function AttendanceAdminView() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Users className="h-6 w-6 text-blue-600" />
-            전체 근무현황
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            전체 직원들의 출퇴근 현황을 확인할 수 있습니다.
-          </p>
-        </div>
-        <button
-          onClick={() => refetch()}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
-        >
-          <RefreshCw className="h-4 w-4" />
-          새로고침
-        </button>
-      </div>
+    <div className="space-y-4 p-4 lg:p-6">
+      {/* Date Navigation & Filters */}
+      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-800 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handlePrevDay}
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+          >
+            <ChevronLeft className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+          </button>
 
-      {/* Date Navigation */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
-        <button
-          onClick={handlePrevDay}
-          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-        >
-          <ChevronLeft className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-        </button>
-
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          <span className="text-sm font-bold text-slate-900 dark:text-slate-100 px-2">
             {formattedDate}
           </span>
+
+          <button
+            onClick={handleNextDay}
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+          >
+            <ChevronRight className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+          </button>
+
           {!isToday && (
             <button
               onClick={handleToday}
-              className="px-3 py-1 text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+              className="ml-2 px-2 py-1 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition"
             >
               오늘
             </button>
           )}
         </div>
 
-        <button
-          onClick={handleNextDay}
-          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+        <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+
+        {/* BU Filter */}
+        <select
+          value={selectedBu}
+          onChange={(e) => setSelectedBu(e.target.value)}
+          className="text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <ChevronRight className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-        </button>
-      </div>
+          <option value="">전체 사업부</option>
+          {Object.entries(BU_LABELS).map(([code, label]) => (
+            <option key={code} value={code}>{label}</option>
+          ))}
+        </select>
 
-      {/* Stats Cards */}
-      {data?.stats && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          {/* 전체 */}
-          <div
-            onClick={() => setStatusFilter('')}
-            className={cn(
-              'rounded-2xl p-4 border cursor-pointer transition',
-              statusFilter === ''
-                ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-300'
-            )}
+        {/* Approval Queue Toggle */}
+        {approvalQueueData && approvalQueueData.length > 0 && (
+          <button
+            onClick={() => setShowApprovalQueue(!showApprovalQueue)}
+            className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800 transition"
           >
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
-              <Users className="h-4 w-4" />
-              <span className="text-xs font-medium">전체</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-              {data.stats.total}명
-            </p>
-          </div>
-
-          {/* 근무중 */}
-          <div
-            onClick={() => setStatusFilter('WORKING')}
-            className={cn(
-              'rounded-2xl p-4 border cursor-pointer transition',
-              statusFilter === 'WORKING'
-                ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-green-300'
-            )}
-          >
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
-              <Monitor className="h-4 w-4" />
-              <span className="text-xs font-medium">근무중</span>
-            </div>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-              {data.stats.working}명
-            </p>
-          </div>
-
-          {/* 퇴근 */}
-          <div
-            onClick={() => setStatusFilter('CHECKED_OUT')}
-            className={cn(
-              'rounded-2xl p-4 border cursor-pointer transition',
-              statusFilter === 'CHECKED_OUT'
-                ? 'bg-slate-200 dark:bg-slate-600 border-slate-400 dark:border-slate-500'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-400'
-            )}
-          >
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 mb-1">
-              <LogOutIcon className="h-4 w-4" />
-              <span className="text-xs font-medium">퇴근</span>
-            </div>
-            <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">
-              {data.stats.checked_out}명
-            </p>
-          </div>
-
-          {/* 미출근 */}
-          <div
-            onClick={() => setStatusFilter('OFF_WORK')}
-            className={cn(
-              'rounded-2xl p-4 border cursor-pointer transition',
-              statusFilter === 'OFF_WORK'
-                ? 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-red-300'
-            )}
-          >
-            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
-              <UserX className="h-4 w-4" />
-              <span className="text-xs font-medium">미출근</span>
-            </div>
-            <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-              {data.stats.off_work}명
-            </p>
-          </div>
-
-          {/* 자리비움 */}
-          <div
-            onClick={() => setStatusFilter('AWAY')}
-            className={cn(
-              'rounded-2xl p-4 border cursor-pointer transition',
-              statusFilter === 'AWAY'
-                ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-orange-300'
-            )}
-          >
-            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-1">
-              <Coffee className="h-4 w-4" />
-              <span className="text-xs font-medium">자리비움</span>
-            </div>
-            <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">
-              {data.stats.away}명
-            </p>
-          </div>
-
-          {/* 연장근무 */}
-          <div
-            onClick={() => setStatusFilter('OVERTIME')}
-            className={cn(
-              'rounded-2xl p-4 border cursor-pointer transition',
-              statusFilter === 'OVERTIME'
-                ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-purple-300'
-            )}
-          >
-            <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-1">
-              <Zap className="h-4 w-4" />
-              <span className="text-xs font-medium">연장근무</span>
-            </div>
-            <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-              {data.stats.overtime}명
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Approval Queue Section - Compact */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <button
-          onClick={() => setShowApprovalQueue(!showApprovalQueue)}
-          className="w-full px-4 py-2.5 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition"
-        >
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-              결재 대기함
-            </h2>
-            {approvalQueueData && approvalQueueData.length > 0 && (
-              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
-                {approvalQueueData.length}
-              </span>
-            )}
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              (근무 요청 승인/반려)
-            </span>
-          </div>
-          {showApprovalQueue ? (
-            <ChevronUp className="h-4 w-4 text-slate-500" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-slate-500" />
-          )}
-        </button>
-        {showApprovalQueue && (
-          <div className="p-3 border-t border-slate-200 dark:border-slate-700">
-            <ApprovalQueue />
-          </div>
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            결재대기 ({approvalQueueData.length})
+            {showApprovalQueue ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-slate-500" />
-          <select
-            value={selectedBu}
-            onChange={(e) => setSelectedBu(e.target.value)}
-            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">전체 사업부</option>
-            {Object.entries(BU_LABELS).map(([code, label]) => (
-              <option key={code} value={code}>
-                {label}
-              </option>
-            ))}
-          </select>
+      {/* Stats Cards - Compact */}
+      {data?.stats && (
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          {[
+            { key: '', label: '전체', count: data.stats.total, icon: Users, color: 'blue' },
+            { key: 'WORKING', label: '근무중', count: data.stats.working, icon: Monitor, color: 'green' },
+            { key: 'CHECKED_OUT', label: '퇴근', count: data.stats.checked_out, icon: LogOutIcon, color: 'slate' },
+            { key: 'OFF_WORK', label: '미출근', count: data.stats.off_work, icon: UserX, color: 'red' },
+            { key: 'AWAY', label: '자리비움', count: data.stats.away, icon: Coffee, color: 'orange' },
+            { key: 'OVERTIME', label: '연장근무', count: data.stats.overtime, icon: Zap, color: 'purple' },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = statusFilter === item.key;
+            return (
+              <div
+                key={item.key}
+                onClick={() => setStatusFilter(item.key)}
+                className={cn(
+                  'rounded-xl p-2.5 border cursor-pointer transition',
+                  isActive
+                    ? `bg-${item.color}-50 dark:bg-${item.color}-900/30 border-${item.color}-300 dark:border-${item.color}-700`
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                )}
+              >
+                <div className={cn('flex items-center gap-1.5 mb-0.5', `text-${item.color}-600 dark:text-${item.color}-400`)}>
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
+                </div>
+                <p className={cn('text-lg font-bold', `text-${item.color}-700 dark:text-${item.color}-300`)}>
+                  {item.count}명
+                </p>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
+
+      {/* Approval Queue Section - Collapsible */}
+      {approvalQueueData && approvalQueueData.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-800 overflow-hidden">
+          <button
+            onClick={() => setShowApprovalQueue(!showApprovalQueue)}
+            className="w-full px-3 py-2 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition"
+          >
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                결재 대기함
+              </span>
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
+                {approvalQueueData.length}
+              </span>
+            </div>
+            {showApprovalQueue ? (
+              <ChevronUp className="h-4 w-4 text-slate-500" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-500" />
+            )}
+          </button>
+          {showApprovalQueue && (
+            <div className="p-3 border-t border-slate-200 dark:border-slate-700">
+              <ApprovalQueue />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* User List */}
       {isLoading ? (
-        <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+        <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
           로딩 중...
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.entries(groupedByBu).map(([buCode, users]) => (
             <div
               key={buCode}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+              className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
             >
-              <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-                <h3 className="font-bold text-slate-900 dark:text-slate-100">
+              <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   {BU_LABELS[buCode] || buCode} ({users.length}명)
                 </h3>
               </div>
@@ -451,53 +380,68 @@ export function AttendanceAdminView() {
                   return (
                     <div
                       key={user.user_id}
-                      className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/30 transition"
+                      onClick={() => handleUserClick(user)}
+                      className={cn(
+                        'px-4 py-2.5 flex items-center justify-between transition',
+                        canEdit
+                          ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer group'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'
+                      )}
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <div className="relative">
-                          <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center font-bold text-sm text-slate-700 dark:text-slate-200">
+                          <div className={cn(
+                            'w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-200 transition',
+                            canEdit && 'group-hover:ring-2 group-hover:ring-blue-400'
+                          )}>
                             {user.name?.slice(0, 2) || 'U'}
                           </div>
                           <span
                             className={cn(
-                              'absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-800',
+                              'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-800',
                               statusConfig.dotColor
                             )}
                           />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900 dark:text-slate-100">
+                          <p className={cn(
+                            'text-sm font-semibold text-slate-900 dark:text-slate-100 transition',
+                            canEdit && 'group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                          )}>
                             {user.name}
                           </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
                             {user.position || user.role}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">출근</p>
-                          <p className="font-semibold text-green-600 dark:text-green-400">
+                      <div className="flex items-center gap-4">
+                        <div className="text-right hidden sm:block">
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">출근</p>
+                          <p className="text-xs font-semibold text-green-600 dark:text-green-400">
                             {formatTime(user.first_check_in)}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">퇴근</p>
-                          <p className="font-semibold text-red-600 dark:text-red-400">
+                        <div className="text-right hidden sm:block">
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">퇴근</p>
+                          <p className="text-xs font-semibold text-red-600 dark:text-red-400">
                             {formatTime(user.last_check_out)}
                           </p>
                         </div>
                         <div
                           className={cn(
-                            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold min-w-[90px] justify-center',
+                            'flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold min-w-[72px] justify-center',
                             statusConfig.bgColor,
                             statusConfig.textColor
                           )}
                         >
-                          <StatusIcon className="h-3.5 w-3.5" />
+                          <StatusIcon className="h-3 w-3" />
                           {statusConfig.label}
                         </div>
+                        {canEdit && (
+                          <Edit3 className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition" />
+                        )}
                       </div>
                     </div>
                   );
@@ -507,12 +451,20 @@ export function AttendanceAdminView() {
           ))}
 
           {filteredUsers.length === 0 && (
-            <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+            <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
               해당하는 직원이 없습니다.
             </div>
           )}
         </div>
       )}
+
+      {/* Admin Edit Modal */}
+      <AdminAttendanceEditModal
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
+        user={selectedUser}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 }

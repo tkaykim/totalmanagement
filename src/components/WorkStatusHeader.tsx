@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Monitor, Users, MapPin, Coffee, LogOut, Play, Zap, Sparkles, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Monitor, Users, MapPin, Coffee, LogOut, Zap, Sparkles, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 import {
   Select,
   SelectContent,
@@ -15,20 +16,14 @@ import {
 
 export type WorkStatus = 'OFF_WORK' | 'WORKING' | 'MEETING' | 'OUTSIDE' | 'BREAK' | 'OVERTIME';
 
-interface WorkStatusHeaderProps {
-  currentUser?: {
-    id: string;
-    name?: string;
-    email?: string;
-    profile?: {
-      name?: string;
-      position?: string;
-      role?: string;
-    };
-  };
-  onStatusChange?: (status: WorkStatus) => Promise<void>;
-  onLogout?: () => void;
-}
+const BU_NAMES: Record<string, string> = {
+  HEAD: '본사',
+  GRIGO: '그리고엔터',
+  AST: 'AST컴퍼니',
+  REACT: '리액트스튜디오',
+  FLOW: '플로우메이커',
+  MODOO: '모두굿즈',
+};
 
 const WELCOME_MESSAGES = [
   '오늘도 힘차게 시작해봐요! 화이팅! 🚀',
@@ -65,40 +60,103 @@ const STATUS_CONFIG = {
   },
 };
 
-export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']) {
+export function useWorkStatus() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [workStatus, setWorkStatus] = useState<WorkStatus>('OFF_WORK');
   const [isChanging, setIsChanging] = useState(false);
   const [isStatusLoading, setIsStatusLoading] = useState(true);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeMsg, setWelcomeMsg] = useState('');
   const [welcomeTitle, setWelcomeTitle] = useState('환영합니다!');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showOvertimeConfirm, setShowOvertimeConfirm] = useState(false);
 
+  // 사용자 정보 상태
+  const [userName, setUserName] = useState('');
+  const [userPosition, setUserPosition] = useState('');
+  const [userInitials, setUserInitials] = useState('U');
+
+  // 시간 업데이트
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  // 사용자 정보 로드 (자체적으로 API에서 가져옴)
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      setIsUserLoading(true);
+      try {
+        const supabase = createClient();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+
+        if (authUser) {
+          const { data: appUser } = await supabase
+            .from('app_users')
+            .select('name, position, bu_code')
+            .eq('id', authUser.id)
+            .single();
+
+          if (appUser) {
+            const name = appUser.name || authUser.email || '사용자';
+            setUserName(name);
+
+            // BU 이름과 직급을 조합하여 표시
+            const buName = appUser.bu_code ? BU_NAMES[appUser.bu_code] || appUser.bu_code : '';
+            const position = appUser.position || '';
+            
+            if (buName && position) {
+              setUserPosition(`${buName} / ${position}`);
+            } else if (buName) {
+              setUserPosition(buName);
+            } else if (position) {
+              setUserPosition(position);
+            } else {
+              setUserPosition('');
+            }
+
+            // 이니셜 계산
+            const initials = name
+              .split(' ')
+              .map((n: string) => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2) || 'U';
+            setUserInitials(initials);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch user info:', error);
+      } finally {
+        setIsUserLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
+
+  // 근무 상태 로드 (자체적으로 API에서 가져옴)
   useEffect(() => {
     const fetchStatus = async () => {
       setIsStatusLoading(true);
       try {
-        // 출퇴근 상태 가져오기
+        // 출퇴근 상태 가져오기 (활성 근무 기록 기준 - 날짜 무관)
         const attendanceRes = await fetch('/api/attendance/status');
         let isCheckedIn = false;
         let isCheckedOut = false;
         let hasCheckedOut = false;
+        let isOvernightWork = false;
 
         if (attendanceRes.ok) {
           const attendanceData = await attendanceRes.json();
           isCheckedIn = attendanceData.isCheckedIn;
           isCheckedOut = attendanceData.isCheckedOut;
           hasCheckedOut = attendanceData.hasCheckedOut;
+          isOvernightWork = attendanceData.isOvernightWork || false;
         }
 
-        // 실시간 근무 상태 가져오기
+        // 실시간 근무 상태 가져오기 (user_work_status 테이블)
         const workStatusRes = await fetch('/api/attendance/work-status');
         let realtimeStatus: WorkStatus = 'OFF_WORK';
         if (workStatusRes.ok) {
@@ -108,18 +166,24 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
           }
         }
 
-        // 상태 결정 로직
+        // 상태 결정 로직:
+        // 1. 활성 근무 기록이 있으면 (isCheckedIn && !isCheckedOut) 근무 상태 유지
+        //    - 자정이 지난 경우(isOvernightWork)도 동일하게 처리
+        // 2. 활성 근무 없고 오늘 퇴근 기록만 있으면 연장근무 여부 확인
+        // 3. 둘 다 없으면 미출근(OFF_WORK) 상태
         if (isCheckedIn && !isCheckedOut) {
-          // 출근 중인 경우, 실시간 상태 사용
+          // 활성 근무 중 (자정이 지나도 근무 유지)
           if (realtimeStatus !== 'OFF_WORK') {
             setWorkStatus(realtimeStatus);
           } else {
             setWorkStatus('WORKING');
           }
-        } else if (hasCheckedOut) {
+        } else if (hasCheckedOut && !isOvernightWork) {
+          // 오늘 퇴근 완료 - 연장근무 여부 확인
           setShowOvertimeConfirm(true);
           setWorkStatus('OFF_WORK');
         } else {
+          // 미출근 상태
           setWorkStatus('OFF_WORK');
         }
       } catch (error) {
@@ -128,25 +192,27 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
         setIsStatusLoading(false);
       }
     };
+
     fetchStatus();
   }, []);
 
-  const formatTimeDetail = (date: Date) => {
+  const formatTimeDetail = useCallback((date: Date) => {
     return format(date, 'HH:mm:ss', { locale: ko });
-  };
+  }, []);
 
-  const formatDateDetail = (date: Date) => {
+  const formatDateDetail = useCallback((date: Date) => {
     return format(date, 'M월 d일 EEEE', { locale: ko });
-  };
+  }, []);
 
-  const triggerWelcome = (title: string, msg: string) => {
+  const triggerWelcome = useCallback((title: string, msg: string) => {
     setWelcomeTitle(title);
     setWelcomeMsg(msg);
     setShowWelcome(true);
     setTimeout(() => setShowWelcome(false), 3500);
-  };
+  }, []);
 
-  const handleStatusChange = async (newStatus: WorkStatus, onStatusChange?: (status: WorkStatus, previousStatus: WorkStatus) => Promise<void>) => {
+  // 근무 상태 변경 (자체적으로 API 호출)
+  const handleStatusChange = useCallback(async (newStatus: WorkStatus) => {
     if (newStatus === workStatus) return;
 
     if (newStatus === 'OFF_WORK') {
@@ -157,21 +223,28 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
     const previousStatus = workStatus;
     setIsChanging(true);
     try {
-      if (onStatusChange) {
-        await onStatusChange(newStatus, previousStatus);
-      }
-
       // 실시간 상태를 user_work_status 테이블에 저장
-      await fetch('/api/attendance/work-status', {
+      const res = await fetch('/api/attendance/work-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
 
+      if (!res.ok) {
+        throw new Error('Failed to update work status');
+      }
+
+      // 출근 처리 (OFF_WORK -> WORKING)
       if (previousStatus === 'OFF_WORK' && newStatus === 'WORKING') {
+        // 출근 API 호출
+        await fetch('/api/attendance/check-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
         triggerWelcome('출근 완료!', WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)]);
       }
 
+      // 휴식 복귀 (BREAK -> WORKING)
       if (previousStatus === 'BREAK' && newStatus === 'WORKING') {
         triggerWelcome('업무 복귀!', '잘 쉬고 오셨나요? 다시 화이팅 해봅시다! 🔥');
       }
@@ -179,45 +252,66 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
       setWorkStatus(newStatus);
     } catch (error) {
       console.error('Status change error:', error);
+      alert('상태 변경 중 오류가 발생했습니다.');
     } finally {
       setIsChanging(false);
     }
-  };
+  }, [workStatus, triggerWelcome]);
 
-  const confirmLogout = async (onStatusChange?: (status: WorkStatus) => Promise<void>, onLogout?: () => void) => {
+  // 퇴근 확인 후 처리 (자체적으로 API 호출)
+  const confirmLogout = useCallback(async () => {
     setIsChanging(true);
     try {
-      if (onStatusChange) {
-        await onStatusChange('OFF_WORK');
-      }
-      
       // 실시간 상태를 OFF_WORK로 업데이트
       await fetch('/api/attendance/work-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'OFF_WORK' }),
       });
-      
+
+      // 퇴근 API 호출
+      await fetch('/api/attendance/check-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
       setWorkStatus('OFF_WORK');
       setShowLogoutConfirm(false);
-      if (onLogout) {
-        onLogout();
-      }
     } catch (error) {
       console.error('Logout error:', error);
+      alert('퇴근 처리 중 오류가 발생했습니다.');
     } finally {
       setIsChanging(false);
     }
-  };
+  }, []);
 
-  const userName = currentUser?.profile?.name || currentUser?.name || currentUser?.email || '사용자';
-  const userPosition = currentUser?.profile?.position || '';
-  const userInitials = userName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'U';
+  // 연장근무 재개 (자체적으로 API 호출)
+  const confirmOvertime = useCallback(async () => {
+    setIsChanging(true);
+    try {
+      // 연장근무 상태로 변경
+      await fetch('/api/attendance/work-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'OVERTIME' }),
+      });
+
+      // 연장근무 체크인 API 호출
+      await fetch('/api/attendance/overtime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      setWorkStatus('OVERTIME');
+      setShowOvertimeConfirm(false);
+      triggerWelcome('연장근무 시작!', '힘내세요! 화이팅! 💪');
+    } catch (error) {
+      console.error('Overtime error:', error);
+      alert('연장근무 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsChanging(false);
+    }
+  }, [triggerWelcome]);
 
   return {
     workStatus,
@@ -227,6 +321,7 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
     userInitials,
     isChanging,
     isStatusLoading,
+    isUserLoading,
     showWelcome,
     welcomeTitle,
     welcomeMsg,
@@ -238,6 +333,7 @@ export function useWorkStatus(currentUser?: WorkStatusHeaderProps['currentUser']
     triggerWelcome,
     handleStatusChange,
     confirmLogout,
+    confirmOvertime,
     formatTimeDetail,
     formatDateDetail,
   };
@@ -285,7 +381,7 @@ export function WorkStatusHeader({
             {userInitials}
           </div>
           <div className="hidden md:block">
-            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">{userName}</div>
+            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">{userName || '사용자'}</div>
             {userPosition && (
               <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">{userPosition}</div>
             )}
@@ -311,7 +407,6 @@ export function WorkStatusHeader({
             </SelectTrigger>
             <SelectContent>
               {Object.entries(STATUS_CONFIG).map(([key, config]) => {
-                const status = key as WorkStatus;
                 const Icon = config.icon;
                 return (
                   <SelectItem key={key} value={key}>

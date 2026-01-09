@@ -37,14 +37,18 @@ export type Member = {
   team: string;
 };
 
+export type TaskPriority = 'low' | 'medium' | 'high';
+
 export type TaskItem = {
   id: string;
   bu: BU;
   projectId: string;
   title: string;
+  description?: string;
   assignee: string;
   dueDate: string;
   status: 'todo' | 'in-progress' | 'done';
+  priority: TaskPriority;
 };
 
 export const BU_TITLES: Record<BU, string> = {

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
 import { WorkStatusWrapper } from '@/components/WorkStatusWrapper';
-import type { BU } from '@/types/database';
 
 export default function ReactStudioPage() {
   const router = useRouter();
@@ -74,7 +73,7 @@ export default function ReactStudioPage() {
 
   return (
     <WorkStatusWrapper currentUser={currentUser} onLogout={handleLogout}>
-      <ReactStudioDashboard bu="REACT" />
+      <ReactStudioDashboard />
     </WorkStatusWrapper>
   );
 }

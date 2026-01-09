@@ -1,12 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPureClient } from '@/lib/supabase/server';
+import { createPureClient, createClient } from '@/lib/supabase/server';
 import type { BU } from '@/types/database';
+import { canAccessProject, canCreateProject, type AppUser, type Project as PermProject } from '@/lib/permissions';
+
+async function getCurrentUser(): Promise<AppUser | null> {
+  const authSupabase = await createClient();
+  const { data: { user } } = await authSupabase.auth.getUser();
+  if (!user) return null;
+
+  const supabase = await createPureClient();
+  const { data: appUser } = await supabase
+    .from('app_users')
+    .select('id, role, bu_code, name, position')
+    .eq('id', user.id)
+    .single();
+
+  return appUser as AppUser | null;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
     const bu = searchParams.get('bu') as BU | null;
+
+    // 현재 사용자 정보 가져오기
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     let query = supabase.from('projects').select('*').order('created_at', { ascending: false });
 
@@ -18,8 +40,7 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // participants JSONB 컬럼이 이미 포함되어 있으므로 별도 조회 불필요
-    // 각 프로젝트의 participants가 null이면 빈 배열로 초기화
+    // participants JSONB 컬럼 초기화
     if (projects) {
       projects.forEach((project: any) => {
         if (!project.participants) {
@@ -28,7 +49,24 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(projects);
+    // admin은 전체 접근
+    if (currentUser.role === 'admin') {
+      return NextResponse.json(projects);
+    }
+
+    // 권한에 따라 필터링
+    const filteredProjects = projects?.filter((project: any) => {
+      const permProject: PermProject = {
+        id: project.id,
+        bu_code: project.bu_code,
+        pm_id: project.pm_id,
+        participants: project.participants || [],
+        created_by: project.created_by,
+      };
+      return canAccessProject(currentUser, permProject);
+    }) || [];
+
+    return NextResponse.json(filteredProjects);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -37,13 +75,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createPureClient();
-    const { createClient } = await import('@/lib/supabase/server');
-    const authSupabase = await createClient();
     const body = await request.json();
 
-    // 현재 로그인한 사용자 정보 가져오기
-    const { data: { user } } = await authSupabase.auth.getUser();
-    const userId = user?.id || null;
+    // 현재 사용자 정보 가져오기
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 프로젝트 생성 권한 체크
+    if (!canCreateProject(currentUser)) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
 
     // insert 객체 생성 (undefined인 필드는 제외)
     const insertData: any = {
@@ -53,7 +96,7 @@ export async function POST(request: NextRequest) {
       status: body.status || '준비중',
       start_date: body.start_date || null,
       end_date: body.end_date || null,
-      created_by: userId || body.created_by || null,
+      created_by: currentUser.id,
     };
 
     // description이 있으면 추가
@@ -118,5 +161,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

@@ -27,34 +27,7 @@ interface WorkStatusWrapperProps {
 }
 
 export function WorkStatusWrapper({ children, currentUser, onLogout }: WorkStatusWrapperProps) {
-  const workStatusHook = useWorkStatus(currentUser);
-
-  const handleStatusChange = async (status: WorkStatus, previousStatus: WorkStatus) => {
-    try {
-      if (status === 'WORKING' && previousStatus === 'OFF_WORK') {
-        const res = await fetch('/api/attendance/check-in', { method: 'POST' });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          if (data.error && data.error.includes('이미 출근 처리되었습니다')) {
-            return;
-          }
-          throw new Error(data.error || 'Failed to check in');
-        }
-      } else if (status === 'OFF_WORK') {
-        const res = await fetch('/api/attendance/check-out', { method: 'POST' });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
-            return;
-          }
-          throw new Error(data.error || 'Failed to check out');
-        }
-      }
-    } catch (error) {
-      console.error('Status change error:', error);
-      throw error;
-    }
-  };
+  const workStatusHook = useWorkStatus();
 
   // 상태 로딩 중
   if (workStatusHook.isStatusLoading) {
@@ -77,9 +50,7 @@ export function WorkStatusWrapper({ children, currentUser, onLogout }: WorkStatu
           userInitials={workStatusHook.userInitials}
           isChanging={workStatusHook.isChanging}
           onStatusChange={(status) => {
-            workStatusHook.handleStatusChange(status, async (status, previousStatus) => {
-              await handleStatusChange(status, previousStatus);
-            });
+            workStatusHook.handleStatusChange(status);
           }}
           formatTimeDetail={workStatusHook.formatTimeDetail}
           formatDateDetail={workStatusHook.formatDateDetail}
@@ -93,47 +64,16 @@ export function WorkStatusWrapper({ children, currentUser, onLogout }: WorkStatu
           showLogoutConfirm={workStatusHook.showLogoutConfirm}
           isChanging={workStatusHook.isChanging}
           onCancel={() => workStatusHook.setShowLogoutConfirm(false)}
-          onConfirm={() => {
-            workStatusHook.confirmLogout(
-              async (status) => {
-                try {
-                  if (status === 'OFF_WORK') {
-                    const res = await fetch('/api/attendance/check-out', { method: 'POST' });
-                    if (!res.ok) {
-                      const data = await res.json().catch(() => ({}));
-                      if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
-                        return;
-                      }
-                      throw new Error(data.error || 'Failed to check out');
-                    }
-                  }
-                } catch (error) {
-                  console.error('Status change error:', error);
-                  throw error;
-                }
-              },
-              onLogout
-            );
+          onConfirm={async () => {
+            await workStatusHook.confirmLogout();
+            onLogout?.();
           }}
         />
         <WorkStatusOvertimeModal
           show={workStatusHook.showOvertimeConfirm}
           isChanging={workStatusHook.isChanging}
           onCancel={() => workStatusHook.setShowOvertimeConfirm(false)}
-          onConfirm={async () => {
-            try {
-              const res = await fetch('/api/attendance/check-in', { method: 'POST' });
-              if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.error || 'Failed to check in');
-              }
-              workStatusHook.setShowOvertimeConfirm(false);
-              workStatusHook.setWorkStatus('WORKING');
-              workStatusHook.triggerWelcome('연장근무 시작!', '오늘도 수고하셨습니다. 연장근무를 시작합니다. 💪');
-            } catch (error) {
-              console.error('Overtime check-in error:', error);
-            }
-          }}
+          onConfirm={() => workStatusHook.confirmOvertime()}
         />
       </>
     );
@@ -144,8 +84,8 @@ export function WorkStatusWrapper({ children, currentUser, onLogout }: WorkStatu
 }
 
 // 헤더에 표시할 상태 컴포넌트 export
-export function useWorkStatusForHeader(currentUser?: WorkStatusWrapperProps['currentUser']) {
-  return useWorkStatus(currentUser);
+export function useWorkStatusForHeader() {
+  return useWorkStatus();
 }
 
 export { WorkStatusHeader };

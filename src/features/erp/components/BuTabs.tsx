@@ -10,17 +10,19 @@ export interface BuTabsProps {
   showAll?: boolean;
 }
 
-export function BuTabs({ bu, onChange, prefix, showAll }: BuTabsProps) {
+export function BuTabs({ bu, onChange, prefix, showAll = true }: BuTabsProps) {
   const buKeys = (Object.keys(BU_TITLES) as BU[]);
   
   return (
-    <div className="flex w-fit overflow-x-auto rounded-2xl bg-slate-200/60 p-1 sm:p-1.5">
+    <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
       {showAll && (
         <button
           onClick={() => onChange('ALL')}
           className={cn(
-            'px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-            bu === 'ALL' ? 'tab-active rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
+            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+            bu === 'ALL' 
+              ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' 
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
           )}
           id={`tab-${prefix}-ALL`}
         >
@@ -32,8 +34,10 @@ export function BuTabs({ bu, onChange, prefix, showAll }: BuTabsProps) {
           key={key}
           onClick={() => onChange(key)}
           className={cn(
-            'px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap',
-            bu === key ? 'tab-active rounded-xl bg-white dark:bg-slate-800 text-blue-600 shadow' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100',
+            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+            bu === key 
+              ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' 
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
           )}
           id={`tab-${prefix}-${key}`}
         >

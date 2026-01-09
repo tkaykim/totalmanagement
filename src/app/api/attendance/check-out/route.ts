@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getTodayKST, getNowKSTISO } from '@/lib/timezone.server';
+import { getNowKSTISO } from '@/lib/timezone.server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,34 +11,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const today = getTodayKST();
     const now = getNowKSTISO();
 
-    // 같은 날짜의 모든 출근 기록 조회 (최신순)
-    const { data: existingLogs, error: checkError } = await supabase
+    // 날짜와 상관없이 미완료된(퇴근하지 않은) 출근 기록 조회
+    // 자정이 지나서도 근무 중인 케이스를 처리하기 위함
+    const { data: activeLog, error: checkError } = await supabase
       .from('attendance_logs')
       .select('*')
       .eq('user_id', user.id)
-      .eq('work_date', today)
-      .order('check_in_at', { ascending: false });
+      .is('check_out_at', null)
+      .not('check_in_at', 'is', null)
+      .order('check_in_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (checkError) {
       throw checkError;
     }
 
-    if (!existingLogs || existingLogs.length === 0) {
-      return NextResponse.json(
-        { error: '출근 기록이 없습니다. 먼저 출근해주세요.' },
-        { status: 400 }
-      );
-    }
-
-    // 가장 최근 출근 기록 중 퇴근 기록이 없는 것 찾기
-    const activeLog = existingLogs.find(log => log.check_in_at && !log.check_out_at);
-
     if (!activeLog) {
       return NextResponse.json(
-        { error: '이미 퇴근 처리되었습니다.' },
+        { error: '퇴근할 출근 기록이 없습니다. 이미 퇴근 처리되었거나 출근 기록이 없습니다.' },
         { status: 400 }
       );
     }

@@ -19,6 +19,8 @@ export interface SettlementViewProps {
   rows: { revRows: FinancialEntry[]; expRows: FinancialEntry[] };
   projects: Project[];
   onEditFinance: (entry: FinancialEntry) => void;
+  canViewAllBu?: boolean;
+  canViewNetProfit?: boolean;
 }
 
 export function SettlementView({
@@ -27,6 +29,8 @@ export function SettlementView({
   rows,
   projects,
   onEditFinance,
+  canViewAllBu = false,
+  canViewNetProfit = true,
 }: SettlementViewProps) {
   const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
 
@@ -58,9 +62,9 @@ export function SettlementView({
 
   return (
     <section className="space-y-6">
-      <BuTabs bu={bu} onChange={onBuChange} prefix="SET" showAll={true} />
+      <BuTabs bu={bu} onChange={onBuChange} prefix="SET" showAll={canViewAllBu} />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className={cn("grid grid-cols-1 gap-4", canViewNetProfit ? "md:grid-cols-3" : "md:grid-cols-2")}>
         <StatCard
           title="총 매출"
           value={totalRevenue}
@@ -73,12 +77,14 @@ export function SettlementView({
           icon={<Coins className="h-5 w-5 text-red-500" />}
           accent="text-red-600"
         />
-        <StatCard
-          title="순익"
-          value={totalProfit}
-          icon={<ChartLine className="h-5 w-5 text-emerald-500" />}
-          accent="text-emerald-600"
-        />
+        {canViewNetProfit && (
+          <StatCard
+            title="순익"
+            value={totalProfit}
+            icon={<ChartLine className="h-5 w-5 text-emerald-500" />}
+            accent="text-emerald-600"
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">

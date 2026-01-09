@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import ModooGoodsDashboard from '@/features/modoogoods/components/ModooGoodsDashboard';
 import { WorkStatusWrapper } from '@/components/WorkStatusWrapper';
-import type { BU } from '@/types/database';
 
 export default function ModooGoodsPage() {
   const router = useRouter();
@@ -74,7 +73,7 @@ export default function ModooGoodsPage() {
 
   return (
     <WorkStatusWrapper currentUser={currentUser} onLogout={handleLogout}>
-      <ModooGoodsDashboard bu="MODOO" />
+      <ModooGoodsDashboard />
     </WorkStatusWrapper>
   );
 }
