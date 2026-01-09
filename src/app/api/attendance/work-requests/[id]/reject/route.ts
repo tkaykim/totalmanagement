@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createPureClient } from '@/lib/supabase/server';
 import { canApproveRequest } from '@/features/attendance/lib/permissions';
 import type { AppUser } from '@/types/database';
 
@@ -64,7 +64,9 @@ export async function POST(
       );
     }
 
-    const { data: updatedRequest, error: updateError } = await supabase
+    // Service role client로 RLS 우회하여 업데이트
+    const adminClient = await createPureClient();
+    const { error: updateError } = await adminClient
       .from('work_requests')
       .update({
         status: 'rejected',
@@ -72,15 +74,21 @@ export async function POST(
         rejection_reason: rejection_reason.trim(),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id)
-      .select(`
-        *,
-        requester:app_users!work_requests_requester_id_fkey(id, name, bu_code),
-        approver:app_users!work_requests_approver_id_fkey(id, name)
-      `)
-      .single();
+      .eq('id', id);
 
     if (updateError) throw updateError;
+
+    // 업데이트 후 별도로 조회
+    const { data: updatedRequest, error: fetchUpdatedError } = await adminClient
+      .from('work_requests')
+      .select(`
+        *,
+        requester:app_users!work_requests_requester_id_fkey(id, name, bu_code)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchUpdatedError) throw fetchUpdatedError;
 
     return NextResponse.json(updatedRequest);
   } catch (error: any) {

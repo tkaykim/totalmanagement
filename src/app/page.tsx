@@ -73,6 +73,7 @@ import { StatCard } from '@/features/erp/components/StatCard';
 import { ProjectsView } from '@/features/erp/components/ProjectsView';
 import { SettlementView } from '@/features/erp/components/SettlementView';
 import { AttendanceManagementView } from '@/features/attendance/components/AttendanceManagementView';
+import { AttendanceAdminView } from '@/features/attendance/components/AttendanceAdminView';
 import { BuTabs } from '@/features/erp/components/BuTabs';
 import { FinanceRow } from '@/features/erp/components/FinanceRow';
 import {
@@ -1049,14 +1050,21 @@ export default function HomePage() {
           <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
             관리자 전용
           </p>
-          <Link
-            href="/attendance/admin"
-            onClick={() => onItemClick?.()}
-            className="flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600"
+          <button
+            onClick={() => {
+              setView('attendanceAdmin');
+              onItemClick?.();
+            }}
+            className={cn(
+              "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200",
+              view === 'attendanceAdmin'
+                ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg"
+                : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
+            )}
           >
             <Users className="h-4 w-4" />
             <span className="font-medium whitespace-nowrap">전체 근무현황</span>
-          </Link>
+          </button>
         </div>
       )}
       <div className="mt-auto space-y-4 p-4 sm:p-6">
@@ -1151,7 +1159,9 @@ export default function HomePage() {
                     ? '할일 관리'
                     : view === 'attendance'
                       ? '근태 관리'
-                      : '조직 현황'
+                      : view === 'attendanceAdmin'
+                        ? '전체 근무현황'
+                        : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
           periodType={periodType}
@@ -1393,6 +1403,10 @@ export default function HomePage() {
 
           {view === 'attendance' && (
             <AttendanceManagementView />
+          )}
+
+          {view === 'attendanceAdmin' && (
+            <AttendanceAdminView />
           )}
 
         </div>

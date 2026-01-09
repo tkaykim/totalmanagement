@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ApprovalQueue } from './ApprovalQueue';
+import { getApprovalQueue } from '../api';
+import type { ApprovalQueueItem } from '../types';
 
 type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME';
 
@@ -124,7 +126,21 @@ export function AttendanceAdminView() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedBu, setSelectedBu] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [showApprovalQueue, setShowApprovalQueue] = useState(true);
+  const [showApprovalQueue, setShowApprovalQueue] = useState(false);
+
+  // 결재 대기 항목 쿼리
+  const { data: approvalQueueData } = useQuery<ApprovalQueueItem[]>({
+    queryKey: ['approval-queue'],
+    queryFn: getApprovalQueue,
+    refetchInterval: 30000,
+  });
+
+  // 결재 대기 항목이 있으면 자동으로 열고, 없으면 닫음
+  useEffect(() => {
+    if (approvalQueueData) {
+      setShowApprovalQueue(approvalQueueData.length > 0);
+    }
+  }, [approvalQueueData]);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['attendance-admin-overview', selectedDate, selectedBu],
@@ -356,29 +372,34 @@ export function AttendanceAdminView() {
         </div>
       )}
 
-      {/* Approval Queue Section */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      {/* Approval Queue Section - Compact */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <button
           onClick={() => setShowApprovalQueue(!showApprovalQueue)}
-          className="w-full px-6 py-4 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition"
+          className="w-full px-4 py-2.5 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition"
         >
-          <div className="flex items-center gap-3">
-            <ClipboardCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
               결재 대기함
             </h2>
-            <span className="text-sm text-slate-500 dark:text-slate-400">
-              (근무 생성/수정 요청 승인 및 반려)
+            {approvalQueueData && approvalQueueData.length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
+                {approvalQueueData.length}
+              </span>
+            )}
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              (근무 요청 승인/반려)
             </span>
           </div>
           {showApprovalQueue ? (
-            <ChevronUp className="h-5 w-5 text-slate-500" />
+            <ChevronUp className="h-4 w-4 text-slate-500" />
           ) : (
-            <ChevronDown className="h-5 w-5 text-slate-500" />
+            <ChevronDown className="h-4 w-4 text-slate-500" />
           )}
         </button>
         {showApprovalQueue && (
-          <div className="p-6 border-t border-slate-200 dark:border-slate-700">
+          <div className="p-3 border-t border-slate-200 dark:border-slate-700">
             <ApprovalQueue />
           </div>
         )}

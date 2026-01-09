@@ -106,6 +106,7 @@ import {
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
 import { ProjectModal } from '@/features/erp/components/ProjectModal';
+import { AttendanceManagementView } from '@/features/attendance/components/AttendanceManagementView';
 
 type FlowMakerView =
   | 'dashboard'
@@ -117,7 +118,8 @@ type FlowMakerView =
   | 'finance'
   | 'tasks'
   | 'manuals'
-  | 'artists';
+  | 'artists'
+  | 'attendance';
 
 interface FlowMakerDashboardProps {
   bu: BU;
@@ -417,6 +419,7 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
     { id: 'clients', label: '클라이언트', icon: Briefcase },
     { id: 'finance', label: '정산/회계', icon: Receipt },
     { id: 'tasks', label: '업무/할일', icon: CheckSquare },
+    { id: 'attendance', label: '근무시간 관리', icon: Clock },
     { id: 'manuals', label: '매뉴얼/가이드', icon: BookOpen },
   ];
 
@@ -3068,6 +3071,8 @@ export default function FlowMakerDashboard({ bu }: FlowMakerDashboardProps) {
         return <FinanceView />;
       case 'tasks':
         return <TaskView />;
+      case 'attendance':
+        return <AttendanceManagementView />;
       case 'manuals':
         return <ManualView />;
       default:

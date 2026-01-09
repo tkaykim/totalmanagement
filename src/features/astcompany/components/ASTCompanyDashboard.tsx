@@ -119,6 +119,7 @@ import {
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
 import { ProjectModal } from '@/features/erp/components/ProjectModal';
+import { AttendanceManagementView } from '@/features/attendance/components/AttendanceManagementView';
 
 type ASTCompanyView =
   | 'dashboard'
@@ -130,7 +131,8 @@ type ASTCompanyView =
   | 'finance'
   | 'tasks'
   | 'schedule'
-  | 'manuals';
+  | 'manuals'
+  | 'attendance';
 
 interface ASTCompanyDashboardProps {
   bu: BU;
@@ -446,6 +448,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
     { id: 'finance', label: '정산/회계', icon: Receipt },
     { id: 'tasks', label: '할일 관리', icon: CheckSquare },
     { id: 'schedule', label: '일정/캘린더', icon: CalendarIcon },
+    { id: 'attendance', label: '근무시간 관리', icon: Clock },
     { id: 'manuals', label: '매뉴얼 관리', icon: BookOpen },
   ];
 
@@ -3349,6 +3352,8 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
         return <TaskView />;
       case 'schedule':
         return <ScheduleView />;
+      case 'attendance':
+        return <AttendanceManagementView />;
       case 'manuals':
         return <ManualView />;
       default:

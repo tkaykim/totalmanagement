@@ -85,6 +85,7 @@ import { MentionedCommentsSection } from '@/features/comments/components/Mention
 import { ProjectModal } from '@/features/erp/components/ProjectModal';
 import { DancersView } from './DancersView';
 import { ArtistsView } from './ArtistsView';
+import { AttendanceManagementView } from '@/features/attendance/components/AttendanceManagementView';
 
 type GrigoEntView =
   | 'dashboard'
@@ -95,7 +96,8 @@ type GrigoEntView =
   | 'schedule'
   | 'partners'
   | 'settlements'
-  | 'manuals';
+  | 'manuals'
+  | 'attendance';
 
 // 상수 정의
 const VISA_TYPES = ['N/A (내국인)', 'E-6 (예술흥행)', 'F-2 (거주)', 'F-4 (재외동포)'];
@@ -2507,6 +2509,8 @@ export default function GrigoEntDashboard() {
         return <PartnersView />;
       case 'settlements':
         return <SettlementsView />;
+      case 'attendance':
+        return <AttendanceManagementView />;
       case 'manuals':
         return <ManualsView />;
       default:
@@ -2548,6 +2552,7 @@ export default function GrigoEntDashboard() {
               { id: 'schedule', icon: CalendarIcon, label: '일정/캘린더' },
               { id: 'partners', icon: Building2, label: '거래처 관리' },
               { id: 'settlements', icon: CreditCard, label: '정산/회계' },
+              { id: 'attendance', icon: Clock, label: '근무시간 관리' },
               { id: 'manuals', icon: BookOpen, label: '매뉴얼/가이드' },
             ].map((item) => (
               <button
