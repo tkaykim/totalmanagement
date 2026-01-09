@@ -29,25 +29,27 @@ export async function GET(request: NextRequest) {
 
     let query = supabase.from('attendance_logs').select('*');
 
+    // user_id가 명시적으로 전달되면 해당 사용자의 로그 조회 (권한 체크)
+    // user_id가 없으면 항상 본인 로그만 조회 (admin 포함)
     if (targetUserId) {
-      if (!canViewAllAttendance(currentUser as AppUser)) {
-        const { data: targetUser } = await supabase
-          .from('app_users')
-          .select('bu_code')
-          .eq('id', targetUserId)
-          .single();
+      // 다른 사용자의 로그를 조회하려면 권한 필요
+      if (targetUserId !== user.id) {
+        if (!canViewAllAttendance(currentUser as AppUser)) {
+          const { data: targetUser } = await supabase
+            .from('app_users')
+            .select('bu_code')
+            .eq('id', targetUserId)
+            .single();
 
-        if (!canViewTeamAttendance(currentUser as AppUser, targetUser?.bu_code || null)) {
-          if (targetUserId !== user.id) {
+          if (!canViewTeamAttendance(currentUser as AppUser, targetUser?.bu_code || null)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
           }
         }
       }
       query = query.eq('user_id', targetUserId);
     } else {
-      if (!canViewAllAttendance(currentUser as AppUser)) {
-        query = query.eq('user_id', user.id);
-      }
+      // user_id가 없으면 항상 본인 로그만 반환 (권한과 무관)
+      query = query.eq('user_id', user.id);
     }
 
     if (startDate) {
