@@ -1043,6 +1043,22 @@ export default function HomePage() {
           }}
         />
       </nav>
+      {/* 관리자 전용 메뉴 */}
+      {user?.profile?.role === 'admin' && (
+        <div className="px-2 sm:px-4 pb-2">
+          <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            관리자 전용
+          </p>
+          <Link
+            href="/attendance/admin"
+            onClick={() => onItemClick?.()}
+            className="flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600"
+          >
+            <Users className="h-4 w-4" />
+            <span className="font-medium whitespace-nowrap">전체 근무현황</span>
+          </Link>
+        </div>
+      )}
       <div className="mt-auto space-y-4 p-4 sm:p-6">
         <div className="border-t border-slate-700"></div>
         <div className="space-y-2">
