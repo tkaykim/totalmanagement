@@ -13,8 +13,6 @@ import {
   CheckSquare,
   Calendar as CalendarIcon,
   Settings,
-  Bell,
-  Search,
   Plus,
   MoreVertical,
   ChevronRight,
@@ -47,6 +45,7 @@ import {
   FolderOpen,
   Trash2,
   LogOut,
+  Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -121,6 +120,8 @@ import {
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
 import { ProjectModal } from '@/features/erp/components/ProjectModal';
 import { AttendanceManagementView } from '@/features/attendance/components/AttendanceManagementView';
+import { DashboardHeader, useWorkStatus, type PeriodType } from '@/components/DashboardHeader';
+import { WorkStatusWelcomeModal, WorkStatusLogoutModal, WorkStatusOvertimeModal } from '@/components/WorkStatusHeader';
 
 type ASTCompanyView =
   | 'dashboard'
@@ -219,7 +220,7 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
   const [user, setUser] = useState<any>(null);
 
   // Period filter states
-  const [periodType, setPeriodType] = useState<'all' | 'year' | 'quarter' | 'month' | 'custom'>('all');
+  const [periodType, setPeriodType] = useState<PeriodType>('all');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedQuarter, setSelectedQuarter] = useState<number>(1);
   const [selectedQuarterYear, setSelectedQuarterYear] = useState<number>(new Date().getFullYear());
@@ -384,12 +385,15 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
     return Array.from({ length: currentYear - 2021 + 1 }, (_, i) => 2021 + i).reverse();
   }, []);
 
-  const handlePeriodTypeChange = (type: 'all' | 'year' | 'quarter' | 'month' | 'custom') => {
+  const handlePeriodTypeChange = (type: PeriodType) => {
     setPeriodType(type);
     if (type !== 'custom') {
       setCustomRange({ start: undefined, end: undefined });
     }
   };
+
+  // Work status hook
+  const workStatusHook = useWorkStatus(user);
 
   const handleDateChange = (key: 'start' | 'end', value: string) => {
     setCustomRange((prev) => ({ ...prev, [key]: value }));
@@ -3424,184 +3428,27 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
       </aside>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
-        <header className="bg-white dark:bg-slate-800 border-b border-gray-200 shadow-sm z-10">
-          <div className="h-16 flex items-center justify-between px-4 lg:px-8">
-            <div className="flex items-center">
-              <h2 className="text-xl font-bold text-gray-800 capitalize hidden sm:block">
-                {menuItems.find((m) => m.id === activeTab)?.label}
-              </h2>
-            </div>
-
-            <div className="flex items-center space-x-4 lg:space-x-6">
-              <div className="relative hidden sm:block">
-                <Search className="w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer transition-colors" />
-              </div>
-              <div className="relative">
-                <Bell className="w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer transition-colors" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-gray-100 px-4 lg:px-8 py-3">
-            <div className="flex flex-col gap-3">
-              {/* Period type buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePeriodTypeChange('all')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'all'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  전체 기간
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('year')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'year'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  연도
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('quarter')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'quarter'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  분기
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('month')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'month'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  월별
-                </button>
-                <button
-                  onClick={() => handlePeriodTypeChange('custom')}
-                  className={cn(
-                    'rounded-lg px-3 py-1.5 text-[11px] font-semibold transition',
-                    periodType === 'custom'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                  )}
-                >
-                  직접선택
-                </button>
-              </div>
-
-              {/* Conditional selection UI */}
-              {periodType === 'year' && (
-                <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">연도:</label>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {yearOptions.map((year) => (
-                      <option key={year} value={year}>
-                        {year}년
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {periodType === 'quarter' && (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">연도:</label>
-                    <select
-                      value={selectedQuarterYear}
-                      onChange={(e) => setSelectedQuarterYear(Number(e.target.value))}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {yearOptions.map((year) => (
-                        <option key={year} value={year}>
-                          {year}년
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">분기:</label>
-                    <select
-                      value={selectedQuarter}
-                      onChange={(e) => setSelectedQuarter(Number(e.target.value))}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value={1}>1분기 (1-3월)</option>
-                      <option value={2}>2분기 (4-6월)</option>
-                      <option value={3}>3분기 (7-9월)</option>
-                      <option value={4}>4분기 (10-12월)</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {periodType === 'month' && (
-                <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">월:</label>
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                      <option key={month} value={month}>
-                        {month}월
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {yearOptions.map((year) => (
-                      <option key={year} value={year}>
-                        {year}년
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {periodType === 'custom' && (
-                <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">시작일:</label>
-                  <input
-                    type="date"
-                    value={customRange.start ?? ''}
-                    onChange={(e) => handleDateChange('start', e.target.value)}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-[11px]"
-                  />
-                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">종료일:</label>
-                  <input
-                    type="date"
-                    value={customRange.end ?? ''}
-                    onChange={(e) => handleDateChange('end', e.target.value)}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-[11px]"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
+        <DashboardHeader
+          title={menuItems.find((m) => m.id === activeTab)?.label || 'AST COMPANY'}
+          periodType={periodType}
+          onPeriodTypeChange={handlePeriodTypeChange}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+          selectedQuarter={selectedQuarter}
+          onQuarterChange={setSelectedQuarter}
+          selectedQuarterYear={selectedQuarterYear}
+          onQuarterYearChange={setSelectedQuarterYear}
+          customRange={customRange}
+          onCustomRangeChange={handleDateChange}
+          yearOptions={yearOptions}
+          workStatusHook={workStatusHook}
+          onStatusChange={workStatusHook.handleStatusChange}
+          showMonitoring={true}
+          showNotification={true}
+          onNotificationClick={() => {}}
+        />
 
         <main className="flex-1 overflow-auto bg-gray-50 p-4 lg:p-8">
           <div className="max-w-7xl mx-auto h-full">{renderView()}</div>
@@ -4293,6 +4140,32 @@ export default function ASTCompanyDashboard({ bu }: ASTCompanyDashboardProps) {
           onCancel={() => setDeleteCreatorId(null)}
         />
       )}
+
+      {/* Work Status Modals */}
+      <WorkStatusWelcomeModal
+        showWelcome={workStatusHook.showWelcome}
+        welcomeTitle={workStatusHook.welcomeTitle}
+        welcomeMsg={workStatusHook.welcomeMsg}
+      />
+      <WorkStatusLogoutModal
+        showLogoutConfirm={workStatusHook.showLogoutConfirm}
+        isChanging={workStatusHook.isChanging}
+        onConfirm={async () => {
+          await workStatusHook.confirmLogout(
+            async (status) => {
+              // Status change handler if needed
+            },
+            handleLogout
+          );
+        }}
+        onCancel={() => workStatusHook.setShowLogoutConfirm(false)}
+      />
+      <WorkStatusOvertimeModal
+        show={workStatusHook.showOvertimeConfirm}
+        isChanging={workStatusHook.isChanging}
+        onConfirm={() => workStatusHook.setShowOvertimeConfirm(false)}
+        onCancel={() => workStatusHook.setShowOvertimeConfirm(false)}
+      />
     </div>
   );
 }

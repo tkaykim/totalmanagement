@@ -2511,7 +2511,28 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
       />
       <WorkStatusLogoutModal
         showLogoutConfirm={workStatusHook.showLogoutConfirm}
-        onConfirm={() => workStatusHook.confirmLogout(undefined, handleLogout)}
+        onConfirm={() => {
+          workStatusHook.confirmLogout(
+            async (status) => {
+              try {
+                if (status === 'OFF_WORK') {
+                  const res = await fetch('/api/attendance/check-out', { method: 'POST' });
+                  if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    if (data.error && data.error.includes('이미 퇴근 처리되었습니다')) {
+                      return;
+                    }
+                    throw new Error(data.error || 'Failed to check out');
+                  }
+                }
+              } catch (error) {
+                console.error('Check-out error:', error);
+                throw error;
+              }
+            },
+            handleLogout
+          );
+        }}
         onCancel={() => workStatusHook.setShowLogoutConfirm(false)}
         isChanging={workStatusHook.isChanging}
       />
