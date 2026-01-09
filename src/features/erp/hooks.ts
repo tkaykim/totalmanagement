@@ -706,22 +706,5 @@ export function useCommentReads(commentId: number) {
   });
 }
 
-// ============================================
-// My Works Hooks
-// ============================================
-
-export function useMyWorks() {
-  return useQuery({
-    queryKey: ['my-works'],
-    queryFn: api.fetchMyWorks,
-  });
-}
-
-export function useMyArtistProfile() {
-  return useQuery({
-    queryKey: ['my-artist-profile'],
-    queryFn: api.fetchMyArtistProfile,
-  });
-}
 
 

@@ -40,30 +40,8 @@ export default function LoginPage() {
           .eq('id', data.user.id)
           .single();
 
-        const buCode = appUser?.bu_code;
-        
-        // 사업부별 리디렉션
-        if (buCode === 'HEAD') {
-          router.push('/');
-        } else if (buCode === 'AST') {
-          router.push('/astcompany');
-        } else if (buCode === 'GRIGO') {
-          router.push('/grigoent');
-        } else if (buCode === 'REACT') {
-          router.push('/reactstudio');
-        } else if (buCode === 'FLOW') {
-          router.push('/flow');
-        } else if (buCode === 'MODOO') {
-          router.push('/modoogoods');
-        } else if (!buCode) {
-          // bu_code가 null인 경우 my-works 페이지로 리디렉션
-          router.push('/my-works');
-        } else {
-          // 사업부 정보가 없으면 로그인 페이지에 머무름
-          setError('사업부 정보가 없습니다. 관리자에게 문의하세요.');
-          setLoading(false);
-          return;
-        }
+        // 모든 사용자를 루트 페이지로 리디렉션
+        router.push('/');
         
         router.refresh();
       }

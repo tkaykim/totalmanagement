@@ -965,40 +965,5 @@ export async function fetchCommentReads(commentId: number): Promise<any[]> {
   return res.json();
 }
 
-// ============================================
-// My Works API Functions
-// ============================================
-
-export async function fetchMyWorks(): Promise<{
-  projects: Project[];
-  tasks: ProjectTask[];
-  user: any;
-}> {
-  const res = await fetch(`${API_BASE}/my-works`);
-  if (!res.ok) throw new Error('Failed to fetch my works');
-  return res.json();
-}
-
-export async function fetchMyArtistProfile(): Promise<{
-  artist: Artist;
-  projects: Project[];
-  financialSummary: {
-    totalRevenue: number;
-    totalExpense: number;
-    totalProfit: number;
-    byProject: Array<{
-      projectId: number;
-      projectName: string;
-      revenue: number;
-      expense: number;
-      profit: number;
-    }>;
-  };
-  financialEntries: FinancialEntry[];
-}> {
-  const res = await fetch(`${API_BASE}/grigoent/my-profile`);
-  if (!res.ok) throw new Error('Failed to fetch artist profile');
-  return res.json();
-}
 
 

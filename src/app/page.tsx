@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
   ChartLine,
   Check,
@@ -31,7 +30,7 @@ import { DashboardHeader } from '@/components/DashboardHeader';
 import type { PeriodType } from '@/components/PeriodSelector';
 import { createClient } from '@/lib/supabase/client';
 import { format, isWithinInterval, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
-import { cn, buToSlug } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { getTodayKST } from '@/lib/timezone';
 import { getVisibleMenus, canViewAllBuStats, canCreateProject, type AppUser as PermAppUser } from '@/lib/permissions';
 import {
@@ -68,7 +67,6 @@ import {
   frontendTaskToDb,
   frontendFinancialToDb,
 } from '@/features/erp/utils';
-import ReactStudioDashboard from '@/features/reactstudio/components/ReactStudioDashboard';
 import { UnifiedProjectModal } from '@/features/erp/components/UnifiedProjectModal';
 import { DashboardView } from '@/features/erp/components/DashboardView';
 import { StatCard } from '@/features/erp/components/StatCard';
@@ -121,10 +119,6 @@ export default function HomePage() {
   // BU 변경 핸들러 - 모든 BU 버튼은 동일하게 BU만 변경하고 뷰는 유지
   const handleBuChange = (newBu: BU | 'ALL') => {
     setBu(newBu);
-    // reactstudio 뷰에서 다른 BU로 변경 시 dashboard로 전환
-    if (view === 'reactstudio' && newBu !== 'REACT') {
-      setView('dashboard');
-    }
   };
   const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -264,15 +258,9 @@ export default function HomePage() {
         .eq('id', user.id)
         .single();
 
-      // role이 artist인 경우 /my-profile로 리디렉션
-      if (appUser?.role === 'artist') {
-        router.push('/grigoent/my-profile');
-        return;
-      }
-
-      // bu_code가 null인 경우 /my-works로 리디렉션
+      // bu_code가 null인 경우 로그인 페이지로 리디렉션
       if (!appUser?.bu_code) {
-        router.push('/my-works');
+        router.push('/login');
         return;
       }
 
@@ -862,10 +850,6 @@ export default function HomePage() {
     );
   }
 
-  // ReactStudio 뷰일 때는 별도 레이아웃 사용
-  if (view === 'reactstudio' && bu === 'REACT') {
-    return <ReactStudioDashboard />;
-  }
 
   const SidebarContent = ({ onItemClick }: { onItemClick?: () => void }) => (
     <>
@@ -980,39 +964,8 @@ export default function HomePage() {
           </button>
         </div>
       )}
-      <div className="mt-auto space-y-4 p-4 sm:p-6">
+      <div className="mt-auto p-4 sm:p-6">
         <div className="border-t border-slate-700"></div>
-        <div className="space-y-2">
-          <p className="px-2 sm:px-3 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-            사업부별 대시보드
-          </p>
-          {(Object.keys(BU_TITLES) as BU[]).map((buKey) => (
-            <Link
-              key={buKey}
-              href={
-                buKey === 'AST' 
-                  ? '/astcompany' 
-                  : buKey === 'GRIGO' 
-                  ? '/grigoent' 
-                  : buKey === 'FLOW'
-                  ? '/flowmaker'
-                  : buKey === 'MODOO'
-                  ? '/modoogoods'
-                  : `/${buToSlug(buKey)}`
-              }
-              onClick={() => onItemClick?.()}
-              className={cn(
-                'flex w-full items-center gap-2 sm:gap-3 rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-left text-xs sm:text-sm transition',
-                'text-slate-300 hover:bg-slate-800 hover:text-white'
-              )}
-            >
-              <span className="w-4 sm:w-5 text-center">
-                <FolderKanban className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </span>
-              <span>{BU_TITLES[buKey]}</span>
-            </Link>
-          ))}
-        </div>
       </div>
       <div className="p-4 sm:p-6 pt-0">
         <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-3 sm:p-4">
