@@ -67,6 +67,7 @@ import {
 } from '@/features/erp/hooks';
 import { dbProjectToFrontend, dbTaskToFrontend, dbFinancialToFrontend, frontendProjectToDb, frontendTaskToDb, frontendFinancialToDb } from '@/features/erp/utils';
 import { ProjectModal } from '@/features/erp/components/ProjectModal';
+import { AttendanceManagementView } from '@/features/attendance/components/AttendanceManagementView';
 
 type ModooGoodsView =
   | 'dashboard'
@@ -77,7 +78,8 @@ type ModooGoodsView =
   | 'clients'
   | 'factory'
   | 'finance'
-  | 'manuals';
+  | 'manuals'
+  | 'attendance';
 
 interface ModooGoodsDashboardProps {
   bu: BU;
@@ -263,6 +265,7 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
     { id: 'clients', label: '클라이언트', icon: Briefcase },
     { id: 'factory', label: '외주(공장)', icon: Factory },
     { id: 'finance', label: '정산/회계', icon: Receipt },
+    { id: 'attendance', label: '근태 관리', icon: Clock },
     { id: 'manuals', label: '매뉴얼', icon: BookOpen },
   ];
 
@@ -1870,6 +1873,8 @@ export default function ModooGoodsDashboard({ bu }: ModooGoodsDashboardProps) {
         return <FactoryView />;
       case 'finance':
         return <FinanceView />;
+      case 'attendance':
+        return <AttendanceManagementView />;
       case 'manuals':
         return <ManualsView />;
       default:
