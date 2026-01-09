@@ -449,6 +449,8 @@ export interface AttendanceLog {
   is_modified: boolean;
   modification_reason?: string | null;
   is_verified_location: boolean;
+  is_overtime?: boolean;
+  break_minutes?: number;
   created_at: string;
   updated_at: string;
 }
