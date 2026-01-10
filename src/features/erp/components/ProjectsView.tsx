@@ -27,6 +27,8 @@ export interface ProjectsViewProps {
   onDeleteProject: (id: string) => void;
   tasks: TaskItem[];
   usersData?: { users: any[]; currentUser: any };
+  partnerWorkersData?: any[];
+  partnerCompaniesData?: any[];
 }
 
 export function ProjectsView({
