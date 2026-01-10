@@ -45,12 +45,40 @@ export function ProjectsView({
   onDeleteProject,
   tasks,
   usersData,
+  partnerWorkersData,
+  partnerCompaniesData,
 }: ProjectsViewProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
 
   const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
   const completedProjectStatuses = ['완료'];
+
+  const getPmName = (pmId?: string | null): string => {
+    if (!pmId) return '미지정';
+    const pm = usersData?.users?.find((u: any) => u.id === pmId);
+    return pm?.name || '미지정';
+  };
+
+  const getParticipantNames = (participants?: Project['participants']): string[] => {
+    if (!participants || participants.length === 0) return [];
+    
+    return participants.map((p) => {
+      if (p.user_id) {
+        const user = usersData?.users?.find((u: any) => u.id === p.user_id);
+        return user?.name || null;
+      }
+      if (p.partner_worker_id) {
+        const worker = partnerWorkersData?.find((w: any) => w.id === p.partner_worker_id);
+        return worker?.name_ko || worker?.name_en || worker?.name || null;
+      }
+      if (p.partner_company_id) {
+        const company = partnerCompaniesData?.find((c: any) => c.id === p.partner_company_id);
+        return company?.company_name_ko || company?.company_name_en || null;
+      }
+      return null;
+    }).filter((name): name is string => name !== null);
+  };
   
   const filteredProjects = useMemo(() => {
     if (projectFilter === 'active') {
@@ -118,21 +146,39 @@ export function ProjectsView({
               <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
                 <button
                   onClick={() => setOpenId(opened ? null : p.id)}
-                  className="flex flex-1 items-center justify-between text-left"
+                  className="flex flex-1 items-center justify-between text-left min-w-0"
                 >
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{p.name}</p>
-                      <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  <div className="space-y-1 min-w-0 flex-1 overflow-hidden">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate max-w-[120px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-none">{p.name}</p>
+                      <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap flex-shrink-0">
                         {p.cat}
                       </span>
-                      <span className="rounded bg-emerald-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 whitespace-nowrap">
+                      <span className="rounded bg-emerald-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 whitespace-nowrap flex-shrink-0 hidden sm:inline">
                         할일 {projectTasks.length}개
                       </span>
                     </div>
-                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      {p.startDate} ~ {p.endDate}
-                    </p>
+                    <div className="flex items-center gap-2 text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500">
+                      <span className="font-bold uppercase tracking-widest">
+                        {p.startDate} ~ {p.endDate}
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600">|</span>
+                      <span className="font-medium">
+                        PM: <span className="text-slate-600 dark:text-slate-300">{getPmName(p.pm_id)}</span>
+                      </span>
+                      {(() => {
+                        const participantNames = getParticipantNames(p.participants);
+                        if (participantNames.length === 0) return null;
+                        return (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
+                            <span className="font-medium hidden sm:inline truncate max-w-[150px] md:max-w-[250px]">
+                              참여자: <span className="text-slate-600 dark:text-slate-300">{participantNames.join(', ')}</span>
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
                     <div className="text-right text-[9px] sm:text-[11px]">

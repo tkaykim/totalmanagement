@@ -1137,6 +1137,8 @@ export default function HomePage() {
               onDeleteProject={(id) => setDeleteProjectId(id)}
               tasks={tasks}
               usersData={usersData}
+              partnerWorkersData={partnerWorkersData}
+              partnerCompaniesData={partnerCompaniesData}
             />
           )}
 
