@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
-import type { BU } from '@/types/database';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createPureClient();
-    const searchParams = request.nextUrl.searchParams;
-    const bu = searchParams.get('bu') as BU | null;
 
-    let query = supabase.from('equipment').select('*').order('created_at', { ascending: false });
-
-    if (bu) {
-      query = query.eq('bu_code', bu);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from('meeting_rooms')
+      .select('*')
+      .order('name', { ascending: true });
 
     if (error) throw error;
 
@@ -27,7 +21,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-
+    
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -40,23 +34,20 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!appUser || appUser.role !== 'admin') {
-      return NextResponse.json({ error: '관리자만 장비를 추가할 수 있습니다.' }, { status: 403 });
+      return NextResponse.json({ error: '관리자만 회의실을 추가할 수 있습니다.' }, { status: 403 });
     }
 
     const body = await request.json();
 
     const pureClient = await createPureClient();
     const { data, error } = await pureClient
-      .from('equipment')
+      .from('meeting_rooms')
       .insert({
-        bu_code: body.bu_code,
         name: body.name,
-        category: body.category,
-        quantity: body.quantity || 1,
-        serial_number: body.serial_number,
-        status: body.status || 'available',
+        description: body.description,
+        capacity: body.capacity,
         location: body.location,
-        notes: body.notes,
+        is_active: body.is_active ?? true,
       })
       .select()
       .single();
@@ -68,19 +59,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

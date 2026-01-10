@@ -547,6 +547,13 @@ export function useDeleteExternalWorker() {
   });
 }
 
+export function usePartners(bu?: BU) {
+  return useQuery({
+    queryKey: ['partners', bu],
+    queryFn: () => api.fetchPartners(bu),
+  });
+}
+
 export function usePartnerCompanies(bu?: BU) {
   return useQuery({
     queryKey: ['partner-companies', bu],

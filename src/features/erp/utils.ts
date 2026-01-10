@@ -235,8 +235,7 @@ export function frontendFinancialToDb(f: {
   amount: number;
   date: string;
   status?: 'planned' | 'paid' | 'canceled';
-  partner_company_id?: number | null;
-  partner_worker_id?: number | null;
+  partner_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
   actual_amount?: number | null;
 }): {
@@ -248,8 +247,7 @@ export function frontendFinancialToDb(f: {
   amount: number;
   occurred_at: string;
   status: 'planned' | 'paid' | 'canceled';
-  partner_company_id?: number | null;
-  partner_worker_id?: number | null;
+  partner_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
   actual_amount?: number | null;
 } {
@@ -258,13 +256,12 @@ export function frontendFinancialToDb(f: {
     project_id: Number(f.projectId),
     bu_code: f.bu,
     kind: f.type,
-    category: f.category || f.type, // category가 없으면 type을 사용 (하위 호환성)
+    category: f.category || f.type,
     name: f.name,
     amount: f.amount,
     occurred_at: f.date || today,
     status: f.status || 'planned',
-    partner_company_id: f.partner_company_id || null,
-    partner_worker_id: f.partner_worker_id || null,
+    partner_id: f.partner_id || null,
     payment_method: f.payment_method || null,
     actual_amount: f.actual_amount || null,
   };

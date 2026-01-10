@@ -375,12 +375,69 @@ export function WorkStatusHeader({
         </span>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center gap-1.5 md:gap-2 overflow-x-auto">
+      {/* 모바일: 한 줄 배치 */}
+      <div className="md:hidden bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2">
+        <div className="flex items-center gap-2 px-1.5">
+          <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shadow-md flex-shrink-0">
+            {userInitials}
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">{userName || '사용자'}</div>
+            {userPosition && (
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight truncate">{userPosition}</div>
+            )}
+          </div>
+        </div>
+
+        <Select
+          value={workStatus}
+          onValueChange={(value) => {
+            if (value === 'OFF_WORK_ACTION') {
+              onStatusChange('OFF_WORK');
+            } else {
+              onStatusChange(value as WorkStatus);
+            }
+          }}
+          disabled={isChanging}
+        >
+          <SelectTrigger className="h-8 text-xs px-2 min-w-[100px] max-w-[120px]">
+            <div className="flex items-center gap-1.5">
+              <CurrentIcon size={12} />
+              <SelectValue>
+                {currentStatusConfig?.label || '상태 선택'}
+              </SelectValue>
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(STATUS_CONFIG).map(([key, config]) => {
+              const Icon = config.icon;
+              return (
+                <SelectItem key={key} value={key}>
+                  <div className="flex items-center gap-2">
+                    <Icon size={14} />
+                    {config.label}
+                  </div>
+                </SelectItem>
+              );
+            })}
+            <div className="h-px bg-slate-200 dark:bg-slate-700 my-1" />
+            <SelectItem value="OFF_WORK_ACTION">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <LogOut size={14} />
+                퇴근하기
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* PC: 기존 레이아웃 */}
+      <div className="hidden md:flex bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 items-center gap-2 overflow-x-auto">
         <div className="flex items-center gap-2 px-1.5 min-w-max">
           <div className="w-9 h-9 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shadow-md">
             {userInitials}
           </div>
-          <div className="hidden md:block">
+          <div>
             <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">{userName || '사용자'}</div>
             {userPosition && (
               <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">{userPosition}</div>
@@ -388,41 +445,9 @@ export function WorkStatusHeader({
           </div>
         </div>
 
-        <div className="hidden md:block h-7 w-px bg-slate-100 dark:bg-slate-700"></div>
+        <div className="h-7 w-px bg-slate-100 dark:bg-slate-700"></div>
 
-        {/* 모바일: 드롭다운 */}
-        <div className="md:hidden w-full">
-          <Select
-            value={workStatus}
-            onValueChange={(value) => onStatusChange(value as WorkStatus)}
-            disabled={isChanging}
-          >
-            <SelectTrigger className="w-full h-9 text-sm">
-              <div className="flex items-center gap-2">
-                <CurrentIcon size={14} />
-                <SelectValue>
-                  {currentStatusConfig?.label || '상태 선택'}
-                </SelectValue>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(STATUS_CONFIG).map(([key, config]) => {
-                const Icon = config.icon;
-                return (
-                  <SelectItem key={key} value={key}>
-                    <div className="flex items-center gap-2">
-                      <Icon size={14} />
-                      {config.label}
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* PC: 버튼들 */}
-        <div className="hidden md:flex items-center gap-1 p-0.5">
+        <div className="flex items-center gap-1 p-0.5">
           {Object.entries(STATUS_CONFIG).map(([key, config]) => {
             const status = key as WorkStatus;
             const isActive = workStatus === status;
@@ -447,15 +472,15 @@ export function WorkStatusHeader({
           })}
         </div>
 
-        <div className="hidden md:block h-7 w-px bg-slate-100 dark:bg-slate-700"></div>
+        <div className="h-7 w-px bg-slate-100 dark:bg-slate-700"></div>
 
         <button
           onClick={() => onStatusChange('OFF_WORK')}
           disabled={isChanging}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors whitespace-nowrap ml-auto md:ml-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <LogOut size={14} />
-          <span className="hidden md:inline">퇴근</span>
+          퇴근
         </button>
       </div>
     </div>

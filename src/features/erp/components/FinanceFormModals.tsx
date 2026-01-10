@@ -190,8 +190,7 @@ export function CreateFinanceModal({
   onClose,
   onSubmit,
   projects,
-  partnerCompaniesData,
-  partnerWorkersData,
+  partnersData,
   calculateActualAmount,
   defaultProjectId,
 }: {
@@ -206,14 +205,11 @@ export function CreateFinanceModal({
     amount: string;
     date: string;
     status: FinancialEntryStatus;
-    partnerType?: 'company' | 'worker' | '';
-    partnerCompanyId?: string;
-    partnerWorkerId?: string;
+    partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
   }) => Promise<string | null>;
   projects: Project[];
-  partnerCompaniesData?: any[];
-  partnerWorkersData?: any[];
+  partnersData?: { id: number; display_name: string; entity_type: string }[];
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
   defaultProjectId?: string | null;
 }) {
@@ -230,9 +226,8 @@ export function CreateFinanceModal({
     amount: '',
     date: '',
     status: 'planned' as FinancialEntryStatus,
-    partnerType: '' as 'company' | 'worker' | '',
-    partnerCompanyId: '',
-    partnerWorkerId: '',
+    partnerEntityFilter: '' as 'person' | 'organization' | '',
+    partnerId: '',
     paymentMethod: '' as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
   });
   const [error, setError] = useState<string>('');
@@ -392,49 +387,35 @@ export function CreateFinanceModal({
                 <div className="grid grid-cols-2 gap-3">
                   <FormField label="지급처 유형" icon={Building2}>
                     <Select
-                      value={form.partnerType}
+                      value={form.partnerEntityFilter}
                       onChange={(val) => {
-                        const newType = val as 'company' | 'worker' | '';
+                        const newFilter = val as 'person' | 'organization' | '';
                         setForm((prev) => ({
                           ...prev,
-                          partnerType: newType,
-                          partnerCompanyId: newType !== 'company' ? '' : prev.partnerCompanyId,
-                          partnerWorkerId: newType !== 'worker' ? '' : prev.partnerWorkerId,
+                          partnerEntityFilter: newFilter,
+                          partnerId: '',
                         }));
                       }}
                       options={[
-                        { value: '', label: '선택 안함' },
-                        { value: 'company', label: '회사' },
-                        { value: 'worker', label: '인력' },
+                        { value: '', label: '전체' },
+                        { value: 'organization', label: '회사/조직' },
+                        { value: 'person', label: '개인/인력' },
                       ]}
                     />
                   </FormField>
-                  {form.partnerType === 'company' && (
-                    <FormField label="지급처 회사">
-                      <Select
-                        value={form.partnerCompanyId}
-                        onChange={(v) => setForm((prev) => ({ ...prev, partnerCompanyId: v }))}
-                        options={(partnerCompaniesData || []).map((c: any) => ({
-                          value: String(c.id),
-                          label: c.company_name_ko || c.company_name_en || `회사 #${c.id}`,
+                  <FormField label="지급처" icon={User}>
+                    <Select
+                      value={form.partnerId}
+                      onChange={(v) => setForm((prev) => ({ ...prev, partnerId: v }))}
+                      options={(partnersData || [])
+                        .filter((p) => !form.partnerEntityFilter || p.entity_type === form.partnerEntityFilter)
+                        .map((p) => ({
+                          value: String(p.id),
+                          label: `${p.entity_type === 'organization' ? '🏢' : '👤'} ${p.display_name}`,
                         }))}
-                        placeholder="선택하세요"
-                      />
-                    </FormField>
-                  )}
-                  {form.partnerType === 'worker' && (
-                    <FormField label="지급처 인력" icon={User}>
-                      <Select
-                        value={form.partnerWorkerId}
-                        onChange={(v) => setForm((prev) => ({ ...prev, partnerWorkerId: v }))}
-                        options={(partnerWorkersData || []).map((w: any) => ({
-                          value: String(w.id),
-                          label: w.name_ko || w.name_en || w.name || `인력 #${w.id}`,
-                        }))}
-                        placeholder="선택하세요"
-                      />
-                    </FormField>
-                  )}
+                      placeholder="선택하세요"
+                    />
+                  </FormField>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField label="지급 방식" icon={Calculator}>
@@ -505,8 +486,7 @@ export function EditFinanceModal({
   onClose,
   onSubmit,
   projects,
-  partnerCompaniesData,
-  partnerWorkersData,
+  partnersData,
   calculateActualAmount,
 }: {
   entry: FinancialEntry;
@@ -521,17 +501,16 @@ export function EditFinanceModal({
     amount: string;
     date: string;
     status: FinancialEntryStatus;
-    partnerType?: 'company' | 'worker' | '';
-    partnerCompanyId?: string;
-    partnerWorkerId?: string;
+    partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
   }) => void;
   projects: Project[];
-  partnerCompaniesData?: any[];
-  partnerWorkersData?: any[];
+  partnersData?: { id: number; display_name: string; entity_type: string }[];
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
 }) {
   const entryData = entry as any;
+  const partnerId = entryData.partner_id ? String(entryData.partner_id) : '';
+  const partnerEntity = partnersData?.find((p) => String(p.id) === partnerId);
   const [form, setForm] = useState({
     projectId: entry.projectId,
     bu: entry.bu,
@@ -541,12 +520,11 @@ export function EditFinanceModal({
     amount: String(entry.amount),
     date: entry.date,
     status: entry.status,
-    partnerType: (entryData.partner_company_id ? 'company' : entryData.partner_worker_id ? 'worker' : '') as 'company' | 'worker' | '',
-    partnerCompanyId: entryData.partner_company_id ? String(entryData.partner_company_id) : '',
-    partnerWorkerId: entryData.partner_worker_id ? String(entryData.partner_worker_id) : '',
+    partnerEntityFilter: (partnerEntity?.entity_type || '') as 'person' | 'organization' | '',
+    partnerId: partnerId,
     paymentMethod: (entryData.payment_method || '') as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
   });
-  const [showPaymentOptions, setShowPaymentOptions] = useState(!!form.partnerType || !!form.paymentMethod);
+  const [showPaymentOptions, setShowPaymentOptions] = useState(!!form.partnerId || !!form.paymentMethod);
 
   const isRevenue = form.type === 'revenue';
   const Icon = isRevenue ? TrendingUp : TrendingDown;
@@ -693,49 +671,35 @@ export function EditFinanceModal({
                 <div className="grid grid-cols-2 gap-3">
                   <FormField label="지급처 유형" icon={Building2}>
                     <Select
-                      value={form.partnerType}
+                      value={form.partnerEntityFilter}
                       onChange={(val) => {
-                        const newType = val as 'company' | 'worker' | '';
+                        const newFilter = val as 'person' | 'organization' | '';
                         setForm((prev) => ({
                           ...prev,
-                          partnerType: newType,
-                          partnerCompanyId: newType !== 'company' ? '' : prev.partnerCompanyId,
-                          partnerWorkerId: newType !== 'worker' ? '' : prev.partnerWorkerId,
+                          partnerEntityFilter: newFilter,
+                          partnerId: '',
                         }));
                       }}
                       options={[
-                        { value: '', label: '선택 안함' },
-                        { value: 'company', label: '회사' },
-                        { value: 'worker', label: '인력' },
+                        { value: '', label: '전체' },
+                        { value: 'organization', label: '회사/조직' },
+                        { value: 'person', label: '개인/인력' },
                       ]}
                     />
                   </FormField>
-                  {form.partnerType === 'company' && (
-                    <FormField label="지급처 회사">
-                      <Select
-                        value={form.partnerCompanyId}
-                        onChange={(v) => setForm((prev) => ({ ...prev, partnerCompanyId: v }))}
-                        options={(partnerCompaniesData || []).map((c: any) => ({
-                          value: String(c.id),
-                          label: c.company_name_ko || c.company_name_en || `회사 #${c.id}`,
+                  <FormField label="지급처" icon={User}>
+                    <Select
+                      value={form.partnerId}
+                      onChange={(v) => setForm((prev) => ({ ...prev, partnerId: v }))}
+                      options={(partnersData || [])
+                        .filter((p) => !form.partnerEntityFilter || p.entity_type === form.partnerEntityFilter)
+                        .map((p) => ({
+                          value: String(p.id),
+                          label: `${p.entity_type === 'organization' ? '🏢' : '👤'} ${p.display_name}`,
                         }))}
-                        placeholder="선택하세요"
-                      />
-                    </FormField>
-                  )}
-                  {form.partnerType === 'worker' && (
-                    <FormField label="지급처 인력" icon={User}>
-                      <Select
-                        value={form.partnerWorkerId}
-                        onChange={(v) => setForm((prev) => ({ ...prev, partnerWorkerId: v }))}
-                        options={(partnerWorkersData || []).map((w: any) => ({
-                          value: String(w.id),
-                          label: w.name_ko || w.name_en || w.name || `인력 #${w.id}`,
-                        }))}
-                        placeholder="선택하세요"
-                      />
-                    </FormField>
-                  )}
+                      placeholder="선택하세요"
+                    />
+                  </FormField>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField label="지급 방식" icon={Calculator}>
@@ -787,9 +751,7 @@ export function EditFinanceModal({
                 amount: form.amount,
                 date: form.date,
                 status: form.status,
-                partnerType: form.partnerType,
-                partnerCompanyId: form.partnerCompanyId,
-                partnerWorkerId: form.partnerWorkerId,
+                partnerId: form.partnerId,
                 paymentMethod: form.paymentMethod,
               });
             }}

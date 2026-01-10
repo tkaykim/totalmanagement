@@ -70,8 +70,9 @@ export function canAccessProject(user: AppUser, project: Project): boolean {
     if (project.participants?.includes(user.id)) return true;
   }
   
-  // member: 참여자만
+  // member: 본인 PM + 참여자 (bu_code 관계없이)
   if (user.role === 'member') {
+    if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
   }
   
@@ -150,7 +151,14 @@ export function canAccessTask(user: AppUser, task: Task, project: Project): bool
     if (task.assignee_id === user.id) return true;
   }
   
-  // member/viewer/artist: 본인 할당만
+  // member: PM이거나 참여자인 프로젝트의 모든 할일 + 본인 할당
+  if (user.role === 'member') {
+    if (project.pm_id === user.id) return true;
+    if (project.participants?.includes(user.id)) return true;
+    if (task.assignee_id === user.id) return true;
+  }
+  
+  // viewer/artist: 본인 할당만
   if (task.assignee_id === user.id) return true;
   
   return false;

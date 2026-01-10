@@ -635,14 +635,37 @@ export async function deleteManual(id: number): Promise<void> {
 }
 
 // ============================================
-// Creators API Functions
+// Creators API Functions (uses unified-partners)
 // ============================================
 
 export async function fetchCreators(bu?: BU): Promise<Creator[]> {
-  const url = bu ? `${API_BASE}/creators?bu=${bu}` : `${API_BASE}/creators`;
+  const params = new URLSearchParams();
+  params.append('category', 'creator');
+  if (bu) params.append('bu', bu);
+  const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch creators');
-  return res.json();
+  const data = await res.json();
+  // Map to legacy Creator format for compatibility
+  return (data.partners || []).map((p: any) => ({
+    id: p.id,
+    bu_code: p.owner_bu_code,
+    name: p.display_name,
+    type: p.metadata?.creator_type || 'influencer',
+    platform: p.metadata?.platform,
+    subscribers_count: p.metadata?.subscribers_count,
+    engagement_rate: p.metadata?.engagement_rate,
+    contact_person: p.metadata?.contact_person,
+    phone: p.phone,
+    email: p.email,
+    agency: p.metadata?.agency,
+    fee_range: p.metadata?.fee_range,
+    specialties: p.metadata?.specialties || [],
+    status: p.metadata?.status || 'active',
+    notes: p.notes,
+    created_at: p.created_at,
+    updated_at: p.updated_at,
+  }));
 }
 
 export async function createCreator(data: {
@@ -663,27 +686,82 @@ export async function createCreator(data: {
   notes?: string;
   created_by?: string;
 }): Promise<Creator> {
-  const res = await fetch(`${API_BASE}/creators`, {
+  const res = await fetch(`${API_BASE}/unified-partners`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      entity_type: 'person',
+      display_name: data.name,
+      phone: data.phone,
+      email: data.email,
+      notes: data.notes,
+      owner_bu_code: data.bu_code,
+      category_ids: [], // Will need to look up 'creator' category
+      metadata: {
+        creator_type: data.type,
+        platform: data.platform,
+        channel_id: data.channel_id,
+        subscribers_count: data.subscribers_count,
+        engagement_rate: data.engagement_rate,
+        contact_person: data.contact_person,
+        agency: data.agency,
+        fee_range: data.fee_range,
+        specialties: data.specialties,
+        status: data.status,
+      },
+    }),
   });
   if (!res.ok) throw new Error('Failed to create creator');
-  return res.json();
+  const partner = await res.json();
+  return {
+    id: partner.id,
+    bu_code: partner.owner_bu_code,
+    name: partner.display_name,
+    type: data.type,
+    platform: data.platform,
+    subscribers_count: data.subscribers_count,
+    engagement_rate: data.engagement_rate,
+    contact_person: data.contact_person,
+    phone: data.phone,
+    email: data.email,
+    agency: data.agency,
+    fee_range: data.fee_range,
+    specialties: data.specialties || [],
+    status: data.status || 'active',
+    notes: data.notes,
+    created_at: partner.created_at,
+    updated_at: partner.updated_at,
+  } as Creator;
 }
 
 export async function updateCreator(id: number, data: Partial<Creator>): Promise<Creator> {
-  const res = await fetch(`${API_BASE}/creators/${id}`, {
+  const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      display_name: data.name,
+      phone: data.phone,
+      email: data.email,
+      notes: data.notes,
+      metadata: {
+        creator_type: data.type,
+        platform: data.platform,
+        subscribers_count: data.subscribers_count,
+        engagement_rate: data.engagement_rate,
+        contact_person: data.contact_person,
+        agency: data.agency,
+        fee_range: data.fee_range,
+        specialties: data.specialties,
+        status: data.status,
+      },
+    }),
   });
   if (!res.ok) throw new Error('Failed to update creator');
   return res.json();
 }
 
 export async function deleteCreator(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/creators/${id}`, {
+  const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete creator');
@@ -700,18 +778,59 @@ export async function fetchExternalWorkers(bu?: BU): Promise<ExternalWorker[]> {
   return res.json();
 }
 
+export async function fetchPartners(bu?: BU): Promise<{ id: number; display_name: string; entity_type: string }[]> {
+  const params = new URLSearchParams();
+  if (bu) params.append('bu', bu);
+  const url = `${API_BASE}/unified-partners?${params.toString()}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch partners');
+  const data = await res.json();
+  return (data.partners || []).map((p: any) => ({
+    id: p.id,
+    display_name: p.display_name,
+    entity_type: p.entity_type,
+  }));
+}
+
 export async function fetchPartnerCompanies(bu?: BU): Promise<any[]> {
-  const url = bu ? `${API_BASE}/partners/companies?bu=${bu}` : `${API_BASE}/partners/companies`;
+  const params = new URLSearchParams();
+  params.append('entity_type', 'organization');
+  if (bu) params.append('bu', bu);
+  const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch partner companies');
-  return res.json();
+  const data = await res.json();
+  // Map to legacy format for compatibility
+  return (data.partners || []).map((p: any) => ({
+    id: p.id,
+    company_name_ko: p.display_name,
+    company_name_en: p.name_en || p.display_name,
+    phone: p.phone,
+    email: p.email,
+    address: p.address,
+    notes: p.notes,
+    bu_code: p.owner_bu_code,
+  }));
 }
 
 export async function fetchPartnerWorkers(bu?: BU): Promise<any[]> {
-  const url = bu ? `${API_BASE}/partners/workers?bu=${bu}` : `${API_BASE}/partners/workers`;
+  const params = new URLSearchParams();
+  params.append('entity_type', 'person');
+  if (bu) params.append('bu', bu);
+  const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch partner workers');
-  return res.json();
+  const data = await res.json();
+  // Map to legacy format for compatibility
+  return (data.partners || []).map((p: any) => ({
+    id: p.id,
+    name_ko: p.display_name,
+    name_en: p.name_en || p.display_name,
+    phone: p.phone,
+    email: p.email,
+    bu_code: p.owner_bu_code,
+    partner_company_id: p.affiliations?.[0]?.partner_id || null,
+  }));
 }
 
 export async function createExternalWorker(data: {
@@ -755,14 +874,36 @@ export async function deleteExternalWorker(id: number): Promise<void> {
 }
 
 // ============================================
-// Artists API Functions
+// Artists API Functions (uses unified-partners)
 // ============================================
 
 export async function fetchArtists(bu?: BU): Promise<Artist[]> {
-  const url = bu ? `${API_BASE}/artists?bu=${bu}` : `${API_BASE}/artists`;
+  const params = new URLSearchParams();
+  params.append('category', 'artist');
+  if (bu) params.append('bu', bu);
+  const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch artists');
-  return res.json();
+  const data = await res.json();
+  // Map to legacy Artist format for compatibility
+  return (data.partners || []).map((p: any) => ({
+    id: p.id,
+    bu_code: p.owner_bu_code,
+    name: p.display_name,
+    name_ko: p.display_name,
+    name_en: p.name_en,
+    type: p.metadata?.artist_type || 'solo',
+    nationality: p.nationality,
+    visa_type: p.metadata?.visa_type,
+    contract_start: p.metadata?.contract_start,
+    contract_end: p.metadata?.contract_end,
+    visa_start: p.metadata?.visa_start,
+    visa_end: p.metadata?.visa_end,
+    role: p.metadata?.role,
+    status: p.metadata?.status || 'active',
+    created_at: p.created_at,
+    updated_at: p.updated_at,
+  }));
 }
 
 export async function createArtist(data: {
@@ -779,37 +920,82 @@ export async function createArtist(data: {
   role?: string;
   status?: ArtistStatus;
 }): Promise<Artist> {
-  const res = await fetch(`${API_BASE}/artists`, {
+  const res = await fetch(`${API_BASE}/unified-partners`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      entity_type: 'person',
+      display_name: data.name,
+      nationality: data.nationality,
+      owner_bu_code: data.bu_code,
+      category_ids: [], // Will need to look up 'artist' category
+      metadata: {
+        artist_type: data.type,
+        visa_type: data.visa_type,
+        contract_start: data.contract_start,
+        contract_end: data.contract_end,
+        visa_start: data.visa_start,
+        visa_end: data.visa_end,
+        role: data.role,
+        status: data.status,
+      },
+    }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(errorData.error || 'Failed to create artist');
   }
-  return res.json();
+  const partner = await res.json();
+  return {
+    id: partner.id,
+    bu_code: partner.owner_bu_code,
+    name: partner.display_name,
+    type: data.type || 'solo',
+    nationality: data.nationality,
+    visa_type: data.visa_type,
+    contract_start: data.contract_start,
+    contract_end: data.contract_end,
+    visa_start: data.visa_start,
+    visa_end: data.visa_end,
+    role: data.role,
+    status: data.status || 'active',
+    created_at: partner.created_at,
+    updated_at: partner.updated_at,
+  } as Artist;
 }
 
 export async function updateArtist(id: number, data: Partial<Artist>): Promise<Artist> {
-  const res = await fetch(`${API_BASE}/artists/${id}`, {
+  const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      display_name: data.name,
+      nationality: data.nationality,
+      metadata: {
+        artist_type: data.type,
+        visa_type: data.visa_type,
+        contract_start: data.contract_start,
+        contract_end: data.contract_end,
+        visa_start: data.visa_start,
+        visa_end: data.visa_end,
+        role: data.role,
+        status: data.status,
+      },
+    }),
   });
   if (!res.ok) throw new Error('Failed to update artist');
   return res.json();
 }
 
 export async function deleteArtist(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/artists/${id}`, {
+  const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete artist');
 }
 
 // ============================================
-// Dancers API Functions
+// Dancers API Functions (uses unified-partners)
 // ============================================
 
 export async function fetchDancers(
@@ -819,6 +1005,7 @@ export async function fetchDancers(
   search?: string
 ): Promise<{ data: Dancer[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
   const params = new URLSearchParams();
+  params.append('category', 'dancer');
   if (bu) params.append('bu', bu);
   params.append('page', String(page));
   params.append('limit', String(limit));
@@ -826,10 +1013,37 @@ export async function fetchDancers(
     params.append('search', search.trim());
   }
   
-  const url = `${API_BASE}/dancers?${params.toString()}`;
+  const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch dancers');
-  return res.json();
+  const data = await res.json();
+  // Map to legacy Dancer format for compatibility
+  const dancers = (data.partners || []).map((p: any) => ({
+    id: p.id,
+    bu_code: p.owner_bu_code,
+    name: p.display_name,
+    nickname_ko: p.nickname_ko,
+    nickname_en: p.nickname_en,
+    real_name: p.real_name,
+    photo: p.profile_image,
+    team_name: p.metadata?.team_name,
+    company: p.metadata?.company,
+    nationality: p.nationality,
+    gender: p.metadata?.gender,
+    contact: p.phone,
+    bank_copy: p.metadata?.bank_copy,
+    bank_name: p.metadata?.bank_name,
+    account_number: p.metadata?.account_number,
+    id_document_type: p.metadata?.id_document_type,
+    id_document_file: p.metadata?.id_document_file,
+    note: p.notes,
+    created_at: p.created_at,
+    updated_at: p.updated_at,
+  }));
+  return {
+    data: dancers,
+    pagination: data.pagination || { page, limit, total: dancers.length, totalPages: 1 },
+  };
 }
 
 export async function createDancer(data: {
@@ -851,30 +1065,93 @@ export async function createDancer(data: {
   id_document_file?: string;
   note?: string;
 }): Promise<Dancer> {
-  const res = await fetch(`${API_BASE}/dancers`, {
+  const res = await fetch(`${API_BASE}/unified-partners`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      entity_type: 'person',
+      display_name: data.name,
+      nickname_ko: data.nickname_ko,
+      nickname_en: data.nickname_en,
+      real_name: data.real_name,
+      profile_image: data.photo,
+      phone: data.contact,
+      nationality: data.nationality,
+      notes: data.note,
+      owner_bu_code: data.bu_code,
+      category_ids: [], // Will need to look up 'dancer' category
+      metadata: {
+        team_name: data.team_name,
+        company: data.company,
+        gender: data.gender,
+        bank_copy: data.bank_copy,
+        bank_name: data.bank_name,
+        account_number: data.account_number,
+        id_document_type: data.id_document_type,
+        id_document_file: data.id_document_file,
+      },
+    }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(errorData.error || 'Failed to create dancer');
   }
-  return res.json();
+  const partner = await res.json();
+  return {
+    id: partner.id,
+    bu_code: partner.owner_bu_code,
+    name: partner.display_name,
+    nickname_ko: data.nickname_ko,
+    nickname_en: data.nickname_en,
+    real_name: data.real_name,
+    photo: data.photo,
+    team_name: data.team_name,
+    company: data.company,
+    nationality: data.nationality,
+    gender: data.gender,
+    contact: data.contact,
+    bank_copy: data.bank_copy,
+    bank_name: data.bank_name,
+    account_number: data.account_number,
+    id_document_type: data.id_document_type,
+    id_document_file: data.id_document_file,
+    note: data.note,
+    created_at: partner.created_at,
+    updated_at: partner.updated_at,
+  } as Dancer;
 }
 
 export async function updateDancer(id: number, data: Partial<Dancer>): Promise<Dancer> {
-  const res = await fetch(`${API_BASE}/dancers/${id}`, {
+  const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      display_name: data.name,
+      nickname_ko: data.nickname_ko,
+      nickname_en: data.nickname_en,
+      real_name: data.real_name,
+      profile_image: data.photo,
+      phone: data.contact,
+      nationality: data.nationality,
+      notes: data.note,
+      metadata: {
+        team_name: data.team_name,
+        company: data.company,
+        gender: data.gender,
+        bank_copy: data.bank_copy,
+        bank_name: data.bank_name,
+        account_number: data.account_number,
+        id_document_type: data.id_document_type,
+        id_document_file: data.id_document_file,
+      },
+    }),
   });
   if (!res.ok) throw new Error('Failed to update dancer');
   return res.json();
 }
 
 export async function deleteDancer(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/dancers/${id}`, {
+  const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete dancer');

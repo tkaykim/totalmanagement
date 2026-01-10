@@ -18,6 +18,9 @@ import {
   Trash2,
   LogOut,
   Menu,
+  Building,
+  Package,
+  Car,
 } from 'lucide-react';
 import {
   useWorkStatus,
@@ -56,6 +59,7 @@ import {
   useUsers,
   useCreateUser,
   useUpdateUser,
+  usePartners,
   usePartnerCompanies,
   usePartnerWorkers,
 } from '@/features/erp/hooks';
@@ -84,6 +88,10 @@ import { TasksView } from '@/features/erp/components/TasksView';
 import { OrganizationView } from '@/features/erp/components/OrganizationView';
 import { CreateFinanceModal, EditFinanceModal } from '@/features/erp/components/FinanceFormModals';
 import { CommentSection } from '@/features/comments/components/CommentSection';
+import { PartnersView } from '@/features/partners/components/PartnersView';
+import { MeetingRoomView } from '@/features/reservations/components/MeetingRoomView';
+import { EquipmentRentalView } from '@/features/reservations/components/EquipmentRentalView';
+import { VehicleLogView } from '@/features/reservations/components/VehicleLogView';
 import {
   Sheet,
   SheetContent,
@@ -172,6 +180,7 @@ export default function HomePage() {
   const { data: orgData = [] } = useOrgMembers();
   const { data: externalWorkersData = [] } = useExternalWorkers();
   const { data: usersData } = useUsers();
+  const { data: partnersData = [] } = usePartners(bu === 'ALL' ? undefined : bu);
   const { data: partnerCompaniesData = [] } = usePartnerCompanies(bu === 'ALL' ? undefined : bu);
   const { data: partnerWorkersData = [] } = usePartnerWorkers(bu === 'ALL' ? undefined : bu);
   const createUserMutation = useCreateUser();
@@ -223,9 +232,8 @@ export default function HomePage() {
     name: string;
     amount: string;
     date: string;
-    partnerType: 'company' | 'worker' | '';
-    partnerCompanyId: string;
-    partnerWorkerId: string;
+    partnerEntityFilter: 'person' | 'organization' | '';
+    partnerId: string;
     paymentMethod: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
   }>({
     type: 'revenue',
@@ -233,9 +241,8 @@ export default function HomePage() {
     name: '',
     amount: '',
     date: '',
-    partnerType: '',
-    partnerCompanyId: '',
-    partnerWorkerId: '',
+    partnerEntityFilter: '',
+    partnerId: '',
     paymentMethod: '',
   });
   const [formError, setFormError] = useState<string>('');
@@ -506,12 +513,7 @@ export default function HomePage() {
         amount: amount,
         date: formState.date || getTodayKST(),
         status: 'planned',
-        partner_company_id: formState.partnerType === 'company' && formState.partnerCompanyId 
-          ? Number(formState.partnerCompanyId) 
-          : null,
-        partner_worker_id: formState.partnerType === 'worker' && formState.partnerWorkerId 
-          ? Number(formState.partnerWorkerId) 
-          : null,
+        partner_id: formState.partnerId ? Number(formState.partnerId) : null,
         payment_method: formState.paymentMethod || null,
         actual_amount: actualAmount,
       });
@@ -522,9 +524,8 @@ export default function HomePage() {
         name: '', 
         amount: '', 
         date: '',
-        partnerType: '',
-        partnerCompanyId: '',
-        partnerWorkerId: '',
+        partnerEntityFilter: '',
+        partnerId: '',
         paymentMethod: '',
       }));
       setFormError('');
@@ -650,9 +651,7 @@ export default function HomePage() {
     amount: string;
     date: string;
     status: FinancialEntryStatus;
-    partnerType?: 'company' | 'worker' | '';
-    partnerCompanyId?: string;
-    partnerWorkerId?: string;
+    partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
   }): Promise<string | null> => {
     const missingFields: string[] = [];
@@ -680,12 +679,7 @@ export default function HomePage() {
         amount: amount,
         date: payload.date,
         status: payload.status,
-        partner_company_id: payload.partnerType === 'company' && payload.partnerCompanyId 
-          ? Number(payload.partnerCompanyId) 
-          : null,
-        partner_worker_id: payload.partnerType === 'worker' && payload.partnerWorkerId 
-          ? Number(payload.partnerWorkerId) 
-          : null,
+        partner_id: payload.partnerId ? Number(payload.partnerId) : null,
         payment_method: payload.paymentMethod || null,
         actual_amount: actualAmount,
       });
@@ -708,9 +702,7 @@ export default function HomePage() {
     amount: string;
     date: string;
     status: FinancialEntryStatus;
-    partnerType?: 'company' | 'worker' | '';
-    partnerCompanyId?: string;
-    partnerWorkerId?: string;
+    partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
   }) => {
     if (!payload.cat || !payload.name || !payload.amount) return;
@@ -728,12 +720,7 @@ export default function HomePage() {
         amount: amount,
         occurred_at: payload.date || today,
         status: payload.status,
-        partner_company_id: payload.partnerType === 'company' && payload.partnerCompanyId 
-          ? Number(payload.partnerCompanyId) 
-          : null,
-        partner_worker_id: payload.partnerType === 'worker' && payload.partnerWorkerId 
-          ? Number(payload.partnerWorkerId) 
-          : null,
+        partner_id: payload.partnerId ? Number(payload.partnerId) : null,
         payment_method: payload.paymentMethod || null,
         actual_amount: actualAmount,
       };
@@ -928,6 +915,18 @@ export default function HomePage() {
             }}
           />
         )}
+        {/* 파트너 관리 - admin, leader, manager */}
+        {visibleMenus.includes('organization') && (
+          <SidebarButton
+            label="파트너 관리"
+            icon={<Users className="h-4 w-4" />}
+            active={view === 'partners'}
+            onClick={() => {
+              setView('partners');
+              onItemClick?.();
+            }}
+          />
+        )}
         {/* 근무시간 관리 - 모든 사용자 */}
         {visibleMenus.includes('attendance') && (
           <SidebarButton
@@ -940,6 +939,39 @@ export default function HomePage() {
             }}
           />
         )}
+        {/* 예약 관리 - 탭 형태 */}
+        <div className="mt-2 pt-2 border-t border-slate-700">
+          <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            예약 관리
+          </p>
+          <SidebarButton
+            label="회의실 예약"
+            icon={<Building className="h-4 w-4" />}
+            active={view === 'meetingRooms'}
+            onClick={() => {
+              setView('meetingRooms');
+              onItemClick?.();
+            }}
+          />
+          <SidebarButton
+            label="장비 대여"
+            icon={<Package className="h-4 w-4" />}
+            active={view === 'equipment'}
+            onClick={() => {
+              setView('equipment');
+              onItemClick?.();
+            }}
+          />
+          <SidebarButton
+            label="차량 일지"
+            icon={<Car className="h-4 w-4" />}
+            active={view === 'vehicles'}
+            onClick={() => {
+              setView('vehicles');
+              onItemClick?.();
+            }}
+          />
+        </div>
       </nav>
       {/* 관리자/리더 전용 메뉴 */}
       {visibleMenus.includes('attendanceAdmin') && (
@@ -1027,13 +1059,21 @@ export default function HomePage() {
                       ? '근태 관리'
                       : view === 'attendanceAdmin'
                         ? '전체 근무현황'
-                        : '조직 현황'
+                        : view === 'partners'
+                          ? '파트너 관리'
+                          : view === 'meetingRooms'
+                            ? '회의실 예약'
+                            : view === 'equipment'
+                              ? '장비 대여'
+                              : view === 'vehicles'
+                                ? '차량 일지'
+                                : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
         />
 
-        <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 py-3 sm:py-8 space-y-3 sm:space-y-6">
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4 sm:gap-3">
             <QuickAction
               title="프로젝트 등록"
               icon={<FolderKanban className="h-4 w-4" />}
@@ -1177,6 +1217,54 @@ export default function HomePage() {
             <AttendanceAdminView />
           )}
 
+          {view === 'partners' && (
+            <PartnersView
+              currentBu={bu === 'ALL' ? 'ALL' : bu}
+              currentUserRole={user?.profile?.role || 'member'}
+            />
+          )}
+
+          {view === 'meetingRooms' && (
+            <MeetingRoomView
+              projects={projects}
+              tasks={tasks}
+              currentUserId={user?.id || ''}
+              isAdmin={user?.profile?.role === 'admin'}
+              users={(usersData?.users || []).map((u: any) => ({
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                position: u.position,
+                bu_code: u.bu_code,
+              }))}
+              partners={partnersData.map((p: any) => ({
+                id: p.id,
+                display_name: p.display_name,
+                entity_type: p.entity_type,
+                email: p.email,
+                phone: p.phone,
+              }))}
+            />
+          )}
+
+          {view === 'equipment' && (
+            <EquipmentRentalView
+              projects={projects}
+              tasks={tasks}
+              currentUserId={user?.id || ''}
+              isAdmin={user?.profile?.role === 'admin'}
+            />
+          )}
+
+          {view === 'vehicles' && (
+            <VehicleLogView
+              projects={projects}
+              tasks={tasks}
+              currentUserId={user?.id || ''}
+              isAdmin={user?.profile?.role === 'admin'}
+            />
+          )}
+
         </div>
       </main>
 
@@ -1202,6 +1290,7 @@ export default function HomePage() {
           projects={projects}
           orgData={orgData}
           usersData={usersData}
+          partnersData={partnersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
           calculateActualAmount={calculateActualAmount}
@@ -1241,8 +1330,7 @@ export default function HomePage() {
           }}
           onSubmit={handleCreateFinance}
           projects={projects}
-          partnerCompaniesData={partnerCompaniesData}
-          partnerWorkersData={partnerWorkersData}
+          partnersData={partnersData}
           calculateActualAmount={calculateActualAmount}
           defaultProjectId={financeDefaultProjectId}
         />
@@ -1253,8 +1341,7 @@ export default function HomePage() {
           onClose={() => setEditFinanceModalOpen(null)}
           onSubmit={handleUpdateFinance}
           projects={projects}
-          partnerCompaniesData={partnerCompaniesData}
-          partnerWorkersData={partnerWorkersData}
+          partnersData={partnersData}
           calculateActualAmount={calculateActualAmount}
         />
       )}
@@ -1510,13 +1597,10 @@ function QuickAction({ title, icon, onClick }: { title: string; icon: React.Reac
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 sm:px-4 py-2.5 sm:py-3 text-left shadow-sm transition hover:border-blue-200 hover:shadow"
+      className="flex flex-col sm:flex-row items-center sm:gap-2.5 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 sm:px-3 sm:py-2 text-center sm:text-left shadow-sm transition hover:border-blue-200 hover:shadow"
     >
-      <div className="min-w-0 flex-1">
-        <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{title}</p>
-        <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">모달을 열어 즉시 등록</p>
-      </div>
-      <span className="rounded-full bg-blue-50 dark:bg-blue-900/50 p-3 text-blue-600 dark:text-blue-300">{icon}</span>
+      <span className="rounded-lg bg-blue-50 dark:bg-blue-900/50 p-1.5 sm:p-2 text-blue-600 dark:text-blue-300 flex-shrink-0">{icon}</span>
+      <span className="text-[10px] sm:text-xs font-medium sm:font-semibold text-slate-600 dark:text-slate-300 sm:text-slate-800 sm:dark:text-slate-200 mt-1 sm:mt-0 leading-tight">{title}</span>
     </button>
   );
 }
@@ -1539,6 +1623,7 @@ function ModalProject({
   projects,
   orgData,
   usersData,
+  partnersData,
   partnerCompaniesData,
   partnerWorkersData,
   calculateActualAmount,
@@ -1562,9 +1647,8 @@ function ModalProject({
     name: string;
     amount: string;
     date: string;
-    partnerType: 'company' | 'worker' | '';
-    partnerCompanyId: string;
-    partnerWorkerId: string;
+    partnerEntityFilter: 'person' | 'organization' | '';
+    partnerId: string;
     paymentMethod: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
   };
   formError?: string;
@@ -1575,9 +1659,8 @@ function ModalProject({
       name: string;
       amount: string;
       date: string;
-      partnerType: 'company' | 'worker' | '';
-      partnerCompanyId: string;
-      partnerWorkerId: string;
+      partnerEntityFilter: 'person' | 'organization' | '';
+      partnerId: string;
       paymentMethod: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
     }>
   >;
@@ -1606,6 +1689,7 @@ function ModalProject({
   projects: Project[];
   orgData: any[];
   usersData?: { users: any[]; currentUser: any };
+  partnersData?: { id: number; display_name: string; entity_type: string }[];
   partnerCompaniesData?: any[];
   partnerWorkersData?: any[];
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
@@ -1659,12 +1743,6 @@ function ModalProject({
   };
 
   const handleSaveParticipants = () => {
-    const participants = selectedParticipants.map((p) => ({
-      user_id: p.type === 'user' ? (p.id as string) : undefined,
-      partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
-      partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
-      role: 'participant',
-    }));
     onUpdateProject({
       id: project.id,
       name: project.name,
@@ -2070,59 +2148,40 @@ function ModalProject({
                 <div className="space-y-1">
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">지급처 유형</label>
                   <select
-                    value={formState.partnerType}
+                    value={formState.partnerEntityFilter}
                     onChange={(e) => {
-                      const newType = e.target.value as 'company' | 'worker' | '';
+                      const newFilter = e.target.value as 'person' | 'organization' | '';
                       onFormChange((prev) => ({ 
                         ...prev, 
-                        partnerType: newType,
-                        partnerCompanyId: newType !== 'company' ? '' : prev.partnerCompanyId,
-                        partnerWorkerId: newType !== 'worker' ? '' : prev.partnerWorkerId,
+                        partnerEntityFilter: newFilter,
+                        partnerId: '',
                       }));
                     }}
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs outline-none"
                   >
-                    <option value="">선택 안함</option>
-                    <option value="company">회사</option>
-                    <option value="worker">인력</option>
+                    <option value="">전체</option>
+                    <option value="organization">회사/조직</option>
+                    <option value="person">개인/인력</option>
                   </select>
                 </div>
                 
-                {formState.partnerType === 'company' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 dark:text-slate-400">지급처 회사</label>
-                    <select
-                      value={formState.partnerCompanyId}
-                      onChange={(e) => onFormChange((prev) => ({ ...prev, partnerCompanyId: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs outline-none"
-                    >
-                      <option value="">선택하세요</option>
-                      {(partnerCompaniesData || []).map((company: any) => (
-                        <option key={company.id} value={company.id}>
-                          {company.company_name_ko || company.company_name_en || `회사 #${company.id}`}
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">지급처</label>
+                  <select
+                    value={formState.partnerId}
+                    onChange={(e) => onFormChange((prev) => ({ ...prev, partnerId: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs outline-none"
+                  >
+                    <option value="">선택하세요</option>
+                    {(partnersData || [])
+                      .filter((p) => !formState.partnerEntityFilter || p.entity_type === formState.partnerEntityFilter)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.entity_type === 'organization' ? '🏢' : '👤'} {p.display_name}
                         </option>
                       ))}
-                    </select>
-                  </div>
-                )}
-                
-                {formState.partnerType === 'worker' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 dark:text-slate-400">지급처 인력</label>
-                    <select
-                      value={formState.partnerWorkerId}
-                      onChange={(e) => onFormChange((prev) => ({ ...prev, partnerWorkerId: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs outline-none"
-                    >
-                      <option value="">선택하세요</option>
-                      {(partnerWorkersData || []).map((worker: any) => (
-                        <option key={worker.id} value={worker.id}>
-                          {worker.name_ko || worker.name_en || worker.name || `인력 #${worker.id}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                  </select>
+                </div>
                 
                 <div className="space-y-1">
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">지급 방식</label>

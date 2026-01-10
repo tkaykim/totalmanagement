@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPureClient } from '@/lib/supabase/server';
+import { createPureClient, createClient } from '@/lib/supabase/server';
+
+async function checkAdminRole() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: 'Unauthorized', status: 401 };
+  }
+
+  const { data: appUser } = await supabase
+    .from('app_users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!appUser || appUser.role !== 'admin') {
+    return { error: '관리자만 장비를 수정/삭제할 수 있습니다.', status: 403 };
+  }
+
+  return null;
+}
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authError = await checkAdminRole();
+    if (authError) {
+      return NextResponse.json({ error: authError.error }, { status: authError.status });
+    }
+
     const supabase = await createPureClient();
     const { id } = await params;
     const body = await request.json();
@@ -12,6 +38,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .update({
         name: body.name,
         category: body.category,
+        quantity: body.quantity,
         serial_number: body.serial_number,
         status: body.status,
         location: body.location,
@@ -35,6 +62,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authError = await checkAdminRole();
+    if (authError) {
+      return NextResponse.json({ error: authError.error }, { status: authError.status });
+    }
+
     const supabase = await createPureClient();
     const { id } = await params;
 
