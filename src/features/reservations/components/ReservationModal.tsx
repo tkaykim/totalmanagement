@@ -124,6 +124,14 @@ export function ReservationModal({
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 모달이 열릴 때마다 isEditing 상태를 mode에 따라 리셋
+  useEffect(() => {
+    if (isOpen) {
+      setIsEditing(mode === 'create' || mode === 'edit');
+      setError('');
+    }
+  }, [isOpen, mode]);
+
   useEffect(() => {
     if (reservation) {
       setResourceType(reservation.resource_type);
@@ -511,6 +519,11 @@ export function ReservationModal({
                   {reservation.status === 'active' ? '예약중' : '취소됨'}
                 </span>
               </p>
+              {!canEdit && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                  ※ 예약자 본인 또는 관리자만 수정/취소할 수 있습니다.
+                </p>
+              )}
             </div>
           )}
         </div>
