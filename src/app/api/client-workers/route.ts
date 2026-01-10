@@ -1,28 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 
-// 하위 호환성을 위해 client_worker 대신 partner_worker 사용 (worker_type='employee' 필터링)
+// partners 테이블에서 entity_type이 'person'인 항목 중 조직에 속한 담당자 조회
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
     const clientCompanyId = searchParams.get('client_company_id');
 
+    // partner_relations 테이블을 통해 조직에 속한 개인 조회
     let query = supabase
-      .from('partner_worker')
+      .from('partners')
       .select('*')
-      .eq('worker_type', 'employee')
+      .eq('entity_type', 'person')
+      .eq('is_active', true)
       .order('created_at', { ascending: false });
-
-    if (clientCompanyId) {
-      query = query.eq('partner_company_id', clientCompanyId);
-    }
 
     const { data, error } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // 하위 호환성을 위해 필드 매핑
+    const mappedData = data?.map(item => ({
+      id: item.id,
+      bu_code: item.owner_bu_code,
+      name_ko: item.name_ko || item.display_name,
+      name_en: item.name_en,
+      phone: item.phone,
+      email: item.email,
+      partner_company_id: item.metadata?.partner_company_id || null,
+      is_active: item.is_active,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+    })) || [];
+
+    // clientCompanyId가 지정된 경우 필터링 (metadata에서)
+    const filteredData = clientCompanyId
+      ? mappedData.filter(item => String(item.partner_company_id) === clientCompanyId)
+      : mappedData;
+
+    return NextResponse.json(filteredData);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -42,11 +59,11 @@ export async function POST(request: NextRequest) {
     let buCode = body.bu_code;
     if (!buCode && partnerCompanyId) {
       const { data: company } = await supabase
-        .from('partner_company')
-        .select('bu_code')
+        .from('partners')
+        .select('owner_bu_code')
         .eq('id', partnerCompanyId)
         .single();
-      buCode = company?.bu_code;
+      buCode = company?.owner_bu_code;
     }
 
     if (!buCode) {
@@ -54,26 +71,44 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('partner_worker')
+      .from('partners')
       .insert({
-        partner_company_id: toNullIfEmpty(partnerCompanyId),
-        bu_code: buCode,
-        name_en: toNullIfEmpty(body.name_en),
+        display_name: body.name_ko || body.name_en || 'Unnamed',
         name_ko: toNullIfEmpty(body.name_ko),
-        worker_type: 'employee',
+        name_en: toNullIfEmpty(body.name_en),
+        entity_type: 'person',
+        owner_bu_code: buCode,
         phone: toNullIfEmpty(body.phone),
         email: toNullIfEmpty(body.email),
-        business_card_file: toNullIfEmpty(body.business_card_file),
+        metadata: {
+          partner_company_id: toNullIfEmpty(partnerCompanyId),
+          business_card_file: toNullIfEmpty(body.business_card_file),
+        },
         is_active: true,
+        security_level: 'bu_only',
+        sharing_policy: 'owner_only',
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // 하위 호환성을 위해 필드 매핑
+    const mappedData = {
+      id: data.id,
+      bu_code: data.owner_bu_code,
+      name_ko: data.name_ko || data.display_name,
+      name_en: data.name_en,
+      phone: data.phone,
+      email: data.email,
+      partner_company_id: data.metadata?.partner_company_id || null,
+      is_active: data.is_active,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return NextResponse.json(mappedData);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
-

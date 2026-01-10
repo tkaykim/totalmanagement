@@ -781,11 +781,13 @@ export async function fetchExternalWorkers(bu?: BU): Promise<ExternalWorker[]> {
 export async function fetchPartners(bu?: BU): Promise<{ id: number; display_name: string; entity_type: string }[]> {
   const params = new URLSearchParams();
   if (bu) params.append('bu', bu);
+  params.append('limit', '500'); // 충분히 많은 수의 파트너를 가져옴
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch partners');
-  const data = await res.json();
-  return (data.partners || []).map((p: any) => ({
+  const response = await res.json();
+  // API 응답 형식: { data: [...], pagination: {...} }
+  return (response.data || []).map((p: any) => ({
     id: p.id,
     display_name: p.display_name,
     entity_type: p.entity_type,

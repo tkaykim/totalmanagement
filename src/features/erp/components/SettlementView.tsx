@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { ChartLine, Coins, DollarSign } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChartLine, Coins, DollarSign, PieChart, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BU,
@@ -12,6 +12,9 @@ import {
 } from '../types';
 import { BuTabs } from './BuTabs';
 import { StatCard } from './StatCard';
+import { ProjectShareTab, SettlementListTab } from '@/features/settlement/components';
+
+type SettlementTabType = 'overview' | 'project-share' | 'settlements';
 
 export interface SettlementViewProps {
   bu: BU | 'ALL';
@@ -21,6 +24,7 @@ export interface SettlementViewProps {
   onEditFinance: (entry: FinancialEntry) => void;
   canViewAllBu?: boolean;
   canViewNetProfit?: boolean;
+  activePeriod?: { start?: string; end?: string };
 }
 
 export function SettlementView({
@@ -31,7 +35,10 @@ export function SettlementView({
   onEditFinance,
   canViewAllBu = false,
   canViewNetProfit = true,
+  activePeriod,
 }: SettlementViewProps) {
+  const [activeTab, setActiveTab] = useState<SettlementTabType>('overview');
+
   const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
 
   const getStatusLabel = (status: FinancialEntryStatus) => {
@@ -60,9 +67,47 @@ export function SettlementView({
     return totalRevenue - totalExpense;
   }, [totalRevenue, totalExpense]);
 
+  const tabs = [
+    { id: 'overview' as const, label: '전체 정산', icon: ChartLine },
+    { id: 'project-share' as const, label: '프로젝트별 분배', icon: PieChart },
+    { id: 'settlements' as const, label: '정산서 관리', icon: FileText },
+  ];
+
   return (
     <section className="space-y-6">
       <BuTabs bu={bu} onChange={onBuChange} prefix="SET" showAll={canViewAllBu} />
+
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                activeTab === tab.id
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'project-share' && (
+        <ProjectShareTab bu={bu} />
+      )}
+
+      {activeTab === 'settlements' && (
+        <SettlementListTab />
+      )}
+
+      {activeTab === 'overview' && (
+        <>
 
       <div className={cn("grid grid-cols-1 gap-4", canViewNetProfit ? "md:grid-cols-3" : "md:grid-cols-2")}>
         <StatCard
@@ -186,6 +231,8 @@ export function SettlementView({
           </table>
         </div>
       </div>
+      </>
+      )}
     </section>
   );
 }

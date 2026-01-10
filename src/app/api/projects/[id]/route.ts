@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import { canEditProject, canDeleteProject, type AppUser, type Project as PermProject } from '@/lib/permissions';
+import { createActivityLog, createProjectStatusChangeLog } from '@/lib/activity-logger';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -26,11 +27,16 @@ async function getProject(supabase: any, id: string): Promise<PermProject | null
   
   if (!project) return null;
   
+  // participants에서 user_id만 추출 (객체 배열인 경우)
+  const participantIds = (project.participants || [])
+    .map((p: any) => p.user_id)
+    .filter((id: any): id is string => !!id);
+  
   return {
     id: project.id,
     bu_code: project.bu_code,
     pm_id: project.pm_id,
-    participants: project.participants || [],
+    participants: participantIds,
     created_by: project.created_by,
   };
 }
@@ -50,24 +56,36 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 프로젝트 정보 가져오기
+    // 프로젝트 정보 가져오기 (이전 상태 저장)
     const project = await getProject(supabase, id);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+
+    // 이전 상태 저장 (활동 로그용)
+    const { data: oldProject } = await supabase
+      .from('projects')
+      .select('name, status')
+      .eq('id', id)
+      .single();
 
     // 수정 권한 체크
     if (!canEditProject(currentUser, project)) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    // undefined 필드는 제외하고 update 객체 생성
+    // 유효한 컬럼만 업데이트 (존재하지 않는 컬럼 제외)
+    const validColumns = [
+      'bu_code', 'name', 'category', 'status', 'start_date', 'end_date',
+      'description', 'channel_id', 'pm_id', 'partner_id', 'participants'
+    ];
+    
     const updateData: any = {
       updated_at: new Date().toISOString(),
     };
 
     Object.keys(body).forEach((key) => {
-      if (body[key] !== undefined) {
+      if (body[key] !== undefined && validColumns.includes(key)) {
         updateData[key] = body[key];
       }
     });
@@ -87,6 +105,28 @@ export async function PATCH(
     // participants가 null이면 빈 배열로 초기화
     if (!updatedProject.participants) {
       updatedProject.participants = [];
+    }
+
+    // 활동 로그 기록
+    if (body.status && oldProject?.status !== body.status) {
+      // 상태 변경 로그
+      await createProjectStatusChangeLog(
+        currentUser.id,
+        id,
+        updatedProject.name,
+        oldProject?.status || '',
+        body.status
+      );
+    } else {
+      // 일반 수정 로그
+      await createActivityLog({
+        userId: currentUser.id,
+        actionType: 'project_updated',
+        entityType: 'project',
+        entityId: id,
+        entityTitle: updatedProject.name,
+        metadata: { updated_fields: Object.keys(body) },
+      });
     }
 
     return NextResponse.json(updatedProject);

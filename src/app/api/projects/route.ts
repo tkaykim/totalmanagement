@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import type { BU } from '@/types/database';
 import { canAccessProject, canCreateProject, type AppUser, type Project as PermProject } from '@/lib/permissions';
+import { createActivityLog } from '@/lib/activity-logger';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
     const bu = searchParams.get('bu') as BU | null;
+    const includeShare = searchParams.get('includeShare') === 'true';
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     // 현재 사용자 정보 가져오기
     const currentUser = await getCurrentUser();
@@ -30,7 +34,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let query = supabase.from('projects').select('*').order('created_at', { ascending: false });
+    // 분배 설정 포함 시 파트너 정보도 조회
+    const selectQuery = includeShare
+      ? `*, share_partner:partners!share_partner_id(id, display_name)`
+      : '*';
+
+    let query = supabase.from('projects').select(selectQuery).order('created_at', { ascending: false });
 
     if (bu) {
       query = query.eq('bu_code', bu);
@@ -49,24 +58,71 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // admin은 전체 접근
-    if (currentUser.role === 'admin') {
-      return NextResponse.json(projects);
+    // 분배 설정 포함 시 재무 데이터도 조회
+    let projectsWithFinance = projects;
+    if (includeShare && projects && projects.length > 0) {
+      const projectIds = projects.map((p: any) => p.id);
+      
+      // 재무 데이터 조회 (기간 필터 적용)
+      let financeQuery = supabase
+        .from('financial_entries')
+        .select('project_id, kind, amount')
+        .in('project_id', projectIds)
+        .neq('status', 'canceled');
+      
+      if (startDate) {
+        financeQuery = financeQuery.gte('occurred_at', startDate);
+      }
+      if (endDate) {
+        financeQuery = financeQuery.lte('occurred_at', endDate);
+      }
+      
+      const { data: finances } = await financeQuery;
+
+      // 프로젝트별 매출/지출 합계 계산
+      const financeMap: Record<string, { revenue: number; expense: number }> = {};
+      (finances || []).forEach((f: any) => {
+        if (!financeMap[f.project_id]) {
+          financeMap[f.project_id] = { revenue: 0, expense: 0 };
+        }
+        if (f.kind === 'revenue') {
+          financeMap[f.project_id].revenue += f.amount;
+        } else if (f.kind === 'expense') {
+          financeMap[f.project_id].expense += f.amount;
+        }
+      });
+
+      // 프로젝트에 재무 데이터 추가
+      projectsWithFinance = projects.map((p: any) => ({
+        ...p,
+        total_revenue: financeMap[p.id]?.revenue || 0,
+        total_expense: financeMap[p.id]?.expense || 0,
+      }));
+    }
+
+    // admin/superadmin은 전체 접근
+    if (['admin', 'superadmin'].includes(currentUser.role)) {
+      return NextResponse.json(includeShare ? { data: projectsWithFinance } : projectsWithFinance);
     }
 
     // 권한에 따라 필터링
-    const filteredProjects = projects?.filter((project: any) => {
+    const filteredProjects = projectsWithFinance?.filter((project: any) => {
+      // participants에서 user_id만 추출 (객체 배열인 경우)
+      const participantIds = (project.participants || [])
+        .map((p: any) => p.user_id)
+        .filter((id: any): id is string => !!id);
+      
       const permProject: PermProject = {
         id: project.id,
         bu_code: project.bu_code,
         pm_id: project.pm_id,
-        participants: project.participants || [],
+        participants: participantIds,
         created_by: project.created_by,
       };
       return canAccessProject(currentUser, permProject);
     }) || [];
 
-    return NextResponse.json(filteredProjects);
+    return NextResponse.json(includeShare ? { data: filteredProjects } : filteredProjects);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -109,19 +165,9 @@ export async function POST(request: NextRequest) {
       insertData.channel_id = body.channel_id;
     }
 
-    // partner_company_id가 있으면 추가
-    if (body.partner_company_id !== undefined && body.partner_company_id !== null) {
-      insertData.partner_company_id = body.partner_company_id;
-    }
-
-    // partner_worker_id가 있으면 추가
-    if (body.partner_worker_id !== undefined && body.partner_worker_id !== null) {
-      insertData.partner_worker_id = body.partner_worker_id;
-    }
-
-    // artist_id가 있으면 추가
-    if (body.artist_id !== undefined && body.artist_id !== null) {
-      insertData.artist_id = body.artist_id;
+    // partner_id가 있으면 추가 (partner_company_id, partner_worker_id 대신 partner_id 사용)
+    if (body.partner_id !== undefined && body.partner_id !== null) {
+      insertData.partner_id = body.partner_id;
     }
 
     // pm_id가 있으면 추가
@@ -151,6 +197,16 @@ export async function POST(request: NextRequest) {
     if (!project.participants) {
       project.participants = [];
     }
+
+    // 활동 로그 기록
+    await createActivityLog({
+      userId: currentUser.id,
+      actionType: 'project_created',
+      entityType: 'project',
+      entityId: String(project.id),
+      entityTitle: project.name,
+      metadata: { bu_code: project.bu_code, status: project.status },
+    });
 
     return NextResponse.json(project);
   } catch (error: any) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 
-// 하위 호환성을 위해 external_workers 대신 partner_worker 사용
+// partners 테이블에서 entity_type이 'person'인 항목 조회/수정/삭제
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -11,15 +11,29 @@ export async function GET(
     const { id } = await params;
 
     const { data, error } = await supabase
-      .from('partner_worker')
+      .from('partners')
       .select('*')
       .eq('id', id)
-      .in('worker_type', ['freelancer', 'contractor'])
+      .eq('entity_type', 'person')
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // 하위 호환성을 위해 필드 매핑
+    const mappedData = {
+      id: data.id,
+      name: data.display_name,
+      email: data.email,
+      phone: data.phone,
+      bu_code: data.owner_bu_code,
+      is_active: data.is_active,
+      specialties: data.tags || [],
+      notes: data.metadata?.notes || null,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return NextResponse.json(mappedData);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -37,62 +51,45 @@ export async function PATCH(
     const toNullIfEmpty = (value: any) =>
       value === '' || value === null || value === undefined ? null : value;
 
-    // worker_type 매핑: 'company' -> 'contractor'
-    const workerType = body.worker_type === 'company' ? 'contractor' : (body.worker_type || 'freelancer');
-
-    // company_name이 있으면 partner_company 찾기 또는 생성
-    let partnerCompanyId = null;
-    if (body.company_name) {
-      const { data: existingCompany } = await supabase
-        .from('partner_company')
-        .select('id')
-        .eq('company_name_ko', body.company_name)
-        .eq('bu_code', body.bu_code)
-        .single();
-
-      if (existingCompany) {
-        partnerCompanyId = existingCompany.id;
-      } else {
-        // 새 회사 생성
-        const { data: newCompany } = await supabase
-          .from('partner_company')
-          .insert({
-            bu_code: body.bu_code,
-            company_name_ko: body.company_name,
-            partner_type: workerType === 'contractor' ? 'contractor' : 'vendor',
-            status: 'active',
-          })
-          .select('id')
-          .single();
-        
-        if (newCompany) {
-          partnerCompanyId = newCompany.id;
-        }
-      }
+    const updateData: Record<string, any> = {};
+    if (body.bu_code !== undefined) updateData.owner_bu_code = body.bu_code;
+    if (body.name !== undefined) {
+      updateData.display_name = body.name;
+      updateData.name_ko = body.name;
     }
-
-    const updateData: any = {};
-    if (body.bu_code !== undefined) updateData.bu_code = body.bu_code;
-    if (body.name !== undefined) updateData.name = body.name;
-    if (workerType !== undefined) updateData.worker_type = workerType;
     if (body.phone !== undefined) updateData.phone = toNullIfEmpty(body.phone);
     if (body.email !== undefined) updateData.email = toNullIfEmpty(body.email);
-    if (body.specialties !== undefined) updateData.specialties = body.specialties || [];
-    if (body.notes !== undefined) updateData.notes = toNullIfEmpty(body.notes);
+    if (body.specialties !== undefined) updateData.tags = body.specialties || [];
+    if (body.notes !== undefined) {
+      updateData.metadata = body.notes ? { notes: body.notes } : null;
+    }
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
-    if (partnerCompanyId !== null) updateData.partner_company_id = partnerCompanyId;
 
     const { data, error } = await supabase
-      .from('partner_worker')
+      .from('partners')
       .update(updateData)
       .eq('id', id)
-      .in('worker_type', ['freelancer', 'contractor'])
+      .eq('entity_type', 'person')
       .select()
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // 하위 호환성을 위해 필드 매핑
+    const mappedData = {
+      id: data.id,
+      name: data.display_name,
+      email: data.email,
+      phone: data.phone,
+      bu_code: data.owner_bu_code,
+      is_active: data.is_active,
+      specialties: data.tags || [],
+      notes: data.metadata?.notes || null,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return NextResponse.json(mappedData);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -106,11 +103,12 @@ export async function DELETE(
     const supabase = await createPureClient();
     const { id } = await params;
 
+    // 실제 삭제 대신 soft delete (is_active = false)
     const { error } = await supabase
-      .from('partner_worker')
-      .delete()
+      .from('partners')
+      .update({ is_active: false, deleted_at: new Date().toISOString() })
       .eq('id', id)
-      .in('worker_type', ['freelancer', 'contractor']);
+      .eq('entity_type', 'person');
 
     if (error) throw error;
 

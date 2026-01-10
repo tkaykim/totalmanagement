@@ -258,7 +258,7 @@ export function useWorkStatus() {
     }
   }, [workStatus, triggerWelcome]);
 
-  // 퇴근 확인 후 처리 (자체적으로 API 호출)
+  // 퇴근 확인 후 처리 (자체적으로 API 호출) + 로그아웃
   const confirmLogout = useCallback(async () => {
     setIsChanging(true);
     try {
@@ -277,6 +277,11 @@ export function useWorkStatus() {
 
       setWorkStatus('OFF_WORK');
       setShowLogoutConfirm(false);
+
+      // Supabase 로그아웃 후 로그인 페이지로 리다이렉트
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
       alert('퇴근 처리 중 오류가 발생했습니다.');

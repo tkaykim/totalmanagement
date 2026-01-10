@@ -8,6 +8,7 @@ import {
   type FinancialEntry as PermFinancialEntry,
   type Project as PermProject 
 } from '@/lib/permissions';
+import { createActivityLog } from '@/lib/activity-logger';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -157,6 +158,21 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // 활동 로그 기록
+    await createActivityLog({
+      userId: currentUser.id,
+      actionType: 'financial_created',
+      entityType: 'financial_entry',
+      entityId: String(data.id),
+      entityTitle: data.name,
+      metadata: { 
+        kind: body.kind,
+        category: body.category,
+        amount: body.amount,
+        project_id: body.project_id,
+      },
+    });
 
     return NextResponse.json(data);
   } catch (error) {

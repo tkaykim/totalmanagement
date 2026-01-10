@@ -8,6 +8,7 @@ import {
   type Task as PermTask,
   type Project as PermProject 
 } from '@/lib/permissions';
+import { createActivityLog, createTaskAssignedLog } from '@/lib/activity-logger';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -63,12 +64,19 @@ export async function GET(request: NextRequest) {
       .in('id', projectIds);
 
     const projectMap = new Map(
-      projects?.map((p: any) => [p.id, {
-        id: p.id,
-        bu_code: p.bu_code,
-        pm_id: p.pm_id,
-        participants: p.participants || [],
-      }]) || []
+      projects?.map((p: any) => {
+        // participants에서 user_id만 추출 (객체 배열인 경우)
+        const participantIds = (p.participants || [])
+          .map((participant: any) => participant.user_id)
+          .filter((id: any): id is string => !!id);
+        
+        return [p.id, {
+          id: p.id,
+          bu_code: p.bu_code,
+          pm_id: p.pm_id,
+          participants: participantIds,
+        }];
+      }) || []
     );
 
     // 권한에 따라 필터링
@@ -145,6 +153,30 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // 활동 로그 기록 - 생성자
+    await createActivityLog({
+      userId: currentUser.id,
+      actionType: 'task_created',
+      entityType: 'task',
+      entityId: String(data.id),
+      entityTitle: data.title,
+      metadata: { 
+        project_id: body.project_id, 
+        assignee_id: body.assignee_id,
+        priority: body.priority || 'medium',
+      },
+    });
+
+    // 담당자가 생성자와 다르면 담당자에게도 활동 로그 기록
+    if (body.assignee_id && body.assignee_id !== currentUser.id) {
+      await createTaskAssignedLog(
+        body.assignee_id,
+        String(data.id),
+        data.title,
+        currentUser.id
+      );
+    }
 
     return NextResponse.json(data);
   } catch (error) {

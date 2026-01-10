@@ -196,6 +196,157 @@ function HeaderChipDropdown({
   );
 }
 
+function ClickableStatusChip({
+  status,
+  onChange,
+  disabled = false,
+}: {
+  status: TaskStatus;
+  onChange: (status: TaskStatus) => void;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const config = STATUS_CONFIG[status];
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  if (disabled) {
+    return (
+      <div className={cn("inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium", config.bgColor, config.color)}>
+        {config.label}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition hover:opacity-80",
+          config.bgColor, config.color
+        )}
+      >
+        {config.label}
+        <ChevronDown className={cn("h-3.5 w-3.5 transition", isOpen && "rotate-180")} />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 z-10 min-w-[120px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg py-1">
+          {(['todo', 'in-progress', 'done'] as const).map((s) => {
+            const sConfig = STATUS_CONFIG[s];
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  onChange(s);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "w-full px-3 py-2 text-left text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between",
+                  status === s && cn(sConfig.bgColor, sConfig.color)
+                )}
+              >
+                <span className={status === s ? sConfig.color : "text-slate-600 dark:text-slate-300"}>
+                  {sConfig.label}
+                </span>
+                {status === s && <Check className="h-3 w-3" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClickablePriorityChip({
+  priority,
+  onChange,
+  disabled = false,
+}: {
+  priority: TaskPriority;
+  onChange: (priority: TaskPriority) => void;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const config = PRIORITY_CONFIG[priority];
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  if (disabled) {
+    return (
+      <div className={cn("inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium", config.bgColor, config.color)}>
+        <span>{config.icon}</span>
+        {config.label}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition hover:opacity-80",
+          config.bgColor, config.color
+        )}
+      >
+        <span>{config.icon}</span>
+        {config.label}
+        <ChevronDown className={cn("h-3.5 w-3.5 transition", isOpen && "rotate-180")} />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 z-10 min-w-[120px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg py-1">
+          {(['low', 'medium', 'high'] as const).map((p) => {
+            const pConfig = PRIORITY_CONFIG[p];
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => {
+                  onChange(p);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "w-full px-3 py-2 text-left text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between",
+                  priority === p && cn(pConfig.bgColor, pConfig.color)
+                )}
+              >
+                <span className={cn("flex items-center gap-1", priority === p ? pConfig.color : "text-slate-600 dark:text-slate-300")}>
+                  <span>{pConfig.icon}</span>
+                  {pConfig.label}
+                </span>
+                {priority === p && <Check className="h-3 w-3" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export type UnifiedTaskModalProps = {
   mode: ModalMode;
   task?: TaskItem | null;
@@ -212,6 +363,8 @@ export type UnifiedTaskModalProps = {
     priority: TaskPriority;
   }) => Promise<string | null> | void;
   onDelete?: (id: string) => void;
+  onQuickUpdate?: (id: string, updates: { status?: TaskStatus; priority?: TaskPriority }) => Promise<void>;
+  canQuickEdit?: boolean;
   defaultBu: BU;
   projects: Project[];
   defaultProjectId?: string;
@@ -225,6 +378,8 @@ export function UnifiedTaskModal({
   onClose,
   onSubmit,
   onDelete,
+  onQuickUpdate,
+  canQuickEdit = false,
   defaultBu,
   projects,
   defaultProjectId,
@@ -525,9 +680,16 @@ export function UnifiedTaskModal({
                   ))}
                 </div>
               ) : (
-                <div className={cn("inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium", STATUS_CONFIG[form.status].bgColor, STATUS_CONFIG[form.status].color)}>
-                  {STATUS_CONFIG[form.status].label}
-                </div>
+                <ClickableStatusChip
+                  status={form.status}
+                  onChange={async (newStatus) => {
+                    setForm((prev) => ({ ...prev, status: newStatus }));
+                    if (canQuickEdit && onQuickUpdate && task?.id) {
+                      await onQuickUpdate(task.id, { status: newStatus });
+                    }
+                  }}
+                  disabled={!canQuickEdit}
+                />
               )}
             </FormField>
 
@@ -545,10 +707,16 @@ export function UnifiedTaskModal({
                   ))}
                 </div>
               ) : (
-                <div className={cn("inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium", PRIORITY_CONFIG[form.priority].bgColor, PRIORITY_CONFIG[form.priority].color)}>
-                  <span>{PRIORITY_CONFIG[form.priority].icon}</span>
-                  {PRIORITY_CONFIG[form.priority].label}
-                </div>
+                <ClickablePriorityChip
+                  priority={form.priority}
+                  onChange={async (newPriority) => {
+                    setForm((prev) => ({ ...prev, priority: newPriority }));
+                    if (canQuickEdit && onQuickUpdate && task?.id) {
+                      await onQuickUpdate(task.id, { priority: newPriority });
+                    }
+                  }}
+                  disabled={!canQuickEdit}
+                />
               )}
             </FormField>
 

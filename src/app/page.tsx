@@ -21,6 +21,7 @@ import {
   Building,
   Package,
   Car,
+  ClipboardList,
 } from 'lucide-react';
 import {
   useWorkStatus,
@@ -35,7 +36,7 @@ import { createClient } from '@/lib/supabase/client';
 import { format, isWithinInterval, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getTodayKST } from '@/lib/timezone';
-import { getVisibleMenus, canViewAllBuStats, canCreateProject, type AppUser as PermAppUser } from '@/lib/permissions';
+import { getVisibleMenus, canViewAllBuStats, canCreateProject, canEditTask, type AppUser as PermAppUser, type Task as PermTask, type Project as PermProject } from '@/lib/permissions';
 import {
   useProjects,
   useTasks,
@@ -92,6 +93,7 @@ import { PartnersView } from '@/features/partners/components/PartnersView';
 import { MeetingRoomView } from '@/features/reservations/components/MeetingRoomView';
 import { EquipmentRentalView } from '@/features/reservations/components/EquipmentRentalView';
 import { VehicleLogView } from '@/features/reservations/components/VehicleLogView';
+import { WorkLogView } from '@/features/work-log';
 import {
   Sheet,
   SheetContent,
@@ -271,9 +273,17 @@ export default function HomePage() {
         return;
       }
 
-      // 모든 사용자가 루트 페이지에 접근 가능 (권한에 따라 UI가 달라짐)
-      // HEAD가 아닌 사용자는 기본 BU를 본인 BU로 설정
-      if (appUser.bu_code !== 'HEAD') {
+      // artist role인 경우 /artist로 리다이렉션 (루트 페이지 접근 불가)
+      if (appUser.role === 'artist') {
+        router.push('/artist');
+        return;
+      }
+
+      // 본인 소속의 bu_code를 기반으로 BuTabs 선택
+      // HEAD 사용자는 '전체(ALL)' 탭이 선택되도록
+      if (appUser.bu_code === 'HEAD') {
+        setBu('ALL');
+      } else {
         setBu(appUser.bu_code as BU);
       }
 
@@ -903,6 +913,16 @@ export default function HomePage() {
             }}
           />
         )}
+        {/* 업무일지 - 모든 사용자 */}
+        <SidebarButton
+          label="업무일지"
+          icon={<ClipboardList className="h-4 w-4" />}
+          active={view === 'workLog'}
+          onClick={() => {
+            setView('workLog');
+            onItemClick?.();
+          }}
+        />
         {/* 조직 현황 - admin, leader */}
         {visibleMenus.includes('organization') && (
           <SidebarButton
@@ -1055,21 +1075,36 @@ export default function HomePage() {
                   ? '정산 관리'
                   : view === 'tasks'
                     ? '할일 관리'
-                    : view === 'attendance'
-                      ? '근태 관리'
-                      : view === 'attendanceAdmin'
-                        ? '전체 근무현황'
-                        : view === 'partners'
-                          ? '파트너 관리'
-                          : view === 'meetingRooms'
-                            ? '회의실 예약'
-                            : view === 'equipment'
-                              ? '장비 대여'
-                              : view === 'vehicles'
-                                ? '차량 일지'
-                                : '조직 현황'
+                    : view === 'workLog'
+                      ? '업무일지'
+                      : view === 'attendance'
+                        ? '근태 관리'
+                        : view === 'attendanceAdmin'
+                          ? '전체 근무현황'
+                          : view === 'partners'
+                            ? '파트너 관리'
+                            : view === 'meetingRooms'
+                              ? '회의실 예약'
+                              : view === 'equipment'
+                                ? '장비 대여'
+                                : view === 'vehicles'
+                                  ? '차량 일지'
+                                  : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
+          periodType={periodType}
+          onPeriodTypeChange={handlePeriodTypeChange}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+          selectedQuarter={selectedQuarter}
+          onQuarterChange={setSelectedQuarter}
+          selectedQuarterYear={selectedQuarterYear}
+          onQuarterYearChange={setSelectedQuarterYear}
+          customRange={customRange}
+          onCustomRangeChange={handleDateChange}
+          yearOptions={yearOptions}
         />
 
         <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 py-3 sm:py-8 space-y-3 sm:space-y-6">
@@ -1149,8 +1184,9 @@ export default function HomePage() {
               rows={settlementRows}
               projects={projects}
               onEditFinance={setEditFinanceModalOpen}
-              canViewAllBu={canViewAllStats}
+              canViewAllBu={(user?.profile?.role === 'admin' || user?.profile?.role === 'leader') && user?.profile?.bu_code === 'HEAD'}
               canViewNetProfit={user?.profile?.role === 'admin' || user?.profile?.role === 'leader' || user?.profile?.role === 'manager'}
+              activePeriod={activePeriod}
             />
           )}
 
@@ -1267,6 +1303,10 @@ export default function HomePage() {
             />
           )}
 
+          {view === 'workLog' && (
+            <WorkLogView />
+          )}
+
         </div>
       </main>
 
@@ -1347,26 +1387,65 @@ export default function HomePage() {
           calculateActualAmount={calculateActualAmount}
         />
       )}
-      {isEditTaskModalOpen && (
-        <UnifiedTaskModal
-          mode="view"
-          task={isEditTaskModalOpen}
-          onClose={() => setEditTaskModalOpen(null)}
-          onSubmit={handleUpdateTask}
-          onDelete={async (id) => {
-            try {
-              await deleteTaskMutation.mutateAsync(Number(id));
-              setEditTaskModalOpen(null);
-            } catch (error) {
-              console.error('Failed to delete task:', error);
-            }
-          }}
-          defaultBu={isEditTaskModalOpen.bu}
-          projects={projects}
-          orgData={orgData}
-          usersData={usersData}
-        />
-      )}
+      {isEditTaskModalOpen && (() => {
+        const taskProject = projects.find(p => p.id === isEditTaskModalOpen.projectId);
+        const permUser: PermAppUser | null = user?.profile ? {
+          id: user.profile.id,
+          role: user.profile.role as PermAppUser['role'],
+          bu_code: user.profile.bu_code as PermAppUser['bu_code'],
+          name: user.profile.name,
+        } : null;
+        const permTask: PermTask = {
+          id: isEditTaskModalOpen.id,
+          project_id: isEditTaskModalOpen.projectId,
+          bu_code: isEditTaskModalOpen.bu as PermTask['bu_code'],
+          assignee_id: (isEditTaskModalOpen as any).assignee_id || null,
+          created_by: (isEditTaskModalOpen as any).created_by || null,
+        };
+        const permProject: PermProject = {
+          id: taskProject?.id || '',
+          bu_code: (taskProject?.bu || isEditTaskModalOpen.bu) as PermProject['bu_code'],
+          pm_id: taskProject?.pm_id || null,
+          participants: taskProject?.participants?.map(p => p.user_id).filter((id): id is string => !!id) || [],
+        };
+        const canEdit = permUser ? canEditTask(permUser, permTask, permProject) : false;
+
+        return (
+          <UnifiedTaskModal
+            mode="view"
+            task={isEditTaskModalOpen}
+            onClose={() => setEditTaskModalOpen(null)}
+            onSubmit={handleUpdateTask}
+            onDelete={async (id) => {
+              try {
+                await deleteTaskMutation.mutateAsync(Number(id));
+                setEditTaskModalOpen(null);
+              } catch (error) {
+                console.error('Failed to delete task:', error);
+              }
+            }}
+            canQuickEdit={canEdit}
+            onQuickUpdate={async (id, updates) => {
+              try {
+                const dbData: Record<string, string> = {};
+                if (updates.status) {
+                  dbData.status = updates.status === 'in-progress' ? 'in_progress' : updates.status;
+                }
+                if (updates.priority) {
+                  dbData.priority = updates.priority;
+                }
+                await updateTaskMutation.mutateAsync({ id: Number(id), data: dbData });
+              } catch (error) {
+                console.error('Failed to quick update task:', error);
+              }
+            }}
+            defaultBu={isEditTaskModalOpen.bu}
+            projects={projects}
+            orgData={orgData}
+            usersData={usersData}
+          />
+        );
+      })()}
       {isEditProjectModalOpen && (
         <UnifiedProjectModal
           project={isEditProjectModalOpen}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getNowKSTISO } from '@/lib/timezone.server';
+import { createActivityLog } from '@/lib/activity-logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +47,20 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // 활동 로그 기록
+    await createActivityLog({
+      userId: user.id,
+      actionType: 'check_out',
+      entityType: 'attendance',
+      entityId: data.id,
+      entityTitle: data.is_overtime ? '연장근무 퇴근' : '퇴근',
+      metadata: { 
+        check_in_at: activeLog.check_in_at,
+        check_out_at: now,
+        is_overtime: data.is_overtime,
+      },
+    });
 
     return NextResponse.json(data);
   } catch (error: any) {

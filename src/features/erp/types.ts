@@ -1,5 +1,5 @@
 export type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
-export type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio' | 'attendance' | 'attendanceAdmin' | 'partners' | 'meetingRooms' | 'equipment' | 'vehicles';
+export type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio' | 'attendance' | 'attendanceAdmin' | 'partners' | 'meetingRooms' | 'equipment' | 'vehicles' | 'workLog';
 
 export type Project = {
   id: string;

@@ -8,6 +8,7 @@ import {
   type Task as PermTask,
   type Project as PermProject 
 } from '@/lib/permissions';
+import { createTaskStatusChangeLog } from '@/lib/activity-logger';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -81,6 +82,13 @@ export async function PATCH(
 
     const { task, project } = taskData;
 
+    // 이전 상태 저장 (활동 로그용)
+    const { data: oldTask } = await supabase
+      .from('project_tasks')
+      .select('title, status')
+      .eq('id', id)
+      .single();
+
     // 수정 권한 체크
     if (!canEditTask(currentUser, task, project)) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
@@ -109,6 +117,17 @@ export async function PATCH(
       .single();
 
     if (error) throw error;
+
+    // 상태가 변경된 경우 활동 로그 기록
+    if (body.status && oldTask?.status !== body.status) {
+      await createTaskStatusChangeLog(
+        currentUser.id,
+        id,
+        data.title || oldTask?.title || '',
+        oldTask?.status || '',
+        body.status
+      );
+    }
 
     return NextResponse.json(data);
   } catch (error) {

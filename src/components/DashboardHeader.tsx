@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Bell, Menu } from 'lucide-react';
 import { PeriodSelector, PeriodType } from './PeriodSelector';
 import {
@@ -19,6 +18,20 @@ interface DashboardHeaderProps {
   showNotification?: boolean;
   onNotificationClick?: () => void;
   showPeriodSelector?: boolean;
+  // 기간 선택 props - 외부에서 제어
+  periodType?: PeriodType;
+  onPeriodTypeChange?: (type: PeriodType) => void;
+  selectedYear?: number;
+  onYearChange?: (year: number) => void;
+  selectedMonth?: number;
+  onMonthChange?: (month: number) => void;
+  selectedQuarter?: number;
+  onQuarterChange?: (quarter: number) => void;
+  selectedQuarterYear?: number;
+  onQuarterYearChange?: (year: number) => void;
+  customRange?: { start?: string; end?: string };
+  onCustomRangeChange?: (key: 'start' | 'end', value: string) => void;
+  yearOptions?: number[];
 }
 
 export function DashboardHeader({
@@ -29,20 +42,20 @@ export function DashboardHeader({
   showNotification = true,
   onNotificationClick,
   showPeriodSelector = true,
+  periodType = 'month',
+  onPeriodTypeChange,
+  selectedYear = new Date().getFullYear(),
+  onYearChange,
+  selectedMonth = new Date().getMonth() + 1,
+  onMonthChange,
+  selectedQuarter = Math.ceil((new Date().getMonth() + 1) / 3),
+  onQuarterChange,
+  selectedQuarterYear = new Date().getFullYear(),
+  onQuarterYearChange,
+  customRange = {},
+  onCustomRangeChange,
+  yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i),
 }: DashboardHeaderProps) {
-  // Period state - 내부에서 관리
-  const [periodType, setPeriodType] = useState<PeriodType>('month');
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedQuarter, setSelectedQuarter] = useState(Math.ceil((new Date().getMonth() + 1) / 3));
-  const [selectedQuarterYear, setSelectedQuarterYear] = useState(new Date().getFullYear());
-  const [customRange, setCustomRange] = useState<{ start?: string; end?: string }>({});
-
-  const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
-
-  const handleCustomRangeChange = (key: 'start' | 'end', value: string) => {
-    setCustomRange(prev => ({ ...prev, [key]: value }));
-  };
 
   // Work status - 내부에서 직접 hook 호출 (자체적으로 API에서 사용자 정보와 상태를 가져옴)
   const workStatus = useWorkStatus();
@@ -67,20 +80,20 @@ export function DashboardHeader({
         </h2>
 
         {/* 기간 선택기 */}
-        {showPeriodSelector && (
+        {showPeriodSelector && onPeriodTypeChange && onYearChange && onMonthChange && onQuarterChange && onQuarterYearChange && onCustomRangeChange && (
           <PeriodSelector
             periodType={periodType}
-            onPeriodTypeChange={setPeriodType}
+            onPeriodTypeChange={onPeriodTypeChange}
             selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
+            onYearChange={onYearChange}
             selectedMonth={selectedMonth}
-            onMonthChange={setSelectedMonth}
+            onMonthChange={onMonthChange}
             selectedQuarter={selectedQuarter}
-            onQuarterChange={setSelectedQuarter}
+            onQuarterChange={onQuarterChange}
             selectedQuarterYear={selectedQuarterYear}
-            onQuarterYearChange={setSelectedQuarterYear}
+            onQuarterYearChange={onQuarterYearChange}
             customRange={customRange}
-            onCustomRangeChange={handleCustomRangeChange}
+            onCustomRangeChange={onCustomRangeChange}
             yearOptions={yearOptions}
           />
         )}

@@ -33,15 +33,20 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // 사용자 프로필에서 사업부 정보 가져오기
+        // 사용자 프로필에서 사업부 및 역할 정보 가져오기
         const { data: appUser } = await supabase
           .from('app_users')
-          .select('bu_code')
+          .select('bu_code, role')
           .eq('id', data.user.id)
           .single();
 
-        // 모든 사용자를 루트 페이지로 리디렉션
-        router.push('/');
+        // artist role인 경우 /artist로 리다이렉션
+        if (appUser?.role === 'artist') {
+          router.push('/artist');
+        } else {
+          // 그 외 사용자는 루트 페이지로 리다이렉션
+          router.push('/');
+        }
         
         router.refresh();
       }

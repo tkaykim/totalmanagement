@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BU,
@@ -9,6 +9,7 @@ import {
   TaskItem,
   FinancialEntry,
   formatCurrency,
+  BU_TITLES,
 } from '../types';
 import { BuTabs } from './BuTabs';
 import { FinanceRow } from './FinanceRow';
@@ -50,9 +51,18 @@ export function ProjectsView({
 }: ProjectsViewProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
   const completedProjectStatuses = ['완료'];
+
+  const formatDateShort = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${month}.${day}`;
+  };
 
   const getPmName = (pmId?: string | null): string => {
     if (!pmId) return '미지정';
@@ -81,41 +91,63 @@ export function ProjectsView({
   };
   
   const filteredProjects = useMemo(() => {
+    let result = projects;
+    
     if (projectFilter === 'active') {
-      return projects.filter((p) => activeProjectStatuses.includes(p.status));
+      result = result.filter((p) => activeProjectStatuses.includes(p.status));
     } else {
-      return projects.filter((p) => completedProjectStatuses.includes(p.status));
+      result = result.filter((p) => completedProjectStatuses.includes(p.status));
     }
-  }, [projects, projectFilter]);
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter((p) => p.name.toLowerCase().includes(query));
+    }
+    
+    return result;
+  }, [projects, projectFilter, searchQuery]);
 
   return (
     <section className="space-y-6">
       <BuTabs bu={bu} onChange={onBuChange} prefix="BU" />
 
-      <div className="max-w-full overflow-x-auto">
-        <div className="flex w-fit rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
-          <button
-            onClick={() => setProjectFilter('active')}
-            className={cn(
-              'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
-              projectFilter === 'active'
-                ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-            )}
-          >
-            진행예정/진행중
-          </button>
-          <button
-            onClick={() => setProjectFilter('completed')}
-            className={cn(
-              'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
-              projectFilter === 'completed'
-                ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-            )}
-          >
-            완료
-          </button>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="max-w-full overflow-x-auto">
+          <div className="flex w-fit rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+            <button
+              onClick={() => setProjectFilter('active')}
+              className={cn(
+                'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+                projectFilter === 'active'
+                  ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
+              )}
+            >
+              진행예정/진행중
+            </button>
+            <button
+              onClick={() => setProjectFilter('completed')}
+              className={cn(
+                'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+                projectFilter === 'completed'
+                  ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
+              )}
+            >
+              완료
+            </button>
+          </div>
+        </div>
+        
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="프로젝트명 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full sm:w-64 pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
       </div>
 
@@ -151,31 +183,36 @@ export function ProjectsView({
                   className="flex flex-1 items-center justify-between text-left min-w-0"
                 >
                   <div className="space-y-1 min-w-0 flex-1 overflow-hidden">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate max-w-[120px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-none">{p.name}</p>
-                      <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap flex-shrink-0">
-                        {p.cat}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="rounded bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-blue-700 dark:text-blue-300 whitespace-nowrap flex-shrink-0">
+                        {BU_TITLES[p.bu]}
                       </span>
-                      <span className="rounded bg-emerald-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 whitespace-nowrap flex-shrink-0 hidden sm:inline">
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate max-w-[120px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-none">{p.name}</p>
+                      <span className="rounded bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 whitespace-nowrap flex-shrink-0 hidden sm:inline">
                         할일 {projectTasks.length}개
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500">
+                    <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+                      <span className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        {p.cat}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 flex-wrap">
                       <span className="font-bold uppercase tracking-widest">
-                        {p.startDate} ~ {p.endDate}
+                        {formatDateShort(p.startDate)} ~ {formatDateShort(p.endDate)}
                       </span>
                       <span className="text-slate-300 dark:text-slate-600">|</span>
                       <span className="font-medium">
-                        PM: <span className="text-slate-600 dark:text-slate-300">{getPmName(p.pm_id)}</span>
+                        PM <span className="text-slate-600 dark:text-slate-300">{getPmName(p.pm_id)}</span>
                       </span>
                       {(() => {
                         const participantNames = getParticipantNames(p.participants);
                         if (participantNames.length === 0) return null;
                         return (
                           <>
-                            <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
-                            <span className="font-medium hidden sm:inline truncate max-w-[150px] md:max-w-[250px]">
-                              참여자: <span className="text-slate-600 dark:text-slate-300">{participantNames.join(', ')}</span>
+                            <span className="text-slate-300 dark:text-slate-600">,</span>
+                            <span className="font-medium truncate max-w-[150px] md:max-w-[250px]">
+                              참여 <span className="text-slate-600 dark:text-slate-300">{participantNames.join(', ')}</span>
                             </span>
                           </>
                         );
