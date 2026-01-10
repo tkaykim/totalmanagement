@@ -62,29 +62,31 @@ export function ProjectsView({
     <section className="space-y-6">
       <BuTabs bu={bu} onChange={onBuChange} prefix="BU" />
 
-      <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
-        <button
-          onClick={() => setProjectFilter('active')}
-          className={cn(
-            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            projectFilter === 'active'
-              ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-          )}
-        >
-          진행예정/진행중
-        </button>
-        <button
-          onClick={() => setProjectFilter('completed')}
-          className={cn(
-            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            projectFilter === 'completed'
-              ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-          )}
-        >
-          완료
-        </button>
+      <div className="max-w-full overflow-x-auto">
+        <div className="flex w-fit rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+          <button
+            onClick={() => setProjectFilter('active')}
+            className={cn(
+              'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+              projectFilter === 'active'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
+            )}
+          >
+            진행예정/진행중
+          </button>
+          <button
+            onClick={() => setProjectFilter('completed')}
+            className={cn(
+              'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+              projectFilter === 'completed'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
+            )}
+          >
+            완료
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">

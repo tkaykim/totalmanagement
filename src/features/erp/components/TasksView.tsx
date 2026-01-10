@@ -40,29 +40,31 @@ export function TasksView({
     <section className="space-y-6">
       <BuTabs bu={bu} onChange={onBuChange} prefix="TASK" />
 
-      <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
-        <button
-          onClick={() => setTaskFilter('active')}
-          className={cn(
-            'px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            taskFilter === 'active'
-              ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-          )}
-        >
-          진행예정/진행중
-        </button>
-        <button
-          onClick={() => setTaskFilter('completed')}
-          className={cn(
-            'px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            taskFilter === 'completed'
-              ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
-          )}
-        >
-          완료
-        </button>
+      <div className="max-w-full overflow-x-auto">
+        <div className="flex w-fit rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+          <button
+            onClick={() => setTaskFilter('active')}
+            className={cn(
+              'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+              taskFilter === 'active'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
+            )}
+          >
+            진행예정/진행중
+          </button>
+          <button
+            onClick={() => setTaskFilter('completed')}
+            className={cn(
+              'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+              taskFilter === 'completed'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
+            )}
+          >
+            완료
+          </button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
