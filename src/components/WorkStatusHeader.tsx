@@ -383,9 +383,6 @@ export function WorkStatusHeader({
       {/* 모바일: 한 줄 배치 */}
       <div className="md:hidden bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2">
         <div className="flex items-center gap-2 px-1.5">
-          <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shadow-md flex-shrink-0">
-            {userInitials}
-          </div>
           <div className="min-w-0">
             <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">{userName || '사용자'}</div>
             {userPosition && (
@@ -439,9 +436,6 @@ export function WorkStatusHeader({
       {/* PC: 기존 레이아웃 */}
       <div className="hidden md:flex bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 items-center gap-2 overflow-x-auto">
         <div className="flex items-center gap-2 px-1.5 min-w-max">
-          <div className="w-9 h-9 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shadow-md">
-            {userInitials}
-          </div>
           <div>
             <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">{userName || '사용자'}</div>
             {userPosition && (
