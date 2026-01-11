@@ -144,32 +144,34 @@ export function DashboardView({
 
   return (
     <section className="space-y-4 sm:space-y-8">
-      <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
-        <button
-          onClick={() => setSelectedBu('ALL')}
-          className={cn(
-            'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-            selectedBu === 'ALL'
-              ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
-          )}
-        >
-          전체
-        </button>
-        {(Object.keys(BU_TITLES) as BU[]).map((key) => (
+      <div className="max-w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
+        <div className="flex w-fit rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
           <button
-            key={key}
-            onClick={() => setSelectedBu(key)}
+            onClick={() => setSelectedBu('ALL')}
             className={cn(
-              'px-4 py-2 text-xs font-semibold transition whitespace-nowrap rounded-lg',
-              selectedBu === key
+              'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+              selectedBu === 'ALL'
                 ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
             )}
           >
-            {BU_TITLES[key]}
+            전체
           </button>
-        ))}
+          {(Object.keys(BU_TITLES) as BU[]).map((key) => (
+            <button
+              key={key}
+              onClick={() => setSelectedBu(key)}
+              className={cn(
+                'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+                selectedBu === key
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
+              )}
+            >
+              {BU_TITLES[key]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {canViewFinancialData && (
