@@ -38,18 +38,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let query = supabase.from('project_tasks').select('*').order('due_date', { ascending: true });
-
+    // BU 필터가 있어도 본인에게 할당된 할일은 항상 포함되도록 함
+    // 1. BU 필터가 있는 경우: 해당 BU의 할일 조회
+    // 2. 본인에게 할당된 할일 조회 (BU와 무관)
+    // 두 결과를 병합하여 중복 제거
+    
+    let tasks: any[] = [];
+    
     if (bu) {
-      query = query.eq('bu_code', bu);
+      // BU 필터가 있는 경우: 해당 BU 할일 + 본인 할당 할일을 병합
+      let buQuery = supabase.from('project_tasks').select('*');
+      buQuery = buQuery.eq('bu_code', bu);
+      if (projectId) {
+        buQuery = buQuery.eq('project_id', projectId);
+      }
+      
+      const { data: buTasks, error: buError } = await buQuery;
+      if (buError) throw buError;
+      
+      // 본인에게 할당된 할일 조회 (다른 BU 포함)
+      let assignedQuery = supabase.from('project_tasks').select('*');
+      assignedQuery = assignedQuery.eq('assignee_id', currentUser.id);
+      if (projectId) {
+        assignedQuery = assignedQuery.eq('project_id', projectId);
+      }
+      
+      const { data: assignedTasks, error: assignedError } = await assignedQuery;
+      if (assignedError) throw assignedError;
+      
+      // 병합 및 중복 제거
+      const taskMap = new Map<number, any>();
+      (buTasks || []).forEach((t: any) => taskMap.set(t.id, t));
+      (assignedTasks || []).forEach((t: any) => taskMap.set(t.id, t));
+      tasks = Array.from(taskMap.values());
+    } else if (projectId) {
+      // 프로젝트 ID만 있는 경우
+      const { data, error } = await supabase
+        .from('project_tasks')
+        .select('*')
+        .eq('project_id', projectId);
+      if (error) throw error;
+      tasks = data || [];
+    } else {
+      // 필터 없는 경우: 전체 조회
+      const { data, error } = await supabase
+        .from('project_tasks')
+        .select('*');
+      if (error) throw error;
+      tasks = data || [];
     }
-    if (projectId) {
-      query = query.eq('project_id', projectId);
-    }
-
-    const { data: tasks, error } = await query;
-
-    if (error) throw error;
+    
+    // 정렬
+    tasks.sort((a, b) => {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    });
 
     // admin은 전체 접근
     if (currentUser.role === 'admin') {
