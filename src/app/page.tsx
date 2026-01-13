@@ -1148,7 +1148,7 @@ export default function HomePage() {
               expenses={expenses}
               currentUser={user}
               onProjectClick={(project) => {
-                setModalProjectId(String(project.id));
+                setEditProjectModalOpen(project);
               }}
               onTaskClick={(task) => {
                 setEditTaskModalOpen(task);
