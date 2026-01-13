@@ -1959,7 +1959,7 @@ function ModalProject({
                 전체 {tasks.length}개
               </span>
               <span className="rounded-full bg-slate-200 dark:bg-slate-600 px-2 py-1 font-semibold text-slate-700 dark:text-slate-300">
-                TODO {tasks.filter(t => t.status === 'todo').length}개
+                진행 전 {tasks.filter(t => t.status === 'todo').length}개
               </span>
               <span className="rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-1 font-semibold text-blue-700 dark:text-blue-300">
                 진행중 {tasks.filter(t => t.status === 'in-progress').length}개
@@ -2008,12 +2008,12 @@ function ModalProject({
                         </div>
                       </div>
                       <span className={cn(
-                        'rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-tight whitespace-nowrap flex-shrink-0 ml-3',
+                        'rounded-full px-3 py-1 text-[10px] font-bold tracking-tight whitespace-nowrap flex-shrink-0 ml-3',
                         task.status === 'done' ? 'bg-emerald-100 text-emerald-700' :
                         task.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
                         'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300'
                       )}>
-                        {task.status === 'todo' ? 'TODO' : task.status === 'in-progress' ? 'IN PROGRESS' : 'DONE'}
+                        {task.status === 'todo' ? '진행 전' : task.status === 'in-progress' ? '진행중' : '완료'}
                       </span>
                     </button>
                   ))}

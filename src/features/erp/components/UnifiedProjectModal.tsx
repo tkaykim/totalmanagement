@@ -237,7 +237,7 @@ function SearchDropdown({
 }
 
 const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; icon: typeof Circle }> = {
-  'todo': { label: '할 일', color: 'text-slate-500 bg-slate-100 dark:bg-slate-700', icon: Circle },
+  'todo': { label: '진행 전', color: 'text-slate-500 bg-slate-100 dark:bg-slate-700', icon: Circle },
   'in-progress': { label: '진행중', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/50', icon: Clock },
   'done': { label: '완료', color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/50', icon: CheckCircle2 },
 };
