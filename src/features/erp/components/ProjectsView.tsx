@@ -293,7 +293,16 @@ export function ProjectsView({
                                 {t.assignee} • {t.dueDate}
                               </p>
                             </div>
-                            <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap flex-shrink-0 ml-2">
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold whitespace-nowrap flex-shrink-0 ml-2',
+                                t.status === 'todo'
+                                  ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
+                                  : t.status === 'in-progress'
+                                    ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
+                                    : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                              )}
+                            >
                               {t.status === 'todo'
                                 ? '진행 전'
                                 : t.status === 'in-progress'

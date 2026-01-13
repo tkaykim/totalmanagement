@@ -485,7 +485,16 @@ export function DashboardView({
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-full bg-slate-900 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-tight text-white whitespace-nowrap flex-shrink-0">
+                  <span
+                    className={cn(
+                      'rounded-full px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-tight whitespace-nowrap flex-shrink-0',
+                      task.status === 'todo'
+                        ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
+                        : task.status === 'in-progress'
+                          ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
+                          : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                    )}
+                  >
                     {task.status === 'todo' ? '진행 전' : task.status === 'in-progress' ? '진행중' : '완료'}
                   </span>
                 </button>
