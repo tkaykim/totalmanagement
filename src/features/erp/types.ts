@@ -46,6 +46,7 @@ export type TaskItem = {
   title: string;
   description?: string;
   assignee: string;
+  assignee_id?: string;
   dueDate: string;
   status: 'todo' | 'in-progress' | 'done';
   priority: TaskPriority;
