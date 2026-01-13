@@ -295,10 +295,10 @@ export function ProjectsView({
                             </div>
                             <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap flex-shrink-0 ml-2">
                               {t.status === 'todo'
-                                ? 'TODO'
+                                ? '진행 전'
                                 : t.status === 'in-progress'
-                                  ? 'IN PROGRESS'
-                                  : 'DONE'}
+                                  ? '진행중'
+                                  : '완료'}
                             </span>
                           </button>
                         ))}

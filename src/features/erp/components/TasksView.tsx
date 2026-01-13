@@ -102,9 +102,9 @@ export function TasksView({
                       onChange={(e) => onStatusChange(task.id, e.target.value as TaskItem['status'])}
                       className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-[10px] sm:text-[11px] outline-none w-full"
                     >
-                      <option value="todo">TODO</option>
-                      <option value="in-progress">IN PROGRESS</option>
-                      <option value="done">DONE</option>
+                      <option value="todo">진행 전</option>
+                      <option value="in-progress">진행중</option>
+                      <option value="done">완료</option>
                     </select>
                   </td>
                 </tr>
@@ -146,7 +146,7 @@ export function TasksView({
                     onChange={(e) => onStatusChange(task.id, e.target.value as TaskItem['status'])}
                     className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-[9px] outline-none flex-shrink-0"
                   >
-                    <option value="todo">TODO</option>
+                    <option value="todo">진행 전</option>
                     <option value="in-progress">진행중</option>
                     <option value="done">완료</option>
                   </select>

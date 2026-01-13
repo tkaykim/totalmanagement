@@ -347,7 +347,7 @@ export function DashboardView({
                       <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                         {todoCount > 0 && (
                           <span className="rounded-full bg-slate-200 dark:bg-slate-600 px-2 py-0.5 text-[9px] font-semibold text-slate-700 dark:text-slate-300 dark:text-slate-300">
-                            TODO {todoCount}
+                            진행 전 {todoCount}
                           </span>
                         )}
                         {inProgressCount > 0 && (
@@ -485,8 +485,8 @@ export function DashboardView({
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-full bg-slate-900 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-tight text-white whitespace-nowrap flex-shrink-0">
-                    {task.status === 'todo' ? 'TODO' : task.status === 'in-progress' ? 'IN PROGRESS' : 'DONE'}
+                  <span className="rounded-full bg-slate-900 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-tight text-white whitespace-nowrap flex-shrink-0">
+                    {task.status === 'todo' ? '진행 전' : task.status === 'in-progress' ? '진행중' : '완료'}
                   </span>
                 </button>
               ))

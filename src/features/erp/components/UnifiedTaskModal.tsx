@@ -10,7 +10,7 @@ type ModalMode = 'create' | 'view' | 'edit';
 type TaskStatus = 'todo' | 'in-progress' | 'done';
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bgColor: string }> = {
-  'todo': { label: 'TODO', color: 'text-violet-600 dark:text-violet-400', bgColor: 'bg-violet-100 dark:bg-violet-900/40' },
+  'todo': { label: '진행 전', color: 'text-violet-600 dark:text-violet-400', bgColor: 'bg-violet-100 dark:bg-violet-900/40' },
   'in-progress': { label: '진행중', color: 'text-sky-600 dark:text-sky-400', bgColor: 'bg-sky-100 dark:bg-sky-900/40' },
   'done': { label: '완료', color: 'text-teal-600 dark:text-teal-400', bgColor: 'bg-teal-100 dark:bg-teal-900/40' },
 };
