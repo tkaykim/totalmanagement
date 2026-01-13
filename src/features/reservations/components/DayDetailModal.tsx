@@ -159,12 +159,20 @@ export function DayDetailModal({
                 const startTime = format(parseISO(group.startTime), 'a h:mm', { locale: ko });
                 const endTime = format(parseISO(group.endTime), 'a h:mm', { locale: ko });
                 const totalQuantity = group.items.reduce((sum, item) => sum + item.quantity, 0);
+                const firstReservation = group.items[0]?.reservation;
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={group.key}
+                    onClick={() => {
+                      if (firstReservation && onReservationClick) {
+                        onReservationClick(firstReservation);
+                      }
+                    }}
                     className={cn(
-                      'rounded-xl border overflow-hidden',
+                      'w-full text-left rounded-xl border overflow-hidden transition-all',
+                      onReservationClick && 'cursor-pointer hover:opacity-90 hover:shadow-md',
                       colorClass
                     )}
                   >
@@ -224,7 +232,7 @@ export function DayDetailModal({
                         ))}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

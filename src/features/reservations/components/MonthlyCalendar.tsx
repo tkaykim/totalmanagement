@@ -168,12 +168,8 @@ export function MonthlyCalendar({
                   return (
                     <div
                       key={r.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onReservationClick?.(r);
-                      }}
                       className={cn(
-                        'flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-medium truncate cursor-pointer hover:opacity-80 transition',
+                        'flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-medium truncate',
                         r.resource_type === 'meeting_room' && 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
                         r.resource_type === 'equipment' && 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300',
                         r.resource_type === 'vehicle' && 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
