@@ -357,6 +357,7 @@ export type UnifiedTaskModalProps = {
     description?: string;
     bu: BU;
     projectId: string;
+    assignee_id?: string;
     assignee: string;
     dueDate: string;
     status: TaskStatus;
@@ -402,6 +403,7 @@ export function UnifiedTaskModal({
     description: task?.description || '',
     bu: task?.bu || defaultProject?.bu || defaultBu,
     projectId: task?.projectId || defaultProject?.id || '',
+    assignee_id: task?.assignee_id || '',
     assignee: task?.assignee || '',
     dueDate: task?.dueDate || '',
     status: (task?.status || 'todo') as TaskStatus,
@@ -411,32 +413,41 @@ export function UnifiedTaskModal({
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const memberNames = useMemo(() => {
-    const names = new Set<string>();
-    orgData.forEach((unit) => {
-      (unit.members || []).forEach((m: any) => {
-        if (m.name) names.add(m.name);
-      });
-    });
+  const memberList = useMemo(() => {
+    const memberMap = new Map<string, { id: string; name: string }>();
+    
     if (usersData?.users) {
       usersData.users.forEach((user: any) => {
-        if (user.name) names.add(user.name);
+        if (user.id && user.name) {
+          memberMap.set(user.id, { id: user.id, name: user.name });
+        }
       });
     }
-    return Array.from(names).sort();
+    
+    orgData.forEach((unit) => {
+      (unit.members || []).forEach((m: any) => {
+        if (m.id && m.name && !memberMap.has(m.id)) {
+          memberMap.set(m.id, { id: m.id, name: m.name });
+        }
+      });
+    });
+    
+    return Array.from(memberMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [orgData, usersData]);
 
-  const isAssigneeInList = memberNames.includes(form.assignee);
+  const memberNames = useMemo(() => memberList.map(m => m.name), [memberList]);
+
+  const isAssigneeInList = form.assignee_id ? memberList.some(m => m.id === form.assignee_id) : memberNames.includes(form.assignee);
   const [assigneeMode, setAssigneeMode] = useState<'select' | 'custom'>(
     form.assignee && !isAssigneeInList ? 'custom' : 'select'
   );
 
   const assigneeOptions = useMemo(() => {
     return [
-      { value: '', label: '담당자 선택' },
-      ...memberNames.map((name) => ({ value: name, label: name })),
+      { value: '', id: '', label: '담당자 선택' },
+      ...memberList.map((member) => ({ value: member.id, id: member.id, label: member.name })),
     ];
-  }, [memberNames]);
+  }, [memberList]);
 
   const projectOptions = useMemo(() => {
     const filtered = projects
@@ -464,6 +475,7 @@ export function UnifiedTaskModal({
       description: form.description.trim() || undefined,
       bu: form.bu,
       projectId: form.projectId,
+      assignee_id: form.assignee_id || undefined,
       assignee: form.assignee.trim(),
       dueDate: form.dueDate,
       status: form.status,
@@ -604,19 +616,24 @@ export function UnifiedTaskModal({
                   assigneeMode === 'select' ? (
                     <div className="space-y-1">
                       <select
-                        value={form.assignee}
+                        value={form.assignee_id}
                         onChange={(e) => {
                           if (e.target.value === '__CUSTOM__') {
                             setAssigneeMode('custom');
-                            setForm((prev) => ({ ...prev, assignee: '' }));
+                            setForm((prev) => ({ ...prev, assignee_id: '', assignee: '' }));
                           } else {
-                            setForm((prev) => ({ ...prev, assignee: e.target.value }));
+                            const selected = assigneeOptions.find(opt => opt.id === e.target.value);
+                            setForm((prev) => ({ 
+                              ...prev, 
+                              assignee_id: e.target.value,
+                              assignee: selected?.label || ''
+                            }));
                           }
                         }}
                         className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
                       >
                         {assigneeOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          <option key={opt.id || 'empty'} value={opt.id}>{opt.label}</option>
                         ))}
                         <option value="__CUSTOM__">직접 입력</option>
                       </select>
@@ -632,7 +649,7 @@ export function UnifiedTaskModal({
                     <div className="space-y-1">
                       <Input
                         value={form.assignee}
-                        onChange={(v) => setForm((prev) => ({ ...prev, assignee: v }))}
+                        onChange={(v) => setForm((prev) => ({ ...prev, assignee_id: '', assignee: v }))}
                         placeholder="담당자 이름"
                       />
                       <button

@@ -47,6 +47,7 @@ export function dbTaskToFrontend(t: ProjectTask): {
   projectId: string;
   title: string;
   description?: string;
+  assignee_id?: string;
   assignee: string;
   dueDate: string;
   status: 'todo' | 'in-progress' | 'done';
@@ -59,6 +60,7 @@ export function dbTaskToFrontend(t: ProjectTask): {
     projectId: String(t.project_id),
     title: t.title,
     description: (t as any).description || undefined,
+    assignee_id: t.assignee_id || undefined,
     assignee: t.assignee || '',
     dueDate: t.due_date,
     status: t.status === 'in_progress' ? 'in-progress' : t.status,
@@ -196,6 +198,7 @@ export function frontendTaskToDb(t: {
   bu: BU;
   title: string;
   description?: string;
+  assignee_id?: string;
   assignee: string;
   dueDate: string;
   status?: 'todo' | 'in-progress' | 'done';
@@ -206,6 +209,7 @@ export function frontendTaskToDb(t: {
   bu_code: BU;
   title: string;
   description?: string;
+  assignee_id?: string;
   assignee: string;
   due_date: string;
   status: 'todo' | 'in_progress' | 'done';
@@ -218,6 +222,7 @@ export function frontendTaskToDb(t: {
     bu_code: t.bu,
     title: t.title,
     description: t.description,
+    assignee_id: t.assignee_id || undefined,
     assignee: t.assignee || '',
     due_date: t.dueDate || today,
     status: t.status === 'in-progress' ? 'in_progress' : (t.status || 'todo'),

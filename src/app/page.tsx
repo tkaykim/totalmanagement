@@ -628,6 +628,7 @@ export default function HomePage() {
     description?: string;
     bu: BU;
     projectId: string;
+    assignee_id?: string;
     assignee: string;
     dueDate: string;
     status: TaskItem['status'];
@@ -747,6 +748,7 @@ export default function HomePage() {
     description?: string;
     bu: BU;
     projectId: string;
+    assignee_id?: string;
     assignee: string;
     dueDate: string;
     status: TaskItem['status'];
@@ -762,6 +764,7 @@ export default function HomePage() {
         bu: payload.bu,
         title: payload.title,
         description: payload.description,
+        assignee_id: payload.assignee_id,
         assignee: payload.assignee,
         dueDate: payload.dueDate,
         status: payload.status,
