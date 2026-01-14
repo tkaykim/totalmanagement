@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getAttendanceStatus } from '../api';
+import { getAttendanceStatus, type AutoCheckoutWarning } from '../api';
 import { CheckInButton } from './CheckInButton';
 import { CheckOutButton } from './CheckOutButton';
 import { AttendanceStatusCard } from './AttendanceStatusCard';
 import { WorkStatusButtons } from './WorkStatusButtons';
 import { WelcomeToast, getRandomWelcomeMessage } from './WelcomeToast';
-import { Calendar, FileEdit } from 'lucide-react';
+import { Calendar, FileEdit, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AttendanceStatus } from '../types';
 
@@ -24,6 +24,7 @@ export function AttendanceDashboard({ onRequestCorrection }: AttendanceDashboard
   const [welcomeTitle, setWelcomeTitle] = useState('');
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [previousCheckedIn, setPreviousCheckedIn] = useState(false);
+  const [autoCheckoutWarning, setAutoCheckoutWarning] = useState<AutoCheckoutWarning | null>(null);
   
   const queryClient = useQueryClient();
   const { data: status, isLoading } = useQuery<AttendanceStatus>({
@@ -96,6 +97,55 @@ export function AttendanceDashboard({ onRequestCorrection }: AttendanceDashboard
 
       <AttendanceStatusCard status={status} />
 
+      {autoCheckoutWarning && autoCheckoutWarning.logs && autoCheckoutWarning.logs.length > 0 && (
+        <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" size={20} />
+            <div className="flex-1">
+              <h4 className="font-semibold text-orange-800 dark:text-orange-300">
+                퇴근 기록 누락 알림
+              </h4>
+              <p className="text-sm text-orange-700 dark:text-orange-400 mt-1">
+                다음 날짜에 퇴근 기록이 없어 시스템에서 자동으로 18:00에 퇴근 처리되었습니다.
+                정정 신청을 통해 실제 퇴근 시간으로 수정해 주세요.
+              </p>
+              <ul className="mt-2 space-y-1">
+                {autoCheckoutWarning.logs.slice(0, 5).map((log) => (
+                  <li key={log.id} className="text-xs text-orange-600 dark:text-orange-500">
+                    • {log.work_date}
+                  </li>
+                ))}
+                {autoCheckoutWarning.logs.length > 5 && (
+                  <li className="text-xs text-orange-600 dark:text-orange-500">
+                    • 외 {autoCheckoutWarning.logs.length - 5}건
+                  </li>
+                )}
+              </ul>
+              {onRequestCorrection && (
+                <button
+                  onClick={() => {
+                    onRequestCorrection();
+                  }}
+                  className={cn(
+                    'mt-3 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all',
+                    'bg-orange-600 hover:bg-orange-500 text-white active:scale-95'
+                  )}
+                >
+                  <FileEdit size={16} />
+                  근무시간 정정 신청
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setAutoCheckoutWarning(null)}
+              className="text-orange-400 hover:text-orange-600 dark:text-orange-500 dark:hover:text-orange-300"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {status.isCheckedIn && !status.isCheckedOut && (
         <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
           <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">근무 상태</h3>
@@ -112,7 +162,19 @@ export function AttendanceDashboard({ onRequestCorrection }: AttendanceDashboard
         
         <div className="flex flex-col sm:flex-row gap-4">
           {!status.isCheckedIn ? (
-            <CheckInButton />
+            <CheckInButton 
+              onAutoCheckoutWarning={(warning) => {
+                if (warning) {
+                  setAutoCheckoutWarning(warning);
+                  // 정정 신청 모달 자동 열기
+                  if (onRequestCorrection) {
+                    setTimeout(() => {
+                      onRequestCorrection();
+                    }, 100);
+                  }
+                }
+              }}
+            />
           ) : !status.isCheckedOut ? (
             <CheckOutButton />
           ) : (

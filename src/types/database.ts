@@ -450,6 +450,7 @@ export interface AttendanceLog {
   modification_reason?: string | null;
   is_verified_location: boolean;
   is_overtime?: boolean;
+  is_auto_checkout?: boolean; // 시스템에 의한 강제 퇴근 여부
   break_minutes?: number;
   created_at: string;
   updated_at: string;

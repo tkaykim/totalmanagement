@@ -16,7 +16,22 @@ import type {
 
 const API_BASE = '/api/attendance';
 
-export async function checkIn(): Promise<AttendanceLog> {
+export interface AutoCheckoutWarning {
+  type: 'auto_checkout_history';
+  message: string;
+  logs: Array<{
+    id: string;
+    work_date: string;
+    check_in_at: string;
+    check_out_at: string;
+  }>;
+}
+
+export interface CheckInResponse extends AttendanceLog {
+  _warning?: AutoCheckoutWarning | null;
+}
+
+export async function checkIn(): Promise<CheckInResponse> {
   const res = await fetch(`${API_BASE}/check-in`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -193,5 +208,32 @@ export async function getApprovalQueue(): Promise<ApprovalQueueItem[]> {
     status: req.status,
     created_at: req.created_at,
   }));
+}
+
+export interface AutoCheckoutLog {
+  id: string;
+  work_date: string;
+  check_in_at: string;
+  check_out_at: string;
+}
+
+export async function getAutoCheckoutHistory(): Promise<AutoCheckoutLog[]> {
+  const res = await fetch(`${API_BASE}/auto-checkout-history`);
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to get auto checkout history');
+  }
+  return res.json();
+}
+
+export async function clearAutoCheckoutFlag(logId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/logs/${logId}/clear-auto-checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to clear auto checkout flag');
+  }
 }
 

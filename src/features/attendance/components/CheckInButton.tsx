@@ -2,19 +2,34 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { checkIn } from '../api';
+import { checkIn, type CheckInResponse } from '../api';
 import { LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function CheckInButton() {
+interface CheckInButtonProps {
+  onAutoCheckoutWarning?: (logs: CheckInResponse['_warning']) => void;
+}
+
+export function CheckInButton({ onAutoCheckoutWarning }: CheckInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: checkIn,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['attendance-status'] });
       queryClient.invalidateQueries({ queryKey: ['attendance-logs'] });
+      
+      // 강제 퇴근 이력이 있으면 경고 표시
+      if (data._warning && data._warning.type === 'auto_checkout_history') {
+        // 먼저 alert 표시
+        window.alert(data._warning.message);
+        
+        // 정정 신청 모달 열기 콜백 호출
+        if (onAutoCheckoutWarning) {
+          onAutoCheckoutWarning(data._warning);
+        }
+      }
     },
   });
 

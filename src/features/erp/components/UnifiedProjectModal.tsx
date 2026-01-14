@@ -5,6 +5,8 @@ import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock
 import { cn } from '@/lib/utils';
 import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
 import type { AppUser, Project as DbProject } from '@/types/database';
+import { DatePicker } from '@/components/ui/date-picker';
+import { toast } from '@/hooks/use-toast';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type ModalMode = 'create' | 'view' | 'edit';
@@ -237,7 +239,7 @@ function SearchDropdown({
 }
 
 const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; icon: typeof Circle }> = {
-  'todo': { label: '진행 전', color: 'text-slate-500 bg-slate-100 dark:bg-slate-700', icon: Circle },
+  'todo': { label: '할 일', color: 'text-slate-500 bg-slate-100 dark:bg-slate-700', icon: Circle },
   'in-progress': { label: '진행중', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/50', icon: Clock },
   'done': { label: '완료', color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/50', icon: CheckCircle2 },
 };
@@ -771,18 +773,36 @@ export function UnifiedProjectModal({
               <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                 {isEditable ? (
                   <>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={form.startDate}
-                      onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                      className="bg-white/60 dark:bg-slate-700/60 rounded px-2 py-1 text-xs border border-slate-200 dark:border-slate-600 outline-none focus:border-blue-400"
+                      onChange={(date) => {
+                        setForm({ ...form, startDate: date });
+                        if (form.endDate && date > form.endDate) {
+                          toast({
+                            variant: 'destructive',
+                            title: '날짜 오류',
+                            description: '종료일이 시작일보다 앞설 수 없습니다.',
+                          });
+                          setForm((prev) => ({ ...prev, startDate: date, endDate: '' }));
+                        }
+                      }}
+                      placeholder="시작일"
                     />
                     <span>~</span>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={form.endDate}
-                      onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                      className="bg-white/60 dark:bg-slate-700/60 rounded px-2 py-1 text-xs border border-slate-200 dark:border-slate-600 outline-none focus:border-blue-400"
+                      onChange={(date) => {
+                        if (form.startDate && date < form.startDate) {
+                          toast({
+                            variant: 'destructive',
+                            title: '날짜 오류',
+                            description: '종료일이 시작일보다 앞설 수 없습니다.',
+                          });
+                          return;
+                        }
+                        setForm({ ...form, endDate: date });
+                      }}
+                      placeholder="종료일"
                     />
                   </>
                 ) : (

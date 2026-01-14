@@ -132,6 +132,7 @@ async function applyAttendanceCorrection(
       is_modified: true,
       modification_reason: `정정 신청 승인 (Request ID: ${requestId})`,
       updated_at: new Date().toISOString(),
+      is_auto_checkout: false, // 정정 신청 승인 시 강제 퇴근 플래그 해제
     };
 
     if (checkInAt) {

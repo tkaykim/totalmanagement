@@ -15,6 +15,19 @@ export async function POST(request: NextRequest) {
     const today = getTodayKST();
     const now = getNowKSTISO();
 
+    // 강제 퇴근 조치된 기록이 있는지 확인 (정정 신청 대기 중인 기록)
+    const { data: autoCheckoutLogs, error: autoCheckoutError } = await supabase
+      .from('attendance_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_auto_checkout', true)
+      .order('work_date', { ascending: false })
+      .limit(10);
+
+    if (autoCheckoutError) {
+      throw autoCheckoutError;
+    }
+
     // 먼저 날짜와 상관없이 미완료된(퇴근하지 않은) 출근 기록이 있는지 확인
     // 자정이 지나서도 근무 중인 케이스를 처리하기 위함
     const { data: activeLog, error: activeError } = await supabase
@@ -87,7 +100,22 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    return NextResponse.json(data);
+    // 강제 퇴근 조치된 이력이 있으면 경고 정보와 함께 반환
+    const hasAutoCheckoutHistory = autoCheckoutLogs && autoCheckoutLogs.length > 0;
+    
+    return NextResponse.json({
+      ...data,
+      _warning: hasAutoCheckoutHistory ? {
+        type: 'auto_checkout_history',
+        message: '퇴근 기록을 하지 않은 일정이 있습니다.',
+        logs: autoCheckoutLogs.map(log => ({
+          id: log.id,
+          work_date: log.work_date,
+          check_in_at: log.check_in_at,
+          check_out_at: log.check_out_at,
+        })),
+      } : null,
+    });
   } catch (error: any) {
     console.error('Check-in error:', error);
     return NextResponse.json(

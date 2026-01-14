@@ -22,6 +22,7 @@ import {
   Package,
   Car,
   ClipboardList,
+  Bug,
 } from 'lucide-react';
 import {
   useWorkStatus,
@@ -94,6 +95,7 @@ import { MeetingRoomView } from '@/features/reservations/components/MeetingRoomV
 import { EquipmentRentalView } from '@/features/reservations/components/EquipmentRentalView';
 import { VehicleLogView } from '@/features/reservations/components/VehicleLogView';
 import { WorkLogView } from '@/features/work-log';
+import { BugReportsView } from '@/features/bug-reports';
 import {
   Sheet,
   SheetContent,
@@ -995,6 +997,18 @@ export default function HomePage() {
             }}
           />
         </div>
+        {/* 버그 리포트 */}
+        <div className="mt-2 pt-2 border-t border-slate-700">
+          <SidebarButton
+            label="버그 리포트"
+            icon={<Bug className="h-4 w-4" />}
+            active={view === 'bugReports'}
+            onClick={() => {
+              setView('bugReports');
+              onItemClick?.();
+            }}
+          />
+        </div>
       </nav>
       {/* 관리자/리더 전용 메뉴 */}
       {visibleMenus.includes('attendanceAdmin') && (
@@ -1092,7 +1106,9 @@ export default function HomePage() {
                                 ? '장비 대여'
                                 : view === 'vehicles'
                                   ? '차량 일지'
-                                  : '조직 현황'
+                                  : view === 'bugReports'
+                                    ? '버그 리포트'
+                                    : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
           periodType={periodType}
@@ -1308,6 +1324,12 @@ export default function HomePage() {
 
           {view === 'workLog' && (
             <WorkLogView />
+          )}
+
+          {view === 'bugReports' && (
+            <BugReportsView
+              isAdmin={user?.profile?.role === 'admin' || user?.profile?.role === 'leader'}
+            />
           )}
 
         </div>
