@@ -8,9 +8,10 @@ import { CheckOutButton } from './CheckOutButton';
 import { AttendanceStatusCard } from './AttendanceStatusCard';
 import { WorkStatusButtons } from './WorkStatusButtons';
 import { WelcomeToast, getRandomWelcomeMessage } from './WelcomeToast';
+import { MissedCheckoutModal } from './MissedCheckoutModal';
 import { Calendar, FileEdit, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AttendanceStatus } from '../types';
+import type { AttendanceStatus, PendingAutoCheckoutRecord } from '../types';
 
 type WorkStatus = 'WORKING' | 'MEETING' | 'OUTSIDE' | 'BREAK';
 
@@ -25,6 +26,9 @@ export function AttendanceDashboard({ onRequestCorrection }: AttendanceDashboard
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [previousCheckedIn, setPreviousCheckedIn] = useState(false);
   const [autoCheckoutWarning, setAutoCheckoutWarning] = useState<AutoCheckoutWarning | null>(null);
+  const [showMissedCheckoutModal, setShowMissedCheckoutModal] = useState(false);
+  const [pendingAutoCheckouts, setPendingAutoCheckouts] = useState<PendingAutoCheckoutRecord[]>([]);
+  const [shownPendingIds, setShownPendingIds] = useState<Set<string>>(new Set());
   
   const queryClient = useQueryClient();
   const { data: status, isLoading } = useQuery<AttendanceStatus>({
@@ -32,6 +36,28 @@ export function AttendanceDashboard({ onRequestCorrection }: AttendanceDashboard
     queryFn: getAttendanceStatus,
     refetchInterval: 30000,
   });
+
+  // 접속 시 또는 새로운 미확인 자동 퇴근 기록이 있으면 모달 표시
+  // 로그인 상태에서 자정을 넘겨도 새로운 기록이 추가되면 모달이 다시 표시됨
+  useEffect(() => {
+    if (status?.pendingAutoCheckouts && status.pendingAutoCheckouts.length > 0) {
+      // 아직 표시하지 않은 새로운 기록이 있는지 확인
+      const newRecords = status.pendingAutoCheckouts.filter(
+        (r) => !shownPendingIds.has(r.id)
+      );
+      
+      if (newRecords.length > 0) {
+        setPendingAutoCheckouts(status.pendingAutoCheckouts);
+        setShowMissedCheckoutModal(true);
+        // 표시된 ID들을 기록
+        setShownPendingIds((prev) => {
+          const next = new Set(prev);
+          status.pendingAutoCheckouts.forEach((r) => next.add(r.id));
+          return next;
+        });
+      }
+    }
+  }, [status?.pendingAutoCheckouts, shownPendingIds]);
 
   useEffect(() => {
     if (status) {
@@ -72,6 +98,12 @@ export function AttendanceDashboard({ onRequestCorrection }: AttendanceDashboard
     );
   }
 
+  const handleMissedCheckoutModalClose = () => {
+    setShowMissedCheckoutModal(false);
+    // 모달 닫힌 후 상태 새로고침
+    queryClient.invalidateQueries({ queryKey: ['attendance-status'] });
+  };
+
   return (
     <div className="space-y-6">
       <WelcomeToast
@@ -79,6 +111,12 @@ export function AttendanceDashboard({ onRequestCorrection }: AttendanceDashboard
         title={welcomeTitle}
         message={welcomeMessage}
         onClose={() => setShowWelcome(false)}
+      />
+
+      <MissedCheckoutModal
+        isOpen={showMissedCheckoutModal}
+        onClose={handleMissedCheckoutModalClose}
+        pendingCheckouts={pendingAutoCheckouts}
       />
 
       <div className="flex items-center justify-between">

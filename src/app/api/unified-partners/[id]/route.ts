@@ -77,8 +77,14 @@ export async function GET(
       (access: any) => access.user_id === currentUserId && 
         (access.valid_until === null || new Date(access.valid_until) >= new Date())
     );
+    
+    // FLOW Leader can view all dancers
+    const partnerCategories = partner.partner_category_mappings?.map((m: any) => m.partner_categories?.name) || [];
+    const isDancer = partnerCategories.includes('dancer');
+    const isFlowLeader = currentUserBu === 'FLOW' && currentUserRole === 'leader';
+    const canViewDancerAsFlowLeader = isDancer && isFlowLeader;
 
-    const canViewDetails = isHeadAdmin || isAdmin || isOwnerBu || hasBuAccess || hasUserAccess;
+    const canViewDetails = isHeadAdmin || isAdmin || isOwnerBu || hasBuAccess || hasUserAccess || canViewDancerAsFlowLeader;
     const canEdit = isHeadAdmin || isAdmin || isOwnerBu || partner.partner_bu_access?.some(
       (access: any) => access.bu_code === currentUserBu && ['owner', 'full'].includes(access.access_level)
     );

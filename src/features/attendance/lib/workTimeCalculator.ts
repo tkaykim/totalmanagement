@@ -1,11 +1,13 @@
 import type { AttendanceLog, AttendanceType } from '@/types/database';
 import type { WorkTimeStats, MonthlyStats } from '../types';
 import { differenceInMinutes, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 
 const STANDARD_WORK_HOURS = 8; // 기준 근무시간 (시간)
 const STANDARD_WORK_MINUTES = STANDARD_WORK_HOURS * 60; // 기준 근무시간 (분)
 const LUNCH_BREAK_MINUTES = 60; // 점심시간 (분)
 const STANDARD_CHECK_IN_HOUR = 9; // 기준 출근 시간 (시)
+const KST_TIMEZONE = 'Asia/Seoul';
 
 export function calculateWorkTimeMinutes(
   checkInAt: string | null | undefined,
@@ -32,6 +34,33 @@ export function calculateWorkTimeMinutes(
   }
 }
 
+/**
+ * 현재 시간 기준 실시간 근무시간 계산 (아직 퇴근 전인 경우)
+ */
+export function calculateCurrentWorkTimeMinutes(
+  checkInAt: string | null | undefined
+): number {
+  if (!checkInAt) {
+    return 0;
+  }
+
+  try {
+    const checkIn = parseISO(checkInAt);
+    const now = new Date();
+    
+    if (now <= checkIn) {
+      return 0;
+    }
+
+    const totalMinutes = differenceInMinutes(now, checkIn);
+    const workMinutes = Math.max(0, totalMinutes - LUNCH_BREAK_MINUTES);
+    
+    return workMinutes;
+  } catch {
+    return 0;
+  }
+}
+
 export function isLate(checkInAt: string | null | undefined): boolean {
   if (!checkInAt) {
     return false;
@@ -39,8 +68,10 @@ export function isLate(checkInAt: string | null | undefined): boolean {
 
   try {
     const checkIn = parseISO(checkInAt);
-    const checkInHour = checkIn.getHours();
-    const checkInMinute = checkIn.getMinutes();
+    // KST 기준으로 시간 확인
+    const checkInKST = toZonedTime(checkIn, KST_TIMEZONE);
+    const checkInHour = checkInKST.getHours();
+    const checkInMinute = checkInKST.getMinutes();
     
     return checkInHour > STANDARD_CHECK_IN_HOUR || 
            (checkInHour === STANDARD_CHECK_IN_HOUR && checkInMinute > 0);

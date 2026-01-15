@@ -32,7 +32,7 @@ export function PartnersView({ currentBu = 'ALL', currentUserRole = 'member' }: 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedBu, setSelectedBu] = useState<string>(currentBu);
+  const [selectedBu, setSelectedBu] = useState<string>('ALL');
   const [page, setPage] = useState(1);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showBuDropdown, setShowBuDropdown] = useState(false);

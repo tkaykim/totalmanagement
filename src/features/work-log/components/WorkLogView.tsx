@@ -11,7 +11,7 @@ import {
   FileText,
   BarChart3
 } from 'lucide-react';
-import { useActivityLogs, useWorkLog, useSaveWorkLog } from '../hooks';
+import { useActivityLogs, useWorkLog, useSaveWorkLog, useAttendanceLogs } from '../hooks';
 import { ActivityTimeline } from './ActivityTimeline';
 import { WorkLogForm } from './WorkLogForm';
 import { DailySummary } from './DailySummary';
@@ -25,6 +25,7 @@ export function WorkLogView() {
   const [activeTab, setActiveTab] = useState<'timeline' | 'form'>('timeline');
   
   const { data: activities = [], isLoading: activitiesLoading } = useActivityLogs(selectedDate);
+  const { data: attendanceLogs = [], isLoading: attendanceLoading } = useAttendanceLogs(selectedDate);
   const { data: workLog, isLoading: workLogLoading } = useWorkLog(selectedDate);
   const saveWorkLogMutation = useSaveWorkLog();
 
@@ -110,7 +111,11 @@ export function WorkLogView() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <DailySummary activities={activities} isLoading={activitiesLoading} />
+          <DailySummary 
+            activities={activities} 
+            attendanceLogs={attendanceLogs}
+            isLoading={activitiesLoading || attendanceLoading} 
+          />
         </CardContent>
       </Card>
 

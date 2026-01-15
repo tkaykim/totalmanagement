@@ -11,11 +11,14 @@ import {
 import { createTaskStatusChangeLog } from '@/lib/activity-logger';
 
 async function getCurrentUser(): Promise<AppUser | null> {
-  const authSupabase = await createClient();
+  const [authSupabase, supabase] = await Promise.all([
+    createClient(),
+    createPureClient(),
+  ]);
+  
   const { data: { user } } = await authSupabase.auth.getUser();
   if (!user) return null;
 
-  const supabase = await createPureClient();
   const { data: appUser } = await supabase
     .from('app_users')
     .select('id, role, bu_code, name, position')
@@ -25,15 +28,17 @@ async function getCurrentUser(): Promise<AppUser | null> {
   return appUser as AppUser | null;
 }
 
-async function getTaskWithProject(supabase: any, taskId: string) {
+async function getTaskWithProjectAndOldStatus(supabase: any, taskId: string) {
+  // 병렬로 task 전체 정보 조회 (oldStatus 포함)
   const { data: task } = await supabase
     .from('project_tasks')
-    .select('id, project_id, bu_code, assignee_id, created_by')
+    .select('id, project_id, bu_code, assignee_id, created_by, title, status')
     .eq('id', taskId)
     .single();
 
   if (!task) return null;
 
+  // 프로젝트 정보 조회
   const { data: project } = await supabase
     .from('projects')
     .select('id, bu_code, pm_id, participants')
@@ -56,6 +61,8 @@ async function getTaskWithProject(supabase: any, taskId: string) {
       pm_id: project.pm_id,
       participants: project.participants || [],
     } as PermProject,
+    oldStatus: task.status,
+    oldTitle: task.title,
   };
 }
 
@@ -64,30 +71,25 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const supabase = await createPureClient();
-    const { id } = await params;
-    const body = await request.json();
+    // 병렬로 supabase 클라이언트 생성, params 처리, body 파싱
+    const [supabase, { id }, body, currentUser] = await Promise.all([
+      createPureClient(),
+      params,
+      request.json(),
+      getCurrentUser(),
+    ]);
 
-    // 현재 사용자 정보 가져오기
-    const currentUser = await getCurrentUser();
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 할일 및 프로젝트 정보 가져오기
-    const taskData = await getTaskWithProject(supabase, id);
+    // 할일 및 프로젝트 정보 + 이전 상태를 한 번에 가져오기
+    const taskData = await getTaskWithProjectAndOldStatus(supabase, id);
     if (!taskData) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    const { task, project } = taskData;
-
-    // 이전 상태 저장 (활동 로그용)
-    const { data: oldTask } = await supabase
-      .from('project_tasks')
-      .select('title, status')
-      .eq('id', id)
-      .single();
+    const { task, project, oldStatus, oldTitle } = taskData;
 
     // 수정 권한 체크
     if (!canEditTask(currentUser, task, project)) {
@@ -96,7 +98,6 @@ export async function PATCH(
 
     // 상태만 수정 가능한 경우 체크
     if (canOnlyUpdateTaskStatus(currentUser, task, project)) {
-      // status 외의 필드가 있으면 거부
       const allowedFields = ['status'];
       const requestedFields = Object.keys(body);
       const hasDisallowedFields = requestedFields.some(f => !allowedFields.includes(f));
@@ -118,15 +119,15 @@ export async function PATCH(
 
     if (error) throw error;
 
-    // 상태가 변경된 경우 활동 로그 기록
-    if (body.status && oldTask?.status !== body.status) {
-      await createTaskStatusChangeLog(
+    // 상태가 변경된 경우 활동 로그 기록 (비동기, 응답 대기 안 함)
+    if (body.status && oldStatus !== body.status) {
+      createTaskStatusChangeLog(
         currentUser.id,
         id,
-        data.title || oldTask?.title || '',
-        oldTask?.status || '',
+        data.title || oldTitle || '',
+        oldStatus || '',
         body.status
-      );
+      ).catch(console.error);
     }
 
     return NextResponse.json(data);
@@ -140,17 +141,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const supabase = await createPureClient();
-    const { id } = await params;
+    // 병렬로 처리
+    const [supabase, { id }, currentUser] = await Promise.all([
+      createPureClient(),
+      params,
+      getCurrentUser(),
+    ]);
 
-    // 현재 사용자 정보 가져오기
-    const currentUser = await getCurrentUser();
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // 할일 및 프로젝트 정보 가져오기
-    const taskData = await getTaskWithProject(supabase, id);
+    const taskData = await getTaskWithProjectAndOldStatus(supabase, id);
     if (!taskData) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }

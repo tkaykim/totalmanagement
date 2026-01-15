@@ -71,7 +71,33 @@ export function useUpdateTask() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => api.updateTask(id, data),
-    onSuccess: () => {
+    onMutate: async ({ id, data }) => {
+      // 진행 중인 refetch 취소
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+
+      // 이전 상태 저장 (롤백용)
+      const previousTasksQueries = queryClient.getQueriesData<any[]>({ queryKey: ['tasks'] });
+
+      // Optimistic update: 모든 tasks 쿼리에서 해당 task 업데이트
+      queryClient.setQueriesData<any[]>({ queryKey: ['tasks'] }, (old) => {
+        if (!old) return old;
+        return old.map((task) =>
+          task.id === id ? { ...task, ...data, updated_at: new Date().toISOString() } : task
+        );
+      });
+
+      return { previousTasksQueries };
+    },
+    onError: (_err, _variables, context) => {
+      // 에러 발생 시 이전 상태로 롤백
+      if (context?.previousTasksQueries) {
+        context.previousTasksQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: () => {
+      // 완료 후 백그라운드에서 데이터 동기화
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });

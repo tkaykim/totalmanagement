@@ -13,7 +13,9 @@ import {
   Coins,
   LogIn,
   LogOut,
-  Circle
+  Circle,
+  Clock,
+  Pencil
 } from 'lucide-react';
 import type { ActivityLog, ActivityActionType } from '../types';
 import { ACTION_TYPE_LABELS } from '../types';
@@ -83,6 +85,8 @@ const ACTION_ICONS: Record<ActivityActionType, React.ReactNode> = {
   financial_updated: <Coins className="h-3.5 w-3.5" />,
   check_in: <LogIn className="h-3.5 w-3.5" />,
   check_out: <LogOut className="h-3.5 w-3.5" />,
+  auto_check_out: <Clock className="h-3.5 w-3.5" />,
+  attendance_corrected: <Pencil className="h-3.5 w-3.5" />,
 };
 
 function ActivityItem({ activity }: { activity: ActivityLog }) {
@@ -96,6 +100,10 @@ function ActivityItem({ activity }: { activity: ActivityLog }) {
         return 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400';
       case 'check_out':
         return 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400';
+      case 'auto_check_out':
+        return 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400';
+      case 'attendance_corrected':
+        return 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400';
       case 'task_completed':
         return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400';
       case 'project_created':

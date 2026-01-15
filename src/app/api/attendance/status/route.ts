@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getTodayKST } from '@/lib/timezone.server';
-import { calculateWorkTimeMinutes } from '@/features/attendance/lib/workTimeCalculator';
+import { calculateWorkTimeMinutes, calculateCurrentWorkTimeMinutes } from '@/features/attendance/lib/workTimeCalculator';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,9 +30,24 @@ export async function GET(request: NextRequest) {
       throw activeError;
     }
 
+    // 2. 미확인 자동 퇴근 기록 조회 (user_confirmed가 false인 기록)
+    const { data: pendingAutoCheckouts, error: pendingError } = await supabase
+      .from('attendance_logs')
+      .select('id, work_date, check_in_at, check_out_at')
+      .eq('user_id', user.id)
+      .eq('is_auto_checkout', true)
+      .eq('user_confirmed', false)
+      .order('work_date', { ascending: false })
+      .limit(10);
+
+    if (pendingError) {
+      console.error('Failed to fetch pending auto checkouts:', pendingError);
+    }
+
     // 활성 근무 기록이 있으면 해당 기록 기준으로 상태 반환
     if (activeLog) {
-      const workTimeMinutes = calculateWorkTimeMinutes(activeLog.check_in_at, activeLog.check_out_at);
+      // 아직 퇴근 전이므로 현재 시간 기준으로 실시간 근무시간 계산
+      const workTimeMinutes = calculateCurrentWorkTimeMinutes(activeLog.check_in_at);
       
       return NextResponse.json({
         isCheckedIn: true,
@@ -41,13 +56,14 @@ export async function GET(request: NextRequest) {
         checkOutAt: null,
         workDate: activeLog.work_date,
         status: activeLog.status || 'present',
-        workTimeMinutes: workTimeMinutes || 0,
+        workTimeMinutes: workTimeMinutes,
         hasCheckedOut: false,
         isOvernightWork: activeLog.work_date !== today,
+        pendingAutoCheckouts: pendingAutoCheckouts || [],
       });
     }
 
-    // 2. 활성 근무 기록이 없으면 오늘 날짜의 기록 조회 (최신순)
+    // 3. 활성 근무 기록이 없으면 오늘 날짜의 기록 조회 (최신순)
     const { data: todayLogs, error: todayError } = await supabase
       .from('attendance_logs')
       .select('*')
@@ -78,6 +94,7 @@ export async function GET(request: NextRequest) {
       workTimeMinutes: workTimeMinutes || 0,
       hasCheckedOut: !!latestTodayLog?.check_out_at,
       isOvernightWork: false,
+      pendingAutoCheckouts: pendingAutoCheckouts || [],
     });
   } catch (error: any) {
     console.error('Get status error:', error);

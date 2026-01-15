@@ -9,7 +9,9 @@ export type ActivityActionType =
   | 'financial_created'
   | 'financial_updated'
   | 'check_in'
-  | 'check_out';
+  | 'check_out'
+  | 'auto_check_out'
+  | 'attendance_corrected';
 
 export type ActivityEntityType =
   | 'project'
@@ -59,6 +61,8 @@ export const ACTION_TYPE_LABELS: Record<ActivityActionType, string> = {
   financial_updated: '재무 항목 수정',
   check_in: '출근',
   check_out: '퇴근',
+  auto_check_out: '자동 퇴근',
+  attendance_corrected: '근태 정정',
 };
 
 export const ACTION_TYPE_ICONS: Record<ActivityActionType, string> = {
@@ -73,4 +77,6 @@ export const ACTION_TYPE_ICONS: Record<ActivityActionType, string> = {
   financial_updated: '💰',
   check_in: '📍',
   check_out: '📍',
+  auto_check_out: '⏰',
+  attendance_corrected: '✏️',
 };

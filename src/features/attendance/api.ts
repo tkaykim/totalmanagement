@@ -237,3 +237,54 @@ export async function clearAutoCheckoutFlag(logId: string): Promise<void> {
   }
 }
 
+export interface PendingAutoCheckout {
+  id: string;
+  work_date: string;
+  check_in_at: string;
+  check_out_at: string;
+}
+
+export interface CorrectCheckoutResponse {
+  id: string;
+  work_date: string;
+  check_in_at: string;
+  check_out_at: string;
+  user_confirmed: boolean;
+  message: string;
+}
+
+/**
+ * 자동 퇴근 처리된 기록의 퇴근 시간을 수정합니다.
+ */
+export async function correctCheckoutTime(
+  logId: string, 
+  checkOutTime: string
+): Promise<CorrectCheckoutResponse> {
+  const res = await fetch(`${API_BASE}/logs/${logId}/correct-checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ check_out_time: checkOutTime }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || '퇴근 시간 수정에 실패했습니다.');
+  }
+  return res.json();
+}
+
+/**
+ * 자동 퇴근 처리된 기록을 수정 없이 확인만 합니다.
+ */
+export async function confirmAutoCheckout(logId: string): Promise<CorrectCheckoutResponse> {
+  const res = await fetch(`${API_BASE}/logs/${logId}/correct-checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ skip_correction: true }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || '확인 처리에 실패했습니다.');
+  }
+  return res.json();
+}
+

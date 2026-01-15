@@ -13,6 +13,20 @@ export function useActivityLogs(date?: string) {
   });
 }
 
+// 특정 날짜의 출퇴근 기록 조회 훅 (work_date 기준)
+export function useAttendanceLogs(date?: string) {
+  return useQuery({
+    queryKey: ['attendance-logs-by-date', date],
+    queryFn: async () => {
+      if (!date) return [];
+      const res = await fetch(`/api/attendance/logs?start_date=${date}&end_date=${date}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 1000 * 60, // 1분
+  });
+}
+
 // 업무 일지 조회 훅
 export function useWorkLog(date?: string) {
   return useQuery({

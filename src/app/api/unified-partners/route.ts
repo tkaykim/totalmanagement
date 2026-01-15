@@ -81,7 +81,13 @@ export async function GET(request: NextRequest) {
         (access: any) => access.bu_code === currentUserBu && ['owner', 'full', 'view'].includes(access.access_level)
       );
       
-      const canViewDetails = isHeadAdmin || isAdmin || isOwnerBu || hasBuAccess;
+      // FLOW Leader can view all dancers
+      const partnerCategories = partner.partner_category_mappings?.map((m: any) => m.partner_categories?.name) || [];
+      const isDancer = partnerCategories.includes('dancer');
+      const isFlowLeader = currentUserBu === 'FLOW' && currentUserRole === 'leader';
+      const canViewDancerAsFlowLeader = isDancer && isFlowLeader;
+      
+      const canViewDetails = isHeadAdmin || isAdmin || isOwnerBu || hasBuAccess || canViewDancerAsFlowLeader;
 
       // Extract categories
       const categories = partner.partner_category_mappings?.map((m: any) => ({

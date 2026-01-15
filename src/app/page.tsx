@@ -1180,7 +1180,10 @@ export default function HomePage() {
               projects={currentProjects}
               revenues={revenues}
               expenses={expenses}
-              onOpenModal={setModalProjectId}
+              onOpenModal={(projectId) => {
+                setFinanceDefaultProjectId(projectId);
+                setFinanceModalOpen('revenue');
+              }}
               onOpenTaskModal={(projectId) => {
                 setTaskModalProjectId(projectId);
                 setTaskModalOpen(true);
@@ -1335,34 +1338,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      {modalProject && (
-        <ModalProject
-          project={modalProject}
-          onClose={() => setModalProjectId(null)}
-          entries={modalEntries}
-          period={activePeriod}
-          formState={formState}
-          formError={formError}
-          onFormChange={setFormState}
-          onAddEntry={handleAddEntry}
-          onDateChange={handleProjectDateChange}
-          onEditFinance={setEditFinanceModalOpen}
-          onEditTask={setEditTaskModalOpen}
-          onUpdateProject={handleUpdateProject}
-          onAddTask={(projectId) => {
-            setTaskModalProjectId(projectId);
-            setTaskModalOpen(true);
-          }}
-          tasks={tasks.filter((t) => t.projectId === modalProject.id)}
-          projects={projects}
-          orgData={orgData}
-          usersData={usersData}
-          partnersData={partnersData}
-          partnerCompaniesData={partnerCompaniesData}
-          partnerWorkersData={partnerWorkersData}
-          calculateActualAmount={calculateActualAmount}
-        />
-      )}
       {isProjectModalOpen && (
         <UnifiedProjectModal
           onClose={() => setProjectModalOpen(false)}

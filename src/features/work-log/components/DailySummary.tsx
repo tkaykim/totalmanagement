@@ -6,35 +6,62 @@ import {
   CheckSquare, 
   Zap,
   LogIn,
-  LogOut
+  LogOut,
+  Moon
 } from 'lucide-react';
 import type { ActivityLog } from '../types';
 import { cn } from '@/lib/utils';
 
+interface AttendanceLog {
+  id: string;
+  work_date: string;
+  check_in_at: string | null;
+  check_out_at: string | null;
+  is_overtime?: boolean;
+}
+
 interface DailySummaryProps {
   activities: ActivityLog[];
+  attendanceLogs?: AttendanceLog[];
   isLoading?: boolean;
 }
 
-export function DailySummary({ activities, isLoading }: DailySummaryProps) {
+export function DailySummary({ activities, attendanceLogs = [], isLoading }: DailySummaryProps) {
   const summary = useMemo(() => {
-    const checkIn = activities.find(a => a.action_type === 'check_in');
-    const checkOut = activities.find(a => a.action_type === 'check_out');
+    // 출퇴근 정보는 attendance_logs 기반으로 (work_date 기준)
+    // 가장 최근 기록 사용 (연장근무 등 여러 기록이 있을 수 있음)
+    const latestAttendance = attendanceLogs.length > 0 
+      ? attendanceLogs.reduce((latest, log) => {
+          if (!latest) return log;
+          const latestTime = latest.check_in_at ? new Date(latest.check_in_at).getTime() : 0;
+          const logTime = log.check_in_at ? new Date(log.check_in_at).getTime() : 0;
+          return logTime > latestTime ? log : latest;
+        }, attendanceLogs[0])
+      : null;
+
+    // 야간근무 여부 확인 (퇴근 시간이 다음 날인 경우)
+    const isOvernightWork = latestAttendance?.check_in_at && latestAttendance?.check_out_at
+      ? new Date(latestAttendance.check_in_at).toDateString() !== new Date(latestAttendance.check_out_at).toDateString()
+      : false;
+
     const taskCreated = activities.filter(a => a.action_type === 'task_created').length;
     const taskCompleted = activities.filter(a => a.action_type === 'task_completed').length;
 
     return {
-      checkInTime: checkIn 
-        ? new Date(checkIn.occurred_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+      checkInTime: latestAttendance?.check_in_at 
+        ? new Date(latestAttendance.check_in_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
         : null,
-      checkOutTime: checkOut
-        ? new Date(checkOut.occurred_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+      checkOutTime: latestAttendance?.check_out_at
+        ? new Date(latestAttendance.check_out_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
         : null,
+      isOvernightWork,
+      isOvertime: latestAttendance?.is_overtime || false,
+      hasActiveWork: latestAttendance?.check_in_at && !latestAttendance?.check_out_at,
       taskCreated,
       taskCompleted,
       totalActivities: activities.length,
     };
-  }, [activities]);
+  }, [activities, attendanceLogs]);
 
   if (isLoading) {
     return (
@@ -53,21 +80,31 @@ export function DailySummary({ activities, isLoading }: DailySummaryProps) {
     );
   }
 
+  // 출근 라벨 결정
+  const checkInLabel = summary.isOvertime ? '연장출근' : '출근';
+  
+  // 퇴근 subValue 결정
+  const getCheckOutSubValue = () => {
+    if (summary.hasActiveWork) return '근무중';
+    if (summary.isOvernightWork) return '(야간)';
+    return undefined;
+  };
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <SummaryCard
         icon={<LogIn className="h-4 w-4" />}
-        label="출근"
+        label={checkInLabel}
         value={summary.checkInTime || '-'}
         subValue={summary.checkInTime ? undefined : '미출근'}
       />
       
       <SummaryCard
-        icon={<LogOut className="h-4 w-4" />}
+        icon={summary.isOvernightWork ? <Moon className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
         label="퇴근"
         value={summary.checkOutTime || '-'}
-        subValue={summary.checkInTime && !summary.checkOutTime ? '근무중' : undefined}
-        isWorking={summary.checkInTime !== null && summary.checkOutTime === null}
+        subValue={getCheckOutSubValue()}
+        isWorking={summary.hasActiveWork || false}
       />
       
       <SummaryCard

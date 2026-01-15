@@ -12,7 +12,8 @@ export type ActivityActionType =
   | 'financial_updated'
   | 'check_in'
   | 'check_out'
-  | 'auto_check_out';
+  | 'auto_check_out'
+  | 'attendance_corrected';
 
 export type ActivityEntityType =
   | 'project'

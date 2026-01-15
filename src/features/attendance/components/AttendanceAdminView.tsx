@@ -416,7 +416,18 @@ export function AttendanceAdminView() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 sm:gap-4">
+                        {/* 모바일: 출퇴근 시간 한 줄로 표시 */}
+                        <div className="flex items-center gap-1.5 sm:hidden text-[10px]">
+                          <span className="text-green-600 dark:text-green-400 font-semibold">
+                            {formatTime(user.first_check_in)}
+                          </span>
+                          <span className="text-slate-400">~</span>
+                          <span className="text-red-600 dark:text-red-400 font-semibold">
+                            {formatTime(user.last_check_out)}
+                          </span>
+                        </div>
+                        {/* PC: 출퇴근 시간 분리 표시 */}
                         <div className="text-right hidden sm:block">
                           <p className="text-[10px] text-slate-500 dark:text-slate-400">출근</p>
                           <p className="text-xs font-semibold text-green-600 dark:text-green-400">
@@ -431,16 +442,17 @@ export function AttendanceAdminView() {
                         </div>
                         <div
                           className={cn(
-                            'flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold min-w-[72px] justify-center',
+                            'flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold min-w-[60px] sm:min-w-[72px] justify-center',
                             statusConfig.bgColor,
                             statusConfig.textColor
                           )}
                         >
                           <StatusIcon className="h-3 w-3" />
-                          {statusConfig.label}
+                          <span className="hidden sm:inline">{statusConfig.label}</span>
+                          <span className="sm:hidden">{statusConfig.label.replace('중', '')}</span>
                         </div>
                         {canEdit && (
-                          <Edit3 className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition" />
+                          <Edit3 className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition hidden sm:block" />
                         )}
                       </div>
                     </div>

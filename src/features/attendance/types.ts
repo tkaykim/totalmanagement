@@ -2,6 +2,13 @@ import type { AttendanceType, ApprovalStatus, WorkRequestType, BU } from '@/type
 
 export type { AttendanceType, ApprovalStatus, WorkRequestType };
 
+export interface PendingAutoCheckoutRecord {
+  id: string;
+  work_date: string;
+  check_in_at: string;
+  check_out_at: string;
+}
+
 export interface AttendanceStatus {
   isCheckedIn: boolean;
   isCheckedOut: boolean;
@@ -10,6 +17,7 @@ export interface AttendanceStatus {
   workDate: string;
   status: AttendanceType;
   workTimeMinutes?: number;
+  pendingAutoCheckouts?: PendingAutoCheckoutRecord[];
 }
 
 export interface WorkTimeStats {
