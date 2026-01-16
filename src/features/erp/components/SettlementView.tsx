@@ -41,14 +41,16 @@ export function SettlementView({
 
   const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
 
-  const getStatusLabel = (status: FinancialEntryStatus) => {
+  const getStatusLabel = (status: FinancialEntryStatus | undefined | null) => {
+    if (!status) return '미정';
     if (status === 'paid') return '지급완료';
     if (status === 'planned') return '지급예정';
     if (status === 'canceled') return '취소';
-    return status;
+    return String(status);
   };
 
-  const getStatusClass = (status: FinancialEntryStatus) => {
+  const getStatusClass = (status: FinancialEntryStatus | undefined | null) => {
+    if (!status) return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300';
     if (status === 'paid') return 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300';
     if (status === 'planned') return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300';
     if (status === 'canceled') return 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300';
