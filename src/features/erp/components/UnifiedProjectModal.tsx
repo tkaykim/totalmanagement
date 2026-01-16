@@ -1135,6 +1135,15 @@ export function UnifiedProjectModal({
                             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{entry.name}</p>
                             <p className="text-xs text-slate-400">{entry.category} · {entry.occurred_at}</p>
                           </div>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap",
+                            entry.status === 'paid' ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300" :
+                            entry.status === 'planned' ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300" :
+                            entry.status === 'canceled' ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300" :
+                            "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300"
+                          )}>
+                            {entry.status === 'paid' ? '지급완료' : entry.status === 'planned' ? '지급예정' : entry.status === 'canceled' ? '취소' : entry.status}
+                          </span>
                         </div>
                         <p className={cn(
                           "text-sm font-bold",
