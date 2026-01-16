@@ -101,34 +101,34 @@ export function ProjectShareModal({ project, onClose }: ProjectShareModalProps) 
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg mx-4 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle>프로젝트 분배 설정</DialogTitle>
+          <DialogTitle className="text-lg">프로젝트 분배 설정</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
-          <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
+        <div className="space-y-4 sm:space-y-5 py-2">
+          <div className="p-3 sm:p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-2 text-sm sm:text-base truncate">
               {project.projectName}
             </h3>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
               <div>
-                <span className="text-slate-500">매출</span>
-                <p className="font-semibold text-blue-600">
+                <span className="text-slate-500 text-[10px] sm:text-xs">매출</span>
+                <p className="font-semibold text-blue-600 text-xs sm:text-sm">
                   {formatCurrency(project.totalRevenue)}
                 </p>
               </div>
               <div>
-                <span className="text-slate-500">지출</span>
-                <p className="font-semibold text-red-500">
+                <span className="text-slate-500 text-[10px] sm:text-xs">지출</span>
+                <p className="font-semibold text-red-500 text-xs sm:text-sm">
                   {formatCurrency(project.totalExpense)}
                 </p>
               </div>
               <div>
-                <span className="text-slate-500">순수익</span>
+                <span className="text-slate-500 text-[10px] sm:text-xs">순수익</span>
                 <p
                   className={cn(
-                    'font-semibold',
+                    'font-semibold text-xs sm:text-sm',
                     netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
                   )}
                 >
@@ -212,7 +212,7 @@ export function ProjectShareModal({ project, onClose }: ProjectShareModalProps) 
           </div>
 
           <div className="space-y-2">
-            <Label>파트너 분배비율 (%)</Label>
+            <Label className="text-sm">파트너 분배비율 (%)</Label>
             <Input
               type="number"
               placeholder="예: 50"
@@ -221,18 +221,21 @@ export function ProjectShareModal({ project, onClose }: ProjectShareModalProps) 
               min={0}
               max={100}
               disabled={!partnerId}
+              className="text-sm"
             />
             {partnerId && shareRate && (
-              <div className="text-sm text-slate-500 mt-1">
-                파트너: {formatCurrency(partnerAmount)} / 회사: {formatCurrency(companyAmount)}
+              <div className="text-xs sm:text-sm text-slate-500 mt-1">
+                <span className="block sm:inline">파트너: {formatCurrency(partnerAmount)}</span>
+                <span className="hidden sm:inline"> / </span>
+                <span className="block sm:inline">회사: {formatCurrency(companyAmount)}</span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <Label>파트너에게 프로젝트 공개</Label>
-              <p className="text-xs text-slate-500 mt-0.5">
+          <div className="flex items-start sm:items-center justify-between py-2 gap-3">
+            <div className="flex-1 min-w-0">
+              <Label className="text-sm">파트너에게 프로젝트 공개</Label>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
                 공개 시 파트너가 /artist 페이지에서 확인 가능
               </p>
             </div>
@@ -240,16 +243,18 @@ export function ProjectShareModal({ project, onClose }: ProjectShareModalProps) 
               checked={visibleToPartner}
               onCheckedChange={setVisibleToPartner}
               disabled={!partnerId}
+              className="flex-shrink-0"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
               취소
             </Button>
             <Button
               onClick={handleSave}
               disabled={updateMutation.isPending}
+              className="w-full sm:w-auto"
             >
               {updateMutation.isPending ? '저장 중...' : '저장'}
             </Button>

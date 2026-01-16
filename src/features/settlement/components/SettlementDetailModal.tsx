@@ -57,21 +57,21 @@ export function SettlementDetailModal({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <FileText className="h-5 w-5 flex-shrink-0" />
             정산서 상세
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-2">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+        <div className="space-y-4 sm:space-y-6 py-2">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate">
                 {settlement.partnerName}
               </h2>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 {format(new Date(settlement.periodStart), 'yyyy년 M월 d일', { locale: ko })}
                 {' ~ '}
                 {format(new Date(settlement.periodEnd), 'yyyy년 M월 d일', { locale: ko })}
@@ -79,7 +79,7 @@ export function SettlementDetailModal({
             </div>
             <span
               className={cn(
-                'inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold',
+                'inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-semibold self-start flex-shrink-0',
                 SETTLEMENT_STATUS_COLORS[settlement.status]
               )}
             >
@@ -87,37 +87,100 @@ export function SettlementDetailModal({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-xs text-blue-600 dark:text-blue-400">총 매출</p>
-              <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
+            <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400">총 매출</p>
+              <p className="text-sm sm:text-lg font-bold text-blue-700 dark:text-blue-300">
                 {formatCurrency(settlement.totalRevenue)}
               </p>
             </div>
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-              <p className="text-xs text-red-600 dark:text-red-400">총 지출</p>
-              <p className="text-lg font-bold text-red-700 dark:text-red-300">
+            <div className="p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <p className="text-[10px] sm:text-xs text-red-600 dark:text-red-400">총 지출</p>
+              <p className="text-sm sm:text-lg font-bold text-red-700 dark:text-red-300">
                 {formatCurrency(settlement.totalExpense)}
               </p>
             </div>
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">순수익</p>
-              <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+            <div className="p-3 sm:p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+              <p className="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400">순수익</p>
+              <p className="text-sm sm:text-lg font-bold text-emerald-700 dark:text-emerald-300">
                 {formatCurrency(settlement.netProfit)}
               </p>
             </div>
-            <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
-              <p className="text-xs text-violet-600 dark:text-violet-400">파트너 정산액</p>
-              <p className="text-lg font-bold text-violet-700 dark:text-violet-300">
+            <div className="p-3 sm:p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
+              <p className="text-[10px] sm:text-xs text-violet-600 dark:text-violet-400">파트너 정산액</p>
+              <p className="text-sm sm:text-lg font-bold text-violet-700 dark:text-violet-300">
                 {formatCurrency(settlement.partnerAmount)}
               </p>
             </div>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-3">프로젝트별 내역</h3>
-            <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-              <table className="w-full text-sm">
+            <h3 className="font-semibold mb-3 text-sm sm:text-base">프로젝트별 내역</h3>
+            
+            {/* 모바일: 카드 레이아웃 */}
+            <div className="block sm:hidden space-y-2">
+              {settlement.projects.length === 0 ? (
+                <div className="p-4 text-center text-slate-400 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                  프로젝트 내역이 없습니다.
+                </div>
+              ) : (
+                <>
+                  {settlement.projects.map((project) => (
+                    <div key={project.id} className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-sm truncate flex-1">{project.projectName}</span>
+                        <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] ml-2 flex-shrink-0">
+                          {project.shareRate}%
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-slate-500">매출: </span>
+                          <span className="text-blue-600 font-medium">{formatCurrency(project.revenue)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">지출: </span>
+                          <span className="text-red-500 font-medium">{formatCurrency(project.expense)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">순수익: </span>
+                          <span className="text-emerald-600 font-medium">{formatCurrency(project.netProfit)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">파트너 몫: </span>
+                          <span className="text-violet-600 font-semibold">{formatCurrency(project.partnerAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-slate-200 dark:border-slate-600">
+                    <div className="font-bold text-sm mb-2">합계</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-slate-500">매출: </span>
+                        <span className="text-blue-600 font-bold">{formatCurrency(settlement.totalRevenue)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">지출: </span>
+                        <span className="text-red-500 font-bold">{formatCurrency(settlement.totalExpense)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">순수익: </span>
+                        <span className="text-emerald-600 font-bold">{formatCurrency(settlement.netProfit)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">파트너 몫: </span>
+                        <span className="text-violet-600 font-bold">{formatCurrency(settlement.partnerAmount)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* 데스크탑: 테이블 레이아웃 */}
+            <div className="hidden sm:block overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-sm min-w-[600px]">
                 <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                   <tr>
                     <th className="px-4 py-2 text-left font-semibold">프로젝트</th>
@@ -202,13 +265,14 @@ export function SettlementDetailModal({
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
             <div className="flex gap-2">
               {settlement.status === 'draft' && (
                 <Button
                   variant="outline"
                   onClick={() => handleStatusChange('confirmed')}
                   disabled={updateMutation.isPending}
+                  className="flex-1 sm:flex-none text-sm"
                 >
                   <CheckCircle className="h-4 w-4 mr-1" />
                   확정
@@ -219,6 +283,7 @@ export function SettlementDetailModal({
                   variant="outline"
                   onClick={() => handleStatusChange('paid')}
                   disabled={updateMutation.isPending}
+                  className="flex-1 sm:flex-none text-sm"
                 >
                   <Wallet className="h-4 w-4 mr-1" />
                   지급 완료
@@ -227,11 +292,11 @@ export function SettlementDetailModal({
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-1" />
-                인쇄
+              <Button variant="outline" onClick={handlePrint} className="flex-1 sm:flex-none text-sm">
+                <Printer className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">인쇄</span>
               </Button>
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none text-sm">
                 닫기
               </Button>
             </div>
