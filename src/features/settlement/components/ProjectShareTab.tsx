@@ -48,7 +48,7 @@ export function ProjectShareTab({ bu }: ProjectShareTabProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="프로젝트명, 파트너명 검색..."
@@ -59,8 +59,93 @@ export function ProjectShareTab({ bu }: ProjectShareTabProps) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <table className="w-full text-sm">
+      {/* 모바일: 카드 레이아웃 */}
+      <div className="block sm:hidden space-y-3">
+        {filteredProjects.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            프로젝트가 없습니다.
+          </div>
+        ) : (
+          filteredProjects.map((project) => (
+            <div
+              key={project.projectId}
+              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    {project.projectName}
+                  </h4>
+                  {project.sharePartnerName ? (
+                    <div className="flex items-center gap-1.5 mt-1 text-sm text-slate-600 dark:text-slate-400">
+                      <Users className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">{project.sharePartnerName}</span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 mt-1">파트너 미설정</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 ml-2">
+                  {project.sharePartnerId && (
+                    project.visibleToPartner ? (
+                      <Eye className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-slate-400" />
+                    )
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedProject(project)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <p className="text-slate-500 text-xs">비율</p>
+                  {project.shareRate ? (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                      {project.shareRate}%
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs">순수익</p>
+                  <span
+                    className={cn(
+                      'font-semibold text-sm',
+                      project.netProfit >= 0
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-red-600 dark:text-red-400'
+                    )}
+                  >
+                    {formatCurrency(project.netProfit)}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs">파트너 몫</p>
+                  {project.partnerAmount > 0 ? (
+                    <span className="font-semibold text-sm text-violet-600 dark:text-violet-400">
+                      {formatCurrency(project.partnerAmount)}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* 데스크탑: 테이블 레이아웃 */}
+      <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <table className="w-full text-sm min-w-[700px]">
           <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
             <tr>
               <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">프로젝트</th>

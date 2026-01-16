@@ -138,14 +138,14 @@ export function CreateSettlementModal({ onClose }: CreateSettlementModalProps) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle>정산서 생성</DialogTitle>
+          <DialogTitle className="text-lg">정산서 생성</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
+        <div className="space-y-4 sm:space-y-5 py-2">
           <div className="space-y-2" ref={dropdownRef}>
-            <Label>파트너 선택 *</Label>
+            <Label className="text-sm">파트너 선택 *</Label>
             <div className="relative">
               <div
                 className="flex items-center justify-between px-3 py-2 border rounded-md cursor-pointer bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
@@ -217,21 +217,23 @@ export function CreateSettlementModal({ onClose }: CreateSettlementModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
-              <Label>정산 시작일</Label>
+              <Label className="text-sm">정산 시작일</Label>
               <Input
                 type="date"
                 value={periodStart}
                 onChange={(e) => setPeriodStart(e.target.value)}
+                className="text-sm"
               />
             </div>
             <div className="space-y-2">
-              <Label>정산 종료일</Label>
+              <Label className="text-sm">정산 종료일</Label>
               <Input
                 type="date"
                 value={periodEnd}
                 onChange={(e) => setPeriodEnd(e.target.value)}
+                className="text-sm"
               />
             </div>
           </div>
@@ -284,13 +286,13 @@ export function CreateSettlementModal({ onClose }: CreateSettlementModalProps) {
 
               {selectedProjects.length > 0 && (
                 <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-sm">
                     <span>선택된 프로젝트: {selectedProjects.length}개</span>
                     <span className="font-semibold">
                       총 순수익: {formatCurrency(totalNetProfit)}
                     </span>
                   </div>
-                  <div className="flex justify-end mt-1">
+                  <div className="flex justify-start sm:justify-end mt-1">
                     <span className="font-bold text-violet-600">
                       파트너 정산액: {formatCurrency(totalPartnerAmount)}
                     </span>
@@ -310,13 +312,14 @@ export function CreateSettlementModal({ onClose }: CreateSettlementModalProps) {
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
               취소
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || !partnerId || selectedProjects.length === 0}
+              className="w-full sm:w-auto"
             >
               {createMutation.isPending ? '생성 중...' : '정산서 생성'}
             </Button>
