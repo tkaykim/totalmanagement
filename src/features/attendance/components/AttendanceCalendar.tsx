@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAttendanceLogs, getAttendanceStats } from '../api';
 import { formatWorkTime } from '../lib/workTimeCalculator';
@@ -12,11 +12,13 @@ import type { AttendanceLog } from '@/types/database';
 
 interface AttendanceCalendarProps {
   onSelectDate?: (date: string, log?: AttendanceLog) => void;
+  userId?: string;
+  userName?: string;
 }
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
-export function AttendanceCalendar({ onSelectDate }: AttendanceCalendarProps) {
+export function AttendanceCalendar({ onSelectDate, userId, userName }: AttendanceCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
@@ -27,13 +29,17 @@ export function AttendanceCalendar({ onSelectDate }: AttendanceCalendarProps) {
   const endDate = format(monthEnd, 'yyyy-MM-dd');
 
   const { data: logs = [], isLoading: logsLoading } = useQuery({
-    queryKey: ['attendance-logs', startDate, endDate],
-    queryFn: () => getAttendanceLogs({ start_date: startDate, end_date: endDate }),
+    queryKey: ['attendance-logs', startDate, endDate, userId],
+    queryFn: () => getAttendanceLogs({ 
+      start_date: startDate, 
+      end_date: endDate,
+      user_id: userId,
+    }),
   });
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['attendance-stats', year, month],
-    queryFn: () => getAttendanceStats({ year, month }),
+    queryKey: ['attendance-stats', year, month, userId],
+    queryFn: () => getAttendanceStats({ year, month, user_id: userId }),
   });
 
   const calendarDays = useMemo(() => {
@@ -142,6 +148,11 @@ export function AttendanceCalendar({ onSelectDate }: AttendanceCalendarProps) {
           </button>
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
             {format(currentDate, 'yyyy년 M월', { locale: ko })}
+            {userName && (
+              <span className="ml-2 text-base font-medium text-blue-600 dark:text-blue-400">
+                - {userName}
+              </span>
+            )}
           </h2>
           <button
             onClick={nextMonth}

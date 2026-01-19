@@ -102,6 +102,43 @@ export async function getAttendanceStats(params?: {
   return res.json();
 }
 
+export interface TeamMemberStats {
+  user_id: string;
+  user_name: string;
+  bu_code: string | null;
+  position: string | null;
+  totalWorkDays: number;
+  totalWorkMinutes: number;
+  averageWorkMinutes: number;
+  lateCount: number;
+  earlyLeaveCount: number;
+}
+
+export interface TeamStatsResponse {
+  year: number;
+  month: number;
+  stats: TeamMemberStats[];
+}
+
+export async function getTeamStats(params?: {
+  year?: number;
+  month?: number;
+  bu_code?: string;
+}): Promise<TeamStatsResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.year) searchParams.append('year', String(params.year));
+  if (params?.month) searchParams.append('month', String(params.month));
+  if (params?.bu_code) searchParams.append('bu_code', params.bu_code);
+
+  const url = `${API_BASE}/team-stats${searchParams.toString() ? `?${searchParams}` : ''}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to get team stats');
+  }
+  return res.json();
+}
+
 export async function createWorkRequest(data: WorkRequestFormData): Promise<WorkRequest> {
   const res = await fetch(`${API_BASE}/work-requests`, {
     method: 'POST',
@@ -287,4 +324,3 @@ export async function confirmAutoCheckout(logId: string): Promise<CorrectCheckou
   }
   return res.json();
 }
-
