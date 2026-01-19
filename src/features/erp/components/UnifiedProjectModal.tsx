@@ -150,10 +150,12 @@ function SearchDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(search.toLowerCase()) ||
-    (opt.subLabel && opt.subLabel.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredOptions = options
+    .filter((opt) =>
+      opt.label.toLowerCase().includes(search.toLowerCase()) ||
+      (opt.subLabel && opt.subLabel.toLowerCase().includes(search.toLowerCase()))
+    )
+    .sort((a, b) => a.label.localeCompare(b.label, 'ko'));
 
   const selectedOption = options.find((opt) => opt.value === value);
   const displayLabel = selectedOption ? selectedOption.label : emptyLabel;
@@ -843,16 +845,135 @@ export function UnifiedProjectModal({
                   {/* PM (담당자) - 한 줄 전체 */}
                   <div className="space-y-1">
                     <label className="text-xs text-slate-500 dark:text-slate-400">PM (담당자)</label>
-                    <select
+                    <SearchDropdown
+                      options={usersData?.users.map((user: any) => ({
+                        value: user.id,
+                        label: user.name,
+                        subLabel: user.department || '',
+                      })) || []}
                       value={form.pm_id}
-                      onChange={(e) => setForm({ ...form, pm_id: e.target.value })}
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-                    >
-                      <option value="">선택 안함</option>
-                      {usersData?.users.map((user: any) => (
-                        <option key={user.id} value={user.id}>{user.name}</option>
-                      ))}
-                    </select>
+                      onChange={(value) => setForm({ ...form, pm_id: value })}
+                      placeholder="PM 검색..."
+                      emptyLabel="선택 안함"
+                    />
+                  </div>
+
+                  {/* 참여자 추가 - PM 바로 아래 */}
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-500 dark:text-slate-400">참여자</label>
+                    <div className="flex items-center gap-2">
+                      {/* 유형 선택 탭 */}
+                      <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        {[
+                          { type: 'user' as const, label: '직원' },
+                          { type: 'partner_worker' as const, label: '외주담당자' },
+                          { type: 'partner_company' as const, label: '외주업체' },
+                        ].map((item) => (
+                          <button
+                            key={item.type}
+                            type="button"
+                            onClick={() => {
+                              setParticipantSelectType(item.type);
+                              setParticipantSelectId('');
+                            }}
+                            className={cn(
+                              "px-3 py-1.5 text-xs font-medium transition",
+                              participantSelectType === item.type
+                                ? "bg-blue-600 text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                            )}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* 검색 드롭다운 + 추가 버튼 */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <SearchDropdown
+                          options={
+                            participantSelectType === 'user'
+                              ? (usersData?.users
+                                  .filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id))
+                                  .map((u: any) => ({
+                                    value: u.id,
+                                    label: u.name,
+                                    subLabel: u.department || '',
+                                  })) || [])
+                              : participantSelectType === 'partner_worker'
+                              ? (partnerWorkersData
+                                  ?.filter((w: any) => !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === w.id))
+                                  .map((w: any) => ({
+                                    value: String(w.id),
+                                    label: w.name_ko || w.name_en || '',
+                                    subLabel: w.partner_company_id
+                                      ? partnerCompaniesData?.find((c: any) => c.id === w.partner_company_id)?.company_name_ko || ''
+                                      : '소속 없음',
+                                  })) || [])
+                              : (partnerCompaniesData
+                                  ?.filter((c: any) => !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === c.id))
+                                  .map((c: any) => ({
+                                    value: String(c.id),
+                                    label: c.company_name_ko || c.company_name_en || '',
+                                  })) || [])
+                          }
+                          value={participantSelectId}
+                          onChange={(value) => setParticipantSelectId(value)}
+                          placeholder={
+                            participantSelectType === 'user'
+                              ? '직원 검색...'
+                              : participantSelectType === 'partner_worker'
+                              ? '외주담당자 검색...'
+                              : '외주업체 검색...'
+                          }
+                          emptyLabel="선택하세요"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddParticipant}
+                        disabled={!participantSelectId}
+                        className={cn(
+                          "flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-white transition",
+                          participantSelectId
+                            ? "bg-blue-600 hover:bg-blue-700"
+                            : "bg-slate-300 dark:bg-slate-600 cursor-not-allowed"
+                        )}
+                      >
+                        <Plus className="h-4 w-4" />
+                        추가
+                      </button>
+                    </div>
+
+                    {/* 참여자 목록 - 칩 형태 */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {selectedParticipants.length === 0 ? (
+                        <p className="text-sm text-slate-400 dark:text-slate-500 py-1">등록된 참여자가 없습니다.</p>
+                      ) : (
+                        selectedParticipants.map((p, index) => (
+                          <div
+                            key={`${p.type}-${p.id}`}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+                              p.type === 'user' && "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
+                              p.type === 'partner_worker' && "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
+                              p.type === 'partner_company' && "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                            )}
+                          >
+                            <span>{p.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveParticipant(index)}
+                              className="ml-0.5 hover:opacity-70"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
 
                   {/* 외주업체 | 외주담당자 - 한 줄에 두 개 */}
@@ -894,146 +1015,93 @@ export function UnifiedProjectModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs text-slate-500 dark:text-slate-400">아티스트</label>
-                      <select
+                      <SearchDropdown
+                        options={artistsData?.map((artist: any) => ({
+                          value: String(artist.id),
+                          label: artist.name_ko || artist.name || '',
+                        })) || []}
                         value={form.artist_id}
-                        onChange={(e) => setForm({ ...form, artist_id: e.target.value })}
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-                      >
-                        <option value="">선택 안함</option>
-                        {artistsData?.map((artist: any) => (
-                          <option key={artist.id} value={artist.id}>{artist.name_ko || artist.name}</option>
-                        ))}
-                      </select>
+                        onChange={(value) => setForm({ ...form, artist_id: value })}
+                        placeholder="아티스트 검색..."
+                        emptyLabel="선택 안함"
+                      />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-slate-500 dark:text-slate-400">채널</label>
-                      <select
+                      <SearchDropdown
+                        options={channelsData?.map((channel: any) => ({
+                          value: String(channel.id),
+                          label: channel.name || '',
+                        })) || []}
                         value={form.channel_id}
-                        onChange={(e) => setForm({ ...form, channel_id: e.target.value })}
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-                      >
-                        <option value="">선택 안함</option>
-                        {channelsData?.map((channel: any) => (
-                          <option key={channel.id} value={channel.id}>{channel.name}</option>
-                        ))}
-                      </select>
+                        onChange={(value) => setForm({ ...form, channel_id: value })}
+                        placeholder="채널 검색..."
+                        emptyLabel="선택 안함"
+                      />
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-x-6 gap-y-2">
-                  {/* PM - 항상 표시, 없으면 - */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">PM</span>
-                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPmName()}</span>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    {/* PM - 항상 표시, 없으면 - */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">PM</span>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPmName()}</span>
+                    </div>
+                    {/* 외주업체 - 있을 때만 표시 */}
+                    {form.partner_company_id && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">외주업체</span>
+                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPartnerCompanyName()}</span>
+                      </div>
+                    )}
+                    {/* 외주담당자 - 있을 때만 표시 */}
+                    {form.partner_worker_id && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">외주담당자</span>
+                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPartnerWorkerName()}</span>
+                      </div>
+                    )}
+                    {/* 아티스트 - 있을 때만 표시 */}
+                    {form.artist_id && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">아티스트</span>
+                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getArtistName()}</span>
+                      </div>
+                    )}
+                    {/* 채널 - 있을 때만 표시 */}
+                    {form.channel_id && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">채널</span>
+                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getChannelName()}</span>
+                      </div>
+                    )}
                   </div>
-                  {/* 외주업체 - 있을 때만 표시 */}
-                  {form.partner_company_id && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 dark:text-slate-400">외주업체</span>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPartnerCompanyName()}</span>
-                    </div>
-                  )}
-                  {/* 외주담당자 - 있을 때만 표시 */}
-                  {form.partner_worker_id && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 dark:text-slate-400">외주담당자</span>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPartnerWorkerName()}</span>
-                    </div>
-                  )}
-                  {/* 아티스트 - 있을 때만 표시 */}
-                  {form.artist_id && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 dark:text-slate-400">아티스트</span>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getArtistName()}</span>
-                    </div>
-                  )}
-                  {/* 채널 - 있을 때만 표시 */}
-                  {form.channel_id && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 dark:text-slate-400">채널</span>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getChannelName()}</span>
+                  
+                  {/* 참여자 목록 (view 모드) */}
+                  {selectedParticipants.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">참여자</span>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedParticipants.map((p) => (
+                          <div
+                            key={`${p.type}-${p.id}`}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+                              p.type === 'user' && "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
+                              p.type === 'partner_worker' && "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
+                              p.type === 'partner_company' && "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                            )}
+                          >
+                            <span>{p.name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
-            </section>
-
-            {/* 참여자 섹션 */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">참여자</h4>
-              </div>
-
-              {/* 참여자 추가 (editable 모드에서만) */}
-              {isEditable && (
-                <div className="flex items-center gap-2">
-                  <select
-                    value={participantSelectType}
-                    onChange={(e) => {
-                      setParticipantSelectType(e.target.value as any);
-                      setParticipantSelectId('');
-                    }}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm"
-                  >
-                    <option value="user">내부직원</option>
-                    <option value="partner_worker">외주담당자</option>
-                    <option value="partner_company">외주업체</option>
-                  </select>
-                  <select
-                    value={participantSelectId}
-                    onChange={(e) => setParticipantSelectId(e.target.value)}
-                    className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm"
-                  >
-                    <option value="">선택하세요</option>
-                    {participantSelectType === 'user' && usersData?.users.map((u: any) => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
-                    ))}
-                    {participantSelectType === 'partner_worker' && partnerWorkersData?.map((w: any) => (
-                      <option key={w.id} value={w.id}>{w.name_ko || w.name_en}</option>
-                    ))}
-                    {participantSelectType === 'partner_company' && partnerCompaniesData?.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.company_name_ko || c.company_name_en}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleAddParticipant}
-                    className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                  >
-                    <Plus className="h-4 w-4" />
-                    추가
-                  </button>
-                </div>
-              )}
-
-              {/* 참여자 목록 - 칩 형태 */}
-              <div className="flex flex-wrap gap-2">
-                {selectedParticipants.length === 0 ? (
-                  <p className="text-sm text-slate-400 dark:text-slate-500 py-1">등록된 참여자가 없습니다.</p>
-                ) : (
-                  selectedParticipants.map((p, index) => (
-                    <div
-                      key={`${p.type}-${p.id}`}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
-                        p.type === 'user' && "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
-                        p.type === 'partner_worker' && "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
-                        p.type === 'partner_company' && "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                      )}
-                    >
-                      <span>{p.name}</span>
-                      {isEditable && (
-                        <button
-                          onClick={() => handleRemoveParticipant(index)}
-                          className="ml-0.5 hover:opacity-70"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
             </section>
 
             {/* 할일 섹션 (view/edit 모드에서만) */}
