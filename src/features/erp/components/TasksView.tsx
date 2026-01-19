@@ -4,7 +4,51 @@ import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { BuTabs } from './BuTabs';
 import { BU, BU_TITLES, Project, TaskItem, TaskPriority } from '../types';
-import { Circle, Clock, CheckCircle2, Calendar, User, ArrowRight } from 'lucide-react';
+import { Circle, Clock, CheckCircle2, Calendar, User, ArrowRight, Lock } from 'lucide-react';
+
+type CurrentUser = {
+  id: string;
+  role: string;
+  bu_code?: string | null;
+};
+
+/**
+ * 할일 상태 수정 권한 체크 (프론트엔드용)
+ * - admin: 모든 할일 수정 가능
+ * - leader: 본인 BU 프로젝트 또는 본인 할일 수정 가능
+ * - manager: PM인 프로젝트 전체 또는 본인 할일 수정 가능
+ * - member: PM인 프로젝트 전체 또는 본인 할일만 수정 가능
+ */
+function canEditTaskStatus(
+  user: CurrentUser | null | undefined,
+  task: TaskItem,
+  project: Project | undefined
+): boolean {
+  if (!user || !project) return false;
+  
+  // admin: 모든 할일 수정 가능
+  if (user.role === 'admin') return true;
+  
+  // leader: 본인 BU 프로젝트 또는 본인 할일
+  if (user.role === 'leader') {
+    if (project.bu === user.bu_code) return true;
+    if (task.assignee_id === user.id) return true;
+  }
+  
+  // manager: PM이면 전체, 아니면 본인 할일만
+  if (user.role === 'manager') {
+    if (project.pm_id === user.id) return true;
+    if (task.assignee_id === user.id) return true;
+  }
+  
+  // member: PM이면 전체, 아니면 본인 할일만
+  if (user.role === 'member') {
+    if (project.pm_id === user.id) return true;
+    if (task.assignee_id === user.id) return true;
+  }
+  
+  return false;
+}
 
 type TaskStatus = 'todo' | 'in-progress' | 'done';
 
@@ -57,11 +101,13 @@ function TaskCard({
   projectName,
   onEdit,
   onStatusChange,
+  canEdit,
 }: {
   task: TaskItem;
   projectName: string;
   onEdit: () => void;
   onStatusChange: (status: TaskStatus) => void;
+  canEdit: boolean;
 }) {
   const priorityConfig = PRIORITY_CONFIG[task.priority];
   const statusConfig = STATUS_CONFIG[task.status];
@@ -117,24 +163,31 @@ function TaskCard({
           onClick={(e) => e.stopPropagation()}
           className="flex items-center gap-1 mt-3 pt-2 border-t border-slate-100 dark:border-slate-700"
         >
-          {(['todo', 'in-progress', 'done'] as const).map((status) => {
-            const config = STATUS_CONFIG[status];
-            const isActive = task.status === status;
-            return (
-              <button
-                key={status}
-                onClick={() => onStatusChange(status)}
-                className={cn(
-                  'flex-1 px-1.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-medium transition-colors',
-                  isActive
-                    ? cn(config.headerBg, config.color)
-                    : 'bg-slate-50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
-                )}
-              >
-                {config.shortLabel}
-              </button>
-            );
-          })}
+          {canEdit ? (
+            (['todo', 'in-progress', 'done'] as const).map((status) => {
+              const config = STATUS_CONFIG[status];
+              const isActive = task.status === status;
+              return (
+                <button
+                  key={status}
+                  onClick={() => onStatusChange(status)}
+                  className={cn(
+                    'flex-1 px-1.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-medium transition-colors',
+                    isActive
+                      ? cn(config.headerBg, config.color)
+                      : 'bg-slate-50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  )}
+                >
+                  {config.shortLabel}
+                </button>
+              );
+            })
+          ) : (
+            <div className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500 text-[9px] sm:text-[10px]">
+              <Lock className="w-3 h-3" />
+              <span>수정 권한 없음</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -147,16 +200,18 @@ function KanbanColumn({
   projects,
   onEditTask,
   onStatusChange,
+  currentUser,
 }: {
   status: TaskStatus;
   tasks: TaskItem[];
   projects: Project[];
   onEditTask: (task: TaskItem) => void;
   onStatusChange: (id: string, status: TaskStatus) => void;
+  currentUser?: CurrentUser | null;
 }) {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
-  const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
+  const findProject = (id: string) => projects.find((p) => p.id === id);
 
   return (
     <div className="flex flex-col min-w-[280px] sm:min-w-[300px] lg:min-w-0 lg:flex-1">
@@ -192,15 +247,19 @@ function KanbanColumn({
             {status === 'done' && '완료된 할일이 없습니다'}
           </div>
         ) : (
-          tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              projectName={findProject(task.projectId)}
-              onEdit={() => onEditTask(task)}
-              onStatusChange={(newStatus) => onStatusChange(task.id, newStatus)}
-            />
-          ))
+          tasks.map((task) => {
+            const project = findProject(task.projectId);
+            return (
+              <TaskCard
+                key={task.id}
+                task={task}
+                projectName={project?.name ?? '-'}
+                onEdit={() => onEditTask(task)}
+                onStatusChange={(newStatus) => onStatusChange(task.id, newStatus)}
+                canEdit={canEditTaskStatus(currentUser, task, project)}
+              />
+            );
+          })
         )}
       </div>
     </div>
@@ -214,6 +273,7 @@ export function TasksView({
   projects,
   onStatusChange,
   onEditTask,
+  currentUser,
 }: {
   bu: BU | 'ALL';
   onBuChange: (bu: BU | 'ALL') => void;
@@ -221,6 +281,7 @@ export function TasksView({
   projects: Project[];
   onStatusChange: (id: string, status: TaskItem['status']) => void;
   onEditTask: (task: TaskItem) => void;
+  currentUser?: CurrentUser | null;
 }) {
   const [mobileTab, setMobileTab] = useState<TaskStatus>('todo');
 
@@ -290,15 +351,19 @@ export function TasksView({
               {mobileTab === 'done' && '완료된 할일이 없습니다'}
             </div>
           ) : (
-            tasksByStatus[mobileTab].map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                projectName={projects.find((p) => p.id === task.projectId)?.name ?? '-'}
-                onEdit={() => onEditTask(task)}
-                onStatusChange={(newStatus) => onStatusChange(task.id, newStatus)}
-              />
-            ))
+            tasksByStatus[mobileTab].map((task) => {
+              const project = projects.find((p) => p.id === task.projectId);
+              return (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  projectName={project?.name ?? '-'}
+                  onEdit={() => onEditTask(task)}
+                  onStatusChange={(newStatus) => onStatusChange(task.id, newStatus)}
+                  canEdit={canEditTaskStatus(currentUser, task, project)}
+                />
+              );
+            })
           )}
         </div>
 
@@ -321,6 +386,7 @@ export function TasksView({
             projects={projects}
             onEditTask={onEditTask}
             onStatusChange={onStatusChange}
+            currentUser={currentUser}
           />
         ))}
       </div>
@@ -335,6 +401,7 @@ export function TasksView({
               projects={projects}
               onEditTask={onEditTask}
               onStatusChange={onStatusChange}
+              currentUser={currentUser}
             />
           </div>
         ))}

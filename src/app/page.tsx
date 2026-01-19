@@ -1227,6 +1227,7 @@ export default function HomePage() {
                 }
               }}
               onEditTask={setEditTaskModalOpen}
+              currentUser={user?.profile ? { id: user.profile.id, role: user.profile.role, bu_code: user.profile.bu_code } : null}
             />
           )}
 
@@ -1385,6 +1386,13 @@ export default function HomePage() {
           projects={projects}
           partnersData={partnersData}
           calculateActualAmount={calculateActualAmount}
+          onGoToProject={(projectId) => {
+            const targetProject = projects.find((p) => p.id === projectId);
+            if (targetProject) {
+              setEditFinanceModalOpen(null);
+              setEditProjectModalOpen(targetProject);
+            }
+          }}
         />
       )}
       {isEditTaskModalOpen && (() => {

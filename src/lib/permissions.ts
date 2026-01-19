@@ -215,9 +215,9 @@ export function canEditTask(user: AppUser, task: Task, project: Project): boolea
     if (task.assignee_id === user.id) return true;
   }
   
-  // member: 참여자이거나 본인 할당
+  // member: PM이면 전체, 아니면 본인 할당만
   if (user.role === 'member') {
-    if (project.participants?.includes(user.id)) return true;
+    if (project.pm_id === user.id) return true;
     if (task.assignee_id === user.id) return true;
   }
   

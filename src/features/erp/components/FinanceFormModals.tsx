@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, Building2, User, Calculator, Calendar, Tag, FileText, Wallet, ChevronDown, Check, Search, Users, MapPin } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Building2, User, Calculator, Calendar, Tag, FileText, Wallet, ChevronDown, Check, Search, Users, MapPin, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FinancialEntry, Project, BU, FinancialEntryStatus } from '@/features/erp/types';
 
@@ -640,6 +640,7 @@ export function EditFinanceModal({
   projects,
   partnersData,
   calculateActualAmount,
+  onGoToProject,
 }: {
   entry: FinancialEntry;
   onClose: () => void;
@@ -659,6 +660,7 @@ export function EditFinanceModal({
   projects: Project[];
   partnersData?: { id: number; display_name: string; entity_type: string }[];
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
+  onGoToProject?: (projectId: string) => void;
 }) {
   const entryData = entry as any;
   const partnerId = entryData.partner_id ? String(entryData.partner_id) : '';
@@ -895,36 +897,50 @@ export function EditFinanceModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
-          >
-            취소
-          </button>
-          <button
-            onClick={() => {
-              onSubmit({
-                id: entry.id,
-                type: form.type,
-                projectId: form.projectId,
-                bu: form.bu,
-                cat: form.cat,
-                name: form.name,
-                amount: form.amount,
-                date: form.date,
-                status: form.status,
-                partnerId: form.partnerId,
-                paymentMethod: form.paymentMethod,
-              });
-            }}
-            className={cn(
-              "px-4 py-2 text-sm font-semibold text-white rounded-lg transition",
-              isRevenue ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"
-            )}
-          >
-            저장
-          </button>
+        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2">
+          {onGoToProject && form.projectId && (
+            <button
+              onClick={() => {
+                onGoToProject(form.projectId);
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition"
+            >
+              <ExternalLink className="h-4 w-4" />
+              프로젝트 상세
+            </button>
+          )}
+          {(!onGoToProject || !form.projectId) && <div />}
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
+            >
+              취소
+            </button>
+            <button
+              onClick={() => {
+                onSubmit({
+                  id: entry.id,
+                  type: form.type,
+                  projectId: form.projectId,
+                  bu: form.bu,
+                  cat: form.cat,
+                  name: form.name,
+                  amount: form.amount,
+                  date: form.date,
+                  status: form.status,
+                  partnerId: form.partnerId,
+                  paymentMethod: form.paymentMethod,
+                });
+              }}
+              className={cn(
+                "px-4 py-2 text-sm font-semibold text-white rounded-lg transition",
+                isRevenue ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"
+              )}
+            >
+              저장
+            </button>
+          </div>
         </div>
       </div>
     </div>
