@@ -142,7 +142,6 @@ export function canDeleteProject(user: AppUser, project: Project): boolean {
 
 /**
  * 할일 접근(열람) 권한 체크
- * - 담당자가 지정되지 않은 할일은 leader/admin만 접근 가능
  */
 export function canAccessTask(user: AppUser, task: Task, project: Project): boolean {
   if (user.role === 'admin') return true;
@@ -153,21 +152,18 @@ export function canAccessTask(user: AppUser, task: Task, project: Project): bool
     if (task.assignee_id === user.id) return true;
   }
   
-  // 담당자가 지정되지 않은 할일은 manager/member가 접근 불가
-  const hasAssignee = !!task.assignee_id;
-  
-  // manager: PM이거나 본인 할당 (담당자가 없으면 PM이어도 접근 불가)
+  // manager: PM이거나 참여자이면 프로젝트의 모든 할일 접근 가능
   if (user.role === 'manager') {
+    if (project.pm_id === user.id) return true;
+    if (project.participants?.includes(user.id)) return true;
     if (task.assignee_id === user.id) return true;
-    // 담당자가 있는 경우에만 PM으로서 접근 가능
-    if (hasAssignee && project.pm_id === user.id) return true;
   }
   
-  // member: 본인 할당만 (담당자가 없으면 접근 불가)
+  // member: PM이거나 참여자이면 프로젝트의 모든 할일 접근 가능
   if (user.role === 'member') {
+    if (project.pm_id === user.id) return true;
+    if (project.participants?.includes(user.id)) return true;
     if (task.assignee_id === user.id) return true;
-    // 담당자가 있는 경우에만 참여자로서 접근 가능
-    if (hasAssignee && project.participants?.includes(user.id)) return true;
   }
   
   // viewer/artist: 본인 할당만
