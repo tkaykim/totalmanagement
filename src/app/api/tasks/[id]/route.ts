@@ -47,6 +47,11 @@ async function getTaskWithProjectAndOldStatus(supabase: any, taskId: string) {
 
   if (!project) return null;
 
+  // participants에서 user_id만 추출 (객체 배열인 경우)
+  const participantIds = (project.participants || [])
+    .map((participant: any) => participant.user_id)
+    .filter((id: any): id is string => !!id);
+
   return {
     task: {
       id: task.id,
@@ -59,7 +64,7 @@ async function getTaskWithProjectAndOldStatus(supabase: any, taskId: string) {
       id: project.id,
       bu_code: project.bu_code,
       pm_id: project.pm_id,
-      participants: project.participants || [],
+      participants: participantIds,
     } as PermProject,
     oldStatus: task.status,
     oldTitle: task.title,

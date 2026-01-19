@@ -167,11 +167,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // participants에서 user_id만 추출 (객체 배열인 경우)
+    const participantIds = (project.participants || [])
+      .map((participant: any) => participant.user_id)
+      .filter((id: any): id is string => !!id);
+
     const permProject: PermProject = {
       id: project.id,
       bu_code: project.bu_code,
       pm_id: project.pm_id,
-      participants: project.participants || [],
+      participants: participantIds,
     };
 
     // 할일 생성 권한 체크

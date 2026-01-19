@@ -252,8 +252,17 @@ export function canDeleteTask(user: AppUser, task: Task, project: Project): bool
   // leader: 본인 BU 프로젝트
   if (user.role === 'leader' && project.bu_code === user.bu_code) return true;
   
-  // manager: 본인 PM만
-  if (user.role === 'manager' && project.pm_id === user.id) return true;
+  // manager: 본인 PM 또는 참여자
+  if (user.role === 'manager') {
+    if (project.pm_id === user.id) return true;
+    if (project.participants?.includes(user.id)) return true;
+  }
+  
+  // member: 본인 PM 또는 참여자
+  if (user.role === 'member') {
+    if (project.pm_id === user.id) return true;
+    if (project.participants?.includes(user.id)) return true;
+  }
   
   return false;
 }
