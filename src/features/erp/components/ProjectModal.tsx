@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { X, TrendingUp, TrendingDown, Plus, Eye, EyeOff, Lock } from 'lucide-react';
 import { ModalShell, InputField, SelectField, ModalActions } from './modal-components';
 import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
+import { toast } from '@/hooks/use-toast';
 import type { AppUser, Project as ProjectType } from '@/types/database';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
@@ -224,7 +225,7 @@ export function ProjectModal({
 
   const [participantSelectType, setParticipantSelectType] = useState<'user' | 'partner_worker' | 'partner_company'>('user');
   const [participantSelectId, setParticipantSelectId] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const [hasValidationError, setHasValidationError] = useState<boolean>(false);
 
   const handleAddParticipant = () => {
     if (!participantSelectId) return;
@@ -270,11 +271,16 @@ export function ProjectModal({
 
   const handleSubmit = () => {
     if (!form.name || !form.cat) {
-      setError('프로젝트명과 카테고리는 필수 항목입니다.');
+      setHasValidationError(true);
+      toast({
+        variant: 'destructive',
+        title: '필수 항목 누락',
+        description: '프로젝트명과 카테고리는 필수 항목입니다.',
+      });
       return;
     }
 
-    setError('');
+    setHasValidationError(false);
     const participants = selectedParticipants.map((p) => ({
       user_id: p.type === 'user' ? (p.id as string) : undefined,
       partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
@@ -322,12 +328,6 @@ export function ProjectModal({
       }
     >
       <div className="space-y-4">
-        {error && (
-          <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        )}
-
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* 1. 사업부 선택 */}
           <SelectField
@@ -338,10 +338,38 @@ export function ProjectModal({
           />
 
           {/* 2. 제목 (프로젝트명) */}
-          <InputField label="프로젝트명 *" placeholder={placeholders?.projectName || "프로젝트 이름"} value={form.name} onChange={(v) => setForm((prev) => ({ ...prev, name: v }))} />
+          <div className="space-y-1">
+            <InputField 
+              label="프로젝트명 *" 
+              placeholder={placeholders?.projectName || "프로젝트 이름"} 
+              value={form.name} 
+              onChange={(v) => {
+                setForm((prev) => ({ ...prev, name: v }));
+                if (v && hasValidationError) setHasValidationError(false);
+              }}
+              className={hasValidationError && !form.name ? 'border-red-500 ring-1 ring-red-500' : ''}
+            />
+            {hasValidationError && !form.name && (
+              <p className="text-xs text-red-500">프로젝트명을 입력해주세요</p>
+            )}
+          </div>
 
           {/* 3. 카테고리 */}
-          <InputField label="카테고리 *" placeholder={placeholders?.category || "예: 안무제작"} value={form.cat} onChange={(v) => setForm((prev) => ({ ...prev, cat: v }))} />
+          <div className="space-y-1">
+            <InputField 
+              label="카테고리 *" 
+              placeholder={placeholders?.category || "예: 안무제작"} 
+              value={form.cat} 
+              onChange={(v) => {
+                setForm((prev) => ({ ...prev, cat: v }));
+                if (v && hasValidationError) setHasValidationError(false);
+              }}
+              className={hasValidationError && !form.cat ? 'border-red-500 ring-1 ring-red-500' : ''}
+            />
+            {hasValidationError && !form.cat && (
+              <p className="text-xs text-red-500">카테고리를 입력해주세요</p>
+            )}
+          </div>
 
           {/* 4. 설명 */}
           <div className="md:col-span-2">

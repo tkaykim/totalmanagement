@@ -662,8 +662,7 @@ export function EditFinanceModal({
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
   onGoToProject?: (projectId: string) => void;
 }) {
-  const entryData = entry as any;
-  const partnerId = entryData.partner_id ? String(entryData.partner_id) : '';
+  const partnerId = entry.partner_id ? String(entry.partner_id) : '';
   const partnerEntity = partnersData?.find((p) => String(p.id) === partnerId);
   const [form, setForm] = useState({
     projectId: entry.projectId,
@@ -676,7 +675,7 @@ export function EditFinanceModal({
     status: entry.status,
     partnerEntityFilter: (partnerEntity?.entity_type || '') as EntityType,
     partnerId: partnerId,
-    paymentMethod: (entryData.payment_method || '') as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
+    paymentMethod: (entry.payment_method || '') as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
   });
   const [showPaymentOptions, setShowPaymentOptions] = useState(!!form.partnerId || !!form.paymentMethod);
 

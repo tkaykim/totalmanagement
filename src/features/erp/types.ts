@@ -1,5 +1,5 @@
 export type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
-export type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio' | 'attendance' | 'attendanceAdmin' | 'partners' | 'meetingRooms' | 'equipment' | 'vehicles' | 'workLog' | 'bugReports';
+export type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio' | 'attendance' | 'attendanceAdmin' | 'leave' | 'leaveAdmin' | 'partners' | 'meetingRooms' | 'equipment' | 'vehicles' | 'workLog' | 'bugReports' | 'exclusiveArtists';
 
 export type Project = {
   id: string;
@@ -25,6 +25,7 @@ export type FinancialEntry = {
   amount: number;
   date: string;
   status: FinancialEntryStatus;
+  partner_id?: number | null;
   partner_company_id?: number | null;
   partner_worker_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;

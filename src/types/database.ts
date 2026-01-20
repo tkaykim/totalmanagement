@@ -27,6 +27,11 @@ export type AttendanceType = 'present' | 'late' | 'early_leave' | 'absent' | 'va
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type WorkRequestType = 'external_work' | 'remote_work' | 'overtime' | 'attendance_correction';
 
+// Leave Management Types
+export type LeaveType = 'annual' | 'compensatory' | 'special';
+export type LeaveRequestType = 'annual' | 'half_am' | 'half_pm' | 'compensatory' | 'special';
+export type LeaveGrantType = 'auto_monthly' | 'auto_yearly' | 'manual' | 'compensatory_approved';
+
 export interface ProjectAsset {
   status: AssetStatus;
   version?: string;
@@ -142,8 +147,7 @@ export interface FinancialEntry {
   occurred_at: string;
   status: FinancialStatus;
   memo?: string;
-  partner_company_id?: number | null;
-  partner_worker_id?: number | null;
+  partner_id?: number | null;
   payment_method?: PaymentMethod | null;
   actual_amount?: number | null;
   created_by?: string;

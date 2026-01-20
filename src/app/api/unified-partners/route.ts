@@ -80,6 +80,9 @@ export async function GET(request: NextRequest) {
       const hasBuAccess = partner.partner_bu_access?.some(
         (access: any) => access.bu_code === currentUserBu && ['owner', 'full', 'view'].includes(access.access_level)
       );
+      const hasEditAccess = partner.partner_bu_access?.some(
+        (access: any) => access.bu_code === currentUserBu && ['owner', 'full'].includes(access.access_level)
+      );
       
       // FLOW Leader can view all dancers
       const partnerCategories = partner.partner_category_mappings?.map((m: any) => m.partner_categories?.name) || [];
@@ -88,6 +91,7 @@ export async function GET(request: NextRequest) {
       const canViewDancerAsFlowLeader = isDancer && isFlowLeader;
       
       const canViewDetails = isHeadAdmin || isAdmin || isOwnerBu || hasBuAccess || canViewDancerAsFlowLeader;
+      const canEdit = isHeadAdmin || isAdmin || isOwnerBu || hasEditAccess;
 
       // Extract categories
       const categories = partner.partner_category_mappings?.map((m: any) => ({
@@ -118,11 +122,15 @@ export async function GET(request: NextRequest) {
         website_url: partner.website_url,
         metadata: canViewDetails ? partner.metadata : {},
         owner_bu_code: partner.owner_bu_code,
+        security_level: partner.security_level,
+        sharing_policy: partner.sharing_policy,
         is_active: partner.is_active,
+        tags: partner.tags,
         created_at: partner.created_at,
         categories,
         affiliations,
         can_view_details: canViewDetails,
+        can_edit: canEdit,
         access_status: canViewDetails ? 'granted' : 'request_required',
       };
     });

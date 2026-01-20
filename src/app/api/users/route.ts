@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
         role: body.role || 'member',
         bu_code: body.bu_code || null,
         position: body.position || null,
+        hire_date: body.hire_date || null,
       })
       .select()
       .single();

@@ -524,7 +524,7 @@ export function UnifiedProjectModal({
 
   const [participantSelectType, setParticipantSelectType] = useState<'user' | 'partner_worker' | 'partner_company'>('user');
   const [participantSelectId, setParticipantSelectId] = useState('');
-  const [error, setError] = useState('');
+  const [hasValidationError, setHasValidationError] = useState(false);
   const [showFinanceDetail, setShowFinanceDetail] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -573,11 +573,16 @@ export function UnifiedProjectModal({
 
   const handleSubmit = () => {
     if (!form.name || !form.cat) {
-      setError('프로젝트명과 카테고리는 필수 항목입니다.');
+      setHasValidationError(true);
+      toast({
+        variant: 'destructive',
+        title: '필수 항목 누락',
+        description: '프로젝트명과 카테고리는 필수 항목입니다.',
+      });
       return;
     }
 
-    setError('');
+    setHasValidationError(false);
     const participants = selectedParticipants.map((p) => ({
       user_id: p.type === 'user' ? (p.id as string) : undefined,
       partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
@@ -747,21 +752,47 @@ export function UnifiedProjectModal({
             <div className="space-y-2">
               {isEditable ? (
                 <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="프로젝트명을 입력하세요"
-                    className="flex-1 text-xl font-bold bg-transparent border-b-2 border-slate-300 dark:border-slate-500 text-slate-800 dark:text-slate-100 px-1 py-1 outline-none focus:border-blue-500 placeholder:text-slate-400"
-                  />
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => {
+                        setForm({ ...form, name: e.target.value });
+                        if (e.target.value && hasValidationError) setHasValidationError(false);
+                      }}
+                      placeholder="프로젝트명을 입력하세요 *"
+                      className={cn(
+                        "w-full text-xl font-bold bg-transparent border-b-2 text-slate-800 dark:text-slate-100 px-1 py-1 outline-none focus:border-blue-500 placeholder:text-slate-400",
+                        hasValidationError && !form.name 
+                          ? "border-red-500" 
+                          : "border-slate-300 dark:border-slate-500"
+                      )}
+                    />
+                    {hasValidationError && !form.name && (
+                      <p className="text-xs text-red-500 mt-1">프로젝트명을 입력해주세요</p>
+                    )}
+                  </div>
                   <span className="text-slate-400 dark:text-slate-500">·</span>
-                  <input
-                    type="text"
-                    value={form.cat}
-                    onChange={(e) => setForm({ ...form, cat: e.target.value })}
-                    placeholder="카테고리"
-                    className="w-32 text-sm bg-transparent border-b-2 border-slate-300 dark:border-slate-500 text-slate-600 dark:text-slate-300 px-1 py-1 outline-none focus:border-blue-500 placeholder:text-slate-400"
-                  />
+                  <div className="w-32">
+                    <input
+                      type="text"
+                      value={form.cat}
+                      onChange={(e) => {
+                        setForm({ ...form, cat: e.target.value });
+                        if (e.target.value && hasValidationError) setHasValidationError(false);
+                      }}
+                      placeholder="카테고리 *"
+                      className={cn(
+                        "w-full text-sm bg-transparent border-b-2 text-slate-600 dark:text-slate-300 px-1 py-1 outline-none focus:border-blue-500 placeholder:text-slate-400",
+                        hasValidationError && !form.cat 
+                          ? "border-red-500" 
+                          : "border-slate-300 dark:border-slate-500"
+                      )}
+                    />
+                    {hasValidationError && !form.cat && (
+                      <p className="text-xs text-red-500 mt-1">카테고리 필수</p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-baseline gap-2">
@@ -1226,12 +1257,6 @@ export function UnifiedProjectModal({
               </section>
             )}
 
-            {/* 에러 메시지 */}
-            {error && (
-              <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              </div>
-            )}
           </div>
 
           {/* Footer */}

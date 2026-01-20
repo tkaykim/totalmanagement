@@ -23,6 +23,7 @@ import {
   Car,
   ClipboardList,
   Bug,
+  CalendarDays,
 } from 'lucide-react';
 import {
   useWorkStatus,
@@ -80,6 +81,8 @@ import { ProjectsView } from '@/features/erp/components/ProjectsView';
 import { SettlementView } from '@/features/erp/components/SettlementView';
 import { AttendanceManagementView } from '@/features/attendance/components/AttendanceManagementView';
 import { AttendanceAdminView } from '@/features/attendance/components/AttendanceAdminView';
+import { LeaveManagementView } from '@/features/leave/components/LeaveManagementView';
+import { LeaveAdminView } from '@/features/leave/components/LeaveAdminView';
 import { BuTabs } from '@/features/erp/components/BuTabs';
 import { FinanceRow } from '@/features/erp/components/FinanceRow';
 import { DeleteConfirmModal } from '@/features/erp/components/modal-components';
@@ -96,6 +99,7 @@ import { EquipmentRentalView } from '@/features/reservations/components/Equipmen
 import { VehicleLogView } from '@/features/reservations/components/VehicleLogView';
 import { WorkLogView } from '@/features/work-log';
 import { BugReportsView } from '@/features/bug-reports';
+import { ExclusiveArtistsView } from '@/features/exclusive-artists';
 import {
   Sheet,
   SheetContent,
@@ -952,6 +956,18 @@ export default function HomePage() {
             }}
           />
         )}
+        {/* 전속 아티스트 관리 - GRIGO, HEAD 사업부 */}
+        {visibleMenus.includes('exclusiveArtists') && (
+          <SidebarButton
+            label="전속 아티스트"
+            icon={<Users className="h-4 w-4" />}
+            active={view === 'exclusiveArtists'}
+            onClick={() => {
+              setView('exclusiveArtists');
+              onItemClick?.();
+            }}
+          />
+        )}
         {/* 근무시간 관리 - 모든 사용자 */}
         {visibleMenus.includes('attendance') && (
           <SidebarButton
@@ -960,6 +976,18 @@ export default function HomePage() {
             active={view === 'attendance'}
             onClick={() => {
               setView('attendance');
+              onItemClick?.();
+            }}
+          />
+        )}
+        {/* 휴가 관리 - 모든 사용자 */}
+        {visibleMenus.includes('leave') && (
+          <SidebarButton
+            label="휴가 관리"
+            icon={<CalendarDays className="h-4 w-4" />}
+            active={view === 'leave'}
+            onClick={() => {
+              setView('leave');
               onItemClick?.();
             }}
           />
@@ -1011,26 +1039,45 @@ export default function HomePage() {
         </div>
       </nav>
       {/* 관리자/리더 전용 메뉴 */}
-      {visibleMenus.includes('attendanceAdmin') && (
+      {(visibleMenus.includes('attendanceAdmin') || visibleMenus.includes('leaveAdmin')) && (
         <div className="px-2 sm:px-4 pb-2">
           <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
             관리자 전용
           </p>
-          <button
-            onClick={() => {
-              setView('attendanceAdmin');
-              onItemClick?.();
-            }}
-            className={cn(
-              "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200",
-              view === 'attendanceAdmin'
-                ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg"
-                : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
-            )}
-          >
-            <Users className="h-4 w-4" />
-            <span className="font-medium whitespace-nowrap">전체 근무현황</span>
-          </button>
+          {visibleMenus.includes('attendanceAdmin') && (
+            <button
+              onClick={() => {
+                setView('attendanceAdmin');
+                onItemClick?.();
+              }}
+              className={cn(
+                "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 mb-1",
+                view === 'attendanceAdmin'
+                  ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg"
+                  : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
+              )}
+            >
+              <Users className="h-4 w-4" />
+              <span className="font-medium whitespace-nowrap">전체 근무현황</span>
+            </button>
+          )}
+          {visibleMenus.includes('leaveAdmin') && (
+            <button
+              onClick={() => {
+                setView('leaveAdmin');
+                onItemClick?.();
+              }}
+              className={cn(
+                "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200",
+                view === 'leaveAdmin'
+                  ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg"
+                  : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
+              )}
+            >
+              <CalendarDays className="h-4 w-4" />
+              <span className="font-medium whitespace-nowrap">휴가 승인/관리</span>
+            </button>
+          )}
         </div>
       )}
       <div className="mt-auto p-4 sm:p-6">
@@ -1098,17 +1145,23 @@ export default function HomePage() {
                         ? '근태 관리'
                         : view === 'attendanceAdmin'
                           ? '전체 근무현황'
-                          : view === 'partners'
+                          : view === 'leave'
+                            ? '휴가 관리'
+                            : view === 'leaveAdmin'
+                              ? '휴가 승인/관리'
+                              : view === 'partners'
                             ? '파트너 관리'
-                            : view === 'meetingRooms'
-                              ? '회의실 예약'
-                              : view === 'equipment'
-                                ? '장비 대여'
-                                : view === 'vehicles'
-                                  ? '차량 일지'
-                                  : view === 'bugReports'
-                                    ? '버그 리포트'
-                                    : '조직 현황'
+                            : view === 'exclusiveArtists'
+                              ? '전속 아티스트'
+                              : view === 'meetingRooms'
+                                ? '회의실 예약'
+                                : view === 'equipment'
+                                  ? '장비 대여'
+                                  : view === 'vehicles'
+                                    ? '차량 일지'
+                                    : view === 'bugReports'
+                                      ? '버그 리포트'
+                                      : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
           periodType={periodType}
@@ -1209,6 +1262,8 @@ export default function HomePage() {
               canViewAllBu={(user?.profile?.role === 'admin' || user?.profile?.role === 'leader') && user?.profile?.bu_code === 'HEAD'}
               canViewNetProfit={user?.profile?.role === 'admin' || user?.profile?.role === 'leader' || user?.profile?.role === 'manager'}
               activePeriod={activePeriod}
+              partnerCompaniesData={partnerCompaniesData}
+              partnerWorkersData={partnerWorkersData}
             />
           )}
 
@@ -1278,6 +1333,16 @@ export default function HomePage() {
             <AttendanceAdminView />
           )}
 
+          {view === 'leave' && (
+            <LeaveManagementView 
+              onNavigateToAdmin={() => setView('leaveAdmin')} 
+            />
+          )}
+
+          {view === 'leaveAdmin' && (
+            <LeaveAdminView />
+          )}
+
           {view === 'partners' && (
             <PartnersView
               currentBu={bu === 'ALL' ? 'ALL' : bu}
@@ -1334,6 +1399,10 @@ export default function HomePage() {
             <BugReportsView
               isAdmin={user?.profile?.role === 'admin' || user?.profile?.role === 'leader'}
             />
+          )}
+
+          {view === 'exclusiveArtists' && (
+            <ExclusiveArtistsView />
           )}
 
         </div>
@@ -1632,6 +1701,7 @@ export default function HomePage() {
               throw error;
             }
           }}
+          isAdmin={user?.profile?.role === 'admin'}
         />
       )}
       {isEditUserModalOpen && (
@@ -1649,6 +1719,7 @@ export default function HomePage() {
               console.error('Failed to update user:', error);
             }
           }}
+          isAdmin={user?.profile?.role === 'admin'}
         />
       )}
     </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { 
-  Lock, Mail, Phone, Globe, Users, Edit2, X, 
+  Lock, Mail, Phone, Globe, Users, Edit2, X, Trash2, Star,
   User, Building2, UsersRound, MapPin, Tag 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ const ENTITY_TYPE_ICON_SM: Record<PartnerEntityType, React.ReactNode> = {
   venue: <MapPin className="w-4 h-4" />,
   brand: <Tag className="w-4 h-4" />,
 };
-import { useRequestAccess } from '../hooks/usePartners';
+import { useRequestAccess, useDeletePartner } from '../hooks/usePartners';
 import { useToast } from '@/hooks/use-toast';
 
 interface PartnerDetailModalProps {
@@ -37,6 +37,7 @@ interface PartnerDetailModalProps {
   onClose: () => void;
   partner: Partner | null;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function PartnerDetailModal({
@@ -44,14 +45,37 @@ export function PartnerDetailModal({
   onClose,
   partner,
   onEdit,
+  onDelete,
 }: PartnerDetailModalProps) {
   const { toast } = useToast();
   const [showAccessRequest, setShowAccessRequest] = useState(false);
   const [accessReason, setAccessReason] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const requestAccessMutation = useRequestAccess();
+  const deleteMutation = useDeletePartner();
 
   if (!isOpen || !partner) return null;
+
+  const isGrigoExclusiveArtist = partner.affiliations?.some(
+    a => a.relation_type === 'exclusive' && 
+    (a.display_name?.includes('GRIGO') || a.display_name?.includes('그리고'))
+  );
+
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync(partner.id);
+      toast({ title: '파트너가 삭제되었습니다' });
+      setShowDeleteConfirm(false);
+      onClose();
+    } catch (error) {
+      toast({
+        title: '삭제에 실패했습니다',
+        description: String(error),
+        variant: 'destructive',
+      });
+    }
+  };
 
   const displayName = partner.name_ko || partner.name_en || partner.display_name;
   const entityIcon = ENTITY_TYPE_ICON_MAP[partner.entity_type];
@@ -90,6 +114,11 @@ export function PartnerDetailModal({
               <div className="flex items-center gap-2 mt-1">
                 <span className="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{entityLabel}</span>
                 <span className="px-2 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">{partner.owner_bu_code}</span>
+                {isGrigoExclusiveArtist && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                    <Star className="w-3 h-3" /> 전속
+                  </span>
+                )}
                 {!partner.can_view_details && (
                   <span className="px-2 py-0.5 rounded text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 flex items-center gap-1">
                     <Lock className="w-3 h-3" /> 열람 제한
@@ -105,6 +134,14 @@ export function PartnerDetailModal({
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
               >
                 <Edit2 className="w-4 h-4" /> 수정
+              </button>
+            )}
+            {partner.can_edit && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                <Trash2 className="w-4 h-4" /> 삭제
               </button>
             )}
             <button
@@ -354,6 +391,41 @@ export function PartnerDetailModal({
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-10 rounded-2xl">
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-sm w-full shadow-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100">파트너 삭제</h3>
+                  <p className="text-sm text-slate-500">이 작업은 되돌릴 수 없습니다</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                <strong>{displayName}</strong> 파트너를 정말 삭제하시겠습니까?
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? '삭제 중...' : '삭제'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

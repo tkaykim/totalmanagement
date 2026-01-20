@@ -439,13 +439,22 @@ export function getVisibleMenus(user: AppUser): string[] {
     menus.push('organization');
   }
   
+  // 전속 아티스트 관리: GRIGO 또는 HEAD 사업부의 admin, leader, manager
+  if (canAccessExclusiveArtists(user)) {
+    menus.push('exclusiveArtists');
+  }
+  
   // 모든 사용자가 본인 근무시간은 볼 수 있음
   menus.push('attendance');
+  
+  // 모든 사용자가 휴가 관리 메뉴에 접근 가능
+  menus.push('leave');
   
   // admin과 leader는 전체 근무현황 (승인/반려를 위해)
   // leader는 본인 BU만 조회 가능하지만, 메뉴 자체는 접근 가능
   if (['admin', 'leader'].includes(user.role)) {
     menus.push('attendanceAdmin');
+    menus.push('leaveAdmin');
   }
   
   return menus;
@@ -515,6 +524,55 @@ export function getFinancePermissions(
 }
 
 // ============================================
+// 휴가 권한
+// ============================================
+
+/**
+ * 휴가 신청 승인 권한
+ * - admin: 전체 승인 가능
+ * - leader: 같은 BU만 승인 가능
+ */
+export function canApproveLeaveRequest(
+  user: AppUser,
+  requesterBuCode: BuCode | null
+): boolean {
+  if (user.role === 'admin') return true;
+  if (user.role === 'leader' && user.bu_code === requesterBuCode) return true;
+  return false;
+}
+
+/**
+ * 대체휴무 생성 승인 권한
+ * - HEAD의 admin만 가능
+ */
+export function canApproveCompensatoryRequest(user: AppUser): boolean {
+  return user.role === 'admin' && user.bu_code === 'HEAD';
+}
+
+/**
+ * 특별휴가 부여 권한
+ * - HEAD의 admin만 가능
+ */
+export function canGrantSpecialLeave(user: AppUser): boolean {
+  return user.role === 'admin' && user.bu_code === 'HEAD';
+}
+
+/**
+ * 연차 수동 조정 권한
+ * - HEAD의 admin만 가능
+ */
+export function canAdjustAnnualLeave(user: AppUser): boolean {
+  return user.role === 'admin' && user.bu_code === 'HEAD';
+}
+
+/**
+ * 휴가 관리자 페이지 접근 권한
+ */
+export function canAccessLeaveAdmin(user: AppUser): boolean {
+  return ['admin', 'leader'].includes(user.role);
+}
+
+// ============================================
 // 아티스트 페이지 권한
 // ============================================
 
@@ -533,6 +591,37 @@ export function canAccessArtistPage(user: AppUser): boolean {
   }
   
   return false;
+}
+
+// ============================================
+// 전속 아티스트 관리 권한
+// ============================================
+
+/**
+ * 전속 아티스트 관리 페이지 접근 권한 체크
+ * - GRIGO 또는 HEAD 사업부 소속만 접근 가능
+ * - role이 admin, leader, manager인 경우
+ */
+export function canAccessExclusiveArtists(user: AppUser): boolean {
+  const allowedBuCodes: BuCode[] = ['GRIGO', 'HEAD'];
+  const allowedRoles: Role[] = ['admin', 'leader', 'manager'];
+  
+  if (!user.bu_code) return false;
+  
+  return allowedBuCodes.includes(user.bu_code) && allowedRoles.includes(user.role);
+}
+
+/**
+ * 전속 아티스트 정보 수정 권한 체크
+ * - GRIGO 또는 HEAD 사업부의 admin, leader만 가능
+ */
+export function canEditExclusiveArtist(user: AppUser): boolean {
+  const allowedBuCodes: BuCode[] = ['GRIGO', 'HEAD'];
+  const allowedRoles: Role[] = ['admin', 'leader'];
+  
+  if (!user.bu_code) return false;
+  
+  return allowedBuCodes.includes(user.bu_code) && allowedRoles.includes(user.role);
 }
 
 /**
@@ -578,9 +667,20 @@ export const Permissions = {
     canAccess: canAccessAttendance,
     canEdit: canEditAttendance,
   },
+  leave: {
+    canApproveRequest: canApproveLeaveRequest,
+    canApproveCompensatory: canApproveCompensatoryRequest,
+    canGrantSpecial: canGrantSpecialLeave,
+    canAdjustAnnual: canAdjustAnnualLeave,
+    canAccessAdmin: canAccessLeaveAdmin,
+  },
   artist: {
     canAccessPage: canAccessArtistPage,
     shouldRedirectToArtistPage: shouldRedirectArtistToArtistPage,
+  },
+  exclusiveArtists: {
+    canAccess: canAccessExclusiveArtists,
+    canEdit: canEditExclusiveArtist,
   },
   ui: {
     getVisibleMenus,

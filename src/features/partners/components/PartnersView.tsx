@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { 
   Search, Plus, Users, Filter, ChevronDown, ChevronRight,
   User, Building2, UsersRound, MapPin, Tag, Lock, Edit2,
-  Mail, Phone, ExternalLink, MoreHorizontal
+  Mail, Phone, ExternalLink, MoreHorizontal, Star, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePartners, useCategories } from '../hooks/usePartners';
+import { usePartners, useCategories, useDeletePartner } from '../hooks/usePartners';
+import { useToast } from '@/hooks/use-toast';
 import { Partner, PartnerEntityType, ENTITY_TYPE_LABELS } from '../types';
 import { UnifiedPartnerModal } from './UnifiedPartnerModal';
 import { PartnerDetailModal } from './PartnerDetailModal';
@@ -28,6 +29,7 @@ interface PartnersViewProps {
 }
 
 export function PartnersView({ currentBu = 'ALL', currentUserRole = 'member' }: PartnersViewProps) {
+  const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -45,6 +47,9 @@ export function PartnersView({ currentBu = 'ALL', currentUserRole = 'member' }: 
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [showAccessRequests, setShowAccessRequests] = useState(false);
   const [defaultEntityType, setDefaultEntityType] = useState<PartnerEntityType>('person');
+  const [deleteConfirmPartner, setDeleteConfirmPartner] = useState<Partner | null>(null);
+  
+  const deleteMutation = useDeletePartner();
 
   // Debounce search
   useDebounce(() => {
@@ -86,6 +91,20 @@ export function PartnersView({ currentBu = 'ALL', currentUserRole = 'member' }: 
   const handleOpenDetail = (partner: Partner) => {
     setSelectedPartner(partner);
     setIsDetailModalOpen(true);
+  };
+
+  const handleDelete = async (partner: Partner) => {
+    try {
+      await deleteMutation.mutateAsync(partner.id);
+      toast({ title: '파트너가 삭제되었습니다' });
+      setDeleteConfirmPartner(null);
+    } catch (error) {
+      toast({
+        title: '삭제에 실패했습니다',
+        description: String(error),
+        variant: 'destructive',
+      });
+    }
   };
 
   const isLeaderOrAdmin = ['leader', 'admin'].includes(currentUserRole);
@@ -305,6 +324,7 @@ export function PartnersView({ currentBu = 'ALL', currentUserRole = 'member' }: 
                   partner={partner}
                   onClick={() => handleOpenDetail(partner)}
                   onEdit={() => handleOpenEdit(partner)}
+                  onDelete={() => setDeleteConfirmPartner(partner)}
                 />
               ))}
             </div>
@@ -365,6 +385,41 @@ export function PartnersView({ currentBu = 'ALL', currentUserRole = 'member' }: 
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmPartner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-sm w-full shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100">파트너 삭제</h3>
+                <p className="text-sm text-slate-500">이 작업은 되돌릴 수 없습니다</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+              <strong>{deleteConfirmPartner.name_ko || deleteConfirmPartner.display_name}</strong> 파트너를 정말 삭제하시겠습니까?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteConfirmPartner(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmPartner)}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -373,9 +428,10 @@ interface PartnerListItemProps {
   partner: Partner;
   onClick: () => void;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-function PartnerListItem({ partner, onClick, onEdit }: PartnerListItemProps) {
+function PartnerListItem({ partner, onClick, onEdit, onDelete }: PartnerListItemProps) {
   const displayName = partner.name_ko || partner.name_en || partner.display_name;
   const subName = partner.legal_name;
   const entityIcon = ENTITY_TYPE_ICON_MAP[partner.entity_type];
@@ -384,6 +440,12 @@ function PartnerListItem({ partner, onClick, onEdit }: PartnerListItemProps) {
   // Check if internal employee (has affiliation to company)
   const isInternalRelated = partner.affiliations?.some(a => 
     a.relation_type === 'employee' || a.relation_type === 'exclusive'
+  );
+
+  // Check if GRIGO Entertainment exclusive artist
+  const isGrigoExclusiveArtist = partner.affiliations?.some(
+    a => a.relation_type === 'exclusive' && 
+    (a.display_name?.includes('GRIGO') || a.display_name?.includes('그리고'))
   );
 
   return (
@@ -462,7 +524,12 @@ function PartnerListItem({ partner, onClick, onEdit }: PartnerListItemProps) {
               {!partner.can_view_details && (
                 <Lock className="w-3 h-3 text-slate-400 flex-shrink-0" />
               )}
-              {isInternalRelated && (
+              {isGrigoExclusiveArtist && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 font-medium flex items-center gap-0.5">
+                  <Star className="w-3 h-3" /> 전속
+                </span>
+              )}
+              {isInternalRelated && !isGrigoExclusiveArtist && (
                 <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 font-medium">
                   내부
                 </span>
@@ -509,15 +576,28 @@ function PartnerListItem({ partner, onClick, onEdit }: PartnerListItemProps) {
         <div className="col-span-2 flex items-center justify-end gap-2">
           <span className="text-xs text-slate-400 mr-2">{partner.owner_bu_code}</span>
           {partner.can_edit && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-500 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
-            >
-              <Edit2 className="w-4 h-4" />
-            </button>
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-500 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                title="수정"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                title="삭제"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
           )}
         </div>
       </div>

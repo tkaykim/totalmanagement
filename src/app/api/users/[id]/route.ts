@@ -39,6 +39,7 @@ export async function PATCH(
     if (body.role !== undefined) updateData.role = body.role;
     if (body.bu_code !== undefined) updateData.bu_code = body.bu_code || null;
     if (body.position !== undefined) updateData.position = body.position || null;
+    if (body.hire_date !== undefined) updateData.hire_date = body.hire_date || null;
     updateData.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase

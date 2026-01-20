@@ -44,6 +44,7 @@ export function InputField({
   placeholder,
   type = 'text',
   disabled = false,
+  className = '',
 }: {
   label: string;
   value: string;
@@ -51,6 +52,7 @@ export function InputField({
   placeholder?: string;
   type?: string;
   disabled?: boolean;
+  className?: string;
 }) {
   if (type === 'date') {
     return (
@@ -80,7 +82,8 @@ export function InputField({
           disabled={disabled}
           className={cn(
             "w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300",
-            disabled && "opacity-60 cursor-not-allowed"
+            disabled && "opacity-60 cursor-not-allowed",
+            className
           )}
         />
       </label>
@@ -98,7 +101,8 @@ export function InputField({
         disabled={disabled}
         className={cn(
           "w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300",
-          disabled && "opacity-60 cursor-not-allowed"
+          disabled && "opacity-60 cursor-not-allowed",
+          className
         )}
       />
     </label>

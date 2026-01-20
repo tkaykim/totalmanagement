@@ -79,8 +79,7 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
   amount: number;
   date: string;
   status: 'planned' | 'paid' | 'canceled';
-  partner_company_id?: number | null;
-  partner_worker_id?: number | null;
+  partner_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
   actual_amount?: number | null;
 } {
@@ -88,14 +87,13 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
     id: String(f.id),
     projectId: String(f.project_id),
     bu: f.bu_code,
-    type: f.kind, // 'revenue' 또는 'expense'
-    category: f.category, // 실제 카테고리명 (안무제작, 인건비 등)
+    type: f.kind,
+    category: f.category,
     name: f.name,
     amount: f.amount,
     date: f.occurred_at,
     status: f.status,
-    partner_company_id: f.partner_company_id,
-    partner_worker_id: f.partner_worker_id,
+    partner_id: f.partner_id,
     payment_method: f.payment_method,
     actual_amount: f.actual_amount,
   };

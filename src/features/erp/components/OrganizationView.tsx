@@ -135,7 +135,7 @@ export function OrganizationView({
                     <th className="px-4 py-3 font-bold uppercase tracking-tight">직급</th>
                     <th className="px-4 py-3 font-bold uppercase tracking-tight">역할</th>
                     <th className="px-4 py-3 font-bold uppercase tracking-tight">이메일</th>
-                    <th className="px-4 py-3 font-bold uppercase tracking-tight">가입일</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-tight">입사일</th>
                     <th className="px-4 py-3 font-bold uppercase tracking-tight">관리</th>
                   </tr>
                 </thead>
@@ -184,7 +184,7 @@ export function OrganizationView({
                         </td>
                         <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{user.email || '-'}</td>
                         <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                          {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
+                          {user.hire_date ? new Date(user.hire_date).toLocaleDateString('ko-KR') : '-'}
                         </td>
                         <td className="px-4 py-3">
                           <button
@@ -413,7 +413,7 @@ export function OrganizationView({
                   <th className="px-4 py-3 font-bold uppercase tracking-tight">역할</th>
                   <th className="px-4 py-3 font-bold uppercase tracking-tight">소속사업부</th>
                   <th className="px-4 py-3 font-bold uppercase tracking-tight">직급</th>
-                  <th className="px-4 py-3 font-bold uppercase tracking-tight">가입일</th>
+                  <th className="px-4 py-3 font-bold uppercase tracking-tight">입사일</th>
                   {isAdmin && (
                     <th className="px-4 py-3 font-bold uppercase tracking-tight">관리</th>
                   )}
@@ -464,7 +464,7 @@ export function OrganizationView({
                       </td>
                       <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{u.position || '-'}</td>
                       <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                        {u.created_at ? new Date(u.created_at).toLocaleDateString('ko-KR') : '-'}
+                        {u.hire_date ? new Date(u.hire_date).toLocaleDateString('ko-KR') : '-'}
                       </td>
                       {isAdmin && (
                         <td className="px-4 py-3">

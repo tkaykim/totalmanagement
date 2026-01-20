@@ -8,6 +8,7 @@ export function EditUserModal({
   user,
   onClose,
   onSubmit,
+  isAdmin = false,
 }: {
   user: any;
   onClose: () => void;
@@ -17,7 +18,9 @@ export function EditUserModal({
     role?: string;
     bu_code?: string;
     position?: string;
+    hire_date?: string;
   }) => Promise<void>;
+  isAdmin?: boolean;
 }) {
   const [form, setForm] = useState({
     name: user.name || '',
@@ -25,6 +28,7 @@ export function EditUserModal({
     role: user.role || 'member',
     bu_code: user.bu_code || '',
     position: user.position || '',
+    hire_date: user.hire_date || '',
   });
   const [error, setError] = useState<string>('');
 
@@ -74,6 +78,15 @@ export function EditUserModal({
           value={form.position}
           onChange={(v) => setForm((prev) => ({ ...prev, position: v }))}
         />
+        {isAdmin && (
+          <InputField
+            label="입사일"
+            type="date"
+            placeholder="입사일을 선택하세요"
+            value={form.hire_date}
+            onChange={(v) => setForm((prev) => ({ ...prev, hire_date: v }))}
+          />
+        )}
       </div>
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
@@ -97,6 +110,7 @@ export function EditUserModal({
             role: form.role,
             bu_code: form.bu_code || undefined,
             position: form.position || undefined,
+            hire_date: isAdmin ? (form.hire_date || undefined) : undefined,
           });
         }}
         onClose={onClose}
@@ -109,6 +123,7 @@ export function EditUserModal({
 export function CreateUserModal({
   onClose,
   onSubmit,
+  isAdmin = false,
 }: {
   onClose: () => void;
   onSubmit: (payload: {
@@ -118,7 +133,9 @@ export function CreateUserModal({
     role?: string;
     bu_code?: string;
     position?: string;
+    hire_date?: string;
   }) => Promise<void>;
+  isAdmin?: boolean;
 }) {
   const [form, setForm] = useState({
     name: '',
@@ -128,6 +145,7 @@ export function CreateUserModal({
     role: 'member',
     bu_code: '',
     position: '',
+    hire_date: '',
   });
   const [error, setError] = useState<string>('');
 
@@ -191,6 +209,15 @@ export function CreateUserModal({
           value={form.position}
           onChange={(v) => setForm((prev) => ({ ...prev, position: v }))}
         />
+        {isAdmin && (
+          <InputField
+            label="입사일"
+            type="date"
+            placeholder="입사일을 선택하세요"
+            value={form.hire_date}
+            onChange={(v) => setForm((prev) => ({ ...prev, hire_date: v }))}
+          />
+        )}
       </div>
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
@@ -229,6 +256,7 @@ export function CreateUserModal({
               role: form.role,
               bu_code: form.bu_code || undefined,
               position: form.position || undefined,
+              hire_date: isAdmin ? (form.hire_date || undefined) : undefined,
             });
           } catch (err: any) {
             setError(err.message || '회원 생성 중 오류가 발생했습니다.');
