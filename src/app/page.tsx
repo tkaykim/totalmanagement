@@ -30,6 +30,7 @@ import {
   WorkStatusWelcomeModal,
   WorkStatusLogoutModal,
   WorkStatusOvertimeModal,
+  WorkStatusAutoCheckoutWarningModal,
 } from '@/components/WorkStatusHeader';
 import { WorkStatusFullScreen } from '@/components/WorkStatusFullScreen';
 import { DashboardHeader } from '@/components/DashboardHeader';
@@ -851,6 +852,15 @@ export default function HomePage() {
               console.error('Overtime check-in error:', error);
             }
           }}
+        />
+
+        {/* 강제 퇴근 경고 모달 */}
+        <WorkStatusAutoCheckoutWarningModal
+          show={workStatusHook.showAutoCheckoutWarning}
+          logs={workStatusHook.autoCheckoutLogs}
+          onConfirmOne={workStatusHook.confirmOneAutoCheckout}
+          onRequestCorrection={workStatusHook.requestCorrectionForAutoCheckout}
+          onDismiss={workStatusHook.dismissAutoCheckoutWarning}
         />
       </>
     );

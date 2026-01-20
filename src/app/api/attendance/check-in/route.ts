@@ -15,12 +15,13 @@ export async function POST(request: NextRequest) {
     const today = getTodayKST();
     const now = getNowKSTISO();
 
-    // 강제 퇴근 조치된 기록이 있는지 확인 (정정 신청 대기 중인 기록)
+    // 강제 퇴근 조치된 기록이 있는지 확인 (사용자가 아직 확인하지 않은 기록만)
     const { data: autoCheckoutLogs, error: autoCheckoutError } = await supabase
       .from('attendance_logs')
       .select('*')
       .eq('user_id', user.id)
       .eq('is_auto_checkout', true)
+      .eq('user_confirmed', false)
       .order('work_date', { ascending: false })
       .limit(10);
 

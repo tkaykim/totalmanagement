@@ -60,6 +60,19 @@ const STATUS_CONFIG = {
   },
 };
 
+interface AutoCheckoutLog {
+  id: string;
+  work_date: string;
+  check_in_at: string;
+  check_out_at: string;
+}
+
+interface AutoCheckoutWarning {
+  type: 'auto_checkout_history';
+  message: string;
+  logs: AutoCheckoutLog[];
+}
+
 export function useWorkStatus() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [workStatus, setWorkStatus] = useState<WorkStatus>('OFF_WORK');
@@ -71,6 +84,8 @@ export function useWorkStatus() {
   const [welcomeTitle, setWelcomeTitle] = useState('환영합니다!');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showOvertimeConfirm, setShowOvertimeConfirm] = useState(false);
+  const [showAutoCheckoutWarning, setShowAutoCheckoutWarning] = useState(false);
+  const [autoCheckoutLogs, setAutoCheckoutLogs] = useState<AutoCheckoutLog[]>([]);
 
   // 사용자 정보 상태
   const [userName, setUserName] = useState('');
@@ -166,6 +181,16 @@ export function useWorkStatus() {
           }
         }
 
+        // 강제 퇴근 이력 확인 (로그인 직후 확인)
+        const autoCheckoutRes = await fetch('/api/attendance/pending-auto-checkouts');
+        if (autoCheckoutRes.ok) {
+          const autoCheckoutData = await autoCheckoutRes.json();
+          if (autoCheckoutData.logs && autoCheckoutData.logs.length > 0) {
+            setAutoCheckoutLogs(autoCheckoutData.logs);
+            setShowAutoCheckoutWarning(true);
+          }
+        }
+
         // 상태 결정 로직:
         // 1. 활성 근무 기록이 있으면 (isCheckedIn && !isCheckedOut) 근무 상태 유지
         //    - 자정이 지난 경우(isOvernightWork)도 동일하게 처리
@@ -237,10 +262,21 @@ export function useWorkStatus() {
       // 출근 처리 (OFF_WORK -> WORKING)
       if (previousStatus === 'OFF_WORK' && newStatus === 'WORKING') {
         // 출근 API 호출
-        await fetch('/api/attendance/check-in', {
+        const checkInRes = await fetch('/api/attendance/check-in', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
+        
+        if (checkInRes.ok) {
+          const checkInData = await checkInRes.json();
+          
+          // 강제 퇴근 이력이 있으면 경고 모달 표시
+          if (checkInData._warning && checkInData._warning.type === 'auto_checkout_history') {
+            setAutoCheckoutLogs(checkInData._warning.logs || []);
+            setShowAutoCheckoutWarning(true);
+          }
+        }
+        
         triggerWelcome('출근 완료!', WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)]);
       }
 
@@ -318,6 +354,91 @@ export function useWorkStatus() {
     }
   }, [triggerWelcome]);
 
+  // 강제 퇴근 기록 하나 확인 처리 (시간 수정 없이)
+  const confirmOneAutoCheckout = useCallback(async (logId: string) => {
+    try {
+      const res = await fetch(`/api/attendance/logs/${logId}/correct-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skip_correction: true }),
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || '확인 처리에 실패했습니다.');
+      }
+      
+      // 확인된 로그 제거
+      setAutoCheckoutLogs(prev => {
+        const newLogs = prev.filter(log => log.id !== logId);
+        // 남은 로그가 없으면 모달 닫기
+        if (newLogs.length === 0) {
+          setShowAutoCheckoutWarning(false);
+        }
+        return newLogs;
+      });
+    } catch (error) {
+      console.error('Confirm auto checkout error:', error);
+      alert(error instanceof Error ? error.message : '확인 처리에 실패했습니다.');
+    }
+  }, []);
+
+  // 강제 퇴근 기록에 대한 정정 신청 (관리자 승인 필요)
+  const requestCorrectionForAutoCheckout = useCallback(async (
+    logId: string, 
+    workDate: string, 
+    checkInTime: string, 
+    checkOutTime: string, 
+    reason: string
+  ) => {
+    try {
+      // 1. 정정 신청 생성 (work_requests 테이블)
+      const correctionRes = await fetch('/api/attendance/work-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request_type: 'attendance_correction',
+          start_date: workDate,
+          end_date: workDate,
+          start_time: checkInTime,
+          end_time: checkOutTime,
+          reason: `[자동퇴근 정정] ${reason}`,
+        }),
+      });
+      
+      if (!correctionRes.ok) {
+        const data = await correctionRes.json();
+        throw new Error(data.error || '정정 신청에 실패했습니다.');
+      }
+      
+      // 2. 해당 기록을 user_confirmed = true로 업데이트 (신청했으므로 확인한 것으로 간주)
+      await fetch(`/api/attendance/logs/${logId}/correct-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skip_correction: true }),
+      });
+      
+      alert('정정 신청이 완료되었습니다. 관리자 승인 후 반영됩니다.');
+      
+      // 신청 완료된 로그 제거
+      setAutoCheckoutLogs(prev => {
+        const newLogs = prev.filter(log => log.id !== logId);
+        if (newLogs.length === 0) {
+          setShowAutoCheckoutWarning(false);
+        }
+        return newLogs;
+      });
+    } catch (error) {
+      console.error('Request correction error:', error);
+      alert(error instanceof Error ? error.message : '정정 신청에 실패했습니다.');
+    }
+  }, []);
+
+  // 모달 닫기 (나중에 처리)
+  const dismissAutoCheckoutWarning = useCallback(() => {
+    setShowAutoCheckoutWarning(false);
+  }, []);
+
   return {
     workStatus,
     currentTime,
@@ -332,13 +453,19 @@ export function useWorkStatus() {
     welcomeMsg,
     showLogoutConfirm,
     showOvertimeConfirm,
+    showAutoCheckoutWarning,
+    autoCheckoutLogs,
     setShowLogoutConfirm,
     setShowOvertimeConfirm,
+    setShowAutoCheckoutWarning,
     setWorkStatus,
     triggerWelcome,
     handleStatusChange,
     confirmLogout,
     confirmOvertime,
+    confirmOneAutoCheckout,
+    requestCorrectionForAutoCheckout,
+    dismissAutoCheckoutWarning,
     formatTimeDetail,
     formatDateDetail,
   };
@@ -600,6 +727,196 @@ export function WorkStatusOvertimeModal({
               예, 재개하기
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface AutoCheckoutLogItem {
+  id: string;
+  work_date: string;
+  check_in_at: string;
+  check_out_at: string;
+}
+
+export function WorkStatusAutoCheckoutWarningModal({
+  show,
+  logs,
+  onConfirmOne,
+  onRequestCorrection,
+  onDismiss,
+}: {
+  show: boolean;
+  logs: AutoCheckoutLogItem[];
+  onConfirmOne: (logId: string) => Promise<void>;
+  onRequestCorrection: (logId: string, workDate: string, checkInTime: string, checkOutTime: string, reason: string) => Promise<void>;
+  onDismiss: () => void;
+}) {
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editTime, setEditTime] = useState('');
+  const [editReason, setEditReason] = useState('');
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
+
+  if (!show || logs.length === 0) return null;
+
+  const formatDateTime = (dateTimeStr: string) => {
+    const date = new Date(dateTimeStr);
+    return format(date, 'HH:mm', { locale: ko });
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return format(date, 'M월 d일 (E)', { locale: ko });
+  };
+
+  const handleConfirm = async (logId: string) => {
+    setIsProcessing(logId);
+    try {
+      await onConfirmOne(logId);
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleStartEdit = (logId: string, currentCheckOut: string) => {
+    setEditingLogId(logId);
+    const time = new Date(currentCheckOut);
+    const hours = time.getHours().toString().padStart(2, '0');
+    const minutes = time.getMinutes().toString().padStart(2, '0');
+    setEditTime(`${hours}:${minutes}`);
+    setEditReason('시스템 강제 퇴근 시간 정정');
+  };
+
+  const handleSubmitCorrection = async (log: AutoCheckoutLogItem) => {
+    if (!editTime) {
+      alert('퇴근 시간을 입력해주세요.');
+      return;
+    }
+    if (!editReason.trim()) {
+      alert('정정 사유를 입력해주세요.');
+      return;
+    }
+    
+    setIsProcessing(log.id);
+    try {
+      const checkInTime = formatDateTime(log.check_in_at);
+      await onRequestCorrection(log.id, log.work_date, checkInTime, editTime, editReason);
+      setEditingLogId(null);
+      setEditTime('');
+      setEditReason('');
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLogId(null);
+    setEditTime('');
+    setEditReason('');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[101] backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center flex-shrink-0">
+              <Clock size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">미확인 퇴근 기록 ({logs.length}건)</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">시스템에 의해 자동 퇴근 처리된 기록입니다</p>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 mb-4 max-h-96 overflow-y-auto">
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+              기록이 맞으면 <strong>확인 완료</strong>를, 수정이 필요하면 <strong>정정 신청</strong>을 해주세요.
+            </p>
+            <ul className="space-y-3">
+              {logs.map((log) => (
+                <li key={log.id} className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{formatDate(log.work_date)}</span>
+                    <span className="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full font-medium">
+                      자동 퇴근
+                    </span>
+                  </div>
+                  
+                  <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                    <div className="flex justify-between">
+                      <span>출근: {formatDateTime(log.check_in_at)}</span>
+                      <span>퇴근: {formatDateTime(log.check_out_at)}</span>
+                    </div>
+                  </div>
+
+                  {editingLogId === log.id ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">실제 퇴근:</label>
+                        <input
+                          type="time"
+                          value={editTime}
+                          onChange={(e) => setEditTime(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-slate-600 dark:text-slate-400">정정 사유:</label>
+                        <textarea
+                          value={editReason}
+                          onChange={(e) => setEditReason(e.target.value)}
+                          placeholder="정정 사유를 입력해주세요"
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSubmitCorrection(log)}
+                          disabled={isProcessing === log.id}
+                          className="flex-1 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50"
+                        >
+                          {isProcessing === log.id ? '신청중...' : '정정 신청하기'}
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg"
+                        >
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleStartEdit(log.id, log.check_out_at)}
+                        disabled={isProcessing === log.id}
+                        className="flex-1 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50"
+                      >
+                        정정 신청
+                      </button>
+                      <button
+                        onClick={() => handleConfirm(log.id)}
+                        disabled={isProcessing === log.id}
+                        className="flex-1 py-2 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50"
+                      >
+                        {isProcessing === log.id ? '처리중...' : '확인 완료'}
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <button
+            onClick={onDismiss}
+            className="w-full py-3 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors"
+          >
+            나중에 처리하기
+          </button>
         </div>
       </div>
     </div>
