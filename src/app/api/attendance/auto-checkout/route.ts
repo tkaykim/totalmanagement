@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 import { createActivityLog } from '@/lib/activity-logger';
 import { getTodayKST } from '@/lib/timezone.server';
+import { notifyAutoCheckout } from '@/lib/notification-sender';
 
 const STANDARD_WORK_HOURS = 9; // 기본 근무시간 (시간)
 const MAX_WORK_HOURS = 16; // 최대 근무시간 (시간) - 이 시간 이후 자동 퇴근
@@ -111,6 +112,9 @@ export async function POST(request: NextRequest) {
           reason: isYesterdayOrBefore ? '이전 날짜 퇴근 미기록' : `${MAX_WORK_HOURS}시간 경과`
         },
       });
+
+      // 사용자에게 알림 생성
+      await notifyAutoCheckout(log.user_id, log.work_date, log.id);
 
       processedLogs.push(log.id);
     }

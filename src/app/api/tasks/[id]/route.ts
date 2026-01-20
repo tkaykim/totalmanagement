@@ -9,6 +9,7 @@ import {
   type Project as PermProject 
 } from '@/lib/permissions';
 import { createTaskStatusChangeLog } from '@/lib/activity-logger';
+import { notifyTaskAssigned } from '@/lib/notification-sender';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const [authSupabase, supabase] = await Promise.all([
@@ -41,7 +42,7 @@ async function getTaskWithProjectAndOldStatus(supabase: any, taskId: string) {
   // 프로젝트 정보 조회
   const { data: project } = await supabase
     .from('projects')
-    .select('id, bu_code, pm_id, participants')
+    .select('id, name, bu_code, pm_id, participants')
     .eq('id', task.project_id)
     .single();
 
@@ -66,8 +67,10 @@ async function getTaskWithProjectAndOldStatus(supabase: any, taskId: string) {
       pm_id: project.pm_id,
       participants: participantIds,
     } as PermProject,
+    projectName: project.name,
     oldStatus: task.status,
     oldTitle: task.title,
+    oldAssigneeId: task.assignee_id,
   };
 }
 
@@ -94,7 +97,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    const { task, project, oldStatus, oldTitle } = taskData;
+    const { task, project, projectName, oldStatus, oldTitle, oldAssigneeId } = taskData;
 
     // 수정 권한 체크
     if (!canEditTask(currentUser, task, project)) {
@@ -132,6 +135,16 @@ export async function PATCH(
         data.title || oldTitle || '',
         oldStatus || '',
         body.status
+      ).catch(console.error);
+    }
+
+    // 담당자가 변경된 경우 새 담당자에게 알림 전송
+    if (body.assignee_id && body.assignee_id !== oldAssigneeId && body.assignee_id !== currentUser.id) {
+      notifyTaskAssigned(
+        body.assignee_id,
+        data.title || oldTitle || '',
+        projectName || '',
+        id
       ).catch(console.error);
     }
 

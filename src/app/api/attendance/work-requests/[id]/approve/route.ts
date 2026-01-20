@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createPureClient } from '@/lib/supabase/server';
 import { canApproveRequest } from '@/features/attendance/lib/permissions';
 import { toKSTISOString } from '@/lib/timezone.server';
+import { notifyWorkRequestApproved } from '@/lib/notification-sender';
 import type { AppUser } from '@/types/database';
 
 export async function POST(
@@ -84,6 +85,14 @@ export async function POST(
       .single();
 
     if (fetchUpdatedError) throw fetchUpdatedError;
+
+    // 신청자에게 승인 알림 전송
+    await notifyWorkRequestApproved(
+      workRequest.requester_id,
+      workRequest.request_type,
+      workRequest.start_date,
+      id
+    ).catch(console.error);
 
     return NextResponse.json(updatedRequest);
   } catch (error: any) {

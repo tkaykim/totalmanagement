@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getLeaveTypeFromRequestType } from '@/features/leave/types';
+import { notifyLeaveRequestApproved } from '@/lib/notification-sender';
 
 export async function POST(
   request: NextRequest,
@@ -149,6 +150,14 @@ export async function POST(
         }
       }
     }
+
+    // 신청자에게 승인 알림 전송
+    await notifyLeaveRequestApproved(
+      leaveRequest.requester_id,
+      leaveRequest.leave_type,
+      leaveRequest.start_date,
+      id
+    ).catch(console.error);
 
     return NextResponse.json(updatedRequest);
   } catch (error) {

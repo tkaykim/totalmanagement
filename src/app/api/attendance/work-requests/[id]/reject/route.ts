@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createPureClient } from '@/lib/supabase/server';
 import { canApproveRequest } from '@/features/attendance/lib/permissions';
+import { notifyWorkRequestRejected } from '@/lib/notification-sender';
 import type { AppUser } from '@/types/database';
 
 export async function POST(
@@ -89,6 +90,15 @@ export async function POST(
       .single();
 
     if (fetchUpdatedError) throw fetchUpdatedError;
+
+    // 신청자에게 거절 알림 전송
+    await notifyWorkRequestRejected(
+      workRequest.requester_id,
+      workRequest.request_type,
+      workRequest.start_date,
+      id,
+      rejection_reason.trim()
+    ).catch(console.error);
 
     return NextResponse.json(updatedRequest);
   } catch (error: any) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { PeriodSelector, PeriodType } from './PeriodSelector';
 import {
   useWorkStatus,
@@ -9,6 +9,7 @@ import {
   WorkStatusLogoutModal,
   WorkStatusOvertimeModal,
 } from './WorkStatusHeader';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface DashboardHeaderProps {
   title: string;
@@ -16,7 +17,6 @@ interface DashboardHeaderProps {
   showMobileMenu?: boolean;
   showMonitoring?: boolean;
   showNotification?: boolean;
-  onNotificationClick?: () => void;
   showPeriodSelector?: boolean;
   // 기간 선택 props - 외부에서 제어
   periodType?: PeriodType;
@@ -40,7 +40,6 @@ export function DashboardHeader({
   showMobileMenu = true,
   showMonitoring = true,
   showNotification = true,
-  onNotificationClick,
   showPeriodSelector = true,
   periodType = 'month',
   onPeriodTypeChange,
@@ -123,15 +122,8 @@ export function DashboardHeader({
           </div>
         )}
 
-        {/* 알림 버튼 */}
-        {showNotification && (
-          <button
-            onClick={onNotificationClick}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 transition hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0"
-          >
-            <Bell className="h-3.5 w-3.5 text-slate-600 dark:text-slate-300" />
-          </button>
-        )}
+        {/* 알림 드롭다운 */}
+        {showNotification && <NotificationDropdown />}
       </header>
 
       {/* Work Status Modals - 자체 렌더링 */}

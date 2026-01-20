@@ -9,6 +9,7 @@ import {
   type Project as PermProject 
 } from '@/lib/permissions';
 import { createActivityLog, createTaskAssignedLog } from '@/lib/activity-logger';
+import { notifyTaskAssigned } from '@/lib/notification-sender';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
     // 프로젝트 정보 가져오기
     const { data: project } = await supabase
       .from('projects')
-      .select('id, bu_code, pm_id, participants')
+      .select('id, name, bu_code, pm_id, participants')
       .eq('id', body.project_id)
       .single();
 
@@ -217,13 +218,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 담당자가 생성자와 다르면 담당자에게도 활동 로그 기록
+    // 담당자가 생성자와 다르면 담당자에게도 활동 로그 기록 및 알림 전송
     if (body.assignee_id && body.assignee_id !== currentUser.id) {
       await createTaskAssignedLog(
         body.assignee_id,
         String(data.id),
         data.title,
         currentUser.id
+      );
+      
+      // 담당자에게 알림 전송
+      await notifyTaskAssigned(
+        body.assignee_id,
+        data.title,
+        project.name,
+        String(data.id)
       );
     }
 
