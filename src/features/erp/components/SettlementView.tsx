@@ -130,8 +130,8 @@ export function SettlementView({
           <StatCard
             title="순익"
             value={totalProfit}
-            icon={<ChartLine className="h-5 w-5 text-emerald-500" />}
-            accent="text-emerald-600"
+            icon={<ChartLine className={cn('h-5 w-5', totalProfit >= 0 ? 'text-emerald-500' : 'text-red-500')} />}
+            accent={totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}
           />
         )}
       </div>

@@ -100,9 +100,9 @@ export function SettlementDetailModal({
                 {formatCurrency(settlement.totalExpense)}
               </p>
             </div>
-            <div className="p-3 sm:p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-              <p className="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400">순수익</p>
-              <p className="text-sm sm:text-lg font-bold text-emerald-700 dark:text-emerald-300">
+            <div className={cn('p-3 sm:p-4 rounded-lg', settlement.netProfit >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20')}>
+              <p className={cn('text-[10px] sm:text-xs', settlement.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>순수익</p>
+              <p className={cn('text-sm sm:text-lg font-bold', settlement.netProfit >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300')}>
                 {formatCurrency(settlement.netProfit)}
               </p>
             </div>
@@ -144,7 +144,7 @@ export function SettlementDetailModal({
                         </div>
                         <div>
                           <span className="text-slate-500">순수익: </span>
-                          <span className="text-emerald-600 font-medium">{formatCurrency(project.netProfit)}</span>
+                          <span className={cn('font-medium', project.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600')}>{formatCurrency(project.netProfit)}</span>
                         </div>
                         <div>
                           <span className="text-slate-500">파트너 몫: </span>
@@ -166,7 +166,7 @@ export function SettlementDetailModal({
                       </div>
                       <div>
                         <span className="text-slate-500">순수익: </span>
-                        <span className="text-emerald-600 font-bold">{formatCurrency(settlement.netProfit)}</span>
+                        <span className={cn('font-bold', settlement.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600')}>{formatCurrency(settlement.netProfit)}</span>
                       </div>
                       <div>
                         <span className="text-slate-500">파트너 몫: </span>
@@ -208,7 +208,7 @@ export function SettlementDetailModal({
                         <td className="px-4 py-2 text-right text-red-500">
                           {formatCurrency(project.expense)}
                         </td>
-                        <td className="px-4 py-2 text-right text-emerald-600">
+                        <td className={cn('px-4 py-2 text-right', project.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600')}>
                           {formatCurrency(project.netProfit)}
                         </td>
                         <td className="px-4 py-2 text-center">
@@ -232,7 +232,7 @@ export function SettlementDetailModal({
                     <td className="px-4 py-2 text-right font-bold text-red-500">
                       {formatCurrency(settlement.totalExpense)}
                     </td>
-                    <td className="px-4 py-2 text-right font-bold text-emerald-600">
+                    <td className={cn('px-4 py-2 text-right font-bold', settlement.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600')}>
                       {formatCurrency(settlement.netProfit)}
                     </td>
                     <td className="px-4 py-2"></td>

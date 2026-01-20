@@ -2134,7 +2134,7 @@ function ModalProject({
                 </div>
                 <div className="text-center">
                   <p className="text-[10px] text-slate-400 dark:text-slate-500">순익</p>
-                  <p className="font-bold text-emerald-600">{formatCurrency(entries.periodProfit)}</p>
+                  <p className={cn('font-bold', entries.periodProfit >= 0 ? 'text-emerald-600' : 'text-red-600')}>{formatCurrency(entries.periodProfit)}</p>
                 </div>
               </div>
             </div>
@@ -2390,7 +2390,7 @@ function ModalProject({
             </div>
             <div>
               <p className="text-[10px] text-slate-400 dark:text-slate-500">순이익</p>
-              <p className="font-bold text-emerald-600">{formatCurrency(entries.totalProfit)}</p>
+              <p className={cn('font-bold', entries.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600')}>{formatCurrency(entries.totalProfit)}</p>
             </div>
           </div>
         </div>

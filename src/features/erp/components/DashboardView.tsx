@@ -191,8 +191,8 @@ export function DashboardView({
           <StatCard
             title={selectedBu === 'ALL' ? '선택 기간 순이익' : `${BU_TITLES[selectedBu]} 순이익`}
             value={filteredTotals.totalProfit}
-            icon={<ChartLine className="h-5 w-5 text-emerald-500" />}
-            accent="text-emerald-600"
+            icon={<ChartLine className={cn('h-5 w-5', filteredTotals.totalProfit >= 0 ? 'text-emerald-500' : 'text-red-500')} />}
+            accent={filteredTotals.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}
           />
         </div>
       )}
@@ -529,7 +529,7 @@ export function DashboardView({
                   <div className="text-right">
                     <p className="text-xs font-black text-blue-600 dark:text-blue-400">{formatCurrency(item.revenue)}</p>
                     <p className="mt-0.5 text-[10px] font-bold text-red-500 dark:text-red-400">- {formatCurrency(item.expense)}</p>
-                    <p className="mt-1 text-[11px] font-black text-emerald-600 dark:text-emerald-400">Net: {formatCurrency(item.profit)}</p>
+                    <p className={cn('mt-1 text-[11px] font-black', item.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>Net: {formatCurrency(item.profit)}</p>
                   </div>
                 </div>
               ))}
