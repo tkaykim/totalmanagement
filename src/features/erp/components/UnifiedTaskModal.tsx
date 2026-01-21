@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, ListTodo, Calendar, User, FileText, Flag, ChevronDown, Check, AlertCircle } from 'lucide-react';
+import { X, ListTodo, Calendar, User, FileText, Flag, ChevronDown, Check, AlertCircle, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { BU, BU_TITLES, Project, TaskItem, TaskPriority } from '../types';
@@ -347,6 +347,132 @@ function ClickablePriorityChip({
   );
 }
 
+type SearchDropdownOption = {
+  value: string;
+  label: string;
+  subLabel?: string;
+};
+
+function SearchDropdown({
+  options,
+  value,
+  onChange,
+  placeholder = '검색...',
+  emptyLabel = '선택 안함',
+  disabled = false,
+}: {
+  options: SearchDropdownOption[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  emptyLabel?: string;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredOptions = options
+    .filter((opt) =>
+      opt.label.toLowerCase().includes(search.toLowerCase()) ||
+      (opt.subLabel && opt.subLabel.toLowerCase().includes(search.toLowerCase()))
+    )
+    .sort((a, b) => a.label.localeCompare(b.label, 'ko'));
+
+  const selectedOption = options.find((opt) => opt.value === value);
+  const displayLabel = selectedOption ? selectedOption.label : emptyLabel;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={cn(
+          "w-full flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300",
+          disabled && "opacity-60 cursor-not-allowed"
+        )}
+      >
+        <span className={!value ? "text-slate-400" : ""}>{displayLabel}</span>
+        <ChevronDown className={cn("h-4 w-4 text-slate-400 transition", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-700">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={placeholder}
+                autoFocus
+                className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 outline-none focus:border-blue-400"
+              />
+            </div>
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => {
+                onChange('');
+                setIsOpen(false);
+                setSearch('');
+              }}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-700",
+                !value && "bg-blue-50 dark:bg-blue-900/30"
+              )}
+            >
+              <span className="text-slate-500 dark:text-slate-400">{emptyLabel}</span>
+              {!value && <Check className="h-4 w-4 text-blue-600" />}
+            </button>
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-slate-400 text-center">검색 결과가 없습니다</div>
+            ) : (
+              filteredOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-700",
+                    value === opt.value && "bg-blue-50 dark:bg-blue-900/30"
+                  )}
+                >
+                  <div>
+                    <span className="text-slate-900 dark:text-slate-100">{opt.label}</span>
+                    {opt.subLabel && (
+                      <span className="ml-2 text-xs text-slate-400">{opt.subLabel}</span>
+                    )}
+                  </div>
+                  {value === opt.value && <Check className="h-4 w-4 text-blue-600" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export type UnifiedTaskModalProps = {
   mode: ModalMode;
   task?: TaskItem | null;
@@ -627,28 +753,23 @@ export function UnifiedTaskModal({
                 {isEditable ? (
                   assigneeMode === 'select' ? (
                     <div className="space-y-1">
-                      <select
+                      <SearchDropdown
+                        options={memberList.map((member) => ({
+                          value: member.id,
+                          label: member.name,
+                        }))}
                         value={form.assignee_id}
-                        onChange={(e) => {
-                          if (e.target.value === '__CUSTOM__') {
-                            setAssigneeMode('custom');
-                            setForm((prev) => ({ ...prev, assignee_id: '', assignee: '' }));
-                          } else {
-                            const selected = assigneeOptions.find(opt => opt.id === e.target.value);
-                            setForm((prev) => ({ 
-                              ...prev, 
-                              assignee_id: e.target.value,
-                              assignee: selected?.label || ''
-                            }));
-                          }
+                        onChange={(value) => {
+                          const selected = memberList.find(m => m.id === value);
+                          setForm((prev) => ({ 
+                            ...prev, 
+                            assignee_id: value,
+                            assignee: selected?.name || ''
+                          }));
                         }}
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
-                      >
-                        {assigneeOptions.map((opt) => (
-                          <option key={opt.id || 'empty'} value={opt.id}>{opt.label}</option>
-                        ))}
-                        <option value="__CUSTOM__">직접 입력</option>
-                      </select>
+                        placeholder="담당자 검색..."
+                        emptyLabel="담당자 선택"
+                      />
                       <button
                         type="button"
                         onClick={() => setAssigneeMode('custom')}
