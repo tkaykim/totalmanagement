@@ -868,8 +868,9 @@ export default function HomePage() {
 
 
   const SidebarContent = ({ onItemClick }: { onItemClick?: () => void }) => (
-    <>
-      <div className="p-4 sm:p-8">
+    <div className="flex h-full flex-col">
+      {/* 헤더 - 고정 */}
+      <div className="shrink-0 p-4 sm:p-8">
         <button
           onClick={() => {
             setView('dashboard');
@@ -883,7 +884,8 @@ export default function HomePage() {
           </p>
         </button>
       </div>
-      <nav className="flex-1 space-y-2 px-2 sm:px-4">
+      {/* 메뉴 영역 - 스크롤 가능 */}
+      <nav className="flex-1 overflow-y-auto space-y-2 px-2 sm:px-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
         {/* 대시보드 - 모든 사용자 */}
         {visibleMenus.includes('dashboard') && (
           <SidebarButton
@@ -1047,53 +1049,53 @@ export default function HomePage() {
             }}
           />
         </div>
+        {/* 관리자/리더 전용 메뉴 - nav 안으로 이동 */}
+        {(visibleMenus.includes('attendanceAdmin') || visibleMenus.includes('leaveAdmin')) && (
+          <div className="mt-2 pt-2 border-t border-slate-700 pb-2">
+            <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              관리자 전용
+            </p>
+            {visibleMenus.includes('attendanceAdmin') && (
+              <button
+                onClick={() => {
+                  setView('attendanceAdmin');
+                  onItemClick?.();
+                }}
+                className={cn(
+                  "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 mb-1",
+                  view === 'attendanceAdmin'
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg"
+                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
+                )}
+              >
+                <Users className="h-4 w-4" />
+                <span className="font-medium whitespace-nowrap">전체 근무현황</span>
+              </button>
+            )}
+            {visibleMenus.includes('leaveAdmin') && (
+              <button
+                onClick={() => {
+                  setView('leaveAdmin');
+                  onItemClick?.();
+                }}
+                className={cn(
+                  "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200",
+                  view === 'leaveAdmin'
+                    ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg"
+                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
+                )}
+              >
+                <CalendarDays className="h-4 w-4" />
+                <span className="font-medium whitespace-nowrap">휴가 승인/관리</span>
+              </button>
+            )}
+          </div>
+        )}
+        {/* nav 내부 하단 패딩 */}
+        <div className="pb-4" />
       </nav>
-      {/* 관리자/리더 전용 메뉴 */}
-      {(visibleMenus.includes('attendanceAdmin') || visibleMenus.includes('leaveAdmin')) && (
-        <div className="px-2 sm:px-4 pb-2">
-          <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-            관리자 전용
-          </p>
-          {visibleMenus.includes('attendanceAdmin') && (
-            <button
-              onClick={() => {
-                setView('attendanceAdmin');
-                onItemClick?.();
-              }}
-              className={cn(
-                "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 mb-1",
-                view === 'attendanceAdmin'
-                  ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg"
-                  : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
-              )}
-            >
-              <Users className="h-4 w-4" />
-              <span className="font-medium whitespace-nowrap">전체 근무현황</span>
-            </button>
-          )}
-          {visibleMenus.includes('leaveAdmin') && (
-            <button
-              onClick={() => {
-                setView('leaveAdmin');
-                onItemClick?.();
-              }}
-              className={cn(
-                "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200",
-                view === 'leaveAdmin'
-                  ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg"
-                  : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
-              )}
-            >
-              <CalendarDays className="h-4 w-4" />
-              <span className="font-medium whitespace-nowrap">휴가 승인/관리</span>
-            </button>
-          )}
-        </div>
-      )}
-      <div className="mt-auto p-4 sm:p-6">
-        <div className="border-t border-slate-700"></div>
-      </div>
-      <div className="p-4 sm:p-6 pt-0">
+      {/* 하단 사용자 정보 - 고정 */}
+      <div className="shrink-0 border-t border-slate-700 p-4 sm:p-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-3 sm:p-4">
           <p className="mb-1 text-[9px] sm:text-[10px] uppercase tracking-tighter text-slate-500 dark:text-slate-400">
             Signed in as
@@ -1116,7 +1118,7 @@ export default function HomePage() {
           로그아웃
         </button>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -1128,13 +1130,11 @@ export default function HomePage() {
 
       {/* 모바일 사이드바 */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="w-[280px] sm:w-[320px] bg-slate-900 text-white p-0 border-slate-700">
+        <SheetContent side="left" className="w-[280px] sm:w-[320px] bg-slate-900 text-white p-0 border-slate-700 overflow-hidden">
           <SheetHeader className="sr-only">
             <SheetTitle>메뉴</SheetTitle>
           </SheetHeader>
-          <div className="flex h-full flex-col">
-            <SidebarContent onItemClick={() => setMobileMenuOpen(false)} />
-          </div>
+          <SidebarContent onItemClick={() => setMobileMenuOpen(false)} />
         </SheetContent>
       </Sheet>
 
