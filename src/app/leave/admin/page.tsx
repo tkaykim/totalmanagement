@@ -179,93 +179,125 @@ export default function LeaveAdminPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              휴가 관리 (관리자)
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              휴가 신청 승인, 휴가 부여, 팀원 현황을 관리합니다.
-            </p>
+      <main className="max-w-6xl mx-auto p-4 md:p-6">
+        {/* 헤더 */}
+        <div className="mb-4 md:mb-6">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">
+                휴가 관리
+              </h1>
+              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 md:mt-1">
+                승인, 부여, 팀원 현황 관리
+              </p>
+            </div>
+            {isHeadAdmin && (
+              <>
+                {/* 데스크톱 버튼 */}
+                <Button onClick={() => setGrantModalOpen(true)} className="hidden md:flex">
+                  <Gift className="h-4 w-4 mr-2" />
+                  휴가 부여
+                </Button>
+                {/* 모바일 FAB */}
+                <div className="md:hidden fixed bottom-4 right-4 z-30">
+                  <Button
+                    onClick={() => setGrantModalOpen(true)}
+                    className="h-14 w-14 rounded-full p-0 shadow-lg"
+                  >
+                    <Gift className="h-6 w-6" />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
-          {isHeadAdmin && (
-            <Button onClick={() => setGrantModalOpen(true)}>
-              <Gift className="h-4 w-4 mr-2" />
-              휴가 부여
-            </Button>
-          )}
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                  <CheckSquare className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+        {/* Summary Cards - 모바일: 가로 스크롤 */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-4 mb-4 md:mb-6 scrollbar-hide">
+          <div className="flex-shrink-0 min-w-[120px] md:min-w-0">
+            <Card className="h-full">
+              <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-2 md:p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                    <CheckSquare className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-xl md:text-2xl font-bold">{pendingItems.length}</p>
+                    <p className="text-xs md:text-sm text-slate-500">승인 대기</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{pendingItems.length}</p>
-                  <p className="text-sm text-slate-500">승인 대기</p>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="flex-shrink-0 min-w-[120px] md:min-w-0">
+            <Card className="h-full">
+              <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-2 md:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <Users className="h-5 w-5 md:h-6 md:w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-xl md:text-2xl font-bold">{teamStats.length}</p>
+                    <p className="text-xs md:text-sm text-slate-500">관리 인원</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="flex-shrink-0 min-w-[120px] md:min-w-0">
+            <Card className="h-full">
+              <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-2 md:p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                    <Calendar className="h-5 w-5 md:h-6 md:w-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-xl md:text-2xl font-bold">
+                      {allRequests.filter(r => r.status === 'approved').length}
+                    </p>
+                    <p className="text-xs md:text-sm text-slate-500">이번달 승인</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{teamStats.length}</p>
-                  <p className="text-sm text-slate-500">관리 대상 인원</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                  <Calendar className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    {allRequests.filter(r => r.status === 'approved').length}
-                  </p>
-                  <p className="text-sm text-slate-500">이번 달 승인</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="pending">
-          <TabsList>
-            <TabsTrigger value="pending" className="gap-2">
+          <TabsList className="w-full md:w-auto grid grid-cols-3 md:flex h-auto p-1">
+            <TabsTrigger value="pending" className="gap-1.5 py-2 px-2 md:px-4 text-xs md:text-sm relative">
               <CheckSquare className="h-4 w-4" />
-              승인 대기
+              <span className="hidden sm:inline">승인 대기</span>
+              <span className="sm:hidden">대기</span>
               {pendingItems.length > 0 && (
-                <span className="ml-1 px-2 py-0.5 text-xs bg-yellow-500 text-white rounded-full">
+                <span className="absolute -top-1 -right-1 md:relative md:top-0 md:right-0 md:ml-1 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs bg-yellow-500 text-white rounded-full">
                   {pendingItems.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="team" className="gap-2">
+            <TabsTrigger value="team" className="gap-1.5 py-2 px-2 md:px-4 text-xs md:text-sm">
               <Users className="h-4 w-4" />
-              팀원 현황
+              <span className="hidden sm:inline">팀원 현황</span>
+              <span className="sm:hidden">팀원</span>
             </TabsTrigger>
-            <TabsTrigger value="all" className="gap-2">
+            <TabsTrigger value="all" className="gap-1.5 py-2 px-2 md:px-4 text-xs md:text-sm">
               <Calendar className="h-4 w-4" />
-              전체 신청
+              <span className="hidden sm:inline">전체 신청</span>
+              <span className="sm:hidden">전체</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="mt-4">
-            <Card>
+            {/* 모바일: 카드 없이 */}
+            <div className="md:hidden">
+              <LeaveApprovalQueue
+                items={pendingItems}
+                onRefresh={fetchData}
+              />
+            </div>
+            {/* 데스크톱: 카드 */}
+            <Card className="hidden md:block">
               <CardHeader>
                 <CardTitle className="text-lg">승인 대기 목록</CardTitle>
               </CardHeader>
@@ -279,7 +311,29 @@ export default function LeaveAdminPage() {
           </TabsContent>
 
           <TabsContent value="team" className="mt-4">
-            <Card>
+            {/* 모바일 필터 */}
+            {currentUser?.role === 'admin' && (
+              <div className="md:hidden mb-3">
+                <Select value={selectedBu} onValueChange={setSelectedBu}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="사업부 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BU_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {/* 모바일: 카드 없이 */}
+            <div className="md:hidden">
+              <TeamLeaveStats stats={teamStats} onRefresh={fetchData} />
+            </div>
+            {/* 데스크톱: 카드 */}
+            <Card className="hidden md:block">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">팀원 휴가 현황</CardTitle>
                 {currentUser?.role === 'admin' && (
@@ -298,13 +352,21 @@ export default function LeaveAdminPage() {
                 )}
               </CardHeader>
               <CardContent>
-                <TeamLeaveStats stats={teamStats} />
+                <TeamLeaveStats stats={teamStats} onRefresh={fetchData} />
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="all" className="mt-4">
-            <Card>
+            {/* 모바일: 카드 없이 */}
+            <div className="md:hidden">
+              <LeaveRequestList
+                requests={allRequests}
+                showRequester
+              />
+            </div>
+            {/* 데스크톱: 카드 */}
+            <Card className="hidden md:block">
               <CardHeader>
                 <CardTitle className="text-lg">전체 휴가 신청</CardTitle>
               </CardHeader>
@@ -317,6 +379,9 @@ export default function LeaveAdminPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* 모바일에서 FAB 버튼 영역 확보 */}
+        {isHeadAdmin && <div className="h-20 md:hidden" />}
       </main>
 
       {/* Modals */}

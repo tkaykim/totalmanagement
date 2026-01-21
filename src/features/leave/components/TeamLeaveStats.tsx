@@ -65,7 +65,84 @@ export function TeamLeaveStats({ stats, isLoading, onRefresh, showHireDateEdit =
 
   return (
     <>
-      <div className="rounded-lg border dark:border-slate-700 overflow-hidden">
+      {/* 모바일: 카드 레이아웃 */}
+      <div className="md:hidden space-y-3">
+        {stats.map((stat) => (
+          <div
+            key={stat.user_id}
+            className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+          >
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium">{stat.user_name}</span>
+                  {stat.position && (
+                    <span className="text-xs text-slate-500">{stat.position}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {stat.bu_code && (
+                    <Badge variant="outline" className="text-[10px]">
+                      {BU_DISPLAY_NAMES[stat.bu_code] || stat.bu_code}
+                    </Badge>
+                  )}
+                  <span className="text-xs text-slate-500">
+                    {stat.hire_date ? format(new Date(stat.hire_date), 'yyyy.MM.dd') : '입사일 미설정'}
+                  </span>
+                  {showHireDateEdit && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0"
+                      onClick={() => setEditingUser({
+                        id: stat.user_id,
+                        name: stat.user_name,
+                        hire_date: stat.hire_date,
+                      })}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 휴가 현황 - 3열 그리드 */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">연차</p>
+                <p className="text-sm font-medium">
+                  <span className={stat.annual_remaining <= 0 ? 'text-red-500' : 'text-blue-600 dark:text-blue-400'}>
+                    {stat.annual_remaining}
+                  </span>
+                  <span className="text-slate-400">/{stat.annual_total}</span>
+                </p>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">대체휴무</p>
+                <p className="text-sm font-medium">
+                  <span className={stat.compensatory_remaining <= 0 ? 'text-slate-400' : 'text-emerald-600 dark:text-emerald-400'}>
+                    {stat.compensatory_remaining}
+                  </span>
+                  <span className="text-slate-400">/{stat.compensatory_total}</span>
+                </p>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">특별휴가</p>
+                <p className="text-sm font-medium">
+                  <span className={stat.special_remaining <= 0 ? 'text-slate-400' : 'text-purple-600 dark:text-purple-400'}>
+                    {stat.special_remaining}
+                  </span>
+                  <span className="text-slate-400">/{stat.special_total}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 데스크톱: 테이블 레이아웃 */}
+      <div className="hidden md:block rounded-lg border dark:border-slate-700 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50 dark:bg-slate-800">
