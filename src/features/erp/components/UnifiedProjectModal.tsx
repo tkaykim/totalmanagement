@@ -27,8 +27,8 @@ type TaskStatus = 'todo' | 'in-progress' | 'done';
 type TaskEntry = {
   id: string;
   title: string;
+  assignee_id?: string;
   assignee: string;
-  assigneeName?: string;
   dueDate: string;
   status: TaskStatus;
 };
@@ -271,10 +271,17 @@ function TasksSection({
     done: tasks.filter((t) => t.status === 'done').length,
   };
 
-  const getAssigneeName = (assignee: string, assigneeName?: string) => {
-    if (assigneeName) return assigneeName;
-    const user = usersData?.users.find((u: any) => u.id === assignee);
-    return user?.name || '미지정';
+  const getAssigneeName = (task: TaskEntry) => {
+    // assignee(이름)가 있으면 그대로 반환
+    if (task.assignee && task.assignee.trim()) {
+      return task.assignee;
+    }
+    // assignee_id로 users에서 찾아서 이름 반환
+    if (task.assignee_id) {
+      const user = usersData?.users.find((u: any) => u.id === task.assignee_id);
+      if (user?.name) return user.name;
+    }
+    return '미지정';
   };
 
   const formatDueDate = (date: string) => {
@@ -389,7 +396,7 @@ function TasksSection({
                         {task.title}
                       </p>
                       <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <span>{getAssigneeName(task.assignee, task.assigneeName)}</span>
+                        <span>{getAssigneeName(task)}</span>
                         {dueInfo && (
                           <>
                             <span>·</span>

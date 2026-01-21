@@ -398,13 +398,15 @@ export function UnifiedTaskModal({
   
   const hasPreselectedProject = !!defaultProjectId || !!task?.projectId;
 
+  const currentUser = usersData?.currentUser;
+
   const [form, setForm] = useState({
     title: task?.title || '',
     description: task?.description || '',
     bu: task?.bu || defaultProject?.bu || defaultBu,
     projectId: task?.projectId || defaultProject?.id || '',
-    assignee_id: task?.assignee_id || '',
-    assignee: task?.assignee || '',
+    assignee_id: task?.assignee_id || (!task && currentUser?.id) || '',
+    assignee: task?.assignee || (!task && currentUser?.name) || '',
     dueDate: task?.dueDate || '',
     status: (task?.status || 'todo') as TaskStatus,
     priority: (task?.priority || 'medium') as TaskPriority,

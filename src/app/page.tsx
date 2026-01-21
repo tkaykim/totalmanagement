@@ -1318,8 +1318,8 @@ export default function HomePage() {
             .map((t) => ({
               id: t.id,
               title: t.title,
+              assignee_id: t.assignee_id,
               assignee: t.assignee,
-              assigneeName: usersData?.users.find((u: any) => u.id === t.assignee)?.name,
               dueDate: t.dueDate,
               status: t.status,
             }))}
