@@ -161,53 +161,95 @@ export default function LeavePage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              휴가 관리
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              연차, 대체휴무, 특별휴가를 신청하고 관리하세요.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setCompModalOpen(true)}
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              대체휴무 신청
-            </Button>
-            <Button onClick={() => setLeaveModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              휴가 신청
-            </Button>
+      <main className="max-w-5xl mx-auto p-4 md:p-6">
+        {/* 모바일 헤더 */}
+        <div className="mb-4 md:mb-6">
+          <div className="flex items-start justify-between gap-2 md:items-center">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">
+                휴가 관리
+              </h1>
+              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 md:mt-1">
+                연차, 대체휴무, 특별휴가 신청
+              </p>
+            </div>
+            {/* 데스크톱 액션 버튼 */}
+            <div className="hidden md:flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setCompModalOpen(true)}
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                대체휴무 신청
+              </Button>
+              <Button onClick={() => setLeaveModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                휴가 신청
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Balance Cards */}
         <LeaveBalanceCard summary={balanceSummary} />
 
+        {/* 모바일 액션 버튼 - FAB 스타일 */}
+        <div className="md:hidden fixed bottom-4 right-4 z-30 flex flex-col gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCompModalOpen(true)}
+            className="h-12 w-12 rounded-full p-0 shadow-lg bg-white dark:bg-slate-800 border-2"
+          >
+            <Clock className="h-5 w-5" />
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setLeaveModalOpen(true)}
+            className="h-14 w-14 rounded-full p-0 shadow-lg"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </div>
+
         {/* Tabs */}
-        <Tabs defaultValue="requests" className="mt-8">
-          <TabsList>
-            <TabsTrigger value="requests" className="gap-2">
+        <Tabs defaultValue="requests" className="mt-6 md:mt-8">
+          {/* 모바일용 탭: 작고 컴팩트하게 */}
+          <TabsList className="w-full md:w-auto grid grid-cols-3 md:flex h-auto p-1">
+            <TabsTrigger 
+              value="requests" 
+              className="gap-1.5 py-2 px-2 md:px-4 text-xs md:text-sm"
+            >
               <CalendarDays className="h-4 w-4" />
-              신청 내역
+              <span className="hidden sm:inline">신청 내역</span>
+              <span className="sm:hidden">신청</span>
             </TabsTrigger>
-            <TabsTrigger value="compensatory" className="gap-2">
+            <TabsTrigger 
+              value="compensatory" 
+              className="gap-1.5 py-2 px-2 md:px-4 text-xs md:text-sm"
+            >
               <Clock className="h-4 w-4" />
-              대체휴무 신청
+              <span className="hidden sm:inline">대체휴무</span>
+              <span className="sm:hidden">대체</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
+            <TabsTrigger 
+              value="history" 
+              className="gap-1.5 py-2 px-2 md:px-4 text-xs md:text-sm"
+            >
               <History className="h-4 w-4" />
               이력
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="requests" className="mt-4">
-            <Card>
+            {/* 모바일: 카드 없이 직접 표시, 데스크톱: 카드로 감싸기 */}
+            <div className="md:hidden">
+              <LeaveRequestList
+                requests={requests}
+                onCancel={handleCancelRequest}
+              />
+            </div>
+            <Card className="hidden md:block">
               <CardHeader>
                 <CardTitle className="text-lg">휴가 사용 신청</CardTitle>
               </CardHeader>
@@ -221,7 +263,52 @@ export default function LeavePage() {
           </TabsContent>
 
           <TabsContent value="compensatory" className="mt-4">
-            <Card>
+            {/* 모바일: 직접 표시 */}
+            <div className="md:hidden">
+              {compRequests.length === 0 ? (
+                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                  <Clock className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">대체휴무 생성 신청 내역이 없습니다.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {compRequests.map((req) => (
+                    <div
+                      key={req.id}
+                      className={`p-3 rounded-xl border-l-4 ${
+                        req.status === 'pending'
+                          ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20'
+                          : req.status === 'approved'
+                          ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
+                          : 'border-red-400 bg-red-50 dark:bg-red-900/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{req.days}일 신청</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              req.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400'
+                                : req.status === 'approved'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-400'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400'
+                            }`}>
+                              {req.status === 'pending' ? '대기' : req.status === 'approved' ? '승인' : '반려'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+                            {req.reason}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* 데스크톱: 카드 */}
+            <Card className="hidden md:block">
               <CardHeader>
                 <CardTitle className="text-lg">대체휴무 생성 신청</CardTitle>
               </CardHeader>
@@ -264,7 +351,12 @@ export default function LeavePage() {
           </TabsContent>
 
           <TabsContent value="history" className="mt-4">
-            <Card>
+            {/* 모바일: 직접 표시 */}
+            <div className="md:hidden">
+              <LeaveHistory grants={grants} requests={requests} />
+            </div>
+            {/* 데스크톱: 카드 */}
+            <Card className="hidden md:block">
               <CardHeader>
                 <CardTitle className="text-lg">휴가 부여/사용 이력</CardTitle>
               </CardHeader>
@@ -274,6 +366,9 @@ export default function LeavePage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* 모바일에서 FAB 버튼 영역 확보 */}
+        <div className="h-24 md:hidden" />
       </main>
 
       {/* Modals */}
