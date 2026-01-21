@@ -115,7 +115,91 @@ export function LeaveApprovalQueue({ items, isLoading, onRefresh }: LeaveApprova
 
   return (
     <>
-      <div className="rounded-lg border dark:border-slate-700 overflow-hidden">
+      {/* 모바일: 카드 레이아웃 */}
+      <div className="md:hidden space-y-3">
+        {items.map((item) => {
+          const dateRange = item.start_date && item.end_date
+            ? item.start_date === item.end_date
+              ? format(new Date(item.start_date), 'M월 d일', { locale: ko })
+              : `${format(new Date(item.start_date), 'M/d', { locale: ko })} ~ ${format(new Date(item.end_date), 'M/d', { locale: ko })}`
+            : '-';
+
+          return (
+            <div
+              key={`${item.type}-${item.id}`}
+              className="p-3 rounded-xl border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  {/* 신청자 정보 */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="font-medium text-sm">{item.requester_name}</span>
+                    {item.requester_bu_code && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                        {BU_DISPLAY_NAMES[item.requester_bu_code] || item.requester_bu_code}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 유형 + 일수 */}
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <Badge variant="outline" className="text-xs">
+                      {item.type === 'compensatory'
+                        ? '대체휴무 생성'
+                        : LEAVE_REQUEST_TYPE_LABELS[item.request_type as keyof typeof LEAVE_REQUEST_TYPE_LABELS] || item.request_type
+                      }
+                    </Badge>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">{item.days}일</span>
+                  </div>
+
+                  {/* 기간 */}
+                  <p className="text-sm text-slate-600 dark:text-slate-300">{dateRange}</p>
+
+                  {/* 사유 */}
+                  {item.reason && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                      {item.reason}
+                    </p>
+                  )}
+                </div>
+
+                {/* 액션 버튼 */}
+                <div className="flex flex-col gap-1 shrink-0">
+                  <Button
+                    size="sm"
+                    onClick={() => handleApprove(item)}
+                    disabled={processing === item.id}
+                    className="h-10 w-10 p-0 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {processing === item.id ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-5 w-5" />
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleRejectClick(item)}
+                    disabled={processing === item.id}
+                    className="h-10 w-10 p-0"
+                  >
+                    <XCircle className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* 신청일 */}
+              <p className="text-[10px] text-slate-400 mt-2">
+                신청: {format(new Date(item.created_at), 'M/d HH:mm', { locale: ko })}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 데스크톱: 테이블 레이아웃 */}
+      <div className="hidden md:block rounded-lg border dark:border-slate-700 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50 dark:bg-slate-800">
