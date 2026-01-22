@@ -348,10 +348,16 @@ export async function notifyLeaveRequestRejected(
 export async function notifyCommentMention(
   mentionedUserId: string,
   authorName: string,
-  entityType: 'task' | 'project',
+  entityType: 'task' | 'project' | 'financial',
   entityTitle: string,
   commentId: string
 ) {
+  const actionUrl = entityType === 'task' 
+    ? '/?view=tasks' 
+    : entityType === 'project' 
+    ? '/?view=projects' 
+    : '/?view=finance';
+  
   return createNotification({
     userId: mentionedUserId,
     title: `${authorName}님이 회원님을 언급했습니다`,
@@ -359,7 +365,7 @@ export async function notifyCommentMention(
     type: 'info',
     entityType: 'comment',
     entityId: commentId,
-    actionUrl: entityType === 'task' ? '/?view=tasks' : '/?view=projects',
+    actionUrl,
   });
 }
 

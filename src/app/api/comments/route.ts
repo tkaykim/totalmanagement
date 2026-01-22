@@ -17,16 +17,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (entityType !== 'task' && entityType !== 'project') {
+    if (entityType !== 'task' && entityType !== 'project' && entityType !== 'financial') {
       return NextResponse.json(
-        { error: 'entity_type must be "task" or "project"' },
+        { error: 'entity_type must be "task", "project", or "financial"' },
         { status: 400 }
       );
     }
 
+    // 댓글과 첨부파일 함께 조회
     const { data, error } = await supabase
       .from('comments')
-      .select('*')
+      .select(`
+        *,
+        attachments:comment_attachments(*)
+      `)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: true });
@@ -68,9 +72,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (entity_type !== 'task' && entity_type !== 'project') {
+    if (entity_type !== 'task' && entity_type !== 'project' && entity_type !== 'financial') {
       return NextResponse.json(
-        { error: 'entity_type must be "task" or "project"' },
+        { error: 'entity_type must be "task", "project", or "financial"' },
         { status: 400 }
       );
     }
@@ -171,16 +175,21 @@ export async function POST(request: NextRequest) {
 
     // 멘션된 사용자들에게 알림 (댓글 작성자 제외)
     if (mentionedIds.length > 0) {
-      const entityTitle = entity_type === 'project' 
-        ? (await pureClient.from('projects').select('name').eq('id', entity_id).single()).data?.name || '프로젝트'
-        : (await pureClient.from('project_tasks').select('title').eq('id', entity_id).single()).data?.title || '할일';
+      let entityTitle = '항목';
+      if (entity_type === 'project') {
+        entityTitle = (await pureClient.from('projects').select('name').eq('id', entity_id).single()).data?.name || '프로젝트';
+      } else if (entity_type === 'task') {
+        entityTitle = (await pureClient.from('project_tasks').select('title').eq('id', entity_id).single()).data?.title || '할일';
+      } else if (entity_type === 'financial') {
+        entityTitle = (await pureClient.from('financial_entries').select('name').eq('id', entity_id).single()).data?.name || '재무';
+      }
 
       for (const mentionedUserId of mentionedIds) {
         if (mentionedUserId !== user.id) {
           await notifyCommentMention(
             mentionedUserId,
             appUser.data.name,
-            entity_type as 'task' | 'project',
+            entity_type as 'task' | 'project' | 'financial',
             entityTitle,
             String(data.id)
           );

@@ -5,39 +5,137 @@ import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CommentInput } from './CommentInput';
 import { Button } from '@/components/ui/button';
-import { useComments, useCreateComment, useDeleteComment, useUpdateComment } from '@/features/erp/hooks';
+import { useComments, useCreateComment, useDeleteComment, useUpdateComment, useUploadCommentAttachment, useDeleteCommentAttachment } from '@/features/erp/hooks';
 import { useUsers } from '@/features/erp/hooks';
-import type { CommentEntityType, Comment, AppUser } from '@/types/database';
-import { Trash2, Edit2, X, Check } from 'lucide-react';
+import type { CommentEntityType, Comment, AppUser, CommentAttachment } from '@/types/database';
+import { Trash2, Edit2, X, Check, FileText, Image, Download, ExternalLink } from 'lucide-react';
 
 interface CommentSectionProps {
   entityType: CommentEntityType;
   entityId: number;
 }
 
+function getFileIcon(type: string) {
+  if (type.startsWith('image/')) {
+    return <Image className="h-4 w-4 text-blue-500" />;
+  }
+  return <FileText className="h-4 w-4 text-slate-500" />;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function getPublicUrl(filePath: string): string {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return `${supabaseUrl}/storage/v1/object/public/comment-attachments/${filePath}`;
+}
+
+function AttachmentItem({ 
+  attachment, 
+  onDelete, 
+  canDelete,
+  isDeleting 
+}: { 
+  attachment: CommentAttachment; 
+  onDelete: () => void;
+  canDelete: boolean;
+  isDeleting: boolean;
+}) {
+  const publicUrl = getPublicUrl(attachment.file_path);
+  const isImage = attachment.file_type.startsWith('image/');
+
+  return (
+    <div className="group relative rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+      {isImage ? (
+        <a href={publicUrl} target="_blank" rel="noopener noreferrer">
+          <img
+            src={publicUrl}
+            alt={attachment.file_name}
+            className="w-full h-24 object-cover hover:opacity-90 transition"
+          />
+        </a>
+      ) : (
+        <a
+          href={publicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+        >
+          {getFileIcon(attachment.file_type)}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
+              {attachment.file_name}
+            </p>
+            <p className="text-xs text-slate-400">
+              {formatFileSize(attachment.file_size)}
+            </p>
+          </div>
+          <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+        </a>
+      )}
+      
+      {canDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={isDeleting}
+          className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-600 disabled:opacity-50"
+          title="삭제"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function CommentSection({ entityType, entityId }: CommentSectionProps) {
   const { data: comments = [], isLoading } = useComments(entityType, entityId);
   const { data: usersData } = useUsers();
   const users = usersData?.users || [];
+  const currentUser = usersData?.currentUser;
   const createComment = useCreateComment();
   const updateComment = useUpdateComment();
   const deleteComment = useDeleteComment();
+  const uploadAttachment = useUploadCommentAttachment();
+  const deleteAttachment = useDeleteCommentAttachment();
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [uploadingCommentId, setUploadingCommentId] = useState<number | null>(null);
 
   const getUserById = (id: string): AppUser | undefined => {
     return users.find((user: AppUser) => user.id === id);
   };
 
-  const handleSubmit = async (content: string, mentionedUserIds: string[]) => {
+  const handleSubmit = async (content: string, mentionedUserIds: string[], files: File[]) => {
     try {
-      await createComment.mutateAsync({
+      // 1. 댓글 생성
+      const comment = await createComment.mutateAsync({
         entity_type: entityType,
         entity_id: entityId,
         content,
         mentioned_user_ids: mentionedUserIds,
       });
+
+      // 2. 첨부파일 업로드
+      if (files.length > 0 && comment.id) {
+        setUploadingCommentId(comment.id);
+        for (const file of files) {
+          try {
+            await uploadAttachment.mutateAsync({
+              commentId: comment.id,
+              file,
+            });
+          } catch (error) {
+            console.error('Failed to upload attachment:', error);
+          }
+        }
+        setUploadingCommentId(null);
+      }
     } catch (error) {
       console.error('Failed to create comment:', error);
     }
@@ -76,6 +174,16 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
     }
   };
 
+  const handleDeleteAttachment = async (attachmentId: number) => {
+    if (!confirm('첨부파일을 삭제하시겠습니까?')) return;
+
+    try {
+      await deleteAttachment.mutateAsync(attachmentId);
+    } catch (error) {
+      console.error('Failed to delete attachment:', error);
+    }
+  };
+
   const renderContent = (content: string, mentionedUserIds: string[]) => {
     let result = content;
     const parts: (string | ReactElement)[] = [];
@@ -108,7 +216,7 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
   };
 
   if (isLoading) {
-    return <div className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">댓글을 불러오는 중...</div>;
+    return <div className="text-sm text-slate-500 dark:text-slate-400">댓글을 불러오는 중...</div>;
   }
 
   return (
@@ -117,8 +225,8 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
         <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">댓글 ({comments.length})</h3>
         <CommentInput
           onSubmit={handleSubmit}
-          isLoading={createComment.isPending}
-          placeholder="댓글을 입력하세요... (@이름으로 멘션 가능)"
+          isLoading={createComment.isPending || uploadingCommentId !== null}
+          placeholder="댓글을 입력하세요... (@이름으로 멘션, 📎 첨부파일 가능)"
         />
       </div>
 
@@ -129,6 +237,8 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
           comments.map((comment: Comment) => {
             const isEditing = editingId === comment.id;
             const author = getUserById(comment.author_id);
+            const isOwner = currentUser?.id === comment.author_id;
+            const attachments = comment.attachments || [];
 
             return (
               <div key={comment.id} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4">
@@ -137,7 +247,7 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
                     <div className="font-semibold text-slate-900 dark:text-slate-100">
                       {author?.name || comment.author_name}
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                       {formatDistanceToNow(new Date(comment.created_at), {
                         addSuffix: true,
                         locale: ko,
@@ -147,59 +257,76 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
                       <span className="text-xs text-slate-400 dark:text-slate-500">(수정됨)</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1">
-                    {isEditing ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleSaveEdit(comment.id)}
-                          className="h-7 w-7 p-0"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handleCancelEdit}
-                          className="h-7 w-7 p-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(comment)}
-                          className="h-7 w-7 p-0"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(comment.id)}
-                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                  {isOwner && (
+                    <div className="flex items-center gap-1">
+                      {isEditing ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleSaveEdit(comment.id)}
+                            className="h-7 w-7 p-0"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleCancelEdit}
+                            className="h-7 w-7 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEdit(comment)}
+                            className="h-7 w-7 p-0"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(comment.id)}
+                            className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {isEditing ? (
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
                   />
                 ) : (
                   <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                     {renderContent(comment.content, comment.mentioned_user_ids)}
+                  </div>
+                )}
+
+                {/* 첨부파일 표시 */}
+                {attachments.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {attachments.map((attachment) => (
+                      <AttachmentItem
+                        key={attachment.id}
+                        attachment={attachment}
+                        onDelete={() => handleDeleteAttachment(attachment.id)}
+                        canDelete={isOwner}
+                        isDeleting={deleteAttachment.isPending}
+                      />
+                    ))}
                   </div>
                 )}
 
@@ -210,7 +337,7 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
                       return user ? (
                         <span
                           key={userId}
-                          className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700"
+                          className="rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-xs text-blue-700 dark:text-blue-300"
                         >
                           @{user.name}
                         </span>
@@ -226,4 +353,3 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
     </div>
   );
 }
-

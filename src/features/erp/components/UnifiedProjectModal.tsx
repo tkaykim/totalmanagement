@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock, Pencil, Search, Check, Circle, Clock, CheckCircle2, ListTodo } from 'lucide-react';
+import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock, Pencil, Search, Check, Circle, Clock, CheckCircle2, ListTodo, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
 import type { AppUser, Project as DbProject } from '@/types/database';
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/hooks/use-toast';
+import { CommentSection } from '@/features/comments/components/CommentSection';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type ModalMode = 'create' | 'view' | 'edit';
@@ -1167,6 +1168,17 @@ export function UnifiedProjectModal({
                 onViewTask={onViewTaskDetail}
                 usersData={usersData}
               />
+            )}
+
+            {/* 댓글 섹션 (view/edit 모드에서만) */}
+            {!isCreateMode && project && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                  <MessageCircle className="h-4 w-4" />
+                  댓글
+                </div>
+                <CommentSection entityType="project" entityId={Number(project.id)} />
+              </section>
             )}
 
             {/* 재무 정보 섹션 (view/edit 모드 + 권한 있을 때만) */}

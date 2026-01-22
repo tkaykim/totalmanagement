@@ -1244,5 +1244,36 @@ export async function fetchCommentReads(commentId: number): Promise<any[]> {
   return res.json();
 }
 
+// 댓글 첨부파일 업로드
+export async function uploadCommentAttachment(
+  commentId: number,
+  file: File
+): Promise<{ id: number; file_name: string; file_path: string; file_type: string; file_size: number; public_url: string }> {
+  const formData = new FormData();
+  formData.append('comment_id', String(commentId));
+  formData.append('file', file);
 
+  const res = await fetch(`${API_BASE}/comments/attachments`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to upload attachment');
+  }
+  return res.json();
+}
+
+// 댓글 첨부파일 삭제
+export async function deleteCommentAttachment(attachmentId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/comments/attachments?id=${attachmentId}`, {
+    method: 'DELETE',
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to delete attachment');
+  }
+}
 

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, Building2, User, Calculator, Calendar, Tag, FileText, Wallet, ChevronDown, Check, Search, Users, MapPin, ExternalLink } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Building2, User, Calculator, Calendar, Tag, FileText, Wallet, ChevronDown, Check, Search, Users, MapPin, ExternalLink, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FinancialEntry, Project, BU, FinancialEntryStatus } from '@/features/erp/types';
+import { CommentSection } from '@/features/comments/components/CommentSection';
 
 // 지급처 유형별 아이콘 및 라벨 설정
 const ENTITY_TYPE_CONFIG = {
@@ -764,7 +765,7 @@ export function EditFinanceModal({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
           {/* 타입 선택 */}
           <div className="flex gap-2">
             {(['revenue', 'expense'] as const).map((type) => (
@@ -910,6 +911,15 @@ export function EditFinanceModal({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 댓글 섹션 */}
+          <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
+            <div className="flex items-center gap-2 mb-3 text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+              <MessageCircle className="h-4 w-4" />
+              댓글
+            </div>
+            <CommentSection entityType="financial" entityId={Number(entry.id)} />
           </div>
         </div>
 

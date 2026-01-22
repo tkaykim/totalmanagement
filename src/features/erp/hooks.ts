@@ -739,5 +739,26 @@ export function useCommentReads(commentId: number) {
   });
 }
 
+// 댓글 첨부파일 업로드 훅
+export function useUploadCommentAttachment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ commentId, file }: { commentId: number; file: File }) =>
+      api.uploadCommentAttachment(commentId, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
+    },
+  });
+}
 
+// 댓글 첨부파일 삭제 훅
+export function useDeleteCommentAttachment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (attachmentId: number) => api.deleteCommentAttachment(attachmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
+    },
+  });
+}
 

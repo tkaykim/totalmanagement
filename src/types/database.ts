@@ -390,7 +390,18 @@ export interface Dancer {
 // 하위 호환성을 위한 타입 별칭
 export type ExternalDancer = Dancer;
 
-export type CommentEntityType = 'task' | 'project';
+export type CommentEntityType = 'task' | 'project' | 'financial';
+
+export interface CommentAttachment {
+  id: number;
+  comment_id: number;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Comment {
   id: number;
@@ -400,6 +411,7 @@ export interface Comment {
   author_id: string;
   author_name: string;
   mentioned_user_ids: string[];
+  attachments?: CommentAttachment[];
   created_at: string;
   updated_at: string;
 }
