@@ -93,8 +93,8 @@ interface UnifiedProjectModalProps {
     channel_id?: number | null;
     status?: string;
     participants?: Participant[];
-  }) => void;
-  onDelete?: (id: string) => void;
+  }) => void | Promise<void>;
+  onDelete?: (id: string) => void | Promise<void>;
   defaultBu: BU;
   usersData?: { users: any[]; currentUser: any };
   partnerCompaniesData?: any[];
@@ -534,6 +534,8 @@ export function UnifiedProjectModal({
   const [hasValidationError, setHasValidationError] = useState(false);
   const [showFinanceDetail, setShowFinanceDetail] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 재무 요약
   const financeSummary = financeData.reduce(
@@ -578,7 +580,9 @@ export function UnifiedProjectModal({
     setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    
     if (!form.name || !form.cat) {
       setHasValidationError(true);
       toast({
@@ -590,34 +594,46 @@ export function UnifiedProjectModal({
     }
 
     setHasValidationError(false);
-    const participants = selectedParticipants.map((p) => ({
-      user_id: p.type === 'user' ? (p.id as string) : undefined,
-      partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
-      partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
-      role: 'participant',
-    }));
+    setIsSubmitting(true);
+    
+    try {
+      const participants = selectedParticipants.map((p) => ({
+        user_id: p.type === 'user' ? (p.id as string) : undefined,
+        partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
+        partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
+        role: 'participant',
+      }));
 
-    onSubmit({
-      ...(project && { id: project.id }),
-      name: form.name,
-      bu: form.bu,
-      cat: form.cat,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      description: form.description || null,
-      pm_id: form.pm_id || null,
-      partner_company_id: form.partner_company_id ? Number(form.partner_company_id) : null,
-      partner_worker_id: form.partner_worker_id ? Number(form.partner_worker_id) : null,
-      artist_id: form.artist_id ? Number(form.artist_id) : null,
-      channel_id: form.channel_id ? Number(form.channel_id) : null,
-      status: form.status,
-      participants,
-    });
+      await onSubmit({
+        ...(project && { id: project.id }),
+        name: form.name,
+        bu: form.bu,
+        cat: form.cat,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        description: form.description || null,
+        pm_id: form.pm_id || null,
+        partner_company_id: form.partner_company_id ? Number(form.partner_company_id) : null,
+        partner_worker_id: form.partner_worker_id ? Number(form.partner_worker_id) : null,
+        artist_id: form.artist_id ? Number(form.artist_id) : null,
+        channel_id: form.channel_id ? Number(form.channel_id) : null,
+        status: form.status,
+        participants,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    if (isDeleting) return;
     if (project && onDelete) {
-      onDelete(project.id);
+      setIsDeleting(true);
+      try {
+        await onDelete(project.id);
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -748,7 +764,8 @@ export function UnifiedProjectModal({
                 )}
                 <button
                   onClick={onClose}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 dark:bg-slate-600/80 text-slate-500 dark:text-slate-400 transition hover:bg-white dark:hover:bg-slate-600"
+                  disabled={isSubmitting || isDeleting}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 dark:bg-slate-600/80 text-slate-500 dark:text-slate-400 transition hover:bg-white dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -1274,7 +1291,8 @@ export function UnifiedProjectModal({
                 {isEditMode && onDelete && (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-800 px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-400 transition hover:bg-red-50 dark:hover:bg-red-900/20"
+                    disabled={isSubmitting || isDeleting}
+                    className="flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-800 px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-400 transition hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="h-4 w-4" />
                     삭제
@@ -1288,15 +1306,23 @@ export function UnifiedProjectModal({
                   <>
                     <button
                       onClick={onClose}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700"
+                      disabled={isSubmitting}
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       취소
                     </button>
                     <button
                       onClick={handleSubmit}
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      disabled={isSubmitting}
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                      등록
+                      {isSubmitting && (
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      )}
+                      {isSubmitting ? '등록 중...' : '등록'}
                     </button>
                   </>
                 )}
@@ -1312,15 +1338,23 @@ export function UnifiedProjectModal({
                   <>
                     <button
                       onClick={() => setMode('view')}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700"
+                      disabled={isSubmitting || isDeleting}
+                      className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       취소
                     </button>
                     <button
                       onClick={handleSubmit}
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      disabled={isSubmitting || isDeleting}
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                      저장
+                      {isSubmitting && (
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      )}
+                      {isSubmitting ? '저장 중...' : '저장'}
                     </button>
                   </>
                 )}
@@ -1341,18 +1375,26 @@ export function UnifiedProjectModal({
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700"
+                disabled={isDeleting}
+                className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 취소
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  await handleDelete();
                   setShowDeleteConfirm(false);
-                  handleDelete();
                 }}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                disabled={isDeleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                삭제
+                {isDeleting && (
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {isDeleting ? '삭제 중...' : '삭제'}
               </button>
             </div>
           </div>

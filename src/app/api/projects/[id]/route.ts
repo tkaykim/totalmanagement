@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import { canEditProject, canDeleteProject, type AppUser, type Project as PermProject } from '@/lib/permissions';
 import { createActivityLog, createProjectStatusChangeLog } from '@/lib/activity-logger';
+import { notifyProjectPMAssigned, createNotification } from '@/lib/notification-sender';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -127,6 +128,30 @@ export async function PATCH(
         entityTitle: updatedProject.name,
         metadata: { updated_fields: Object.keys(body) },
       });
+    }
+
+    // PM이 변경된 경우 새 PM에게 알림 전송 (누가 지정했는지 포함)
+    if (body.pm_id && body.pm_id !== project.pm_id && body.pm_id !== currentUser.id) {
+      await notifyProjectPMAssigned(body.pm_id, updatedProject.name, id, currentUser.name);
+    }
+
+    // 참여자가 추가된 경우 알림 전송 (누가 추가했는지 포함)
+    if (body.participants && Array.isArray(body.participants)) {
+      const newParticipantIds = body.participants
+        .map((p: any) => p.user_id)
+        .filter((pid: string) => pid && !project.participants.includes(pid) && pid !== currentUser.id && pid !== body.pm_id);
+      
+      for (const participantId of newParticipantIds) {
+        await createNotification({
+          userId: participantId,
+          title: '프로젝트에 참여하게 되었습니다',
+          message: `${currentUser.name}님이 "${updatedProject.name}" 프로젝트에 참여자로 추가했습니다.`,
+          type: 'info',
+          entityType: 'project',
+          entityId: id,
+          actionUrl: '/?view=projects',
+        });
+      }
     }
 
     return NextResponse.json(updatedProject);

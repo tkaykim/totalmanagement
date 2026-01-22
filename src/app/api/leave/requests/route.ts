@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { calculateDaysUsed } from '@/features/leave/lib/leave-calculator';
 import { getLeaveTypeFromRequestType } from '@/features/leave/types';
+import { notifyLeaveRequestCreated } from '@/lib/notification-sender';
 
 export async function GET(request: NextRequest) {
   try {
@@ -132,6 +133,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // 신청자 이름 조회
+    const { data: requester } = await supabase
+      .from('app_users')
+      .select('name')
+      .eq('id', user.id)
+      .single();
+
     // 휴가 신청 생성
     const { data: leaveRequest, error } = await supabase
       .from('leave_requests')
@@ -151,6 +159,15 @@ export async function POST(request: NextRequest) {
       console.error('Leave request create error:', error);
       return NextResponse.json({ error: '휴가 신청에 실패했습니다.' }, { status: 500 });
     }
+
+    // 관리자들에게 알림 전송
+    await notifyLeaveRequestCreated(
+      requester?.name || '사용자',
+      leave_type,
+      start_date,
+      end_date,
+      leaveRequest.id
+    );
 
     return NextResponse.json(leaveRequest);
   } catch (error) {

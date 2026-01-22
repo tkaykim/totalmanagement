@@ -9,7 +9,7 @@ import {
   WorkStatusLogoutModal,
   WorkStatusOvertimeModal,
 } from './WorkStatusHeader';
-import { NotificationDropdown } from './NotificationDropdown';
+import { NotificationDrawer } from './NotificationDrawer';
 
 interface DashboardHeaderProps {
   title: string;
@@ -122,8 +122,8 @@ export function DashboardHeader({
           </div>
         )}
 
-        {/* 알림 드롭다운 */}
-        {showNotification && <NotificationDropdown />}
+        {/* 알림 드로어 */}
+        {showNotification && <NotificationDrawer />}
       </header>
 
       {/* Work Status Modals - 자체 렌더링 */}

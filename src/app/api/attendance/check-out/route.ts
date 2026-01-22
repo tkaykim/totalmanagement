@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getNowKSTISO } from '@/lib/timezone.server';
 import { createActivityLog } from '@/lib/activity-logger';
+import { notifyCheckOutToHeadAdmin } from '@/lib/notification-sender';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +49,13 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    // 사용자 이름 조회
+    const { data: appUser } = await supabase
+      .from('app_users')
+      .select('name')
+      .eq('id', user.id)
+      .single();
+
     // 활동 로그 기록
     await createActivityLog({
       userId: user.id,
@@ -61,6 +69,13 @@ export async function POST(request: NextRequest) {
         is_overtime: data.is_overtime,
       },
     });
+
+    // HEAD-ADMIN에게 퇴근 알림
+    await notifyCheckOutToHeadAdmin(
+      appUser?.name || '사용자',
+      now,
+      data.id
+    );
 
     return NextResponse.json(data);
   } catch (error: any) {

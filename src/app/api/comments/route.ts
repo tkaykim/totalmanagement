@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createPureClient } from '@/lib/supabase/server';
 import type { CommentEntityType } from '@/types/database';
+import { notifyProjectComment, notifyTaskComment, notifyCommentMention } from '@/lib/notification-sender';
 
 export async function GET(request: NextRequest) {
   try {
@@ -104,6 +105,88 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    const pureClient = await createPureClient();
+
+    // 댓글 알림 전송
+    if (entity_type === 'project') {
+      // 프로젝트 댓글: PM과 참여자들에게 알림
+      const { data: project } = await pureClient
+        .from('projects')
+        .select('name, pm_id, participants')
+        .eq('id', entity_id)
+        .single();
+
+      if (project) {
+        const targetUserIds: string[] = [];
+        
+        // PM 추가
+        if (project.pm_id) {
+          targetUserIds.push(project.pm_id);
+        }
+        
+        // 참여자들 추가
+        if (project.participants && Array.isArray(project.participants)) {
+          project.participants.forEach((p: any) => {
+            if (p.user_id && !targetUserIds.includes(p.user_id)) {
+              targetUserIds.push(p.user_id);
+            }
+          });
+        }
+
+        // 댓글 작성자 본인 제외하고 알림 전송
+        await notifyProjectComment(
+          targetUserIds,
+          appUser.data.name,
+          project.name,
+          String(data.id),
+          user.id
+        );
+      }
+    } else if (entity_type === 'task') {
+      // 할일 댓글: 담당자에게 알림
+      const { data: task } = await pureClient
+        .from('project_tasks')
+        .select('title, assignee_id, project_id')
+        .eq('id', entity_id)
+        .single();
+
+      if (task && task.assignee_id && task.assignee_id !== user.id) {
+        // 프로젝트명 조회
+        const { data: project } = await pureClient
+          .from('projects')
+          .select('name')
+          .eq('id', task.project_id)
+          .single();
+
+        await notifyTaskComment(
+          task.assignee_id,
+          appUser.data.name,
+          task.title,
+          project?.name || '프로젝트',
+          String(data.id)
+        );
+      }
+    }
+
+    // 멘션된 사용자들에게 알림 (댓글 작성자 제외)
+    if (mentionedIds.length > 0) {
+      const entityTitle = entity_type === 'project' 
+        ? (await pureClient.from('projects').select('name').eq('id', entity_id).single()).data?.name || '프로젝트'
+        : (await pureClient.from('project_tasks').select('title').eq('id', entity_id).single()).data?.title || '할일';
+
+      for (const mentionedUserId of mentionedIds) {
+        if (mentionedUserId !== user.id) {
+          await notifyCommentMention(
+            mentionedUserId,
+            appUser.data.name,
+            entity_type as 'task' | 'project',
+            entityTitle,
+            String(data.id)
+          );
+        }
+      }
+    }
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {

@@ -2,12 +2,14 @@
 'use client';
 
 // Since QueryClientProvider relies on useContext under the hood, we have to put 'use client' on top
+import { useEffect } from 'react';
 import {
   isServer,
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
+import { initPushNotifications, isNativePlatform } from '@/lib/capacitor';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -43,6 +45,27 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   //       suspend because React will throw away the client on the initial
   //       render if it suspends and there is no boundary
   const queryClient = getQueryClient();
+
+  // Capacitor 푸시 알림 초기화 (네이티브 앱에서만)
+  useEffect(() => {
+    if (isNativePlatform()) {
+      initPushNotifications({
+        onRegistration: (token) => {
+          console.log('[App] 푸시 토큰 등록됨:', token.substring(0, 20) + '...');
+        },
+        onNotificationReceived: (notification) => {
+          console.log('[App] 푸시 알림 수신:', notification.title);
+        },
+        onNotificationActionPerformed: (action) => {
+          // 알림 클릭 시 특정 페이지로 이동
+          const data = action.notification.data;
+          if (data?.action_url) {
+            window.location.href = data.action_url;
+          }
+        },
+      });
+    }
+  }, []);
 
   return (
     <ThemeProvider

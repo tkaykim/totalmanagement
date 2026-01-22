@@ -6,9 +6,19 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "cap:build": "npm run build && npx cap sync"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.1",
+    "@capacitor/camera": "^8.0.0",
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/geolocation": "^8.0.0",
+    "@capacitor/ios": "^8.0.1",
+    "@capacitor/push-notifications": "^8.0.0",
     "@hookform/resolvers": "^4",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -48,6 +58,7 @@
     "zustand": "^4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.0.1",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/typography": "^0.5.10",
     "@types/node": "^20",

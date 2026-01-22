@@ -138,13 +138,14 @@ export async function PATCH(
       ).catch(console.error);
     }
 
-    // 담당자가 변경된 경우 새 담당자에게 알림 전송
+    // 담당자가 변경된 경우 새 담당자에게 알림 전송 (누가 배정했는지 포함)
     if (body.assignee_id && body.assignee_id !== oldAssigneeId && body.assignee_id !== currentUser.id) {
       notifyTaskAssigned(
         body.assignee_id,
         data.title || oldTitle || '',
         projectName || '',
-        id
+        id,
+        currentUser.name
       ).catch(console.error);
     }
 

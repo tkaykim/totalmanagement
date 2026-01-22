@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
+import { notifyReservationCreated } from '@/lib/notification-sender';
 
 export async function GET(request: NextRequest) {
   try {
@@ -112,6 +113,30 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
+
+    // 리소스 이름 조회
+    let resourceName = '예약 항목';
+    if (body.resource_type === 'meeting_room') {
+      const { data: room } = await pureClient.from('meeting_rooms').select('name').eq('id', body.resource_id).single();
+      resourceName = room?.name || '회의실';
+    } else if (body.resource_type === 'equipment') {
+      const { data: eq } = await pureClient.from('equipment').select('name').eq('id', body.resource_id).single();
+      resourceName = eq?.name || '장비';
+    } else if (body.resource_type === 'vehicle') {
+      const { data: veh } = await pureClient.from('vehicles').select('name').eq('id', body.resource_id).single();
+      resourceName = veh?.name || '차량';
+    }
+
+    // 모든 사용자에게 알림 전송 (본인 제외)
+    await notifyReservationCreated(
+      body.resource_type,
+      resourceName,
+      appUser.name,
+      body.start_time,
+      body.end_time,
+      String(data.id),
+      appUser.id
+    );
 
     return NextResponse.json(data);
   } catch (error) {

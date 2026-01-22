@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 담당자가 생성자와 다르면 담당자에게도 활동 로그 기록 및 알림 전송
+    // 담당자가 생성자와 다르면 담당자에게도 활동 로그 기록 및 알림 전송 (누가 배정했는지 포함)
     if (body.assignee_id && body.assignee_id !== currentUser.id) {
       await createTaskAssignedLog(
         body.assignee_id,
@@ -227,12 +227,13 @@ export async function POST(request: NextRequest) {
         currentUser.id
       );
       
-      // 담당자에게 알림 전송
+      // 담당자에게 알림 전송 (누가 배정했는지 포함)
       await notifyTaskAssigned(
         body.assignee_id,
         data.title,
         project.name,
-        String(data.id)
+        String(data.id),
+        currentUser.name
       );
     }
 

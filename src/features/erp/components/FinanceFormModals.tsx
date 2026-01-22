@@ -386,6 +386,7 @@ export function CreateFinanceModal({
   }, [partnersData, form.partnerEntityFilter]);
   const [error, setError] = useState<string>('');
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isRevenue = mode === 'revenue';
   const Icon = isRevenue ? TrendingUp : TrendingDown;
@@ -416,7 +417,8 @@ export function CreateFinanceModal({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/50 dark:hover:bg-slate-700/50 transition"
+              disabled={isSubmitting}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/50 dark:hover:bg-slate-700/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X className="h-4 w-4 text-slate-500" />
             </button>
@@ -610,22 +612,36 @@ export function CreateFinanceModal({
         <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             취소
           </button>
           <button
             onClick={async () => {
+              if (isSubmitting) return;
               setError('');
-              const result = await onSubmit({ ...form, type: mode });
-              if (result) setError(result);
+              setIsSubmitting(true);
+              try {
+                const result = await onSubmit({ ...form, type: mode });
+                if (result) setError(result);
+              } finally {
+                setIsSubmitting(false);
+              }
             }}
+            disabled={isSubmitting}
             className={cn(
-              "px-4 py-2 text-sm font-semibold text-white rounded-lg transition",
+              "px-4 py-2 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2",
               isRevenue ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"
             )}
           >
-            등록
+            {isSubmitting && (
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {isSubmitting ? '등록 중...' : '등록'}
           </button>
         </div>
       </div>
@@ -656,7 +672,7 @@ export function EditFinanceModal({
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
-  }) => void;
+  }) => void | Promise<void>;
   projects: Project[];
   partnersData?: { id: number; display_name: string; entity_type: string }[];
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
@@ -678,6 +694,7 @@ export function EditFinanceModal({
     paymentMethod: (entry.payment_method || '') as 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '',
   });
   const [showPaymentOptions, setShowPaymentOptions] = useState(!!form.partnerId || !!form.paymentMethod);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 지급처 옵션 생성 (필터링 + 검색용)
   const editPartnerOptions = useMemo(() => {
@@ -720,7 +737,8 @@ export function EditFinanceModal({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/50 dark:hover:bg-slate-700/50 transition"
+              disabled={isSubmitting}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/50 dark:hover:bg-slate-700/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X className="h-4 w-4 text-slate-500" />
             </button>
@@ -902,7 +920,8 @@ export function EditFinanceModal({
               onClick={() => {
                 onGoToProject(form.projectId);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition"
+              disabled={isSubmitting}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ExternalLink className="h-4 w-4" />
               프로젝트 상세
@@ -912,32 +931,46 @@ export function EditFinanceModal({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               취소
             </button>
             <button
-              onClick={() => {
-                onSubmit({
-                  id: entry.id,
-                  type: form.type,
-                  projectId: form.projectId,
-                  bu: form.bu,
-                  cat: form.cat,
-                  name: form.name,
-                  amount: form.amount,
-                  date: form.date,
-                  status: form.status,
-                  partnerId: form.partnerId,
-                  paymentMethod: form.paymentMethod,
-                });
+              onClick={async () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
+                try {
+                  await onSubmit({
+                    id: entry.id,
+                    type: form.type,
+                    projectId: form.projectId,
+                    bu: form.bu,
+                    cat: form.cat,
+                    name: form.name,
+                    amount: form.amount,
+                    date: form.date,
+                    status: form.status,
+                    partnerId: form.partnerId,
+                    paymentMethod: form.paymentMethod,
+                  });
+                } finally {
+                  setIsSubmitting(false);
+                }
               }}
+              disabled={isSubmitting}
               className={cn(
-                "px-4 py-2 text-sm font-semibold text-white rounded-lg transition",
+                "px-4 py-2 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2",
                 isRevenue ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"
               )}
             >
-              저장
+              {isSubmitting && (
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {isSubmitting ? '저장 중...' : '저장'}
             </button>
           </div>
         </div>

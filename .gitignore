@@ -42,3 +42,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Firebase / Capacitor 인증 파일
+google-services.json
+GoogleService-Info.plist
+
+# Capacitor 빌드 아티팩트
+android/app/build/
+ios/App/Pods/

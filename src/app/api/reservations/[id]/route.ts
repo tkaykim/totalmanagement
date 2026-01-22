@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
+import { notifyReservationUpdated, notifyReservationCancelled } from '@/lib/notification-sender';
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+async function getResourceName(pureClient: any, resourceType: string, resourceId: number): Promise<string> {
+  if (resourceType === 'meeting_room') {
+    const { data } = await pureClient.from('meeting_rooms').select('name').eq('id', resourceId).single();
+    return data?.name || '회의실';
+  } else if (resourceType === 'equipment') {
+    const { data } = await pureClient.from('equipment').select('name').eq('id', resourceId).single();
+    return data?.name || '장비';
+  } else if (resourceType === 'vehicle') {
+    const { data } = await pureClient.from('vehicles').select('name').eq('id', resourceId).single();
+    return data?.name || '차량';
+  }
+  return '예약 항목';
+}
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
@@ -43,7 +58,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     
     const { data: existingReservation } = await pureClient
       .from('reservations')
-      .select('reserver_id')
+      .select('reserver_id, resource_type, resource_id, start_time, end_time')
       .eq('id', id)
       .single();
 
@@ -53,7 +68,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const { data: appUser } = await supabase
       .from('app_users')
-      .select('id, role')
+      .select('id, role, name')
       .eq('id', user.id)
       .single();
 
@@ -88,6 +103,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       throw error;
     }
 
+    // 리소스 이름 조회 및 알림 전송
+    const resourceName = await getResourceName(pureClient, data.resource_type, data.resource_id);
+    const reserverName = (data as any).reserver?.name || appUser?.name || '사용자';
+    
+    await notifyReservationUpdated(
+      data.resource_type,
+      resourceName,
+      reserverName,
+      data.start_time,
+      data.end_time,
+      id,
+      user.id
+    );
+
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
@@ -109,7 +138,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     
     const { data: existingReservation } = await pureClient
       .from('reservations')
-      .select('reserver_id')
+      .select('reserver_id, resource_type, resource_id, start_time')
       .eq('id', id)
       .single();
 
@@ -119,8 +148,15 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
     const { data: appUser } = await supabase
       .from('app_users')
-      .select('id, role')
+      .select('id, role, name')
       .eq('id', user.id)
+      .single();
+
+    // 예약자 이름 조회
+    const { data: reserver } = await pureClient
+      .from('app_users')
+      .select('name')
+      .eq('id', existingReservation.reserver_id)
       .single();
 
     const isOwner = existingReservation.reserver_id === user.id;
@@ -141,6 +177,19 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       .single();
 
     if (error) throw error;
+
+    // 리소스 이름 조회 및 알림 전송
+    const resourceName = await getResourceName(pureClient, existingReservation.resource_type, existingReservation.resource_id);
+    const reserverName = reserver?.name || '사용자';
+    
+    await notifyReservationCancelled(
+      existingReservation.resource_type,
+      resourceName,
+      reserverName,
+      existingReservation.start_time,
+      id,
+      user.id
+    );
 
     return NextResponse.json(data);
   } catch (error) {
