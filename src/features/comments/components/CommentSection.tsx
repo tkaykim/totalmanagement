@@ -9,6 +9,7 @@ import { useComments, useCreateComment, useDeleteComment, useUpdateComment, useU
 import { useUsers } from '@/features/erp/hooks';
 import type { CommentEntityType, Comment, AppUser, CommentAttachment } from '@/types/database';
 import { Trash2, Edit2, X, Check, FileText, Image, Download, ExternalLink } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 interface CommentSectionProps {
   entityType: CommentEntityType;
@@ -29,8 +30,11 @@ function formatFileSize(bytes: number): string {
 }
 
 function getPublicUrl(filePath: string): string {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return `${supabaseUrl}/storage/v1/object/public/comment-attachments/${filePath}`;
+  const supabase = createClient();
+  const { data } = supabase.storage
+    .from('comment-attachments')
+    .getPublicUrl(filePath);
+  return data.publicUrl;
 }
 
 function AttachmentItem({ 
