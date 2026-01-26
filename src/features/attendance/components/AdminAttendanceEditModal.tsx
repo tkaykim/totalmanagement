@@ -7,6 +7,7 @@ import { ko } from 'date-fns/locale';
 import { X, Clock, Save, AlertCircle, CheckCircle, Trash2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatWorkTime } from '../lib/workTimeCalculator';
+import { formatTimeKST } from '@/lib/timezone';
 
 interface UserAttendance {
   user_id: string;
@@ -179,12 +180,7 @@ export function AdminAttendanceEditModal({
   if (!isOpen || !user) return null;
 
   const formatTime = (isoString: string | null | undefined) => {
-    if (!isoString) return '-';
-    try {
-      return format(parseISO(isoString), 'HH:mm');
-    } catch {
-      return '-';
-    }
+    return formatTimeKST(isoString);
   };
 
   const calculateTotalWorkMinutes = () => {

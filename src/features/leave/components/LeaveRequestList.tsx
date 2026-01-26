@@ -1,8 +1,7 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { CheckCircle, XCircle, Clock, Trash2, CalendarDays } from 'lucide-react';
+import { formatKST } from '@/lib/timezone';
 import {
   Table,
   TableBody,
@@ -74,8 +73,8 @@ export function LeaveRequestList({
           const config = statusConfig[request.status];
           const Icon = config.icon;
           const dateRange = request.start_date === request.end_date
-            ? format(new Date(request.start_date), 'M월 d일', { locale: ko })
-            : `${format(new Date(request.start_date), 'M/d', { locale: ko })} ~ ${format(new Date(request.end_date), 'M/d', { locale: ko })}`;
+            ? formatKST(request.start_date, 'M월 d일')
+            : `${formatKST(request.start_date, 'M/d')} ~ ${formatKST(request.end_date, 'M/d')}`;
 
           return (
             <div
@@ -135,7 +134,7 @@ export function LeaveRequestList({
 
               {/* 신청일 */}
               <p className="text-[10px] text-slate-400 mt-2">
-                신청: {format(new Date(request.created_at), 'M/d HH:mm', { locale: ko })}
+                신청: {formatKST(request.created_at, 'M/d HH:mm')}
               </p>
             </div>
           );
@@ -175,9 +174,9 @@ export function LeaveRequestList({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {format(new Date(request.start_date), 'M/d', { locale: ko })}
+                    {formatKST(request.start_date, 'M/d')}
                     {request.start_date !== request.end_date && (
-                      <> ~ {format(new Date(request.end_date), 'M/d', { locale: ko })}</>
+                      <> ~ {formatKST(request.end_date, 'M/d')}</>
                     )}
                   </TableCell>
                   <TableCell>{request.days_used}일</TableCell>
@@ -191,7 +190,7 @@ export function LeaveRequestList({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
-                    {format(new Date(request.created_at), 'M/d HH:mm', { locale: ko })}
+                    {formatKST(request.created_at, 'M/d HH:mm')}
                   </TableCell>
                   {onCancel && (
                     <TableCell>

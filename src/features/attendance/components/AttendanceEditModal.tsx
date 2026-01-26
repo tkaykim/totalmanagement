@@ -9,6 +9,7 @@ import { ko } from 'date-fns/locale';
 import { X, Clock, Coffee, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AttendanceLog } from '@/types/database';
+import { formatTimeKST, formatKST } from '@/lib/timezone';
 
 const EMPTY_LOGS: AttendanceLog[] = [];
 
@@ -74,12 +75,7 @@ export function AttendanceEditModal({ isOpen, onClose, selectedDate }: Attendanc
   if (!isOpen) return null;
 
   const formatTime = (isoString: string | null | undefined) => {
-    if (!isoString) return '-';
-    try {
-      return format(parseISO(isoString), 'HH:mm');
-    } catch {
-      return '-';
-    }
+    return formatTimeKST(isoString);
   };
 
   const calculateWorkInfo = (logList: AttendanceLog[]) => {

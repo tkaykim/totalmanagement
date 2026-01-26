@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAttendanceLogs, getAttendanceStats } from '../api';
 import { formatWorkTime } from '../lib/workTimeCalculator';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isWeekend, parseISO, differenceInMinutes } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isWeekend, parseISO, differenceInMinutes } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Clock, Coffee, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AttendanceLog } from '@/types/database';
+import { formatTimeKST } from '@/lib/timezone';
 
 interface AttendanceCalendarProps {
   onSelectDate?: (date: string, log?: AttendanceLog) => void;
@@ -113,12 +114,7 @@ export function AttendanceCalendar({ onSelectDate, userId, userName }: Attendanc
   };
 
   const formatTime = (isoString: string | null) => {
-    if (!isoString) return '-';
-    try {
-      return format(parseISO(isoString), 'HH:mm');
-    } catch {
-      return '-';
-    }
+    return formatTimeKST(isoString);
   };
 
   const prevMonth = () => {

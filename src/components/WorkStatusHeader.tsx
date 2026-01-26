@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Monitor, Users, MapPin, Coffee, LogOut, Zap, Sparkles, Clock } from 'lucide-react';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { formatKST, formatTimeKST } from '@/lib/timezone';
 import {
   Select,
   SelectContent,
@@ -222,11 +221,11 @@ export function useWorkStatus() {
   }, []);
 
   const formatTimeDetail = useCallback((date: Date) => {
-    return format(date, 'HH:mm:ss', { locale: ko });
+    return formatKST(date, 'HH:mm:ss');
   }, []);
 
   const formatDateDetail = useCallback((date: Date) => {
-    return format(date, 'M월 d일 EEEE', { locale: ko });
+    return formatKST(date, 'M월 d일 EEEE');
   }, []);
 
   const triggerWelcome = useCallback((title: string, msg: string) => {
@@ -761,13 +760,11 @@ export function WorkStatusAutoCheckoutWarningModal({
   if (!show || logs.length === 0) return null;
 
   const formatDateTime = (dateTimeStr: string) => {
-    const date = new Date(dateTimeStr);
-    return format(date, 'HH:mm', { locale: ko });
+    return formatTimeKST(dateTimeStr);
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return format(date, 'M월 d일 (E)', { locale: ko });
+    return formatKST(dateStr, 'M월 d일 (E)');
   };
 
   const handleConfirm = async (logId: string) => {

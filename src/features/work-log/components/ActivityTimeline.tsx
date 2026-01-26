@@ -1,7 +1,5 @@
 'use client';
 
-import { format, parseISO } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { 
   FolderPlus, 
   FileEdit, 
@@ -21,6 +19,7 @@ import type { ActivityLog, ActivityActionType } from '../types';
 import { ACTION_TYPE_LABELS } from '../types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { formatTimeKST } from '@/lib/timezone';
 
 interface ActivityTimelineProps {
   activities: ActivityLog[];
@@ -92,7 +91,7 @@ const ACTION_ICONS: Record<ActivityActionType, React.ReactNode> = {
 function ActivityItem({ activity }: { activity: ActivityLog }) {
   const icon = ACTION_ICONS[activity.action_type] || <Circle className="h-3.5 w-3.5" />;
   const label = ACTION_TYPE_LABELS[activity.action_type] || activity.action_type;
-  const time = format(parseISO(activity.occurred_at), 'HH:mm', { locale: ko });
+  const time = formatTimeKST(activity.occurred_at);
 
   const getIconStyle = () => {
     switch (activity.action_type) {
