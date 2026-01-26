@@ -19,7 +19,7 @@ import {
   Edit3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getTodayKST } from '@/lib/timezone';
+import { getTodayKST, formatTimeKST } from '@/lib/timezone';
 import { ApprovalQueue } from './ApprovalQueue';
 import { AdminAttendanceEditModal } from './AdminAttendanceEditModal';
 import { getApprovalQueue } from '../api';
@@ -176,12 +176,7 @@ export function AttendanceAdminView() {
   }, [filteredUsers]);
 
   const formatTime = (isoString: string | null) => {
-    if (!isoString) return '-';
-    try {
-      return format(parseISO(isoString), 'HH:mm');
-    } catch {
-      return '-';
-    }
+    return formatTimeKST(isoString);
   };
 
   const handlePrevDay = () => {

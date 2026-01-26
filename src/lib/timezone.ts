@@ -9,6 +9,8 @@
  */
 
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { formatDistanceToNow as dateFnsFormatDistanceToNow } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 export const KST_TIMEZONE = 'Asia/Seoul';
 
@@ -109,4 +111,85 @@ export function calculateMinutesDiff(startTime: string, endTime: string): number
   const [startH, startM] = startTime.split(':').map(Number);
   const [endH, endM] = endTime.split(':').map(Number);
   return (endH * 60 + endM) - (startH * 60 + startM);
+}
+
+/**
+ * UTC timestamp를 KST HH:mm 형식으로 변환
+ * @example
+ * formatTimeKST('2026-01-10T05:00:00.000Z') => '14:00'
+ */
+export function formatTimeKST(timestamp: string | Date | null | undefined): string {
+  if (!timestamp) return '-';
+  try {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return formatInTimeZone(date, KST_TIMEZONE, 'HH:mm');
+  } catch {
+    return '-';
+  }
+}
+
+/**
+ * UTC timestamp를 KST HH:mm:ss 형식으로 변환
+ * @example
+ * formatTimeWithSecondsKST('2026-01-10T05:00:00.000Z') => '14:00:00'
+ */
+export function formatTimeWithSecondsKST(timestamp: string | Date | null | undefined): string {
+  if (!timestamp) return '-';
+  try {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return formatInTimeZone(date, KST_TIMEZONE, 'HH:mm:ss');
+  } catch {
+    return '-';
+  }
+}
+
+/**
+ * UTC timestamp로부터 KST 기준 상대 시간 표시
+ * @example
+ * formatDistanceToNowKST('2026-01-10T05:00:00.000Z') => '3시간 전'
+ */
+export function formatDistanceToNowKST(
+  timestamp: string | Date | null | undefined,
+  options?: { addSuffix?: boolean }
+): string {
+  if (!timestamp) return '-';
+  try {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return dateFnsFormatDistanceToNow(date, { 
+      addSuffix: options?.addSuffix ?? true, 
+      locale: ko 
+    });
+  } catch {
+    return '-';
+  }
+}
+
+/**
+ * UTC timestamp를 KST 기준 날짜+시간 표시 (yyyy.M.d HH:mm)
+ * @example
+ * formatDateTimeKST('2026-01-10T05:00:00.000Z') => '2026.1.10 14:00'
+ */
+export function formatDateTimeKST(timestamp: string | Date | null | undefined): string {
+  if (!timestamp) return '-';
+  try {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return formatInTimeZone(date, KST_TIMEZONE, 'yyyy.M.d HH:mm');
+  } catch {
+    return '-';
+  }
+}
+
+/**
+ * UTC timestamp를 KST 기준 한국어 날짜 형식으로 표시
+ * @example
+ * formatDateKoreanKST('2026-01-10T05:00:00.000Z') => '2026년 1월 10일'
+ */
+export function formatDateKoreanKST(timestamp: string | Date | null | undefined): string {
+  if (!timestamp) return '-';
+  try {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return formatInTimeZone(date, KST_TIMEZONE, 'yyyy년 M월 d일');
+  } catch {
+    return '-';
+  }
 }

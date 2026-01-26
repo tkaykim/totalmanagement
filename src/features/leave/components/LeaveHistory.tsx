@@ -1,7 +1,5 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { CalendarPlus, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import {
   Table,
@@ -14,6 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { LeaveGrantWithUser, LeaveRequestWithUser } from '../types';
 import { LEAVE_TYPE_LABELS, LEAVE_GRANT_TYPE_LABELS, LEAVE_REQUEST_TYPE_LABELS } from '../types';
+import { formatKST } from '@/lib/timezone';
 
 interface LeaveHistoryProps {
   grants: LeaveGrantWithUser[];
@@ -132,7 +131,7 @@ export function LeaveHistory({ grants, requests, isLoading }: LeaveHistoryProps)
 
             {/* 날짜 */}
             <p className="text-[10px] text-slate-400 mt-2">
-              {format(new Date(item.date), 'yyyy년 M월 d일', { locale: ko })}
+              {formatKST(item.date, 'yyyy년 M월 d일')}
             </p>
           </div>
         ))}
@@ -167,7 +166,7 @@ export function LeaveHistory({ grants, requests, isLoading }: LeaveHistoryProps)
                   )}
                 </TableCell>
                 <TableCell className="text-slate-500 dark:text-slate-400">
-                  {format(new Date(item.date), 'yyyy.M.d', { locale: ko })}
+                  {formatKST(item.date, 'yyyy.M.d')}
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">{item.leaveType}</Badge>

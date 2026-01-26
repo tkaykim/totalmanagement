@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import type { AttendanceStatus } from '../types';
 import { formatWorkTime } from '../lib/workTimeCalculator';
 import { Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { formatTimeKST } from '@/lib/timezone';
 
 interface AttendanceStatusCardProps {
   status: AttendanceStatus;
@@ -66,10 +67,7 @@ export function AttendanceStatusCard({ status }: AttendanceStatusCardProps) {
           <span className="text-slate-500 dark:text-slate-400">출근 시간</span>
           <span className="font-bold text-slate-900 dark:text-slate-100">
             {status.checkInAt 
-              ? new Date(status.checkInAt).toLocaleTimeString('ko-KR', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })
+              ? formatTimeKST(status.checkInAt)
               : '미기록'}
           </span>
         </div>
@@ -78,10 +76,7 @@ export function AttendanceStatusCard({ status }: AttendanceStatusCardProps) {
           <span className="text-slate-500 dark:text-slate-400">퇴근 시간</span>
           <span className="font-bold text-slate-900 dark:text-slate-100">
             {status.checkOutAt 
-              ? new Date(status.checkOutAt).toLocaleTimeString('ko-KR', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })
+              ? formatTimeKST(status.checkOutAt)
               : '미기록'}
           </span>
         </div>

@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, CheckCheck, Trash2, Clock, AlertCircle, Info, CheckCircle, RefreshCw } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { formatDistanceToNowKST } from '@/lib/timezone';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import {
@@ -331,7 +330,7 @@ function NotificationItem({ notification, onClick, onMarkAsRead, onDelete }: Not
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex items-center gap-1.5">
               <Clock size={12} />
-              {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: ko })}
+              {formatDistanceToNowKST(notification.created_at, { addSuffix: true })}
             </p>
           </div>
         </div>

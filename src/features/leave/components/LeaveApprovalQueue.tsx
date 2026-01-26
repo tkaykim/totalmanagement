@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { formatKST } from '@/lib/timezone';
 
 const BU_DISPLAY_NAMES: Record<string, string> = {
   HEAD: '본사',
@@ -120,8 +119,8 @@ export function LeaveApprovalQueue({ items, isLoading, onRefresh }: LeaveApprova
         {items.map((item) => {
           const dateRange = item.start_date && item.end_date
             ? item.start_date === item.end_date
-              ? format(new Date(item.start_date), 'M월 d일', { locale: ko })
-              : `${format(new Date(item.start_date), 'M/d', { locale: ko })} ~ ${format(new Date(item.end_date), 'M/d', { locale: ko })}`
+              ? formatKST(item.start_date, 'M월 d일')
+              : `${formatKST(item.start_date, 'M/d')} ~ ${formatKST(item.end_date, 'M/d')}`
             : '-';
 
           return (
@@ -191,7 +190,7 @@ export function LeaveApprovalQueue({ items, isLoading, onRefresh }: LeaveApprova
 
               {/* 신청일 */}
               <p className="text-[10px] text-slate-400 mt-2">
-                신청: {format(new Date(item.created_at), 'M/d HH:mm', { locale: ko })}
+                신청: {formatKST(item.created_at, 'M/d HH:mm')}
               </p>
             </div>
           );
@@ -234,9 +233,9 @@ export function LeaveApprovalQueue({ items, isLoading, onRefresh }: LeaveApprova
                 <TableCell>
                   {item.start_date && item.end_date ? (
                     <>
-                      {format(new Date(item.start_date), 'M/d', { locale: ko })}
+                      {formatKST(item.start_date, 'M/d')}
                       {item.start_date !== item.end_date && (
-                        <> ~ {format(new Date(item.end_date), 'M/d', { locale: ko })}</>
+                        <> ~ {formatKST(item.end_date, 'M/d')}</>
                       )}
                     </>
                   ) : (
@@ -248,7 +247,7 @@ export function LeaveApprovalQueue({ items, isLoading, onRefresh }: LeaveApprova
                   {item.reason}
                 </TableCell>
                 <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
-                  {format(new Date(item.created_at), 'M/d HH:mm', { locale: ko })}
+                  {formatKST(item.created_at, 'M/d HH:mm')}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">

@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { AlertTriangle, Clock, X, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { correctCheckoutTime, confirmAutoCheckout } from '../api';
 import type { PendingAutoCheckoutRecord } from '../types';
+import { formatTimeKST, formatKST } from '@/lib/timezone';
 
 interface MissedCheckoutModalProps {
   isOpen: boolean;
@@ -30,9 +29,8 @@ export function MissedCheckoutModal({
 
   useEffect(() => {
     if (currentRecord) {
-      // 기본값으로 자동 퇴근 시간 설정
-      const autoCheckoutTime = parseISO(currentRecord.check_out_at);
-      setCheckOutTime(format(autoCheckoutTime, 'HH:mm'));
+      // 기본값으로 자동 퇴근 시간 설정 (KST 기준)
+      setCheckOutTime(formatTimeKST(currentRecord.check_out_at));
     }
   }, [currentRecord]);
 
@@ -107,8 +105,6 @@ export function MissedCheckoutModal({
     return null;
   }
 
-  const checkInTime = parseISO(currentRecord.check_in_at);
-  const autoCheckoutTime = parseISO(currentRecord.check_out_at);
   const workDate = currentRecord.work_date;
 
   const isLoading = correctMutation.isPending || confirmMutation.isPending;
@@ -174,20 +170,20 @@ export function MissedCheckoutModal({
           <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 mb-4">
             <div className="text-center mb-3">
               <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                {format(parseISO(workDate), 'yyyy년 M월 d일 (EEEE)', { locale: ko })}
+                {formatKST(workDate, 'yyyy년 M월 d일 (EEEE)')}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-slate-500 dark:text-slate-400">출근 시간</span>
                 <div className="font-semibold text-slate-900 dark:text-slate-100">
-                  {format(checkInTime, 'HH:mm')}
+                  {formatTimeKST(currentRecord.check_in_at)}
                 </div>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-slate-400">자동 퇴근 처리</span>
                 <div className="font-semibold text-orange-600 dark:text-orange-400">
-                  {format(autoCheckoutTime, 'HH:mm')}
+                  {formatTimeKST(currentRecord.check_out_at)}
                 </div>
               </div>
             </div>
@@ -228,7 +224,7 @@ export function MissedCheckoutModal({
                   />
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                  자동 퇴근 처리된 시간: {format(autoCheckoutTime, 'HH:mm')}
+                  자동 퇴근 처리된 시간: {formatTimeKST(currentRecord.check_out_at)}
                 </p>
               </div>
 

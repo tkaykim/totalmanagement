@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { ActivityLog } from '../types';
 import { cn } from '@/lib/utils';
+import { formatTimeKST } from '@/lib/timezone';
 
 interface AttendanceLog {
   id: string;
@@ -49,10 +50,10 @@ export function DailySummary({ activities, attendanceLogs = [], isLoading }: Dai
 
     return {
       checkInTime: latestAttendance?.check_in_at 
-        ? new Date(latestAttendance.check_in_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        ? formatTimeKST(latestAttendance.check_in_at)
         : null,
       checkOutTime: latestAttendance?.check_out_at
-        ? new Date(latestAttendance.check_out_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        ? formatTimeKST(latestAttendance.check_out_at)
         : null,
       isOvernightWork,
       isOvertime: latestAttendance?.is_overtime || false,
