@@ -1,4 +1,5 @@
 import { createPureClient } from '@/lib/supabase/server';
+import { formatTimeKST, formatKST } from '@/lib/timezone';
 
 type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -537,11 +538,9 @@ export async function notifyReservationCancelled(
 
 function formatTimeRange(startTime: string, endTime: string): string {
   try {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const dateStr = start.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-    const startStr = start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-    const endStr = end.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = formatKST(startTime, 'M월 d일');
+    const startStr = formatTimeKST(startTime);
+    const endStr = formatTimeKST(endTime);
     return `${dateStr} ${startStr}~${endStr}`;
   } catch {
     return `${startTime} ~ ${endTime}`;
@@ -570,10 +569,7 @@ export async function notifyCheckInToHeadAdmin(
   const headAdminIds = await getHeadAdminIds();
   if (headAdminIds.length === 0) return { success: true };
   
-  const timeStr = new Date(checkInTime).toLocaleTimeString('ko-KR', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
+  const timeStr = formatTimeKST(checkInTime);
   
   return createNotificationForUsers(headAdminIds, {
     title: '출근 알림',
@@ -596,10 +592,7 @@ export async function notifyCheckOutToHeadAdmin(
   const headAdminIds = await getHeadAdminIds();
   if (headAdminIds.length === 0) return { success: true };
   
-  const timeStr = new Date(checkOutTime).toLocaleTimeString('ko-KR', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
+  const timeStr = formatTimeKST(checkOutTime);
   
   return createNotificationForUsers(headAdminIds, {
     title: '퇴근 알림',
