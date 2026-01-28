@@ -46,6 +46,8 @@ export function LeaveAdminView() {
   const [pendingItems, setPendingItems] = useState<PendingApprovalItem[]>([]);
   const [teamStats, setTeamStats] = useState<TeamLeaveStatsType[]>([]);
   const [allRequests, setAllRequests] = useState<LeaveRequestWithUser[]>([]);
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedBu, setSelectedBu] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [grantModalOpen, setGrantModalOpen] = useState(false);
@@ -55,8 +57,11 @@ export function LeaveAdminView() {
     try {
       const [pending, stats, requests] = await Promise.all([
         getPendingApprovals(),
-        getTeamLeaveStats({ bu_code: selectedBu !== 'all' ? selectedBu : undefined }),
-        getLeaveRequests(),
+        getTeamLeaveStats({
+          year: selectedYear,
+          bu_code: selectedBu !== 'all' ? selectedBu : undefined,
+        }),
+        getLeaveRequests({ year: selectedYear }),
       ]);
 
       setPendingItems(pending);
@@ -65,7 +70,7 @@ export function LeaveAdminView() {
     } catch (error) {
       console.error('Failed to fetch admin data:', error);
     }
-  }, [selectedBu]);
+  }, [selectedBu, selectedYear]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -115,7 +120,7 @@ export function LeaveAdminView() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="w-full min-w-0 p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
@@ -125,7 +130,22 @@ export function LeaveAdminView() {
             휴가 신청 승인, 휴가 부여, 팀원 현황을 관리합니다.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={String(selectedYear)}
+            onValueChange={(v) => setSelectedYear(parseInt(v, 10))}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="연도" />
+            </SelectTrigger>
+            <SelectContent>
+              {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}년
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             variant="ghost"
             size="sm"
@@ -231,7 +251,7 @@ export function LeaveAdminView() {
       </div>
 
       {/* Tab Content */}
-      <div className="mt-4">
+      <div className="mt-4 w-full min-w-0">
         {activeTab === 'pending' && (
           <Card>
             <CardHeader>
@@ -265,7 +285,7 @@ export function LeaveAdminView() {
                 </Select>
               )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="w-full min-w-0 overflow-x-auto">
               <TeamLeaveTable stats={teamStats} onRefresh={fetchData} />
             </CardContent>
           </Card>

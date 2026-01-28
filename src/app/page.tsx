@@ -945,7 +945,7 @@ export default function HomePage() {
           yearOptions={yearOptions}
         />
 
-        <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 py-3 sm:py-8 space-y-3 sm:space-y-6">
+        <div className={`mx-auto w-full px-3 sm:px-4 py-3 sm:py-8 space-y-3 sm:space-y-6 ${view === 'leaveAdmin' ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
           <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4 sm:gap-3">
             <QuickAction
               title="프로젝트 등록"

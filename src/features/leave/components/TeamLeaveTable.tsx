@@ -79,12 +79,12 @@ export function TeamLeaveTable({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-x-auto">
-        <Table>
+      <div className="w-full min-w-0 rounded-lg border border-slate-200 dark:border-slate-700 overflow-x-auto">
+        <Table className="w-full min-w-[1400px]">
           <TableHeader>
             <TableRow className="bg-slate-50 dark:bg-slate-800/80">
               <TableHead
-                className="cursor-pointer select-none whitespace-nowrap"
+                className="cursor-pointer select-none whitespace-nowrap min-w-[140px]"
                 onClick={() => toggleSort('name')}
               >
                 <span className="inline-flex items-center gap-1">
@@ -101,7 +101,7 @@ export function TeamLeaveTable({
                 </span>
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none whitespace-nowrap"
+                className="cursor-pointer select-none whitespace-nowrap min-w-[110px]"
                 onClick={() => toggleSort('hire_date')}
               >
                 <span className="inline-flex items-center gap-1">
@@ -117,56 +117,56 @@ export function TeamLeaveTable({
                   )}
                 </span>
               </TableHead>
-              <TableHead className="text-center whitespace-nowrap">올해 생성</TableHead>
-              <TableHead className="text-center whitespace-nowrap" colSpan={3}>
+              <TableHead className="text-center whitespace-nowrap min-w-[100px]">올해 생성</TableHead>
+              <TableHead className="text-center whitespace-nowrap min-w-[80px]" colSpan={3}>
                 생성내역
               </TableHead>
-              <TableHead className="text-center whitespace-nowrap" colSpan={9}>
+              <TableHead className="text-center whitespace-nowrap min-w-[80px]" colSpan={9}>
                 사용현황
               </TableHead>
-              <TableHead className="text-center whitespace-nowrap">잔여</TableHead>
+              <TableHead className="text-center whitespace-nowrap min-w-[100px]">잔여</TableHead>
             </TableRow>
             <TableRow className="bg-slate-50 dark:bg-slate-800/50">
-              <TableHead />
-              <TableHead />
-              <TableHead />
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="min-w-[140px]" />
+              <TableHead className="min-w-[110px]" />
+              <TableHead className="min-w-[100px]" />
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 정기
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 포상
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 기타
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 연차
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 월차
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 경조사
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 병가
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 공가
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 여름 휴가
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 대체 휴가
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 병원
               </TableHead>
-              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]">
                 명절
               </TableHead>
-              <TableHead />
+              <TableHead className="min-w-[100px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,7 +180,7 @@ export function TeamLeaveTable({
               const shortId = stat.user_id.slice(0, 6);
               return (
                 <TableRow key={stat.user_id}>
-                  <TableCell className="font-medium whitespace-nowrap">
+                  <TableCell className="font-medium whitespace-nowrap min-w-[140px]">
                     <button
                       type="button"
                       className="text-left underline-offset-4 hover:underline text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded"
@@ -189,41 +189,41 @@ export function TeamLeaveTable({
                       {stat.user_name} ({shortId}…)
                     </button>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-slate-600 dark:text-slate-400">
+                  <TableCell className="whitespace-nowrap text-slate-600 dark:text-slate-400 min-w-[110px]">
                     {stat.hire_date
                       ? format(new Date(stat.hire_date), 'yyyy-MM-dd')
                       : '-'}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="text-center whitespace-nowrap min-w-[100px]">
                     {formatLeaveDays(totalGen)}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">
                     {formatLeaveDays(stat.grant_regular ?? 0)}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">
                     {formatLeaveDays(stat.grant_reward ?? 0)}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">
                     {formatLeaveDays(stat.grant_other ?? 0)}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">
                     {formatLeaveDays(stat.usage_annual ?? stat.annual_used ?? 0)}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">
                     {formatLeaveDays(stat.usage_monthly ?? 0)}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">
                     {formatLeaveDays(stat.usage_compensatory ?? stat.compensatory_used ?? 0)}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap min-w-[80px]">
                     {formatLeaveDays(stat.usage_special ?? stat.special_used ?? 0)}
                   </TableCell>
-                  <TableCell className="text-center font-medium whitespace-nowrap">
+                  <TableCell className="text-center font-medium whitespace-nowrap min-w-[100px]">
                     {formatLeaveDays(totalRem)}
                   </TableCell>
                 </TableRow>
