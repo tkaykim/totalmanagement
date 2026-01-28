@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useDebounce } from 'react-use';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, ChevronDown, ChevronUp, Plus, Trash2, User, Building2, UsersRound, MapPin, Tag } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Plus, Trash2, User, Building2, UsersRound, MapPin, Tag, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCategories, useCreatePartner, useUpdatePartner, usePartners } from '../hooks/usePartners';
 import {
@@ -75,15 +76,36 @@ export function UnifiedPartnerModal({
   );
 
   const { data: categories = [] } = useCategories({ entity_type: selectedEntityType });
-  const { data: teamsAndOrgs } = usePartners({ 
-    entity_type: selectedEntityType === 'person' ? undefined : undefined,
-    limit: 100 
+  const [affiliationSearch, setAffiliationSearch] = useState('');
+  const [debouncedAffiliationSearch, setDebouncedAffiliationSearch] = useState('');
+  
+  // Debounce affiliation search
+  useDebounce(() => {
+    setDebouncedAffiliationSearch(affiliationSearch);
+  }, 300, [affiliationSearch]);
+  
+  // Fetch organization and team partners for affiliation options
+  const { data: teamsAndOrgs, isLoading: isLoadingAffiliations } = usePartners({ 
+    limit: 1000,
+    search: debouncedAffiliationSearch || undefined,
   });
 
   const affiliationOptions = useMemo(() => {
     return (teamsAndOrgs?.data || [])
       .filter(p => ['organization', 'team'].includes(p.entity_type) && p.id !== partner?.id)
-      .map(p => ({ id: p.id, label: `${ENTITY_TYPE_EMOJI_ICONS[p.entity_type]} ${p.display_name}` }));
+      .map(p => ({ 
+        id: p.id, 
+        label: `${ENTITY_TYPE_EMOJI_ICONS[p.entity_type]} ${p.display_name}`,
+        display_name: p.display_name,
+        entity_type: p.entity_type,
+      }))
+      .sort((a, b) => {
+        // Sort by entity_type first (organization before team), then by name
+        if (a.entity_type !== b.entity_type) {
+          return a.entity_type === 'organization' ? -1 : 1;
+        }
+        return a.display_name.localeCompare(b.display_name);
+      });
   }, [teamsAndOrgs, partner?.id]);
 
   const createMutation = useCreatePartner();
@@ -406,28 +428,63 @@ export function UnifiedPartnerModal({
                 </p>
               ) : (
                 <div className="space-y-2">
+                  {/* Affiliation Search */}
+                  {affiliations.length > 0 && (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="소속 검색 (회사/팀 이름으로 검색)..."
+                        value={affiliationSearch}
+                        onChange={(e) => setAffiliationSearch(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      />
+                      {isLoadingAffiliations && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {affiliations.map((_, index) => (
                     <div key={index} className="flex gap-2 items-start p-3 border border-slate-300 dark:border-slate-600 rounded-lg">
                       <div className="flex-1 space-y-2">
-                        <select
-                          {...register(`affiliations.${index}.partner_id` as const)}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                        >
-                          <option value={0}>소속 선택</option>
-                          {affiliationOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>{opt.label}</option>
-                          ))}
-                        </select>
+                        <Controller
+                          name={`affiliations.${index}.partner_id` as const}
+                          control={control}
+                          render={({ field }) => (
+                            <select
+                              value={field.value || 0}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              disabled={isLoadingAffiliations}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <option value={0}>
+                                {isLoadingAffiliations ? '로딩 중...' : affiliationOptions.length === 0 ? '소속을 찾을 수 없습니다' : '소속 선택'}
+                              </option>
+                              {affiliationOptions.map((opt) => (
+                                <option key={opt.id} value={opt.id}>{opt.label}</option>
+                              ))}
+                            </select>
+                          )}
+                        />
                         <div className="flex gap-2">
-                          <select
-                            {...register(`affiliations.${index}.relation_type` as const)}
-                            className="w-[120px] px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                          >
-                            <option value="exclusive">전속</option>
-                            <option value="member">소속</option>
-                            <option value="employee">직원</option>
-                            <option value="contract">계약</option>
-                          </select>
+                          <Controller
+                            name={`affiliations.${index}.relation_type` as const}
+                            control={control}
+                            render={({ field }) => (
+                              <select
+                                value={field.value || 'member'}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="w-[120px] px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                              >
+                                <option value="exclusive">전속</option>
+                                <option value="member">소속</option>
+                                <option value="employee">직원</option>
+                                <option value="contract">계약</option>
+                              </select>
+                            )}
+                          />
                           <input
                             {...register(`affiliations.${index}.role_description` as const)}
                             placeholder="역할 설명 (선택)"
