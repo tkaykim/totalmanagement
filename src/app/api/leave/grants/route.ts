@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createLeaveGrantedLog } from '@/lib/activity-logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     // HEAD admin만 휴가 부여 가능
     const { data: currentUser } = await supabase
       .from('app_users')
-      .select('role, bu_code')
+      .select('role, bu_code, name')
       .eq('id', user.id)
       .single();
 
@@ -99,6 +100,16 @@ export async function POST(request: NextRequest) {
       console.error('Leave grant create error:', grantError);
       return NextResponse.json({ error: '휴가 부여에 실패했습니다.' }, { status: 500 });
     }
+
+    await createLeaveGrantedLog(
+      user_id,
+      grant.id,
+      user.id,
+      currentUser.name ?? '관리자',
+      leave_type,
+      Number(days),
+      reason
+    );
 
     // 휴가 잔여일수 업데이트
     const { data: balance } = await supabase

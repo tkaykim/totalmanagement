@@ -13,13 +13,15 @@ export type ActivityActionType =
   | 'check_in'
   | 'check_out'
   | 'auto_check_out'
-  | 'attendance_corrected';
+  | 'attendance_corrected'
+  | 'leave_granted';
 
 export type ActivityEntityType =
   | 'project'
   | 'task'
   | 'financial_entry'
-  | 'attendance';
+  | 'attendance'
+  | 'leave_grant';
 
 export interface ActivityLogParams {
   userId: string;
@@ -95,6 +97,43 @@ export async function createProjectStatusChangeLog(
     entityId: projectId,
     entityTitle: projectName,
     metadata: { old_status: oldStatus, new_status: newStatus },
+  });
+}
+
+/**
+ * 휴가 부여 활동 로그를 생성합니다.
+ * @param granteeId 부여받은 사용자 ID
+ * @param grantId leave_grants.id
+ * @param granterId 부여한 관리자 ID
+ * @param granterName 부여한 관리자 이름
+ * @param leaveType 연차 | 대체휴무 | 특별휴가
+ * @param days 부여 일수
+ * @param reason 부여 사유
+ */
+export async function createLeaveGrantedLog(
+  granteeId: string,
+  grantId: string,
+  granterId: string,
+  granterName: string,
+  leaveType: string,
+  days: number,
+  reason: string
+): Promise<void> {
+  const label = leaveType === 'annual' ? (days === 0.5 ? '반차' : '연차') : leaveType === 'compensatory' ? '대체휴무' : '특별휴가';
+  const title = `${label} ${days}일 부여`;
+  await createActivityLog({
+    userId: granteeId,
+    actionType: 'leave_granted',
+    entityType: 'leave_grant',
+    entityId: String(grantId),
+    entityTitle: title,
+    metadata: {
+      granted_by: granterId,
+      granted_by_name: granterName,
+      leave_type: leaveType,
+      days,
+      reason,
+    },
   });
 }
 

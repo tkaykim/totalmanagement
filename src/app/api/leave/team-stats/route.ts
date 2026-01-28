@@ -50,27 +50,82 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    // 모든 사용자의 휴가 잔여일수를 일괄 조회 (N+1 문제 해결)
     const userIds = users.map(u => u.id);
-    const { data: allBalances } = await supabase
-      .from('leave_balances')
-      .select('*')
-      .in('user_id', userIds)
-      .eq('year', year);
 
-    // 사용자별 잔여일수 맵 생성
+    const [balancesRes, grantsRes, requestsRes] = await Promise.all([
+      supabase.from('leave_balances').select('*').in('user_id', userIds).eq('year', year),
+      supabase.from('leave_grants').select('user_id, leave_type, grant_type, days, reason').in('user_id', userIds).eq('year', year),
+      supabase
+        .from('leave_requests')
+        .select('requester_id, leave_type, days_used, status, start_date')
+        .in('requester_id', userIds)
+        .eq('status', 'approved')
+        .gte('start_date', `${year}-01-01`)
+        .lte('start_date', `${year}-12-31`),
+    ]);
+
+    const allBalances = balancesRes.data ?? [];
+    const allGrants = grantsRes.data ?? [];
+    const allRequests = requestsRes.data ?? [];
+
     const balanceMap = new Map<string, typeof allBalances>();
-    for (const balance of allBalances || []) {
-      const existing = balanceMap.get(balance.user_id) || [];
-      existing.push(balance);
-      balanceMap.set(balance.user_id, existing);
+    for (const b of allBalances) {
+      const list = balanceMap.get(b.user_id) ?? [];
+      list.push(b);
+      balanceMap.set(b.user_id, list);
+    }
+
+    const grantMap = new Map<string, { regular: number; reward: number; other: number }>();
+    for (const g of allGrants) {
+      const days = Number(g.days);
+      let cur = grantMap.get(g.user_id);
+      if (!cur) {
+        cur = { regular: 0, reward: 0, other: 0 };
+        grantMap.set(g.user_id, cur);
+      }
+      if (g.grant_type === 'auto_yearly' || g.grant_type === 'auto_monthly') {
+        cur.regular += days;
+      } else if (g.grant_type === 'manual' && g.reason && String(g.reason).includes('포상')) {
+        cur.reward += days;
+      } else {
+        cur.other += days;
+      }
+    }
+
+    const usageMap = new Map<string, { annual: number; monthly: number; compensatory: number; special: number }>();
+    for (const r of allRequests) {
+      const days = Number(r.days_used);
+      let cur = usageMap.get(r.requester_id);
+      if (!cur) {
+        cur = { annual: 0, monthly: 0, compensatory: 0, special: 0 };
+        usageMap.set(r.requester_id, cur);
+      }
+      if (r.leave_type === 'annual' || r.leave_type === 'half_am' || r.leave_type === 'half_pm') {
+        cur.annual += days;
+      } else if (r.leave_type === 'compensatory') {
+        cur.compensatory += days;
+      } else if (r.leave_type === 'special') {
+        cur.special += days;
+      }
     }
 
     const stats = users.map(u => {
-      const balances = balanceMap.get(u.id) || [];
+      const balances = balanceMap.get(u.id) ?? [];
       const annual = balances.find(b => b.leave_type === 'annual');
       const compensatory = balances.find(b => b.leave_type === 'compensatory');
       const special = balances.find(b => b.leave_type === 'special');
+      const grants = grantMap.get(u.id) ?? { regular: 0, reward: 0, other: 0 };
+      const usage = usageMap.get(u.id) ?? { annual: 0, monthly: 0, compensatory: 0, special: 0 };
+
+      const annualTotal = annual ? Number(annual.total_days) : 0;
+      const annualUsed = annual ? Number(annual.used_days) : 0;
+      const compTotal = compensatory ? Number(compensatory.total_days) : 0;
+      const compUsed = compensatory ? Number(compensatory.used_days) : 0;
+      const specialTotal = special ? Number(special.total_days) : 0;
+      const specialUsed = special ? Number(special.used_days) : 0;
+
+      const totalGenerated = annualTotal + compTotal + specialTotal;
+      const totalRemaining = (annualTotal - annualUsed) + (compTotal - compUsed) + (specialTotal - specialUsed);
 
       return {
         user_id: u.id,
@@ -78,15 +133,24 @@ export async function GET(request: NextRequest) {
         bu_code: u.bu_code,
         position: u.position,
         hire_date: u.hire_date,
-        annual_total: annual ? Number(annual.total_days) : 0,
-        annual_used: annual ? Number(annual.used_days) : 0,
-        annual_remaining: annual ? Number(annual.total_days) - Number(annual.used_days) : 0,
-        compensatory_total: compensatory ? Number(compensatory.total_days) : 0,
-        compensatory_used: compensatory ? Number(compensatory.used_days) : 0,
-        compensatory_remaining: compensatory ? Number(compensatory.total_days) - Number(compensatory.used_days) : 0,
-        special_total: special ? Number(special.total_days) : 0,
-        special_used: special ? Number(special.used_days) : 0,
-        special_remaining: special ? Number(special.total_days) - Number(special.used_days) : 0,
+        annual_total: annualTotal,
+        annual_used: annualUsed,
+        annual_remaining: annualTotal - annualUsed,
+        compensatory_total: compTotal,
+        compensatory_used: compUsed,
+        compensatory_remaining: compTotal - compUsed,
+        special_total: specialTotal,
+        special_used: specialUsed,
+        special_remaining: specialTotal - specialUsed,
+        total_generated: totalGenerated,
+        total_remaining: totalRemaining,
+        grant_regular: grants.regular,
+        grant_reward: grants.reward,
+        grant_other: grants.other,
+        usage_annual: usage.annual,
+        usage_monthly: usage.monthly,
+        usage_compensatory: usage.compensatory,
+        usage_special: usage.special,
       };
     });
 

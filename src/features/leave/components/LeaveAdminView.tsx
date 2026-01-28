@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { LeaveApprovalQueue } from './LeaveApprovalQueue';
 import { AdminLeaveGrant } from './AdminLeaveGrant';
-import { TeamLeaveStats } from './TeamLeaveStats';
+import { TeamLeaveTable } from './TeamLeaveTable';
 import { LeaveRequestList } from './LeaveRequestList';
 import {
   getPendingApprovals,
@@ -249,7 +249,7 @@ export function LeaveAdminView() {
         {activeTab === 'team' && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">팀원 휴가 현황</CardTitle>
+              <CardTitle className="text-lg">전사 근무관리</CardTitle>
               {currentUser?.role === 'admin' && (
                 <Select value={selectedBu} onValueChange={setSelectedBu}>
                   <SelectTrigger className="w-[150px]">
@@ -266,11 +266,7 @@ export function LeaveAdminView() {
               )}
             </CardHeader>
             <CardContent>
-              <TeamLeaveStats 
-                stats={teamStats} 
-                onRefresh={fetchData}
-                showHireDateEdit={isHeadAdmin}
-              />
+              <TeamLeaveTable stats={teamStats} onRefresh={fetchData} />
             </CardContent>
           </Card>
         )}

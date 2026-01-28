@@ -283,6 +283,15 @@ export interface TeamLeaveStats {
   special_total: number;
   special_used: number;
   special_remaining: number;
+  total_generated?: number;
+  total_remaining?: number;
+  grant_regular?: number;
+  grant_reward?: number;
+  grant_other?: number;
+  usage_annual?: number;
+  usage_monthly?: number;
+  usage_compensatory?: number;
+  usage_special?: number;
 }
 
 export async function getTeamLeaveStats(params?: {

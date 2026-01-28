@@ -1,0 +1,268 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { format } from 'date-fns';
+import { ArrowUpDown, ArrowUp, ArrowDown, UserX } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import type { TeamLeaveStats as TeamLeaveStatsType } from '../api';
+import { formatLeaveDays } from '../lib/format-leave-days';
+import { GrantLeaveToUserModal } from './GrantLeaveToUserModal';
+
+type SortKey = 'name' | 'hire_date';
+type SortDir = 'asc' | 'desc';
+
+interface TeamLeaveTableProps {
+  stats: TeamLeaveStatsType[];
+  onNoLeaveUsers?: () => void;
+  onRefresh?: () => void;
+}
+
+export function TeamLeaveTable({
+  stats,
+  onNoLeaveUsers,
+  onRefresh,
+}: TeamLeaveTableProps) {
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [showOnlyNoLeave, setShowOnlyNoLeave] = useState(false);
+  const [grantModalUser, setGrantModalUser] = useState<{ id: string; name: string } | null>(null);
+
+  const noLeaveUsers = useMemo(
+    () =>
+      stats.filter(
+        (s) =>
+          (s.total_generated ?? s.annual_total + s.compensatory_total + s.special_total) === 0
+      ),
+    [stats]
+  );
+
+  const displayStats = showOnlyNoLeave ? noLeaveUsers : stats;
+
+  const sortedStats = useMemo(() => {
+    const list = [...displayStats];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'name') {
+        cmp = (a.user_name ?? '').localeCompare(b.user_name ?? '');
+      } else {
+        const da = a.hire_date ? new Date(a.hire_date).getTime() : 0;
+        const db = b.hire_date ? new Date(b.hire_date).getTime() : 0;
+        cmp = da - db;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [displayStats, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const handleNoLeaveClick = () => {
+    if (noLeaveUsers.length === 0) return;
+    setShowOnlyNoLeave((prev) => !prev);
+    onNoLeaveUsers?.();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50 dark:bg-slate-800/80">
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => toggleSort('name')}
+              >
+                <span className="inline-flex items-center gap-1">
+                  이름
+                  {sortKey === 'name' ? (
+                    sortDir === 'asc' ? (
+                      <ArrowUp className="h-4 w-4" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4" />
+                    )
+                  ) : (
+                    <ArrowUpDown className="h-4 w-4 opacity-50" />
+                  )}
+                </span>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => toggleSort('hire_date')}
+              >
+                <span className="inline-flex items-center gap-1">
+                  입사일
+                  {sortKey === 'hire_date' ? (
+                    sortDir === 'asc' ? (
+                      <ArrowUp className="h-4 w-4" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4" />
+                    )
+                  ) : (
+                    <ArrowUpDown className="h-4 w-4 opacity-50" />
+                  )}
+                </span>
+              </TableHead>
+              <TableHead className="text-center whitespace-nowrap">올해 생성</TableHead>
+              <TableHead className="text-center whitespace-nowrap" colSpan={3}>
+                생성내역
+              </TableHead>
+              <TableHead className="text-center whitespace-nowrap" colSpan={9}>
+                사용현황
+              </TableHead>
+              <TableHead className="text-center whitespace-nowrap">잔여</TableHead>
+            </TableRow>
+            <TableRow className="bg-slate-50 dark:bg-slate-800/50">
+              <TableHead />
+              <TableHead />
+              <TableHead />
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                정기
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                포상
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                기타
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                연차
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                월차
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                경조사
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                병가
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                공가
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                여름 휴가
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                대체 휴가
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                병원
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                명절
+              </TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedStats.map((stat) => {
+              const totalGen =
+                stat.total_generated ??
+                stat.annual_total + stat.compensatory_total + stat.special_total;
+              const totalRem =
+                stat.total_remaining ??
+                stat.annual_remaining + stat.compensatory_remaining + stat.special_remaining;
+              const shortId = stat.user_id.slice(0, 6);
+              return (
+                <TableRow key={stat.user_id}>
+                  <TableCell className="font-medium whitespace-nowrap">
+                    <button
+                      type="button"
+                      className="text-left underline-offset-4 hover:underline text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded"
+                      onClick={() => setGrantModalUser({ id: stat.user_id, name: stat.user_name ?? '' })}
+                    >
+                      {stat.user_name} ({shortId}…)
+                    </button>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-slate-600 dark:text-slate-400">
+                    {stat.hire_date
+                      ? format(new Date(stat.hire_date), 'yyyy-MM-dd')
+                      : '-'}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {formatLeaveDays(totalGen)}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {formatLeaveDays(stat.grant_regular ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {formatLeaveDays(stat.grant_reward ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {formatLeaveDays(stat.grant_other ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {formatLeaveDays(stat.usage_annual ?? stat.annual_used ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {formatLeaveDays(stat.usage_monthly ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {formatLeaveDays(stat.usage_compensatory ?? stat.compensatory_used ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">0일</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {formatLeaveDays(stat.usage_special ?? stat.special_used ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-center font-medium whitespace-nowrap">
+                    {formatLeaveDays(totalRem)}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          총 인원 : {stats.length}
+          {showOnlyNoLeave && ` (휴가 미생성자 ${noLeaveUsers.length}명만 표시)`}
+        </p>
+        {noLeaveUsers.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-slate-600 dark:text-slate-400"
+            onClick={handleNoLeaveClick}
+          >
+            <UserX className="h-4 w-4 mr-2" />
+            {showOnlyNoLeave ? '전체 보기' : `휴가 미생성자 (${noLeaveUsers.length})`}
+          </Button>
+        )}
+      </div>
+
+      {grantModalUser && (
+        <GrantLeaveToUserModal
+          open={!!grantModalUser}
+          onOpenChange={(open) => !open && setGrantModalUser(null)}
+          userId={grantModalUser.id}
+          userName={grantModalUser.name}
+          onSuccess={() => {
+            setGrantModalUser(null);
+            onRefresh?.();
+          }}
+        />
+      )}
+    </div>
+  );
+}
