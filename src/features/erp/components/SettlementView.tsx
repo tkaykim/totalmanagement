@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChartLine, Coins, DollarSign, PieChart, FileText } from 'lucide-react';
+import { ChartLine, Coins, DollarSign, PieChart, FileText, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BU,
@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { BuTabs } from './BuTabs';
 import { StatCard } from './StatCard';
+import { Input } from '@/components/ui/input';
 import { ProjectShareTab, SettlementListTab } from '@/features/settlement/components';
 
 type SettlementTabType = 'overview' | 'project-share' | 'settlements';
@@ -44,6 +45,7 @@ export function SettlementView({
 }: SettlementViewProps) {
   const [activeTab, setActiveTab] = useState<SettlementTabType>('overview');
   const [financeViewType, setFinanceViewType] = useState<FinanceViewType>('revenue');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const findProject = (id: string) => projects.find((p) => p.id === id)?.name ?? '-';
 
@@ -86,6 +88,43 @@ export function SettlementView({
   const totalProfit = useMemo(() => {
     return totalRevenue - totalExpense;
   }, [totalRevenue, totalExpense]);
+
+  const searchLower = searchQuery.trim().toLowerCase();
+  const filteredRevRows = useMemo(() => {
+    if (!searchLower) return rows.revRows;
+    return rows.revRows.filter((r) => {
+      const projName = findProject(r.projectId).toLowerCase();
+      const partnerName = getPartnerName(r).toLowerCase();
+      return (
+        projName.includes(searchLower) ||
+        (r.name || '').toLowerCase().includes(searchLower) ||
+        (r.category || '').toLowerCase().includes(searchLower) ||
+        partnerName.includes(searchLower)
+      );
+    });
+  }, [rows.revRows, searchLower, projects, partnerCompaniesData, partnerWorkersData]);
+  const filteredExpRows = useMemo(() => {
+    if (!searchLower) return rows.expRows;
+    return rows.expRows.filter((e) => {
+      const projName = findProject(e.projectId).toLowerCase();
+      const partnerName = getPartnerName(e).toLowerCase();
+      return (
+        projName.includes(searchLower) ||
+        (e.name || '').toLowerCase().includes(searchLower) ||
+        (e.category || '').toLowerCase().includes(searchLower) ||
+        partnerName.includes(searchLower)
+      );
+    });
+  }, [rows.expRows, searchLower, projects, partnerCompaniesData, partnerWorkersData]);
+
+  const filteredTotalRevenue = useMemo(
+    () => filteredRevRows.reduce((sum, r) => sum + r.amount, 0),
+    [filteredRevRows]
+  );
+  const filteredTotalExpense = useMemo(
+    () => filteredExpRows.reduce((sum, e) => sum + e.amount, 0),
+    [filteredExpRows]
+  );
 
   const tabs = [
     { id: 'overview' as const, label: '전체 정산', icon: ChartLine },
@@ -153,37 +192,49 @@ export function SettlementView({
             )}
           </div>
 
-          <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
-            <button
-              onClick={() => setFinanceViewType('revenue')}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
-                financeViewType === 'revenue'
-                  ? 'bg-blue-500 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              )}
-            >
-              <DollarSign className="h-4 w-4" />
-              <span>매출</span>
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
-                {rows.revRows.length}
-              </span>
-            </button>
-            <button
-              onClick={() => setFinanceViewType('expense')}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
-                financeViewType === 'expense'
-                  ? 'bg-red-500 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              )}
-            >
-              <Coins className="h-4 w-4" />
-              <span>지출</span>
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
-                {rows.expRows.length}
-              </span>
-            </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+              <Input
+                type="search"
+                placeholder="프로젝트·항목·지급처 검색"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 sm:h-10 bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700"
+              />
+            </div>
+            <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
+              <button
+                onClick={() => setFinanceViewType('revenue')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                  financeViewType === 'revenue'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                <DollarSign className="h-4 w-4" />
+                <span>매출</span>
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                  {filteredRevRows.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setFinanceViewType('expense')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                  financeViewType === 'expense'
+                    ? 'bg-red-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                <Coins className="h-4 w-4" />
+                <span>지출</span>
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                  {filteredExpRows.length}
+                </span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
@@ -209,15 +260,15 @@ export function SettlementView({
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {financeViewType === 'revenue' ? (
-                  rows.revRows.length === 0 ? (
+                  filteredRevRows.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-2 sm:px-4 py-6 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
-                        등록된 매출이 없습니다.
+                        {searchLower ? '검색 결과가 없습니다.' : '등록된 매출이 없습니다.'}
                       </td>
                     </tr>
                   ) : (
                     <>
-                      {rows.revRows.map((r, idx) => (
+                      {filteredRevRows.map((r, idx) => (
                         <tr
                           key={`${r.projectId}-${idx}`}
                           onClick={() => onEditFinance(r)}
@@ -237,22 +288,24 @@ export function SettlementView({
                         </tr>
                       ))}
                       <tr className="bg-blue-50/20 dark:bg-blue-900/30 border-t-2 border-blue-200 dark:border-blue-700">
-                        <td colSpan={3} className="px-2 sm:px-4 py-3 font-bold text-slate-700 dark:text-slate-300">합계</td>
-                        <td className="px-2 sm:px-4 py-3 font-black text-blue-600 dark:text-blue-400 italic whitespace-nowrap">{formatCurrency(totalRevenue)}</td>
+                        <td colSpan={3} className="px-2 sm:px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
+                          {searchLower ? '필터 합계' : '합계'}
+                        </td>
+                        <td className="px-2 sm:px-4 py-3 font-black text-blue-600 dark:text-blue-400 italic whitespace-nowrap">{formatCurrency(filteredTotalRevenue)}</td>
                         <td colSpan={3} className="px-2 sm:px-4 py-3"></td>
                       </tr>
                     </>
                   )
                 ) : (
-                  rows.expRows.length === 0 ? (
+                  filteredExpRows.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-2 sm:px-4 py-6 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
-                        등록된 지출이 없습니다.
+                        {searchLower ? '검색 결과가 없습니다.' : '등록된 지출이 없습니다.'}
                       </td>
                     </tr>
                   ) : (
                     <>
-                      {rows.expRows.map((e, idx) => (
+                      {filteredExpRows.map((e, idx) => (
                         <tr
                           key={`${e.projectId}-${idx}`}
                           onClick={() => onEditFinance(e)}
@@ -272,8 +325,10 @@ export function SettlementView({
                         </tr>
                       ))}
                       <tr className="bg-red-50/20 dark:bg-red-900/30 border-t-2 border-red-200 dark:border-red-700">
-                        <td colSpan={3} className="px-2 sm:px-4 py-3 font-bold text-slate-700 dark:text-slate-300">합계</td>
-                        <td className="px-2 sm:px-4 py-3 font-black text-red-500 dark:text-red-400 italic whitespace-nowrap">{formatCurrency(totalExpense)}</td>
+                        <td colSpan={3} className="px-2 sm:px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
+                          {searchLower ? '필터 합계' : '합계'}
+                        </td>
+                        <td className="px-2 sm:px-4 py-3 font-black text-red-500 dark:text-red-400 italic whitespace-nowrap">{formatCurrency(filteredTotalExpense)}</td>
                         <td colSpan={3} className="px-2 sm:px-4 py-3"></td>
                       </tr>
                     </>

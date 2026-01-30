@@ -14,17 +14,19 @@ interface CommentInputProps {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
+  ...IMAGE_TYPES,
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
+
+function isImageFile(file: File): boolean {
+  return IMAGE_TYPES.includes(file.type);
+}
 
 function getFileIcon(type: string) {
   if (type.startsWith('image/')) {
@@ -37,6 +39,56 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function SelectedFilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const isImg = isImageFile(file);
+
+  useEffect(() => {
+    if (isImg) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file, isImg]);
+
+  return (
+    <div className="group relative rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 overflow-hidden">
+      {isImg && previewUrl ? (
+        <div className="aspect-square">
+          <img
+            src={previewUrl}
+            alt={file.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 p-2">
+          {getFileIcon(file.type)}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
+              {file.name}
+            </p>
+            <p className="text-[10px] text-slate-400">{formatFileSize(file.size)}</p>
+          </div>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
+        title="제거"
+      >
+        <X className="h-3 w-3" />
+      </button>
+      {isImg && previewUrl && (
+        <p className="px-2 py-1 text-[10px] text-slate-500 truncate">
+          {file.name && !file.name.startsWith('blob') ? file.name : '붙여넣은 이미지'}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function CommentInput({ onSubmit, isLoading = false, placeholder = '댓글을 입력하세요...' }: CommentInputProps) {
@@ -133,32 +185,57 @@ export function CommentInput({ onSubmit, isLoading = false, placeholder = '댓�
     }, 0);
   }, [content, mentionedUserIds]);
 
+  const addFiles = useCallback((filesToAdd: File[]) => {
+    setFileError(null);
+    const validFiles: File[] = [];
+    filesToAdd.forEach((file, i) => {
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError(`${file.name || '이미지'}: 파일 크기는 10MB 이하만 가능합니다.`);
+        return;
+      }
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setFileError(`${file.name || '파일'}: 지원하지 않는 형식입니다.`);
+        return;
+      }
+      let finalFile = file;
+      if (isImageFile(file) && (!file.name || file.name.startsWith('blob'))) {
+        const ext = file.type.split('/')[1] || 'png';
+        finalFile = new File([file], `이미지-${Date.now()}-${i}.${ext}`, { type: file.type });
+      }
+      validFiles.push(finalFile);
+    });
+    if (validFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...validFiles]);
+    }
+  }, []);
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const imageFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        addFiles(imageFiles);
+      }
+    },
+    [addFiles]
+  );
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    setFileError(null);
-    const newFiles: File[] = [];
+    addFiles(Array.from(files));
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      if (file.size > MAX_FILE_SIZE) {
-        setFileError(`${file.name}: 파일 크기는 10MB 이하만 가능합니다.`);
-        continue;
-      }
-      
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        setFileError(`${file.name}: 지원하지 않는 파일 형식입니다.`);
-        continue;
-      }
-
-      newFiles.push(file);
-    }
-
-    setSelectedFiles((prev) => [...prev, ...newFiles]);
-    
-    // 파일 입력 초기화 (같은 파일 다시 선택 가능하도록)
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -205,9 +282,11 @@ export function CommentInput({ onSubmit, isLoading = false, placeholder = '댓�
           value={content}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={placeholder}
           className="min-h-[100px] resize-none pr-24"
           disabled={isLoading}
+          title="Ctrl+V로 이미지 붙여넣기 가능"
         />
         <div className="absolute bottom-2 right-2 flex items-center gap-1">
           <input
@@ -240,29 +319,15 @@ export function CommentInput({ onSubmit, isLoading = false, placeholder = '댓�
         </div>
       </div>
 
-      {/* 선택된 파일 목록 */}
+      {/* 선택된 파일 목록 - 이미지 썸네일 + 파일명 */}
       {selectedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {selectedFiles.map((file, index) => (
-            <div
-              key={`${file.name}-${index}`}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-1"
-            >
-              {getFileIcon(file.type)}
-              <span className="text-xs text-slate-600 dark:text-slate-300 max-w-[120px] truncate">
-                {file.name}
-              </span>
-              <span className="text-xs text-slate-400">
-                ({formatFileSize(file.size)})
-              </span>
-              <button
-                type="button"
-                onClick={() => handleRemoveFile(index)}
-                className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
-              >
-                <X className="h-3 w-3 text-slate-400" />
-              </button>
-            </div>
+            <SelectedFilePreview
+              key={`${file.name}-${file.size}-${index}`}
+              file={file}
+              onRemove={() => handleRemoveFile(index)}
+            />
           ))}
         </div>
       )}

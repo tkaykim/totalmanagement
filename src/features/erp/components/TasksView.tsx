@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 import { BuTabs } from './BuTabs';
 import { BU, BU_TITLES, Project, TaskItem, TaskPriority } from '../types';
-import { Circle, Clock, CheckCircle2, Calendar, User, ArrowRight, Lock } from 'lucide-react';
+import { Circle, Clock, CheckCircle2, Calendar, User, ArrowRight, Lock, Search } from 'lucide-react';
 
 type CurrentUser = {
   id: string;
@@ -284,10 +285,24 @@ export function TasksView({
   currentUser?: CurrentUser | null;
 }) {
   const [mobileTab, setMobileTab] = useState<TaskStatus>('todo');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const buProjects = bu === 'ALL' ? projects : projects.filter((p) => p.bu === bu);
   const buProjectIds = buProjects.map((p) => p.id);
-  const buTasks = bu === 'ALL' ? tasks : tasks.filter((t) => buProjectIds.includes(t.projectId));
+  const buTasksRaw = bu === 'ALL' ? tasks : tasks.filter((t) => buProjectIds.includes(t.projectId));
+
+  const searchLower = searchQuery.trim().toLowerCase();
+  const buTasks = useMemo(() => {
+    if (!searchLower) return buTasksRaw;
+    return buTasksRaw.filter((t) => {
+      const projectName = projects.find((p) => p.id === t.projectId)?.name ?? '';
+      return (
+        t.title.toLowerCase().includes(searchLower) ||
+        t.assignee.toLowerCase().includes(searchLower) ||
+        projectName.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [buTasksRaw, searchLower, projects]);
 
   const tasksByStatus = useMemo(() => ({
     todo: buTasks.filter((t) => t.status === 'todo'),
@@ -300,6 +315,19 @@ export function TasksView({
   return (
     <section className="space-y-4 sm:space-y-6">
       <BuTabs bu={bu} onChange={onBuChange} prefix="TASK" />
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+          <Input
+            type="search"
+            placeholder="할일·프로젝트·담당자 검색"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 sm:h-10 bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700"
+          />
+        </div>
+      </div>
 
       {/* 헤더 */}
       <div className="flex items-center justify-between">

@@ -1347,6 +1347,14 @@ export default function HomePage() {
               setEditTaskModalOpen(matchedTask);
             }
           }}
+          onTaskStatusChange={async (taskId, status) => {
+            try {
+              const dbStatus = status === 'in-progress' ? 'in_progress' : status;
+              await updateTaskMutation.mutateAsync({ id: Number(taskId), data: { status: dbStatus } });
+            } catch (error) {
+              console.error('Failed to update task status:', error);
+            }
+          }}
         />
       )}
       {deleteProjectId && (

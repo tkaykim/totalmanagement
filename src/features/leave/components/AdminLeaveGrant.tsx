@@ -43,10 +43,17 @@ const schema = z.object({
   reason: z.string().min(1, '사유를 입력해주세요'),
 });
 
+interface PreselectedUser {
+  id: string;
+  name: string;
+}
+
 interface AdminLeaveGrantProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** 이름 클릭으로 열었을 때 사전 지정된 대상자 */
+  preselectedUser?: PreselectedUser | null;
 }
 
 interface UserOption {
@@ -56,7 +63,7 @@ interface UserOption {
   position: string | null;
 }
 
-export function AdminLeaveGrant({ open, onOpenChange, onSuccess }: AdminLeaveGrantProps) {
+export function AdminLeaveGrant({ open, onOpenChange, onSuccess, preselectedUser }: AdminLeaveGrantProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -100,6 +107,12 @@ export function AdminLeaveGrant({ open, onOpenChange, onSuccess }: AdminLeaveGra
     }
   }, [open]);
 
+  useEffect(() => {
+    if (open && preselectedUser?.id) {
+      setValue('user_id', preselectedUser.id);
+    }
+  }, [open, preselectedUser?.id, setValue]);
+
   const onSubmit = async (data: LeaveGrantFormData) => {
     setIsSubmitting(true);
     try {
@@ -121,6 +134,9 @@ export function AdminLeaveGrant({ open, onOpenChange, onSuccess }: AdminLeaveGra
           <DialogTitle className="flex items-center gap-2">
             <Gift className="h-5 w-5" />
             휴가 부여
+            {preselectedUser?.name && (
+              <span className="text-slate-500 font-normal">— {preselectedUser.name}</span>
+            )}
           </DialogTitle>
         </DialogHeader>
 

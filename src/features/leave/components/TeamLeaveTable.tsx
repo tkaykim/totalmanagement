@@ -14,7 +14,6 @@ import {
 import { Button } from '@/components/ui/button';
 import type { TeamLeaveStats as TeamLeaveStatsType } from '../api';
 import { formatLeaveDays } from '../lib/format-leave-days';
-import { GrantLeaveToUserModal } from './GrantLeaveToUserModal';
 
 type SortKey = 'name' | 'hire_date';
 type SortDir = 'asc' | 'desc';
@@ -23,17 +22,19 @@ interface TeamLeaveTableProps {
   stats: TeamLeaveStatsType[];
   onNoLeaveUsers?: () => void;
   onRefresh?: () => void;
+  /** 이름 클릭 시 휴가 부여 모달 열기 (대상자 사전 지정) */
+  onOpenGrantForUser?: (user: { id: string; name: string }) => void;
 }
 
 export function TeamLeaveTable({
   stats,
   onNoLeaveUsers,
   onRefresh,
+  onOpenGrantForUser,
 }: TeamLeaveTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [showOnlyNoLeave, setShowOnlyNoLeave] = useState(false);
-  const [grantModalUser, setGrantModalUser] = useState<{ id: string; name: string } | null>(null);
 
   const noLeaveUsers = useMemo(
     () =>
@@ -184,7 +185,7 @@ export function TeamLeaveTable({
                     <button
                       type="button"
                       className="text-left underline-offset-4 hover:underline text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded"
-                      onClick={() => setGrantModalUser({ id: stat.user_id, name: stat.user_name ?? '' })}
+                      onClick={() => onOpenGrantForUser?.({ id: stat.user_id, name: stat.user_name ?? '' })}
                     >
                       {stat.user_name} ({shortId}…)
                     </button>
@@ -250,19 +251,6 @@ export function TeamLeaveTable({
           </Button>
         )}
       </div>
-
-      {grantModalUser && (
-        <GrantLeaveToUserModal
-          open={!!grantModalUser}
-          onOpenChange={(open) => !open && setGrantModalUser(null)}
-          userId={grantModalUser.id}
-          userName={grantModalUser.name}
-          onSuccess={() => {
-            setGrantModalUser(null);
-            onRefresh?.();
-          }}
-        />
-      )}
     </div>
   );
 }

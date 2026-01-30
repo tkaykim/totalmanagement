@@ -52,14 +52,20 @@ function AttachmentItem({
   const isImage = attachment.file_type.startsWith('image/');
 
   return (
-    <div className="group relative rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <div className="group relative rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-800 shadow-sm hover:shadow-md transition-shadow">
       {isImage ? (
-        <a href={publicUrl} target="_blank" rel="noopener noreferrer">
-          <img
-            src={publicUrl}
-            alt={attachment.file_name}
-            className="w-full h-24 object-cover hover:opacity-90 transition"
-          />
+        <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="block">
+          <div className="aspect-square">
+            <img
+              src={publicUrl}
+              alt={attachment.file_name}
+              className="w-full h-full object-cover hover:opacity-95 transition"
+              loading="lazy"
+            />
+          </div>
+          <p className="px-2 py-1.5 text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+            {attachment.file_name}
+          </p>
         </a>
       ) : (
         <a
@@ -77,7 +83,7 @@ function AttachmentItem({
               {formatFileSize(attachment.file_size)}
             </p>
           </div>
-          <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+          <ExternalLink className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
         </a>
       )}
       
@@ -86,7 +92,7 @@ function AttachmentItem({
           type="button"
           onClick={onDelete}
           disabled={isDeleting}
-          className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-600 disabled:opacity-50"
+          className="absolute top-1 right-1 p-1.5 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-600 disabled:opacity-50 shadow-md"
           title="삭제"
         >
           <X className="h-3 w-3" />
@@ -230,7 +236,7 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
         <CommentInput
           onSubmit={handleSubmit}
           isLoading={createComment.isPending || uploadingCommentId !== null}
-          placeholder="댓글을 입력하세요... (@이름으로 멘션, 📎 첨부파일 가능)"
+          placeholder="댓글을 입력하세요... (@멘션, 📎 첨부, Ctrl+V 이미지 붙여넣기)"
         />
       </div>
 
@@ -321,7 +327,7 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
 
                 {/* 첨부파일 표시 */}
                 {attachments.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {attachments.map((attachment) => (
                       <AttachmentItem
                         key={attachment.id}

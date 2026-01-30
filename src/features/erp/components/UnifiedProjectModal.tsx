@@ -109,6 +109,7 @@ interface UnifiedProjectModalProps {
   onViewFinanceDetail?: (entry: FinanceEntry) => void;
   onAddTask?: () => void;
   onViewTaskDetail?: (task: TaskEntry) => void;
+  onTaskStatusChange?: (taskId: string, status: TaskStatus) => void | Promise<void>;
 }
 
 function formatCurrency(amount: number): string {
@@ -251,11 +252,13 @@ function TasksSection({
   tasks,
   onAddTask,
   onViewTask,
+  onTaskStatusChange,
   usersData,
 }: {
   tasks: TaskEntry[];
   onAddTask?: () => void;
   onViewTask?: (task: TaskEntry) => void;
+  onTaskStatusChange?: (taskId: string, status: TaskStatus) => void | Promise<void>;
   usersData?: { users: any[]; currentUser: any };
 }) {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
@@ -409,6 +412,29 @@ function TasksSection({
                       </div>
                     </div>
 
+                    {/* 할일 상태 변경 (클릭 시 상세로 가지 않도록 stopPropagation) */}
+                    {onTaskStatusChange && (
+                      <select
+                        value={task.status}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          const next = e.target.value as TaskStatus;
+                          onTaskStatusChange(task.id, next);
+                        }}
+                        className={cn(
+                          "flex-shrink-0 text-[10px] font-medium rounded-md px-2 py-1 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 cursor-pointer outline-none focus:ring-1 focus:ring-blue-500",
+                          TASK_STATUS_CONFIG[task.status].color
+                        )}
+                      >
+                        {(['todo', 'in-progress', 'done'] as const).map((s) => (
+                          <option key={s} value={s}>
+                            {TASK_STATUS_CONFIG[s].label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
                     {/* 호버시 화살표 */}
                     <ChevronDown className="h-4 w-4 -rotate-90 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition" />
                   </div>
@@ -441,6 +467,7 @@ export function UnifiedProjectModal({
   onViewFinanceDetail,
   onAddTask,
   onViewTaskDetail,
+  onTaskStatusChange,
 }: UnifiedProjectModalProps) {
   const [mode, setMode] = useState<ModalMode>(() => {
     if (!project) return 'create';
@@ -626,6 +653,39 @@ export function UnifiedProjectModal({
     }
   };
 
+  /** view 모드에서 프로젝트 상태만 즉시 변경 (수정 버튼 없이) */
+  const handleProjectStatusChange = async (newStatus: string) => {
+    if (!project || isSubmitting) return;
+    setForm((prev) => ({ ...prev, status: newStatus }));
+    setIsSubmitting(true);
+    try {
+      const participants = selectedParticipants.map((p) => ({
+        user_id: p.type === 'user' ? (p.id as string) : undefined,
+        partner_worker_id: p.type === 'partner_worker' ? (p.id as number) : undefined,
+        partner_company_id: p.type === 'partner_company' ? (p.id as number) : undefined,
+        role: 'participant',
+      }));
+      await onSubmit({
+        id: project.id,
+        name: form.name,
+        bu: form.bu,
+        cat: form.cat,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        description: form.description || null,
+        pm_id: form.pm_id || null,
+        partner_company_id: form.partner_company_id ? Number(form.partner_company_id) : null,
+        partner_worker_id: form.partner_worker_id ? Number(form.partner_worker_id) : null,
+        artist_id: form.artist_id ? Number(form.artist_id) : null,
+        channel_id: form.channel_id ? Number(form.channel_id) : null,
+        status: newStatus,
+        participants,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (isDeleting) return;
     if (project && onDelete) {
@@ -748,9 +808,20 @@ export function UnifiedProjectModal({
                     ))}
                   </select>
                 ) : (
-                  <span className={cn("text-xs font-semibold rounded-full px-3 py-1", getStatusColor(form.status))}>
-                    {form.status}
-                  </span>
+                  <select
+                    value={form.status}
+                    onChange={(e) => handleProjectStatusChange(e.target.value)}
+                    disabled={isSubmitting}
+                    className={cn(
+                      "text-xs font-semibold rounded-full px-3 py-1 border-0 outline-none cursor-pointer bg-transparent",
+                      getStatusColor(form.status),
+                      isSubmitting && "opacity-60 cursor-not-allowed"
+                    )}
+                  >
+                    {STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -1166,6 +1237,7 @@ export function UnifiedProjectModal({
                 tasks={tasksData}
                 onAddTask={onAddTask}
                 onViewTask={onViewTaskDetail}
+                onTaskStatusChange={onTaskStatusChange}
                 usersData={usersData}
               />
             )}

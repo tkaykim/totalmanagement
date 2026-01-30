@@ -51,6 +51,7 @@ export function LeaveAdminView() {
   const [selectedBu, setSelectedBu] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [grantModalOpen, setGrantModalOpen] = useState(false);
+  const [preselectedUser, setPreselectedUser] = useState<{ id: string; name: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'team' | 'all'>('pending');
 
   const fetchData = useCallback(async () => {
@@ -286,7 +287,14 @@ export function LeaveAdminView() {
               )}
             </CardHeader>
             <CardContent className="w-full min-w-0 overflow-x-auto">
-              <TeamLeaveTable stats={teamStats} onRefresh={fetchData} />
+              <TeamLeaveTable
+                stats={teamStats}
+                onRefresh={fetchData}
+                onOpenGrantForUser={(user) => {
+                  setPreselectedUser(user);
+                  setGrantModalOpen(true);
+                }}
+              />
             </CardContent>
           </Card>
         )}
@@ -309,8 +317,12 @@ export function LeaveAdminView() {
       {/* Modals */}
       <AdminLeaveGrant
         open={grantModalOpen}
-        onOpenChange={setGrantModalOpen}
+        onOpenChange={(open) => {
+          setGrantModalOpen(open);
+          if (!open) setPreselectedUser(null);
+        }}
         onSuccess={fetchData}
+        preselectedUser={preselectedUser}
       />
     </div>
   );

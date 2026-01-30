@@ -12,7 +12,6 @@ import {
   BU_TITLES,
 } from '../types';
 import { BuTabs } from './BuTabs';
-import { FinanceRow } from './FinanceRow';
 
 export interface ProjectsViewProps {
   bu: BU | 'ALL';
@@ -49,7 +48,6 @@ export function ProjectsView({
   partnerWorkersData,
   partnerCompaniesData,
 }: ProjectsViewProps) {
-  const [openId, setOpenId] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -170,7 +168,6 @@ export function ProjectsView({
             const revTotal = projectRevenues.reduce((sum, r) => sum + r.amount, 0);
             const expTotal = projectExpenses.reduce((sum, e) => sum + e.amount, 0);
             const profit = revTotal - expTotal;
-            const opened = openId === p.id;
 
             return (
             <div
@@ -179,7 +176,7 @@ export function ProjectsView({
             >
               <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
                 <button
-                  onClick={() => setOpenId(opened ? null : p.id)}
+                  onClick={() => onEditProject(p)}
                   className="flex flex-1 items-center justify-between text-left min-w-0"
                 >
                   <div className="space-y-1 min-w-0 flex-1 overflow-hidden">
@@ -228,9 +225,6 @@ export function ProjectsView({
                         {formatCurrency(profit)}
                       </p>
                     </div>
-                    <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                      {opened ? '접기 ▲' : '펼치기 ▼'}
-                    </span>
                   </div>
                 </button>
                 <div className="ml-2 sm:ml-4 flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -256,116 +250,6 @@ export function ProjectsView({
                   </button>
                 </div>
               </div>
-
-              {opened && (
-                <div className="border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-3 sm:px-6 py-4 sm:py-5">
-                  <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-emerald-600">
-                          Project Tasks
-                        </h4>
-                        <button
-                          onClick={() => onOpenTaskModal(p.id)}
-                          className="rounded-lg bg-emerald-500 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-semibold text-white hover:bg-emerald-600 whitespace-nowrap"
-                        >
-                          할일 추가
-                        </button>
-                      </div>
-                      <div className="space-y-1.5">
-                        {projectTasks.length === 0 && (
-                          <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">
-                            등록된 할 일이 없습니다.
-                          </p>
-                        )}
-                        {projectTasks.map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => onEditTask(t)}
-                            className="flex w-full items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 sm:px-3 py-2 text-left transition hover:bg-slate-50 dark:bg-slate-900"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[10px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                                {t.title}
-                              </p>
-                              <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 truncate">
-                                {t.assignee} • {t.dueDate}
-                              </p>
-                            </div>
-                            <span
-                              className={cn(
-                                'rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold whitespace-nowrap flex-shrink-0 ml-2',
-                                t.status === 'todo'
-                                  ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
-                                  : t.status === 'in-progress'
-                                    ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
-                                    : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
-                              )}
-                            >
-                              {t.status === 'todo'
-                                ? '진행 전'
-                                : t.status === 'in-progress'
-                                  ? '진행중'
-                                  : '완료'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-blue-600">
-                          매출 내역
-                        </h4>
-                        <button
-                          onClick={() => onOpenModal(p.id)}
-                          className="rounded-lg border border-blue-200 px-2 sm:px-3 py-1 text-[9px] sm:text-[10px] font-semibold text-blue-600 hover:bg-blue-600 hover:text-white whitespace-nowrap"
-                        >
-                          매출/지출 관리
-                        </button>
-                      </div>
-                      <div className="space-y-1.5">
-                        {projectRevenues.length === 0 && (
-                          <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">
-                            등록된 매출이 없습니다.
-                          </p>
-                        )}
-                        {projectRevenues.map((r, idx) => (
-                          <FinanceRow
-                            key={`${r.projectId}-rev-${idx}`}
-                            entry={r}
-                            tone="blue"
-                            onClick={() => onEditFinance(r)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-600">
-                        지출 내역
-                      </h4>
-                      <div className="space-y-1.5">
-                        {projectExpenses.length === 0 && (
-                          <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">
-                            등록된 지출이 없습니다.
-                          </p>
-                        )}
-                        {projectExpenses.map((e, idx) => (
-                          <FinanceRow
-                            key={`${e.projectId}-exp-${idx}`}
-                            entry={e}
-                            tone="red"
-                            onClick={() => onEditFinance(e)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           );
           })

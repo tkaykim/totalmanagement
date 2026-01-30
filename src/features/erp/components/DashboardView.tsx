@@ -8,6 +8,7 @@ import {
   Coins,
   DollarSign,
   FolderKanban,
+  Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -21,6 +22,7 @@ import {
   formatCurrency,
 } from '../types';
 import { StatCard } from './StatCard';
+import { Input } from '@/components/ui/input';
 
 function PieLikeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -59,10 +61,13 @@ export function DashboardView({
   usersData,
 }: DashboardViewProps) {
   const [selectedBu, setSelectedBu] = useState<BU | 'ALL'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
   const [projectAssigneeFilter, setProjectAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
   const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
   const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
+
+  const searchLower = searchQuery.trim().toLowerCase();
 
   const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
   const completedProjectStatuses = ['완료'];
@@ -92,9 +97,23 @@ export function DashboardView({
     if (projectAssigneeFilter === 'unassigned') {
       filtered = filtered.filter((p) => !p.pm_id || p.pm_id.trim() === '');
     }
+
+    if (searchLower) {
+      filtered = filtered.filter((p) => {
+        const pmName = p.pm_id && usersData?.users
+          ? usersData.users.find((u: { id: string }) => u.id === p.pm_id)?.name ?? ''
+          : '';
+        return (
+          p.name.toLowerCase().includes(searchLower) ||
+          p.cat.toLowerCase().includes(searchLower) ||
+          p.status.toLowerCase().includes(searchLower) ||
+          pmName.toLowerCase().includes(searchLower)
+        );
+      });
+    }
     
     return filtered;
-  }, [projects, selectedBu, projectFilter, projectAssigneeFilter, currentUser]);
+  }, [projects, selectedBu, projectFilter, projectAssigneeFilter, currentUser, searchLower, usersData?.users]);
 
   const filteredTasksByProject = useMemo(() => {
     const projectIds = new Set(filteredProjects.map((p) => p.id));
@@ -116,9 +135,20 @@ export function DashboardView({
     if (taskAssigneeFilter === 'unassigned') {
       filtered = filtered.filter((t) => !t.assignee || t.assignee.trim() === '');
     }
+
+    if (searchLower) {
+      filtered = filtered.filter((t) => {
+        const projectName = projects.find((p) => p.id === t.projectId)?.name ?? '';
+        return (
+          t.title.toLowerCase().includes(searchLower) ||
+          t.assignee.toLowerCase().includes(searchLower) ||
+          projectName.toLowerCase().includes(searchLower)
+        );
+      });
+    }
     
     return filtered;
-  }, [filteredTasksByProject, taskFilter, taskAssigneeFilter, currentUser]);
+  }, [filteredTasksByProject, taskFilter, taskAssigneeFilter, currentUser, searchLower, projects]);
 
   const filteredTotals = useMemo(() => {
     if (selectedBu === 'ALL') {
@@ -144,6 +174,17 @@ export function DashboardView({
 
   return (
     <section className="space-y-4 sm:space-y-8">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+        <Input
+          type="search"
+          placeholder="프로젝트, 할일 검색 (이름·카테고리·담당자 등)"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 h-9 sm:h-10 bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 max-w-md"
+        />
+      </div>
+
       <div className="max-w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
         <div className="flex w-fit rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
           <button
