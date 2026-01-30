@@ -905,15 +905,16 @@ export function UnifiedProjectModal({
                     <DatePicker
                       value={form.startDate}
                       onChange={(date) => {
-                        setForm({ ...form, startDate: date });
                         if (form.endDate && date > form.endDate) {
                           toast({
                             variant: 'destructive',
                             title: '날짜 오류',
-                            description: '종료일이 시작일보다 앞설 수 없습니다.',
+                            description: '종료일은 시작일보다 앞설 수 없습니다.',
                           });
                           setForm((prev) => ({ ...prev, startDate: date, endDate: '' }));
+                          return;
                         }
+                        setForm({ ...form, startDate: date });
                       }}
                       placeholder="시작일"
                     />
@@ -925,9 +926,9 @@ export function UnifiedProjectModal({
                           toast({
                             variant: 'destructive',
                             title: '날짜 오류',
-                            description: '종료일이 시작일보다 앞설 수 없습니다.',
+                            description: '종료일은 시작일보다 앞설 수 없습니다.',
                           });
-                          return;
+                          return false;
                         }
                         setForm({ ...form, endDate: date });
                       }}

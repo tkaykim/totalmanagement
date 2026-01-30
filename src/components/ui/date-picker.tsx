@@ -12,7 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 interface DatePickerProps {
   value?: string;
-  onChange: (date: string) => void;
+  /** 반환값이 false이면 선택 후에도 팝오버를 닫지 않음 (검증 실패 시 사용) */
+  onChange: (date: string) => void | boolean;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -32,8 +33,10 @@ export function DatePicker({
   const handleSelect = (date: Date | undefined) => {
     if (date) {
       const formattedDate = format(date, 'yyyy-MM-dd');
-      onChange(formattedDate);
-      setOpen(false);
+      const result = onChange(formattedDate);
+      if (result !== false) {
+        setOpen(false);
+      }
     }
   };
 
@@ -57,23 +60,13 @@ export function DatePicker({
       <PopoverContent
         className="w-auto p-0"
         align="start"
-        onInteractOutside={(e) => {
-          // 월/년 드롭다운 선택 시 Popover가 닫히지 않도록
-          const target = e.target as HTMLElement;
-          if (target.closest('[data-slot="calendar"]') || target.closest('.rdp')) {
-            e.preventDefault();
-          }
-        }}
-        onOpenAutoFocus={(e) => {
-          // 포커스 이동 시 자동 닫힘 방지
-          e.preventDefault();
-        }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <Calendar
           mode="single"
           selected={selectedDate}
           onSelect={handleSelect}
-          captionLayout="dropdown"
+          captionLayout="label"
           fromYear={2020}
           toYear={2030}
           locale={ko}

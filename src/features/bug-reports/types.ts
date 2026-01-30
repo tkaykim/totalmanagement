@@ -30,7 +30,7 @@ export interface UpdateBugReportPayload {
 
 export const BUG_STATUS_LABELS: Record<BugReportStatus, string> = {
   pending: '접수됨',
-  resolved: '개선완료',
+  resolved: '접수완료',
 };
 
 export const BUG_STATUS_COLORS: Record<BugReportStatus, string> = {

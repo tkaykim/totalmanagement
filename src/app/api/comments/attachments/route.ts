@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createPureClient } from '@/lib/supabase/server';
 
 const BUCKET_NAME = 'comment-attachments';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -70,9 +70,10 @@ export async function POST(request: NextRequest) {
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9가-힣._-]/g, '_');
     const filePath = `${commentId}/${timestamp}_${sanitizedFileName}`;
 
-    // Storage에 파일 업로드
+    // Storage 업로드는 service role로 수행 (RLS 우회하여 확실히 저장)
+    const pureClient = await createPureClient();
     const fileBuffer = await file.arrayBuffer();
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await pureClient.storage
       .from(BUCKET_NAME)
       .upload(filePath, fileBuffer, {
         contentType: file.type,
@@ -102,12 +103,12 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       // DB 저장 실패 시 업로드된 파일 삭제
-      await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+      await pureClient.storage.from(BUCKET_NAME).remove([filePath]);
       throw dbError;
     }
 
     // Public URL 생성
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = pureClient.storage
       .from(BUCKET_NAME)
       .getPublicUrl(filePath);
 
@@ -125,6 +126,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const pureClient = await createPureClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -164,8 +166,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Storage에서 파일 삭제
-    const { error: storageError } = await supabase.storage
+    // Storage에서 파일 삭제 (service role로 확실히 삭제)
+    const { error: storageError } = await pureClient.storage
       .from(BUCKET_NAME)
       .remove([attachment.file_path]);
 

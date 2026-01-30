@@ -1,31 +1,215 @@
 'use client';
 
-import { useState } from 'react';
-import { Bug, Plus, Clock, User, Check } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Bug, Plus, Clock, User, ChevronRight, Inbox } from 'lucide-react';
 import { useBugReports, useUpdateBugReport } from '../hooks';
 import {
   BugReport,
   BugReportStatus,
   BUG_STATUS_LABELS,
-  BUG_STATUS_COLORS,
 } from '../types';
 import { BugReportModal } from './BugReportModal';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
+const STATUS_CONFIG: Record<
+  BugReportStatus,
+  { label: string; color: string; bgColor: string; borderColor: string; headerBg: string }
+> = {
+  pending: {
+    label: '접수됨',
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+    borderColor: 'border-amber-200 dark:border-amber-800',
+    headerBg: 'bg-amber-100 dark:bg-amber-900/40',
+  },
+  resolved: {
+    label: '접수완료',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+    borderColor: 'border-emerald-200 dark:border-emerald-800',
+    headerBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+  },
+};
+
 interface BugReportsViewProps {
   isAdmin?: boolean;
+}
+
+function BugReportCard({
+  report,
+  isAdmin,
+  onStatusChange,
+}: {
+  report: BugReport;
+  isAdmin: boolean;
+  onStatusChange: (id: number, status: BugReportStatus) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const updateMutation = useUpdateBugReport();
+  const config = STATUS_CONFIG[report.status];
+  const targetStatus: BugReportStatus = report.status === 'pending' ? 'resolved' : 'pending';
+  const hasDetail = report.description || report.improvement_request;
+
+  const handleMove = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await updateMutation.mutateAsync({ id: report.id, data: { status: targetStatus } });
+    onStatusChange(report.id, targetStatus);
+  };
+
+  return (
+    <div
+      className={cn(
+        'group rounded-xl border bg-white dark:bg-slate-800 p-4 transition-all duration-200',
+        'hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600',
+        hasDetail && 'cursor-pointer',
+        config.borderColor
+      )}
+      onClick={hasDetail ? () => setExpanded((e) => !e) : undefined}
+    >
+      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 line-clamp-2">
+        {report.title}
+      </h3>
+      <p className={cn('mt-2 text-xs text-slate-600 dark:text-slate-400', !expanded && 'line-clamp-2')}>
+        <span className="font-medium text-slate-500">발생 상황:</span> {report.situation}
+      </p>
+      {expanded && (
+        <div className="mt-2 space-y-2 text-xs text-slate-600 dark:text-slate-400">
+          {report.description && (
+            <p>
+              <span className="font-medium text-slate-500">상세 내용:</span> {report.description}
+            </p>
+          )}
+          {report.improvement_request && (
+            <p>
+              <span className="font-medium text-slate-500">개선 요청:</span> {report.improvement_request}
+            </p>
+          )}
+        </div>
+      )}
+      <div className="mt-3 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
+        {report.reporter && (
+          <span className="flex items-center gap-1 truncate">
+            <User className="h-3 w-3 flex-shrink-0" />
+            {report.reporter.name}
+          </span>
+        )}
+        <span className="flex items-center gap-1 flex-shrink-0">
+          <Clock className="h-3 w-3" />
+          {format(new Date(report.created_at), 'MM.dd HH:mm', { locale: ko })}
+        </span>
+        {hasDetail && (
+          <span className="ml-auto text-slate-400">
+            {expanded ? '접기' : '자세히'}
+          </span>
+        )}
+      </div>
+
+      {isAdmin && (
+        <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={handleMove}
+            disabled={updateMutation.isPending}
+            className={cn(
+              'w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-colors',
+              targetStatus === 'resolved'
+                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-300'
+                : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300'
+            )}
+          >
+            {updateMutation.isPending ? (
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
+            {BUG_STATUS_LABELS[targetStatus]}로 이동
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KanbanColumn({
+  status,
+  reports,
+  isAdmin,
+  onStatusChange,
+}: {
+  status: BugReportStatus;
+  reports: BugReport[];
+  isAdmin: boolean;
+  onStatusChange: (id: number, status: BugReportStatus) => void;
+}) {
+  const config = STATUS_CONFIG[status];
+
+  return (
+    <div className="flex flex-col min-w-[280px] sm:min-w-[300px] lg:min-w-0 lg:flex-1">
+      <div
+        className={cn(
+          'flex items-center justify-between px-3 py-2.5 rounded-t-xl',
+          config.headerBg
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <Inbox className={cn('w-4 h-4', config.color)} />
+          <span className={cn('text-sm font-bold', config.color)}>{config.label}</span>
+        </div>
+        <span
+          className={cn(
+            'px-2 py-0.5 rounded-full text-xs font-bold',
+            config.bgColor,
+            config.color
+          )}
+        >
+          {reports.length}
+        </span>
+      </div>
+      <div
+        className={cn(
+          'flex-1 p-2 space-y-2 rounded-b-xl border-x border-b overflow-y-auto',
+          'bg-slate-50/50 dark:bg-slate-900/30',
+          config.borderColor
+        )}
+        style={{ maxHeight: 'calc(100vh - 320px)', minHeight: '200px' }}
+      >
+        {reports.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-24 text-xs text-slate-400 dark:text-slate-500">
+            <Inbox className="h-8 w-8 mb-2 opacity-40" />
+            {status === 'pending' ? '접수 대기 중인 리포트가 없습니다' : '처리 완료된 리포트가 없습니다'}
+          </div>
+        ) : (
+          reports.map((report) => (
+            <BugReportCard
+              key={report.id}
+              report={report}
+              isAdmin={isAdmin}
+              onStatusChange={onStatusChange}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
   const { data: bugReports = [], isLoading } = useBugReports();
   const [showReportModal, setShowReportModal] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<BugReportStatus | 'all'>('all');
+  const [mobileTab, setMobileTab] = useState<BugReportStatus>('pending');
 
-  const filteredReports = bugReports.filter((report) =>
-    statusFilter === 'all' ? true : report.status === statusFilter
+  const reportsByStatus = useMemo(
+    () => ({
+      pending: bugReports.filter((r) => r.status === 'pending'),
+      resolved: bugReports.filter((r) => r.status === 'resolved'),
+    }),
+    [bugReports]
   );
+
+  const handleStatusChange = () => {
+    // refetch is handled by react-query mutation
+  };
 
   if (isLoading) {
     return (
@@ -59,130 +243,88 @@ export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'pending', 'resolved'] as const).map((status) => (
-          <button
+      {/* 모바일: 탭 전환 */}
+      <div className="lg:hidden">
+        <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 mb-4">
+          {(['pending', 'resolved'] as const).map((status) => {
+            const config = STATUS_CONFIG[status];
+            const count = reportsByStatus[status].length;
+            const isActive = mobileTab === status;
+            return (
+              <button
+                key={status}
+                onClick={() => setMobileTab(status)}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all',
+                  isActive
+                    ? cn('bg-white dark:bg-slate-700 shadow-sm', config.color)
+                    : 'text-slate-500 dark:text-slate-400'
+                )}
+              >
+                <span>{config.label}</span>
+                <span
+                  className={cn(
+                    'px-1.5 py-0.5 rounded-full text-xs',
+                    isActive ? config.headerBg : 'bg-slate-200 dark:bg-slate-600'
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="space-y-2">
+          {reportsByStatus[mobileTab].length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-sm text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-700">
+              <Inbox className="h-10 w-10 mb-2 opacity-40" />
+              {mobileTab === 'pending'
+                ? '접수 대기 중인 리포트가 없습니다'
+                : '처리 완료된 리포트가 없습니다'}
+            </div>
+          ) : (
+            reportsByStatus[mobileTab].map((report) => (
+              <BugReportCard
+                key={report.id}
+                report={report}
+                isAdmin={isAdmin}
+                onStatusChange={handleStatusChange}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 데스크톱: 칸반 보드 */}
+      <div className="hidden lg:flex gap-4">
+        {(['pending', 'resolved'] as const).map((status) => (
+          <KanbanColumn
             key={status}
-            onClick={() => setStatusFilter(status)}
-            className={cn(
-              'rounded-lg px-4 py-2 text-sm font-semibold transition',
-              statusFilter === status
-                ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-800'
-                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-            )}
-          >
-            {status === 'all' ? '전체' : BUG_STATUS_LABELS[status]}
-            <span className="ml-1.5 opacity-60">
-              ({status === 'all' 
-                ? bugReports.length 
-                : bugReports.filter(r => r.status === status).length})
-            </span>
-          </button>
+            status={status}
+            reports={reportsByStatus[status]}
+            isAdmin={isAdmin}
+            onStatusChange={handleStatusChange}
+          />
         ))}
       </div>
 
-      {filteredReports.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-12 text-center">
-          <Bug className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
-          <p className="mt-4 text-lg font-semibold text-slate-600 dark:text-slate-400">
-            {statusFilter === 'all' ? '등록된 버그 리포트가 없습니다' : '해당 상태의 리포트가 없습니다'}
-          </p>
-          <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">
-            버그를 발견하셨다면 신고해주세요!
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredReports.map((report) => (
-            <BugReportCard
-              key={report.id}
-              report={report}
+      {/* 태블릿: 가로 스크롤 칸반 */}
+      <div className="hidden sm:flex lg:hidden overflow-x-auto gap-4 pb-4 -mx-4 px-4 snap-x snap-mandatory">
+        {(['pending', 'resolved'] as const).map((status) => (
+          <div key={status} className="snap-center flex-shrink-0">
+            <KanbanColumn
+              status={status}
+              reports={reportsByStatus[status]}
               isAdmin={isAdmin}
+              onStatusChange={handleStatusChange}
             />
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
       {showReportModal && (
         <BugReportModal onClose={() => setShowReportModal(false)} />
       )}
-    </div>
-  );
-}
-
-function BugReportCard({
-  report,
-  isAdmin,
-}: {
-  report: BugReport;
-  isAdmin: boolean;
-}) {
-  const updateMutation = useUpdateBugReport();
-
-  const handleToggleStatus = async () => {
-    const newStatus: BugReportStatus = report.status === 'pending' ? 'resolved' : 'pending';
-    await updateMutation.mutateAsync({ id: report.id, data: { status: newStatus } });
-  };
-
-  return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 transition hover:shadow-md">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', BUG_STATUS_COLORS[report.status])}>
-              {BUG_STATUS_LABELS[report.status]}
-            </span>
-          </div>
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
-            {report.title}
-          </h3>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            <span className="font-medium text-slate-500 dark:text-slate-500">발생 상황:</span> {report.situation}
-          </p>
-          {report.description && (
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              <span className="font-medium text-slate-500 dark:text-slate-500">상세 내용:</span> {report.description}
-            </p>
-          )}
-          {report.improvement_request && (
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              <span className="font-medium text-slate-500 dark:text-slate-500">개선 요청:</span> {report.improvement_request}
-            </p>
-          )}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
-            {report.reporter && (
-              <span className="flex items-center gap-1">
-                <User className="h-3.5 w-3.5" />
-                {report.reporter.name}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              {format(new Date(report.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
-            </span>
-          </div>
-        </div>
-
-        {isAdmin && (
-          <button
-            onClick={handleToggleStatus}
-            disabled={updateMutation.isPending}
-            className={cn(
-              'flex-shrink-0 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition',
-              report.status === 'pending'
-                ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:hover:bg-green-900'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-            )}
-          >
-            {updateMutation.isPending ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {report.status === 'pending' ? '개선완료' : '접수됨으로 변경'}
-          </button>
-        )}
-      </div>
     </div>
   );
 }

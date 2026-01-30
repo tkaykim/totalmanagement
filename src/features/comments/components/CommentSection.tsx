@@ -123,11 +123,14 @@ export function CommentSection({ entityType, entityId }: CommentSectionProps) {
 
   const handleSubmit = async (content: string, mentionedUserIds: string[], files: File[]) => {
     try {
+      const finalContent = content.trim() || (files.length > 0 ? '(이미지)' : '');
+      if (!finalContent && files.length === 0) return;
+
       // 1. 댓글 생성
       const comment = await createComment.mutateAsync({
         entity_type: entityType,
         entity_id: entityId,
-        content,
+        content: finalContent,
         mentioned_user_ids: mentionedUserIds,
       });
 

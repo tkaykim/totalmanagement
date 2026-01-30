@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { entity_type, entity_id, content, mentioned_user_ids } = body;
 
-    if (!entity_type || !entity_id || !content) {
+    if (!entity_type || !entity_id) {
       return NextResponse.json(
-        { error: 'entity_type, entity_id, and content are required' },
+        { error: 'entity_type and entity_id are required' },
         { status: 400 }
       );
     }
@@ -79,9 +79,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typeof content !== 'string' || content.trim().length === 0) {
+    const contentStr = typeof content === 'string' ? content.trim() : '';
+    if (!contentStr) {
       return NextResponse.json(
-        { error: 'content must be a non-empty string' },
+        { error: 'content or attachments are required' },
         { status: 400 }
       );
     }
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       .insert({
         entity_type,
         entity_id: Number(entity_id),
-        content: content.trim(),
+        content: contentStr,
         author_id: user.id,
         author_name: appUser.data.name,
         mentioned_user_ids: mentionedIds,
