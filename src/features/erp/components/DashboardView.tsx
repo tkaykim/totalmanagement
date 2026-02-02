@@ -129,8 +129,16 @@ export function DashboardView({
       filtered = filtered.filter((t) => t.status === 'done');
     }
     
-    if (taskAssigneeFilter === 'my' && currentUser?.profile?.name) {
-      filtered = filtered.filter((t) => t.assignee === currentUser.profile.name);
+    if (taskAssigneeFilter === 'my' && currentUser) {
+      const userId = currentUser.id || currentUser.profile?.id;
+      const userName = currentUser.profile?.name;
+      filtered = filtered.filter((t) => {
+        // assignee_id가 있으면 ID로 비교, 없으면 이름으로 비교 (하위 호환성)
+        if (t.assignee_id) {
+          return t.assignee_id === userId;
+        }
+        return t.assignee === userName;
+      });
     }
     if (taskAssigneeFilter === 'unassigned') {
       filtered = filtered.filter((t) => !t.assignee || t.assignee.trim() === '');
