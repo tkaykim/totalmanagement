@@ -130,6 +130,26 @@ export function checkFinancePermission({
     };
   }
 
+  // 2.5 PM인 경우 해당 프로젝트 재무 접근 (계정 ROLE·BU 무관)
+  if (project && isProjectPm(userId, project)) {
+    if (!entry) {
+      return {
+        canRead: true,
+        canCreate: true,
+        canUpdate: true,
+        canDelete: true,
+      };
+    }
+    const isCreator = isEntryCreator(userId, entry);
+    return {
+      canRead: true,
+      canCreate: true,
+      canUpdate: isCreator,
+      canDelete: isCreator,
+      reason: !isCreator ? '본인이 등록한 항목만 수정/삭제할 수 있습니다.' : undefined,
+    };
+  }
+
   // 3. BU 접근 권한 체크 (manager, member 공통)
   if (entryBu && !canAccessBu(userBu, entryBu)) {
     return {

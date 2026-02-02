@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock, Pencil, Search, Check, Circle, Clock, CheckCircle2, ListTodo, MessageCircle } from 'lucide-react';
+import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock, Pencil, Search, Check, Circle, Clock, CheckCircle2, ListTodo, MessageCircle, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
 import type { AppUser, Project as DbProject } from '@/types/database';
@@ -108,6 +108,7 @@ interface UnifiedProjectModalProps {
   onAddExpense?: () => void;
   onViewFinanceDetail?: (entry: FinanceEntry) => void;
   onAddTask?: () => void;
+  onAddTaskFromTemplate?: () => void;
   onViewTaskDetail?: (task: TaskEntry) => void;
   onTaskStatusChange?: (taskId: string, status: TaskStatus) => void | Promise<void>;
 }
@@ -251,12 +252,14 @@ const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; ico
 function TasksSection({
   tasks,
   onAddTask,
+  onAddTaskFromTemplate,
   onViewTask,
   onTaskStatusChange,
   usersData,
 }: {
   tasks: TaskEntry[];
   onAddTask?: () => void;
+  onAddTaskFromTemplate?: () => void;
   onViewTask?: (task: TaskEntry) => void;
   onTaskStatusChange?: (taskId: string, status: TaskStatus) => void | Promise<void>;
   usersData?: { users: any[]; currentUser: any };
@@ -317,15 +320,26 @@ function TasksSection({
           <span className="text-xs font-normal text-slate-400">({tasks.length})</span>
           {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
         </button>
-        {onAddTask && (
-          <button
-            onClick={onAddTask}
-            className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            할 일 추가
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onAddTaskFromTemplate && (
+            <button
+              onClick={onAddTaskFromTemplate}
+              className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              템플릿
+            </button>
+          )}
+          {onAddTask && (
+            <button
+              onClick={onAddTask}
+              className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              할 일 추가
+            </button>
+          )}
+        </div>
       </div>
 
       {isExpanded && (
@@ -466,6 +480,7 @@ export function UnifiedProjectModal({
   onAddExpense,
   onViewFinanceDetail,
   onAddTask,
+  onAddTaskFromTemplate,
   onViewTaskDetail,
   onTaskStatusChange,
 }: UnifiedProjectModalProps) {
@@ -1237,6 +1252,7 @@ export function UnifiedProjectModal({
               <TasksSection
                 tasks={tasksData}
                 onAddTask={onAddTask}
+                onAddTaskFromTemplate={onAddTaskFromTemplate}
                 onViewTask={onViewTaskDetail}
                 onTaskStatusChange={onTaskStatusChange}
                 usersData={usersData}
