@@ -1026,7 +1026,12 @@ export default function HomePage() {
               projects={projects}
               onEditFinance={setEditFinanceModalOpen}
               canViewAllBu={(user?.profile?.role === 'admin' || user?.profile?.role === 'leader') && user?.profile?.bu_code === 'HEAD'}
-              canViewNetProfit={user?.profile?.role === 'admin' || user?.profile?.role === 'leader' || user?.profile?.role === 'manager'}
+              canViewNetProfit={
+                user?.profile?.role === 'admin' ||
+                user?.profile?.role === 'leader' ||
+                user?.profile?.role === 'manager' ||
+                Boolean(user?.profile?.id && projects.some((p) => p.pm_id === user.profile.id))
+              }
               activePeriod={activePeriod}
               partnerCompaniesData={partnerCompaniesData}
               partnerWorkersData={partnerWorkersData}

@@ -170,7 +170,12 @@ export function DashboardView({
     };
   }, [selectedBu, totals, revenues, expenses, projects]);
 
-  const canViewFinancialData = currentUser?.profile?.role === 'manager' || currentUser?.profile?.role === 'admin';
+  const userId = currentUser?.profile?.id ?? currentUser?.id;
+  const isPmOfAnyProject = Boolean(userId && projects.some((p) => p.pm_id === userId));
+  const canViewFinancialData =
+    currentUser?.profile?.role === 'manager' ||
+    currentUser?.profile?.role === 'admin' ||
+    isPmOfAnyProject;
 
   return (
     <section className="space-y-4 sm:space-y-8">

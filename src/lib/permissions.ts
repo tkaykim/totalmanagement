@@ -299,16 +299,13 @@ export function canAccessFinance(
 
 /**
  * 순익 조회 권한 체크
+ * PM인 경우 계정 ROLE과 관계없이 해당 프로젝트의 매출/지출(순익) 조회 가능
  */
 export function canViewNetProfit(user: AppUser, project: Project): boolean {
   if (user.role === 'admin') return true;
-  
-  // leader: 본인 BU만 (참여 프로젝트는 순익 못 봄)
+  if (project.pm_id === user.id) return true;
   if (user.role === 'leader' && project.bu_code === user.bu_code) return true;
-  
-  // manager: 본인 PM만
   if (user.role === 'manager' && project.pm_id === user.id) return true;
-  
   return false;
 }
 
