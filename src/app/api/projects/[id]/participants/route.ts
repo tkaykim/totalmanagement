@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPureClient } from '@/lib/supabase/server';
+import { createPureClient, createClient } from '@/lib/supabase/server';
+import { notifyProjectParticipantAdded } from '@/lib/notification-sender';
 
 // 프로젝트 참여자 조회
 export async function GET(
@@ -85,6 +86,35 @@ export async function POST(
       .single();
 
     if (updateError) throw updateError;
+
+    // 참여자에게 알림 전송 (내부 사용자인 경우에만)
+    if (body.user_id) {
+      try {
+        const authSupabase = await createClient();
+        const { data: { user: authUser } } = await authSupabase.auth.getUser();
+        
+        // 본인이 아닌 경우에만 알림
+        if (authUser && body.user_id !== authUser.id) {
+          const pureSupabase = await createPureClient();
+          const [projectResult, userResult] = await Promise.all([
+            pureSupabase.from('projects').select('name').eq('id', id).single(),
+            pureSupabase.from('app_users').select('name').eq('id', authUser.id).single(),
+          ]);
+          
+          const projectName = projectResult.data?.name || '프로젝트';
+          const adderName = userResult.data?.name;
+          
+          await notifyProjectParticipantAdded(
+            body.user_id,
+            projectName,
+            id,
+            adderName
+          );
+        }
+      } catch (notifyError) {
+        console.error('Failed to send participant notification:', notifyError);
+      }
+    }
 
     return NextResponse.json(newParticipant);
   } catch (error: any) {

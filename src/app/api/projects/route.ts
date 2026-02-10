@@ -3,7 +3,7 @@ import { createPureClient, createClient } from '@/lib/supabase/server';
 import type { BU } from '@/types/database';
 import { canAccessProject, canCreateProject, type AppUser, type Project as PermProject } from '@/lib/permissions';
 import { createActivityLog } from '@/lib/activity-logger';
-import { notifyProjectPMAssigned, createNotification } from '@/lib/notification-sender';
+import { notifyProjectPMAssigned, notifyProjectParticipantAdded } from '@/lib/notification-sender';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -214,22 +214,19 @@ export async function POST(request: NextRequest) {
       await notifyProjectPMAssigned(body.pm_id, project.name, String(project.id), currentUser.name);
     }
 
-    // 참여자들에게 알림 전송 (본인 제외, 누가 추가했는지 포함)
+    // 참여자들에게 알림 전송 (본인 및 PM 제외)
     if (body.participants && Array.isArray(body.participants)) {
       const participantIds = body.participants
         .map((p: any) => p.user_id)
         .filter((id: string) => id && id !== currentUser.id && id !== body.pm_id);
       
       for (const participantId of participantIds) {
-        await createNotification({
-          userId: participantId,
-          title: '프로젝트에 참여하게 되었습니다',
-          message: `${currentUser.name}님이 "${project.name}" 프로젝트에 참여자로 추가했습니다.`,
-          type: 'info',
-          entityType: 'project',
-          entityId: String(project.id),
-          actionUrl: '/?view=projects',
-        });
+        await notifyProjectParticipantAdded(
+          participantId,
+          project.name,
+          String(project.id),
+          currentUser.name
+        );
       }
     }
 

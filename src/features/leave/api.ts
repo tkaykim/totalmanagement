@@ -71,6 +71,31 @@ export async function createLeaveRequest(data: LeaveRequestFormData): Promise<Le
   return res.json();
 }
 
+/** 관리자 대리 휴가 소진 */
+export interface AdminProxyLeaveData {
+  target_user_id: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+}
+
+export async function adminCreateLeaveRequest(data: AdminProxyLeaveData): Promise<LeaveRequest> {
+  const res = await fetch(`${API_BASE}/requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...data,
+      admin_proxy: true,
+    }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || '관리자 대리 휴가 소진에 실패했습니다.');
+  }
+  return res.json();
+}
+
 export async function getLeaveRequests(params?: {
   requester_id?: string;
   status?: ApprovalStatus;

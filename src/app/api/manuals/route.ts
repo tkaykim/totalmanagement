@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const bu = searchParams.get('bu') as BU | null;
     const category = searchParams.get('category');
+    const search = searchParams.get('search');
+    const activeOnly = searchParams.get('active_only') !== 'false';
 
     let query = supabase.from('manuals').select('*').order('updated_at', { ascending: false });
 
@@ -16,6 +18,12 @@ export async function GET(request: NextRequest) {
     }
     if (category) {
       query = query.eq('category', category);
+    }
+    if (activeOnly) {
+      query = query.eq('is_active', true);
+    }
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,category.ilike.%${search}%`);
     }
 
     const { data, error } = await query;
@@ -39,9 +47,10 @@ export async function POST(request: NextRequest) {
         bu_code: body.bu_code,
         title: body.title,
         category: body.category,
-        content: body.content || [],
+        content: body.content || { blocks: [] },
         author_id: body.author_id,
         author_name: body.author_name,
+        is_active: body.is_active ?? true,
       })
       .select()
       .single();

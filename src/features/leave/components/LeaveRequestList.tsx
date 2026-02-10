@@ -19,6 +19,7 @@ interface LeaveRequestListProps {
   requests: LeaveRequestWithUser[];
   isLoading?: boolean;
   onCancel?: (id: string) => void;
+  onAdminDelete?: (id: string) => void;
   showRequester?: boolean;
 }
 
@@ -44,6 +45,7 @@ export function LeaveRequestList({
   requests,
   isLoading,
   onCancel,
+  onAdminDelete,
   showRequester = false,
 }: LeaveRequestListProps) {
   if (isLoading) {
@@ -130,6 +132,21 @@ export function LeaveRequestList({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
+                {onAdminDelete && (request.status === 'approved' || request.status === 'pending') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`${request.requester?.name || ''}님의 휴가(${request.days_used}일)를 삭제하시겠습니까? 승인된 경우 잔여일수가 복구됩니다.`)) {
+                        onAdminDelete(request.id);
+                      }
+                    }}
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
+                    title="관리자 삭제"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
 
               {/* 신청일 */}
@@ -153,7 +170,7 @@ export function LeaveRequestList({
               <TableHead>사유</TableHead>
               <TableHead>상태</TableHead>
               <TableHead>신청일</TableHead>
-              {onCancel && <TableHead className="w-[80px]"></TableHead>}
+              {(onCancel || onAdminDelete) && <TableHead className="w-[80px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -192,14 +209,29 @@ export function LeaveRequestList({
                   <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
                     {formatKST(request.created_at, 'M/d HH:mm')}
                   </TableCell>
-                  {onCancel && (
+                  {(onCancel || onAdminDelete) && (
                     <TableCell>
-                      {request.status === 'pending' && (
+                      {onCancel && request.status === 'pending' && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onCancel(request.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onAdminDelete && (request.status === 'approved' || request.status === 'pending') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`${request.requester?.name || ''}님의 휴가(${request.days_used}일)를 삭제하시겠습니까? 승인된 경우 잔여일수가 복구됩니다.`)) {
+                              onAdminDelete(request.id);
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="관리자 삭제"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

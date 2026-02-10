@@ -418,42 +418,84 @@ export function canEditAttendance(
 
 /**
  * 사이드바 메뉴 표시 권한
+ * 
+ * 그룹 순서:
+ * 1. 일상 업무: dashboard, tasks, workLog
+ * 2. 근태/휴가: attendance, leave
+ * 3. 프로젝트 운영: projects, settlement
+ * 4. 지식 관리: manuals, taskTemplates
+ * 5. 조직/인력: organization, partners, exclusiveArtists
+ * 6. 예약/자원: meetingRooms, equipment, vehicles
+ * 7. 관리자 전용: attendanceAdmin, leaveAdmin, bugReports, pushTest
  */
 export function getVisibleMenus(user: AppUser): string[] {
-  const menus: string[] = ['dashboard', 'tasks']; // 기본 메뉴
-  
-  // 프로젝트 관리: admin, leader, manager
-  if (['admin', 'leader', 'manager'].includes(user.role)) {
+  const menus: string[] = [];
+
+  // ── 그룹 1: 일상 업무 (모든 사용자) ──
+  menus.push('dashboard');
+  menus.push('tasks');
+  menus.push('workLog');
+
+  // ── 그룹 2: 근태/휴가 (모든 사용자) ──
+  menus.push('attendance');
+  menus.push('leave');
+
+  // ── 그룹 3: 프로젝트 운영 ──
+  // 프로젝트 관리: admin, leader, manager, member
+  if (['admin', 'leader', 'manager', 'member'].includes(user.role)) {
     menus.push('projects');
   }
-  
-  // 정산 관리: bu_code가 HEAD이면서 leader 또는 admin인 경우만
+  // 정산 관리: HEAD의 admin, leader만
   if ((user.role === 'admin' || user.role === 'leader') && user.bu_code === 'HEAD') {
     menus.push('settlement');
   }
-  
+
+  // ── 그룹 4: 지식 관리 ──
+  // 매뉴얼: 모든 사용자 (열람)
+  menus.push('manuals');
+  // 할일 템플릿: admin, leader, manager
+  if (['admin', 'leader', 'manager'].includes(user.role)) {
+    menus.push('taskTemplates');
+  }
+
+  // ── 그룹 5: 조직/인력 ──
+  // 조직 현황: admin, leader
   if (['admin', 'leader'].includes(user.role)) {
     menus.push('organization');
   }
-  
-  // 전속 아티스트 관리: GRIGO 또는 HEAD 사업부의 admin, leader, manager
+  // 파트너 관리: admin, leader, manager (독립 권한)
+  if (['admin', 'leader', 'manager'].includes(user.role)) {
+    menus.push('partners');
+  }
+  // 전속 아티스트: GRIGO/HEAD의 admin, leader, manager
   if (canAccessExclusiveArtists(user)) {
     menus.push('exclusiveArtists');
   }
-  
-  // 모든 사용자가 본인 근무시간은 볼 수 있음
-  menus.push('attendance');
-  
-  // 모든 사용자가 휴가 관리 메뉴에 접근 가능
-  menus.push('leave');
-  
-  // admin과 leader는 전체 근무현황 (승인/반려를 위해)
-  // leader는 본인 BU만 조회 가능하지만, 메뉴 자체는 접근 가능
+
+  // ── 그룹 6: 예약/자원 (artist 제외) ──
+  if (user.role !== 'artist') {
+    menus.push('meetingRooms');
+    menus.push('equipment');
+    menus.push('vehicles');
+  }
+
+  // ── 그룹 7: 기타/관리자 ──
+  // 버그 리포트: 모든 사용자
+  menus.push('bugReports');
+  // 전체 근무현황 / 휴가 승인: admin, leader
   if (['admin', 'leader'].includes(user.role)) {
     menus.push('attendanceAdmin');
     menus.push('leaveAdmin');
   }
-  
+  // 업무일지 관리: admin만
+  if (user.role === 'admin') {
+    menus.push('workLogAdmin');
+  }
+  // 푸시 알림 테스트: admin만
+  if (user.role === 'admin') {
+    menus.push('pushTest');
+  }
+
   return menus;
 }
 
@@ -627,6 +669,76 @@ export function canEditExclusiveArtist(user: AppUser): boolean {
  */
 export function shouldRedirectArtistToArtistPage(user: AppUser): boolean {
   return user.role === 'artist';
+}
+
+// ============================================
+// Manuals (SOP) 권한
+// ============================================
+
+/**
+ * Manuals 조회 권한 - 모든 사용자가 모든 사업부의 매뉴얼 조회 가능
+ */
+export function canAccessManual(user: AppUser): boolean {
+  return true;
+}
+
+/**
+ * Manuals 생성 권한
+ */
+export function canCreateManual(user: AppUser, buCode: BuCode): boolean {
+  if (user.role === 'admin') return true;
+  if (user.role === 'leader' && user.bu_code === buCode) return true;
+  if (user.role === 'manager' && user.bu_code === buCode) return true;
+  return false;
+}
+
+/**
+ * Manuals 수정 권한
+ */
+export function canEditManual(user: AppUser, manual: { bu_code: BuCode }): boolean {
+  if (user.role === 'admin') return true;
+  if (user.role === 'leader' && user.bu_code === manual.bu_code) return true;
+  if (user.role === 'manager' && user.bu_code === manual.bu_code) return true;
+  return false;
+}
+
+/**
+ * Manuals 삭제 권한
+ */
+export function canDeleteManual(user: AppUser, manual: { bu_code: BuCode }): boolean {
+  return canEditManual(user, manual);
+}
+
+// ============================================
+// 할일 템플릿 권한
+// ============================================
+
+/**
+ * 할일 템플릿 조회 권한 - 모든 사용자가 모든 사업부의 템플릿 조회 가능
+ */
+export function canAccessTaskTemplate(user: AppUser): boolean {
+  return true;
+}
+
+/**
+ * 할일 템플릿 생성 권한
+ */
+export function canCreateTaskTemplate(user: AppUser, buCode: BuCode): boolean {
+  return canCreateManual(user, buCode);
+}
+
+/**
+ * 할일 템플릿 수정 권한
+ */
+export function canEditTaskTemplate(user: AppUser, template: { bu_code: BuCode }): boolean {
+  return canEditManual(user, template);
+}
+
+/**
+ * 할일 템플릿 삭제 권한
+ */
+export function canDeleteTaskTemplate(user: AppUser, template: { bu_code: BuCode }): boolean {
+  return canEditTaskTemplate(user, template);
 }
 
 /**

@@ -24,6 +24,8 @@ interface TeamLeaveTableProps {
   onRefresh?: () => void;
   /** 이름 클릭 시 휴가 부여 모달 열기 (대상자 사전 지정) */
   onOpenGrantForUser?: (user: { id: string; name: string }) => void;
+  /** 대리 소진 모달 열기 (대상자 사전 지정) */
+  onOpenUseForUser?: (user: { id: string; name: string }) => void;
 }
 
 export function TeamLeaveTable({
@@ -31,6 +33,7 @@ export function TeamLeaveTable({
   onNoLeaveUsers,
   onRefresh,
   onOpenGrantForUser,
+  onOpenUseForUser,
 }: TeamLeaveTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -182,13 +185,26 @@ export function TeamLeaveTable({
               return (
                 <TableRow key={stat.user_id}>
                   <TableCell className="font-medium whitespace-nowrap min-w-[140px]">
-                    <button
-                      type="button"
-                      className="text-left underline-offset-4 hover:underline text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded"
-                      onClick={() => onOpenGrantForUser?.({ id: stat.user_id, name: stat.user_name ?? '' })}
-                    >
-                      {stat.user_name} ({shortId}…)
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        className="text-left underline-offset-4 hover:underline text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded"
+                        onClick={() => onOpenGrantForUser?.({ id: stat.user_id, name: stat.user_name ?? '' })}
+                        title="휴가 부여"
+                      >
+                        {stat.user_name} ({shortId}…)
+                      </button>
+                      {onOpenUseForUser && (
+                        <button
+                          type="button"
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition"
+                          onClick={() => onOpenUseForUser({ id: stat.user_id, name: stat.user_name ?? '' })}
+                          title="대리 소진"
+                        >
+                          소진
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-slate-600 dark:text-slate-400 min-w-[110px]">
                     {stat.hire_date

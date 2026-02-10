@@ -4,7 +4,7 @@ import { canViewAllAttendance, isLeader, isAdmin, isHeadLeader } from '@/feature
 import type { AppUser } from '@/types/database';
 import { getTodayKST } from '@/lib/timezone.server';
 
-export type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME';
+export type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME' | 'VACATION';
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,8 +88,24 @@ export async function GET(request: NextRequest) {
       logsByUserId[log.user_id].push(log);
     });
 
+    // 승인된 휴가 신청 조회 (해당 날짜가 휴가 기간에 포함되는 건)
+    const { data: approvedLeaves } = await supabase
+      .from('leave_requests')
+      .select('requester_id, leave_type, start_date, end_date')
+      .eq('status', 'approved')
+      .lte('start_date', targetDate)
+      .gte('end_date', targetDate);
+
+    const leaveByUserId = new Map<string, { leave_type: string }>();
+    approvedLeaves?.forEach((leave) => {
+      leaveByUserId.set(leave.requester_id, { leave_type: leave.leave_type });
+    });
+
     const overview = filteredUsers?.map((u) => {
       const userLogs = logsByUserId[u.id] || [];
+      const isVacation = userLogs.some((l) => l.status === 'vacation');
+      const hasApprovedLeave = leaveByUserId.has(u.id);
+      const leaveInfo = leaveByUserId.get(u.id);
       const hasCheckedIn = userLogs.some((l) => l.check_in_at);
       const hasCheckedOut = userLogs.every((l) => l.check_out_at) && userLogs.length > 0;
       const isOvertime = userLogs.some((l) => l.is_overtime);
@@ -113,7 +129,10 @@ export async function GET(request: NextRequest) {
 
       let displayStatus: DisplayWorkStatus = 'OFF_WORK';
       
-      if (!hasCheckedIn) {
+      // 휴가 상태를 먼저 체크 (attendance_logs status 또는 승인된 휴가 신청)
+      if ((isVacation || hasApprovedLeave) && !hasCheckedIn) {
+        displayStatus = 'VACATION';
+      } else if (!hasCheckedIn) {
         displayStatus = 'OFF_WORK';
       } else if (hasCheckedOut) {
         displayStatus = 'CHECKED_OUT';
@@ -137,6 +156,8 @@ export async function GET(request: NextRequest) {
         first_check_in: firstCheckIn,
         last_check_out: lastCheckOut,
         is_overtime: isOvertime,
+        is_vacation: isVacation || hasApprovedLeave,
+        leave_type: leaveInfo?.leave_type || null,
         logs_count: userLogs.length,
       };
     });
@@ -148,6 +169,7 @@ export async function GET(request: NextRequest) {
       off_work: overview?.filter((o) => o.display_status === 'OFF_WORK').length || 0,
       away: overview?.filter((o) => o.display_status === 'AWAY').length || 0,
       overtime: overview?.filter((o) => o.display_status === 'OVERTIME').length || 0,
+      vacation: overview?.filter((o) => o.display_status === 'VACATION').length || 0,
     };
 
     // 직접 수정 권한: admin 또는 HEAD leader만 가능

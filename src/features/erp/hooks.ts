@@ -460,10 +460,10 @@ export function useDeleteEvent() {
 }
 
 // Manuals
-export function useManuals(bu?: BU, category?: string) {
+export function useManuals(bu?: BU, category?: string, includeInactive?: boolean) {
   return useQuery({
-    queryKey: ['manuals', bu, category],
-    queryFn: () => api.fetchManuals(bu, category),
+    queryKey: ['manuals', bu, category, includeInactive],
+    queryFn: () => api.fetchManuals(bu, category, includeInactive),
   });
 }
 

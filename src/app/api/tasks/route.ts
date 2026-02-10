@@ -189,14 +189,16 @@ export async function POST(request: NextRequest) {
       .from('project_tasks')
       .insert({
         project_id: body.project_id,
-        bu_code: body.bu_code,
+        bu_code: project.bu_code,
         title: body.title,
+        description: body.description,
         assignee_id: body.assignee_id,
         assignee: body.assignee,
         due_date: body.due_date,
         status: body.status || 'todo',
         priority: body.priority || 'medium',
         tag: body.tag,
+        manual_id: body.manual_id ?? null,
         created_by: currentUser.id,
       })
       .select()

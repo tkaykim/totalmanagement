@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   server: {
     // 하이브리드 방식: Vercel에 배포된 웹앱을 로드
     // 개발 시에는 로컬 서버, 프로덕션 시에는 Vercel URL 사용
-    url: 'https://total-managements.vercel.app',
+    url: 'https://totalmanagement.vercel.app',
     cleartext: true,
   },
   plugins: {

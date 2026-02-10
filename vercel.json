@@ -11,6 +11,14 @@
     {
       "path": "/api/leave/auto-generate-monthly",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/notifications/due-soon?days=1",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/notifications/due-soon?days=3",
+      "schedule": "0 0 * * *"
     }
   ]
 }

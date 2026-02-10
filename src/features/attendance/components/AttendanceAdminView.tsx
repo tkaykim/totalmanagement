@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
   Edit3,
+  Palmtree,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getTodayKST, formatTimeKST } from '@/lib/timezone';
@@ -25,7 +26,7 @@ import { AdminAttendanceEditModal } from './AdminAttendanceEditModal';
 import { getApprovalQueue } from '../api';
 import type { ApprovalQueueItem } from '../types';
 
-type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME';
+type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME' | 'VACATION';
 
 interface UserAttendance {
   user_id: string;
@@ -39,6 +40,8 @@ interface UserAttendance {
   first_check_in: string | null;
   last_check_out: string | null;
   is_overtime: boolean;
+  is_vacation: boolean;
+  leave_type: string | null;
   logs_count: number;
 }
 
@@ -49,6 +52,7 @@ interface OverviewStats {
   off_work: number;
   away: number;
   overtime: number;
+  vacation: number;
 }
 
 interface CurrentUserInfo {
@@ -73,6 +77,14 @@ const BU_LABELS: Record<string, string> = {
   MODOO: '모두굿즈',
   AST: 'AST COMPANY',
   HEAD: '본사',
+};
+
+const LEAVE_TYPE_LABELS: Record<string, string> = {
+  annual: '연차',
+  half_am: '오전 반차',
+  half_pm: '오후 반차',
+  compensatory: '대체휴무',
+  special: '특별휴가',
 };
 
 const STATUS_CONFIG: Record<DisplayWorkStatus, {
@@ -116,6 +128,13 @@ const STATUS_CONFIG: Record<DisplayWorkStatus, {
     bgColor: 'bg-purple-100 dark:bg-purple-900/30',
     textColor: 'text-purple-700 dark:text-purple-400',
     dotColor: 'bg-purple-500',
+  },
+  VACATION: {
+    label: '휴가',
+    icon: Palmtree,
+    bgColor: 'bg-cyan-100 dark:bg-cyan-900/30',
+    textColor: 'text-cyan-700 dark:text-cyan-400',
+    dotColor: 'bg-slate-400',
   },
 };
 
@@ -284,11 +303,12 @@ export function AttendanceAdminView() {
 
       {/* Stats Cards - Compact */}
       {data?.stats && (
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+        <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
           {[
             { key: '', label: '전체', count: data.stats.total, icon: Users, color: 'blue' },
             { key: 'WORKING', label: '근무중', count: data.stats.working, icon: Monitor, color: 'green' },
             { key: 'CHECKED_OUT', label: '퇴근', count: data.stats.checked_out, icon: LogOutIcon, color: 'slate' },
+            { key: 'VACATION', label: '휴가', count: data.stats.vacation, icon: Palmtree, color: 'cyan' },
             { key: 'OFF_WORK', label: '미출근', count: data.stats.off_work, icon: UserX, color: 'red' },
             { key: 'AWAY', label: '자리비움', count: data.stats.away, icon: Coffee, color: 'orange' },
             { key: 'OVERTIME', label: '연장근무', count: data.stats.overtime, icon: Zap, color: 'purple' },
@@ -406,7 +426,10 @@ export function AttendanceAdminView() {
                             {user.name}
                           </p>
                           <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                            {user.position || user.role}
+                            {user.display_status === 'VACATION' && user.leave_type
+                              ? `${LEAVE_TYPE_LABELS[user.leave_type] || '휴가'}`
+                              : (user.position || user.role)
+                            }
                           </p>
                         </div>
                       </div>

@@ -7,6 +7,7 @@ import {
   Users,
   CheckSquare,
   Calendar,
+  CalendarMinus,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -20,12 +21,14 @@ import {
 } from '@/components/ui/select';
 import { LeaveApprovalQueue } from './LeaveApprovalQueue';
 import { AdminLeaveGrant } from './AdminLeaveGrant';
+import { AdminLeaveUse } from './AdminLeaveUse';
 import { TeamLeaveTable } from './TeamLeaveTable';
 import { LeaveRequestList } from './LeaveRequestList';
 import {
   getPendingApprovals,
   getTeamLeaveStats,
   getLeaveRequests,
+  cancelLeaveRequest,
 } from '../api';
 import type { PendingApprovalItem, TeamLeaveStats as TeamLeaveStatsType } from '../api';
 import type { LeaveRequestWithUser } from '../types';
@@ -51,7 +54,9 @@ export function LeaveAdminView() {
   const [selectedBu, setSelectedBu] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [grantModalOpen, setGrantModalOpen] = useState(false);
+  const [useModalOpen, setUseModalOpen] = useState(false);
   const [preselectedUser, setPreselectedUser] = useState<{ id: string; name: string } | null>(null);
+  const [usePreselectedUser, setUsePreselectedUser] = useState<{ id: string; name: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'team' | 'all'>('pending');
 
   const fetchData = useCallback(async () => {
@@ -156,10 +161,16 @@ export function LeaveAdminView() {
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
           {isHeadAdmin && (
-            <Button onClick={() => setGrantModalOpen(true)}>
-              <Gift className="h-4 w-4 mr-2" />
-              휴가 부여
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => setUseModalOpen(true)}>
+                <CalendarMinus className="h-4 w-4 mr-2" />
+                대리 소진
+              </Button>
+              <Button onClick={() => setGrantModalOpen(true)}>
+                <Gift className="h-4 w-4 mr-2" />
+                휴가 부여
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -294,6 +305,10 @@ export function LeaveAdminView() {
                   setPreselectedUser(user);
                   setGrantModalOpen(true);
                 }}
+                onOpenUseForUser={isHeadAdmin ? (user) => {
+                  setUsePreselectedUser(user);
+                  setUseModalOpen(true);
+                } : undefined}
               />
             </CardContent>
           </Card>
@@ -308,6 +323,14 @@ export function LeaveAdminView() {
               <LeaveRequestList
                 requests={allRequests}
                 showRequester
+                onAdminDelete={isHeadAdmin ? async (id) => {
+                  try {
+                    await cancelLeaveRequest(id);
+                    await fetchData();
+                  } catch (error) {
+                    alert(error instanceof Error ? error.message : '삭제에 실패했습니다.');
+                  }
+                } : undefined}
               />
             </CardContent>
           </Card>
@@ -323,6 +346,15 @@ export function LeaveAdminView() {
         }}
         onSuccess={fetchData}
         preselectedUser={preselectedUser}
+      />
+      <AdminLeaveUse
+        open={useModalOpen}
+        onOpenChange={(open) => {
+          setUseModalOpen(open);
+          if (!open) setUsePreselectedUser(null);
+        }}
+        onSuccess={fetchData}
+        preselectedUser={usePreselectedUser}
       />
     </div>
   );

@@ -125,12 +125,14 @@ export interface ProjectTask {
   project_id: number;
   bu_code: BU;
   title: string;
+  description?: string | null;
   assignee_id?: string;
   assignee?: string;
   due_date: string;
   status: TaskStatus;
   priority?: TaskPriority;
   tag?: string;
+  manual_id?: number | null;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -305,8 +307,74 @@ export interface Manual {
   content: any; // JSONB
   author_id?: string;
   author_name?: string;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Sop {
+  id: number;
+  bu_code: BU;
+  title: string;
+  category: string;
+  content: SopContent; // JSONB
+  author_id?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SopContent {
+  steps?: SopStep[];
+  attachments?: SopAttachment[];
+}
+
+export interface SopStep {
+  order: number;
+  title: string;
+  description?: string;
+  checklist?: string[];
+}
+
+export interface SopAttachment {
+  name: string;
+  url: string;
+}
+
+export interface TaskTemplate {
+  id: number;
+  bu_code: BU;
+  name: string;
+  description?: string | null;
+  template_type: string;
+  options_schema: TaskTemplateOptionsSchema; // JSONB
+  tasks: TaskTemplateTask[]; // JSONB
+  author_id?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskTemplateOptionsSchema {
+  type: 'object';
+  properties: Record<string, TaskTemplateOptionProperty>;
+  required?: string[];
+}
+
+export interface TaskTemplateOptionProperty {
+  type: 'string' | 'number' | 'boolean' | 'date';
+  title: string;
+  enum?: string[];
+  format?: string;
+}
+
+export interface TaskTemplateTask {
+  title: string;
+  days_before: number; // 기준일로부터 며칠 전
+  manual_id?: number | null; // 연동할 매뉴얼 ID (manuals 테이블 참조)
+  assignee_role?: string;
+  priority?: TaskPriority;
+  condition_key?: string; // boolean 옵션 키 - 해당 옵션이 true일 때만 포함
 }
 
 export interface Creator {

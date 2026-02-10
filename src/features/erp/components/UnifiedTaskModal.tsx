@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, ListTodo, Calendar, User, FileText, Flag, ChevronDown, Check, AlertCircle, Search } from 'lucide-react';
+import { X, ListTodo, Calendar, User, FileText, Flag, ChevronDown, Check, AlertCircle, Search, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CommentSection } from '@/features/comments/components/CommentSection';
+import { ManualSelector } from './ManualSelector';
+import { ManualDetailModal } from './ManualDetailModal';
+import { useManuals } from '../hooks';
 import { BU, BU_TITLES, Project, TaskItem, TaskPriority } from '../types';
 
 type ModalMode = 'create' | 'view' | 'edit';
@@ -132,11 +135,13 @@ function HeaderChipDropdown({
   options,
   onChange,
   disabled = false,
+  onClick,
 }: {
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
   disabled?: boolean;
+  onClick?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -154,6 +159,17 @@ function HeaderChipDropdown({
   const selectedLabel = options.find((o) => o.value === value)?.label || '선택';
 
   if (disabled) {
+    if (onClick) {
+      return (
+        <button
+          type="button"
+          onClick={onClick}
+          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/60 dark:bg-slate-700/60 text-indigo-700 dark:text-indigo-300 hover:bg-white dark:hover:bg-slate-700 hover:underline transition cursor-pointer"
+        >
+          {selectedLabel}
+        </button>
+      );
+    }
     return (
       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/60 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200">
         {selectedLabel}
@@ -488,9 +504,11 @@ export type UnifiedTaskModalProps = {
     dueDate: string;
     status: TaskStatus;
     priority: TaskPriority;
+    manual_id?: number | null;
   }) => Promise<string | null> | void;
   onDelete?: (id: string) => Promise<void> | void;
   onQuickUpdate?: (id: string, updates: { status?: TaskStatus; priority?: TaskPriority }) => Promise<void>;
+  onProjectClick?: (projectId: string) => void;
   canQuickEdit?: boolean;
   defaultBu: BU;
   projects: Project[];
@@ -506,6 +524,7 @@ export function UnifiedTaskModal({
   onSubmit,
   onDelete,
   onQuickUpdate,
+  onProjectClick,
   canQuickEdit = false,
   defaultBu,
   projects,
@@ -522,6 +541,10 @@ export function UnifiedTaskModal({
     ? projects.find((p) => p.id === defaultProjectId)
     : null;
   
+  const taskProject = task?.projectId
+    ? projects.find((p) => p.id === task.projectId)
+    : null;
+
   const hasPreselectedProject = !!defaultProjectId || !!task?.projectId;
 
   const currentUser = usersData?.currentUser;
@@ -529,14 +552,22 @@ export function UnifiedTaskModal({
   const [form, setForm] = useState({
     title: task?.title || '',
     description: task?.description || '',
-    bu: task?.bu || defaultProject?.bu || defaultBu,
+    bu: taskProject?.bu || task?.bu || defaultProject?.bu || defaultBu,
     projectId: task?.projectId || defaultProject?.id || '',
     assignee_id: task?.assignee_id || (!task && currentUser?.id) || '',
     assignee: task?.assignee || (!task && currentUser?.name) || '',
     dueDate: task?.dueDate || '',
     status: (task?.status || 'todo') as TaskStatus,
     priority: (task?.priority || 'medium') as TaskPriority,
+    manual_id: task?.manual_id ?? null,
   });
+
+  const { data: manualsData = [] } = useManuals();
+  const [manualDetailOpen, setManualDetailOpen] = useState(false);
+  const linkedManual = useMemo(
+    () => manualsData.find((m) => m.id === form.manual_id) ?? null,
+    [manualsData, form.manual_id]
+  );
 
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -614,6 +645,7 @@ export function UnifiedTaskModal({
         dueDate: form.dueDate,
         status: form.status,
         priority: form.priority,
+        manual_id: form.manual_id ?? null,
       };
 
       const result = await onSubmit(payload);
@@ -677,6 +709,7 @@ export function UnifiedTaskModal({
                   options={projectOptions}
                   onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
                   disabled={!isEditable}
+                  onClick={!isEditable && onProjectClick && form.projectId ? () => onProjectClick(form.projectId) : undefined}
                 />
               </div>
             )}
@@ -870,6 +903,33 @@ export function UnifiedTaskModal({
               )}
             </FormField>
 
+            {/* 매뉴얼(SOP) 연결 */}
+            <FormField label="매뉴얼(SOP) 연결" icon={BookOpen}>
+              {isEditable ? (
+                <ManualSelector
+                  manuals={manualsData}
+                  value={form.manual_id}
+                  onChange={(manualId) => setForm((prev) => ({ ...prev, manual_id: manualId }))}
+                  buFilter={form.bu}
+                  emptyLabel="매뉴얼 선택 안함"
+                />
+              ) : linkedManual ? (
+                <button
+                  type="button"
+                  onClick={() => setManualDetailOpen(true)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition"
+                >
+                  <BookOpen className="h-4 w-4 shrink-0" />
+                  <span className="font-medium">{linkedManual.title}</span>
+                  <span className="text-xs text-indigo-500">클릭하여 열람</span>
+                </button>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">
+                  연결된 매뉴얼이 없습니다.
+                </p>
+              )}
+            </FormField>
+
             {/* 에러 */}
             {error && (
               <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2 flex items-center gap-2">
@@ -925,6 +985,11 @@ export function UnifiedTaskModal({
           </div>
         </div>
       </div>
+
+      {/* 매뉴얼 상세 모달 */}
+      {manualDetailOpen && (
+        <ManualDetailModal manual={linkedManual} onClose={() => setManualDetailOpen(false)} />
+      )}
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (

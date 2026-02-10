@@ -15,6 +15,9 @@ import {
   Car,
   Bug,
   LogOut,
+  FileText,
+  BookOpen,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { View } from '@/features/erp/types';
@@ -87,8 +90,12 @@ export const SidebarContent = memo(function SidebarContent({
       </div>
       
       {/* 메뉴 영역 - 스크롤 가능 */}
-      <nav className="flex-1 overflow-y-auto space-y-2 px-2 sm:px-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-        {/* 대시보드 - 모든 사용자 */}
+      <nav className="flex-1 overflow-y-auto space-y-1 px-2 sm:px-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+
+        {/* ── 그룹 1: 일상 업무 ── */}
+        <p className="px-2 sm:px-3 pt-1 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          일상 업무
+        </p>
         {visibleMenus.includes('dashboard') && (
           <SidebarButton
             label="대시보드"
@@ -97,25 +104,6 @@ export const SidebarContent = memo(function SidebarContent({
             onClick={() => handleMenuClick('dashboard')}
           />
         )}
-        {/* 프로젝트 관리 - admin, leader, manager */}
-        {visibleMenus.includes('projects') && (
-          <SidebarButton
-            label="프로젝트 관리"
-            icon={<FolderKanban className="h-4 w-4" />}
-            active={view === 'projects'}
-            onClick={() => handleMenuClick('projects')}
-          />
-        )}
-        {/* 정산 관리 - admin, leader, manager */}
-        {visibleMenus.includes('settlement') && (
-          <SidebarButton
-            label="정산 관리"
-            icon={<Coins className="h-4 w-4" />}
-            active={view === 'settlement'}
-            onClick={() => handleMenuClick('settlement')}
-          />
-        )}
-        {/* 할일 관리 - 모든 사용자 */}
         {visibleMenus.includes('tasks') && (
           <SidebarButton
             label="할일 관리"
@@ -124,131 +112,204 @@ export const SidebarContent = memo(function SidebarContent({
             onClick={() => handleMenuClick('tasks')}
           />
         )}
-        {/* 업무일지 - 모든 사용자 */}
-        <SidebarButton
-          label="업무일지"
-          icon={<ClipboardList className="h-4 w-4" />}
-          active={view === 'workLog'}
-          onClick={() => handleMenuClick('workLog')}
-        />
-        {/* 조직 현황 - admin, leader */}
-        {visibleMenus.includes('organization') && (
+        {visibleMenus.includes('workLog') && (
           <SidebarButton
-            label="조직 현황"
-            icon={<Users className="h-4 w-4" />}
-            active={view === 'organization'}
-            onClick={() => handleMenuClick('organization')}
+            label="업무일지"
+            icon={<ClipboardList className="h-4 w-4" />}
+            active={view === 'workLog'}
+            onClick={() => handleMenuClick('workLog')}
           />
         )}
-        {/* 파트너 관리 - admin, leader, manager */}
-        {visibleMenus.includes('organization') && (
-          <SidebarButton
-            label="파트너 관리"
-            icon={<Users className="h-4 w-4" />}
-            active={view === 'partners'}
-            onClick={() => handleMenuClick('partners')}
-          />
-        )}
-        {/* 전속 아티스트 관리 - GRIGO, HEAD 사업부 */}
-        {visibleMenus.includes('exclusiveArtists') && (
-          <SidebarButton
-            label="전속 아티스트"
-            icon={<Users className="h-4 w-4" />}
-            active={view === 'exclusiveArtists'}
-            onClick={() => handleMenuClick('exclusiveArtists')}
-          />
-        )}
-        {/* 근무시간 관리 - 모든 사용자 */}
-        {visibleMenus.includes('attendance') && (
-          <SidebarButton
-            label="근무시간 관리"
-            icon={<Clock className="h-4 w-4" />}
-            active={view === 'attendance'}
-            onClick={() => handleMenuClick('attendance')}
-          />
-        )}
-        {/* 휴가 관리 - 모든 사용자 */}
-        {visibleMenus.includes('leave') && (
-          <SidebarButton
-            label="휴가 관리"
-            icon={<CalendarDays className="h-4 w-4" />}
-            active={view === 'leave'}
-            onClick={() => handleMenuClick('leave')}
-          />
-        )}
-        
-        {/* 예약 관리 - 탭 형태 */}
+
+        {/* ── 그룹 2: 근태/휴가 ── */}
         <div className="mt-2 pt-2 border-t border-slate-700">
-          <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-            예약 관리
+          <p className="px-2 sm:px-3 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            근태 / 휴가
           </p>
-          <SidebarButton
-            label="회의실 예약"
-            icon={<Building className="h-4 w-4" />}
-            active={view === 'meetingRooms'}
-            onClick={() => handleMenuClick('meetingRooms')}
-          />
-          <SidebarButton
-            label="장비 대여"
-            icon={<Package className="h-4 w-4" />}
-            active={view === 'equipment'}
-            onClick={() => handleMenuClick('equipment')}
-          />
-          <SidebarButton
-            label="차량 일지"
-            icon={<Car className="h-4 w-4" />}
-            active={view === 'vehicles'}
-            onClick={() => handleMenuClick('vehicles')}
-          />
+          {visibleMenus.includes('attendance') && (
+            <SidebarButton
+              label="근무시간 관리"
+              icon={<Clock className="h-4 w-4" />}
+              active={view === 'attendance'}
+              onClick={() => handleMenuClick('attendance')}
+            />
+          )}
+          {visibleMenus.includes('leave') && (
+            <SidebarButton
+              label="휴가 관리"
+              icon={<CalendarDays className="h-4 w-4" />}
+              active={view === 'leave'}
+              onClick={() => handleMenuClick('leave')}
+            />
+          )}
         </div>
-        
-        {/* 버그 리포트 */}
-        <div className="mt-2 pt-2 border-t border-slate-700">
-          <SidebarButton
-            label="버그 리포트"
-            icon={<Bug className="h-4 w-4" />}
-            active={view === 'bugReports'}
-            onClick={() => handleMenuClick('bugReports')}
-          />
-        </div>
-        
-        {/* 관리자/리더 전용 메뉴 */}
-        {(visibleMenus.includes('attendanceAdmin') || visibleMenus.includes('leaveAdmin')) && (
-          <div className="mt-2 pt-2 border-t border-slate-700 pb-2">
-            <p className="px-2 sm:px-3 py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-              관리자 전용
+
+        {/* ── 그룹 3: 프로젝트 운영 ── */}
+        {(visibleMenus.includes('projects') || visibleMenus.includes('settlement')) && (
+          <div className="mt-2 pt-2 border-t border-slate-700">
+            <p className="px-2 sm:px-3 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              프로젝트
             </p>
-            {visibleMenus.includes('attendanceAdmin') && (
-              <button
-                onClick={() => handleMenuClick('attendanceAdmin')}
-                className={cn(
-                  "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 mb-1",
-                  view === 'attendanceAdmin'
-                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg"
-                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
-                )}
-              >
-                <Users className="h-4 w-4" />
-                <span className="font-medium whitespace-nowrap">전체 근무현황</span>
-              </button>
+            {visibleMenus.includes('projects') && (
+              <SidebarButton
+                label="프로젝트 관리"
+                icon={<FolderKanban className="h-4 w-4" />}
+                active={view === 'projects'}
+                onClick={() => handleMenuClick('projects')}
+              />
             )}
-            {visibleMenus.includes('leaveAdmin') && (
-              <button
-                onClick={() => handleMenuClick('leaveAdmin')}
-                className={cn(
-                  "w-full flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200",
-                  view === 'leaveAdmin'
-                    ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg"
-                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
-                )}
-              >
-                <CalendarDays className="h-4 w-4" />
-                <span className="font-medium whitespace-nowrap">휴가 승인/관리</span>
-              </button>
+            {visibleMenus.includes('settlement') && (
+              <SidebarButton
+                label="정산 관리"
+                icon={<Coins className="h-4 w-4" />}
+                active={view === 'settlement'}
+                onClick={() => handleMenuClick('settlement')}
+              />
             )}
           </div>
         )}
-        
+
+        {/* ── 그룹 4: 지식 관리 ── */}
+        <div className="mt-2 pt-2 border-t border-slate-700">
+          <p className="px-2 sm:px-3 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            지식 관리
+          </p>
+          {visibleMenus.includes('manuals') && (
+            <SidebarButton
+              label="매뉴얼"
+              icon={<BookOpen className="h-4 w-4" />}
+              active={view === 'manuals'}
+              onClick={() => handleMenuClick('manuals')}
+            />
+          )}
+          {visibleMenus.includes('taskTemplates') && (
+            <SidebarButton
+              label="할일 템플릿"
+              icon={<FileText className="h-4 w-4" />}
+              active={view === 'taskTemplates'}
+              onClick={() => handleMenuClick('taskTemplates')}
+            />
+          )}
+        </div>
+
+        {/* ── 그룹 5: 조직/인력 ── */}
+        {(visibleMenus.includes('organization') || visibleMenus.includes('partners') || visibleMenus.includes('exclusiveArtists')) && (
+          <div className="mt-2 pt-2 border-t border-slate-700">
+            <p className="px-2 sm:px-3 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              조직 / 인력
+            </p>
+            {visibleMenus.includes('organization') && (
+              <SidebarButton
+                label="조직 현황"
+                icon={<Users className="h-4 w-4" />}
+                active={view === 'organization'}
+                onClick={() => handleMenuClick('organization')}
+              />
+            )}
+            {visibleMenus.includes('partners') && (
+              <SidebarButton
+                label="파트너 관리"
+                icon={<Users className="h-4 w-4" />}
+                active={view === 'partners'}
+                onClick={() => handleMenuClick('partners')}
+              />
+            )}
+            {visibleMenus.includes('exclusiveArtists') && (
+              <SidebarButton
+                label="전속 아티스트"
+                icon={<Users className="h-4 w-4" />}
+                active={view === 'exclusiveArtists'}
+                onClick={() => handleMenuClick('exclusiveArtists')}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── 그룹 6: 예약/자원 ── */}
+        {(visibleMenus.includes('meetingRooms') || visibleMenus.includes('equipment') || visibleMenus.includes('vehicles')) && (
+          <div className="mt-2 pt-2 border-t border-slate-700">
+            <p className="px-2 sm:px-3 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              예약 관리
+            </p>
+            {visibleMenus.includes('meetingRooms') && (
+              <SidebarButton
+                label="회의실 예약"
+                icon={<Building className="h-4 w-4" />}
+                active={view === 'meetingRooms'}
+                onClick={() => handleMenuClick('meetingRooms')}
+              />
+            )}
+            {visibleMenus.includes('equipment') && (
+              <SidebarButton
+                label="장비 대여"
+                icon={<Package className="h-4 w-4" />}
+                active={view === 'equipment'}
+                onClick={() => handleMenuClick('equipment')}
+              />
+            )}
+            {visibleMenus.includes('vehicles') && (
+              <SidebarButton
+                label="차량 일지"
+                icon={<Car className="h-4 w-4" />}
+                active={view === 'vehicles'}
+                onClick={() => handleMenuClick('vehicles')}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── 그룹 7: 기타 & 관리자 전용 ── */}
+        <div className="mt-2 pt-2 border-t border-slate-700 pb-2">
+          {visibleMenus.includes('bugReports') && (
+            <SidebarButton
+              label="버그 리포트"
+              icon={<Bug className="h-4 w-4" />}
+              active={view === 'bugReports'}
+              onClick={() => handleMenuClick('bugReports')}
+            />
+          )}
+
+          {(visibleMenus.includes('attendanceAdmin') || visibleMenus.includes('leaveAdmin') || visibleMenus.includes('workLogAdmin') || visibleMenus.includes('pushTest')) && (
+            <>
+              <p className="px-2 sm:px-3 pt-3 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                관리자 전용
+              </p>
+              {visibleMenus.includes('attendanceAdmin') && (
+                <SidebarButton
+                  label="전체 근무현황"
+                  icon={<Users className="h-4 w-4" />}
+                  active={view === 'attendanceAdmin'}
+                  onClick={() => handleMenuClick('attendanceAdmin')}
+                />
+              )}
+              {visibleMenus.includes('leaveAdmin') && (
+                <SidebarButton
+                  label="휴가 승인/관리"
+                  icon={<CalendarDays className="h-4 w-4" />}
+                  active={view === 'leaveAdmin'}
+                  onClick={() => handleMenuClick('leaveAdmin')}
+                />
+              )}
+              {visibleMenus.includes('workLogAdmin') && (
+                <SidebarButton
+                  label="업무일지 열람"
+                  icon={<ClipboardList className="h-4 w-4" />}
+                  active={view === 'workLogAdmin'}
+                  onClick={() => handleMenuClick('workLogAdmin')}
+                />
+              )}
+              {visibleMenus.includes('pushTest') && (
+                <SidebarButton
+                  label="푸시 알림 테스트"
+                  icon={<Bell className="h-4 w-4" />}
+                  active={view === 'pushTest'}
+                  onClick={() => handleMenuClick('pushTest')}
+                />
+              )}
+            </>
+          )}
+        </div>
+
         {/* nav 내부 하단 패딩 */}
         <div className="pb-4" />
       </nav>

@@ -8,6 +8,7 @@ import type { AppUser, Project as DbProject } from '@/types/database';
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/hooks/use-toast';
 import { CommentSection } from '@/features/comments/components/CommentSection';
+import { TaskTemplateSelector, type PendingTask } from '@/features/task-template/components/TaskTemplateSelector';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type ModalMode = 'create' | 'view' | 'edit';
@@ -94,6 +95,7 @@ interface UnifiedProjectModalProps {
     channel_id?: number | null;
     status?: string;
     participants?: Participant[];
+    pendingTasks?: PendingTask[];
   }) => void | Promise<void>;
   onDelete?: (id: string) => void | Promise<void>;
   defaultBu: BU;
@@ -249,6 +251,107 @@ const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; ico
   'done': { label: '완료', color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/50', icon: CheckCircle2 },
 };
 
+const PRIORITY_INLINE: Record<string, { label: string; dot: string }> = {
+  high: { label: '높음', dot: 'bg-rose-500' },
+  medium: { label: '보통', dot: 'bg-amber-400' },
+  low: { label: '낮음', dot: 'bg-slate-400' },
+};
+
+function CreateModeTasksSection({
+  pendingTasks,
+  onRemoveTask,
+  onAddTask,
+  onAddFromTemplate,
+}: {
+  pendingTasks: PendingTask[];
+  onRemoveTask: (index: number) => void;
+  onAddTask: () => void;
+  onAddFromTemplate: () => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider hover:text-slate-800 dark:hover:text-slate-100"
+        >
+          <ListTodo className="h-4 w-4" />
+          할 일
+          <span className="text-xs font-normal text-slate-400">({pendingTasks.length})</span>
+          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onAddFromTemplate}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            할일 탬플릿
+          </button>
+          <button
+            onClick={onAddTask}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            할 일 추가
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="space-y-1.5">
+          {pendingTasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-xs text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+              <ListTodo className="h-8 w-8 mb-2 opacity-30" />
+              <p>등록된 할일이 없습니다.</p>
+              <p className="mt-1">위 버튼으로 할일을 추가하거나 템플릿을 사용하세요.</p>
+            </div>
+          ) : (
+            pendingTasks.map((task, index) => {
+              const pConfig = PRIORITY_INLINE[task.priority] || PRIORITY_INLINE.medium;
+              return (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                >
+                  <Circle className="h-4 w-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                      {task.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-1">
+                        <span className={cn('w-1.5 h-1.5 rounded-full', pConfig.dot)} />
+                        <span className="text-[10px] text-slate-500">{pConfig.label}</span>
+                      </div>
+                      {task.dueDate && (
+                        <span className="text-[10px] text-slate-400">{task.dueDate}</span>
+                      )}
+                      {task.templateName && (
+                        <span className="text-[10px] text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                          {task.templateName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onRemoveTask(index)}
+                    className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 flex-shrink-0"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function TasksSection({
   tasks,
   onAddTask,
@@ -327,7 +430,7 @@ function TasksSection({
               className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
             >
               <FileText className="h-3.5 w-3.5" />
-              템플릿
+              할일 탬플릿
             </button>
           )}
           {onAddTask && (
@@ -580,6 +683,14 @@ export function UnifiedProjectModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // 프로젝트 생성 시 로컬 할일 관리
+  const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
+  const [showTemplateSelectorLocal, setShowTemplateSelectorLocal] = useState(false);
+  const [showAddTaskInline, setShowAddTaskInline] = useState(false);
+  const [inlineTaskTitle, setInlineTaskTitle] = useState('');
+  const [inlineTaskPriority, setInlineTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [inlineTaskDueDate, setInlineTaskDueDate] = useState('');
+
   // 재무 요약
   const financeSummary = financeData.reduce(
     (acc, entry) => {
@@ -662,6 +773,7 @@ export function UnifiedProjectModal({
         channel_id: form.channel_id ? Number(form.channel_id) : null,
         status: form.status,
         participants,
+        ...(isCreateMode && pendingTasks.length > 0 && { pendingTasks }),
       });
     } finally {
       setIsSubmitting(false);
@@ -726,14 +838,14 @@ export function UnifiedProjectModal({
     return pm?.name || '-';
   };
 
-  // 외주업체 이름 가져오기
+  // 클라이언트 회사 이름 가져오기
   const getPartnerCompanyName = () => {
     if (!form.partner_company_id) return '-';
     const company = partnerCompaniesData?.find((c: any) => c.id === Number(form.partner_company_id));
     return company?.company_name_ko || company?.company_name_en || '-';
   };
 
-  // 외주담당자 이름 가져오기
+  // 클라이언트 담당자 이름 가져오기
   const getPartnerWorkerName = () => {
     if (!form.partner_worker_id) return '-';
     const worker = partnerWorkersData?.find((w: any) => w.id === Number(form.partner_worker_id));
@@ -749,12 +861,9 @@ export function UnifiedProjectModal({
       return partnerWorkersData.filter(
         (w: any) => w.partner_company_id === Number(form.partner_company_id)
       );
-    } else {
-      // 업체가 선택되지 않으면 소속 없는 직원만 표시
-      return partnerWorkersData.filter(
-        (w: any) => !w.partner_company_id
-      );
     }
+    // 업체가 선택되지 않으면 전체 담당자 표시
+    return partnerWorkersData;
   }, [partnerWorkersData, form.partner_company_id]);
 
   // 아티스트 이름 가져오기
@@ -1119,10 +1228,10 @@ export function UnifiedProjectModal({
                     </div>
                   </div>
 
-                  {/* 외주업체 | 외주담당자 - 한 줄에 두 개 */}
+                  {/* 클라이언트 (의뢰사) | 클라이언트 담당자 - 한 줄에 두 개 */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-500 dark:text-slate-400">외주업체</label>
+                      <label className="text-xs text-slate-500 dark:text-slate-400">클라이언트</label>
                       <SearchDropdown
                         options={partnerCompaniesData?.map((company: any) => ({
                           value: String(company.id),
@@ -1132,12 +1241,12 @@ export function UnifiedProjectModal({
                         onChange={(value) => {
                           setForm({ ...form, partner_company_id: value, partner_worker_id: '' });
                         }}
-                        placeholder="외주업체 검색..."
+                        placeholder="클라이언트 검색..."
                         emptyLabel="선택 안함"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-500 dark:text-slate-400">외주담당자</label>
+                      <label className="text-xs text-slate-500 dark:text-slate-400">클라이언트 담당자</label>
                       <SearchDropdown
                         options={filteredPartnerWorkers.map((worker: any) => ({
                           value: String(worker.id),
@@ -1192,17 +1301,17 @@ export function UnifiedProjectModal({
                       <span className="text-xs text-slate-500 dark:text-slate-400">PM</span>
                       <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPmName()}</span>
                     </div>
-                    {/* 외주업체 - 있을 때만 표시 */}
+                    {/* 클라이언트 - 있을 때만 표시 */}
                     {form.partner_company_id && (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">외주업체</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">클라이언트</span>
                         <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPartnerCompanyName()}</span>
                       </div>
                     )}
-                    {/* 외주담당자 - 있을 때만 표시 */}
+                    {/* 클라이언트 담당자 - 있을 때만 표시 */}
                     {form.partner_worker_id && (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">외주담당자</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">클라이언트 담당자</span>
                         <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getPartnerWorkerName()}</span>
                       </div>
                     )}
@@ -1247,8 +1356,15 @@ export function UnifiedProjectModal({
               )}
             </section>
 
-            {/* 할일 섹션 (view/edit 모드에서만) */}
-            {!isCreateMode && (
+            {/* 할일 섹션 - create 모드에서는 로컬 할일, edit/view에서는 기존 API 할일 */}
+            {isCreateMode ? (
+              <CreateModeTasksSection
+                pendingTasks={pendingTasks}
+                onRemoveTask={(index) => setPendingTasks((prev) => prev.filter((_, i) => i !== index))}
+                onAddTask={() => setShowAddTaskInline(true)}
+                onAddFromTemplate={() => setShowTemplateSelectorLocal(true)}
+              />
+            ) : (
               <TasksSection
                 tasks={tasksData}
                 onAddTask={onAddTask}
@@ -1500,6 +1616,93 @@ export function UnifiedProjectModal({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 인라인 할일 추가 모달 (create 모드) */}
+      {showAddTaskInline && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur" onClick={() => setShowAddTaskInline(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+              <Plus className="h-5 w-5 text-blue-600" />
+              할일 추가
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">제목 *</label>
+                <input
+                  type="text"
+                  value={inlineTaskTitle}
+                  onChange={(e) => setInlineTaskTitle(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                  placeholder="할일 제목을 입력하세요"
+                  autoFocus
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">우선순위</label>
+                  <select
+                    value={inlineTaskPriority}
+                    onChange={(e) => setInlineTaskPriority(e.target.value as 'low' | 'medium' | 'high')}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="low">낮음</option>
+                    <option value="medium">보통</option>
+                    <option value="high">높음</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">마감일</label>
+                  <input
+                    type="date"
+                    value={inlineTaskDueDate}
+                    onChange={(e) => setInlineTaskDueDate(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => { setShowAddTaskInline(false); setInlineTaskTitle(''); setInlineTaskDueDate(''); }}
+                className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  if (!inlineTaskTitle.trim()) return;
+                  setPendingTasks((prev) => [...prev, {
+                    title: inlineTaskTitle.trim(),
+                    priority: inlineTaskPriority,
+                    dueDate: inlineTaskDueDate || form.endDate || '',
+                    days_before: 0,
+                  }]);
+                  setInlineTaskTitle('');
+                  setInlineTaskDueDate('');
+                  setInlineTaskPriority('medium');
+                  setShowAddTaskInline(false);
+                }}
+                disabled={!inlineTaskTitle.trim()}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 로컬 템플릿 선택기 (create 모드) */}
+      {showTemplateSelectorLocal && (
+        <TaskTemplateSelector
+          mode="local"
+          projectEndDate={form.endDate}
+          onLocalAdd={(newTasks) => {
+            setPendingTasks((prev) => [...prev, ...newTasks]);
+          }}
+          onClose={() => setShowTemplateSelectorLocal(false)}
+        />
       )}
     </>
   );

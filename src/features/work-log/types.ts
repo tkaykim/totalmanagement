@@ -65,6 +65,35 @@ export const ACTION_TYPE_LABELS: Record<ActivityActionType, string> = {
   attendance_corrected: '근태 정정',
 };
 
+// 관리자 업무일지 열람용 타입
+export interface AdminWorkLogUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  bu_code: string | null;
+  position: string | null;
+}
+
+export interface AdminWorkLogUserStatus {
+  user: AdminWorkLogUser;
+  has_submitted: boolean;
+  work_log: DailyWorkLog | null;
+}
+
+export interface AdminWorkLogOverview {
+  date: string;
+  total_users: number;
+  submitted_count: number;
+  users: AdminWorkLogUserStatus[];
+}
+
+export interface AdminUserWorkLogDetail {
+  user: AdminWorkLogUser;
+  work_log: DailyWorkLog | null;
+  date: string;
+}
+
 export const ACTION_TYPE_ICONS: Record<ActivityActionType, string> = {
   project_created: '📁',
   project_updated: '📝',

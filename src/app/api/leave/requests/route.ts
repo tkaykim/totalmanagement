@@ -98,10 +98,29 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { leave_type, start_date, end_date, reason } = body;
+    const { leave_type, start_date, end_date, reason, admin_proxy, target_user_id } = body;
 
     if (!leave_type || !start_date || !end_date || !reason) {
       return NextResponse.json({ error: '필수 항목을 입력해주세요.' }, { status: 400 });
+    }
+
+    // 관리자 대리 신청 처리
+    const isAdminProxy = admin_proxy === true && !!target_user_id;
+    let actualRequesterId = user.id;
+
+    if (isAdminProxy) {
+      // 권한 체크: admin만 대리 신청 가능
+      const { data: currentUser } = await supabase
+        .from('app_users')
+        .select('role, bu_code')
+        .eq('id', user.id)
+        .single();
+
+      if (!currentUser || currentUser.role !== 'admin') {
+        return NextResponse.json({ error: '관리자만 대리 휴가 소진이 가능합니다.' }, { status: 403 });
+      }
+
+      actualRequesterId = target_user_id;
     }
 
     // 사용 일수 계산
@@ -113,12 +132,12 @@ export async function POST(request: NextRequest) {
 
     // 잔여 휴가 확인
     const balanceType = getLeaveTypeFromRequestType(leave_type);
-    const currentYear = new Date().getFullYear();
+    const currentYear = new Date(start_date).getFullYear();
 
     const { data: balance } = await supabase
       .from('leave_balances')
-      .select('total_days, used_days')
-      .eq('user_id', user.id)
+      .select('id, total_days, used_days')
+      .eq('user_id', actualRequesterId)
       .eq('leave_type', balanceType)
       .eq('year', currentYear)
       .single();
@@ -137,20 +156,28 @@ export async function POST(request: NextRequest) {
     const { data: requester } = await supabase
       .from('app_users')
       .select('name')
-      .eq('id', user.id)
+      .eq('id', actualRequesterId)
       .single();
+
+    // 관리자 대리 신청이면 즉시 승인 상태로 생성
+    const requestStatus = isAdminProxy ? 'approved' : 'pending';
+    const approverData = isAdminProxy ? {
+      approver_id: user.id,
+      approved_at: new Date().toISOString(),
+    } : {};
 
     // 휴가 신청 생성
     const { data: leaveRequest, error } = await supabase
       .from('leave_requests')
       .insert({
-        requester_id: user.id,
+        requester_id: actualRequesterId,
         leave_type,
         start_date,
         end_date,
         days_used: daysUsed,
-        reason,
-        status: 'pending',
+        reason: isAdminProxy ? `[관리자 대리 소진] ${reason}` : reason,
+        status: requestStatus,
+        ...approverData,
       })
       .select()
       .single();
@@ -160,14 +187,79 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '휴가 신청에 실패했습니다.' }, { status: 500 });
     }
 
-    // 관리자들에게 알림 전송
-    await notifyLeaveRequestCreated(
-      requester?.name || '사용자',
-      leave_type,
-      start_date,
-      end_date,
-      leaveRequest.id
-    );
+    // 관리자 대리 소진이면 즉시 잔여일수 차감
+    if (isAdminProxy && balance) {
+      await supabase
+        .from('leave_balances')
+        .update({
+          used_days: Number(balance.used_days) + daysUsed,
+        })
+        .eq('id', balance.id);
+
+      // 출퇴근 기록에 휴가 상태 반영
+      const isFullDayLeave = ['annual', 'compensatory', 'special'].includes(leave_type);
+      if (isFullDayLeave) {
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+        const current = new Date(startDate);
+        const workDates: string[] = [];
+
+        while (current <= endDate) {
+          const dayOfWeek = current.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            workDates.push(current.toISOString().split('T')[0]);
+          }
+          current.setDate(current.getDate() + 1);
+        }
+
+        if (workDates.length > 0) {
+          const { data: existingLogs } = await supabase
+            .from('attendance_logs')
+            .select('id, work_date')
+            .eq('user_id', actualRequesterId)
+            .in('work_date', workDates);
+
+          const existingDates = new Set(existingLogs?.map(log => log.work_date) || []);
+          const existingLogIds = existingLogs?.map(log => log.id) || [];
+
+          if (existingLogIds.length > 0) {
+            await supabase
+              .from('attendance_logs')
+              .update({
+                status: 'vacation',
+                is_modified: true,
+                modification_reason: `관리자 대리 휴가 소진 (${leave_type})`,
+              })
+              .in('id', existingLogIds);
+          }
+
+          const newLogs = workDates
+            .filter(date => !existingDates.has(date))
+            .map(workDate => ({
+              user_id: actualRequesterId,
+              work_date: workDate,
+              status: 'vacation' as const,
+              is_modified: true,
+              modification_reason: `관리자 대리 휴가 소진 (${leave_type})`,
+            }));
+
+          if (newLogs.length > 0) {
+            await supabase.from('attendance_logs').insert(newLogs);
+          }
+        }
+      }
+    }
+
+    // 일반 신청이면 관리자에게 알림 전송
+    if (!isAdminProxy) {
+      await notifyLeaveRequestCreated(
+        requester?.name || '사용자',
+        leave_type,
+        start_date,
+        end_date,
+        leaveRequest.id
+      );
+    }
 
     return NextResponse.json(leaveRequest);
   } catch (error) {

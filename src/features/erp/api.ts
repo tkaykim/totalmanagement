@@ -106,10 +106,14 @@ export async function createTask(data: {
   project_id: number;
   bu_code: BU;
   title: string;
+  description?: string;
   assignee?: string;
   assignee_id?: string;
   due_date: string;
   status?: TaskStatus;
+  priority?: string;
+  tag?: string;
+  manual_id?: number | null;
   created_by?: string;
 }): Promise<ProjectTask> {
   const res = await fetch(`${API_BASE}/tasks`, {
@@ -590,10 +594,11 @@ export async function deleteEvent(id: number): Promise<void> {
 }
 
 // Manuals
-export async function fetchManuals(bu?: BU, category?: string): Promise<Manual[]> {
+export async function fetchManuals(bu?: BU, category?: string, includeInactive?: boolean): Promise<Manual[]> {
   const params = new URLSearchParams();
   if (bu) params.append('bu', bu);
   if (category) params.append('category', category);
+  if (includeInactive) params.append('active_only', 'false');
   const url = `${API_BASE}/manuals${params.toString() ? `?${params}` : ''}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch manuals');
@@ -641,13 +646,13 @@ export async function deleteManual(id: number): Promise<void> {
 export async function fetchCreators(bu?: BU): Promise<Creator[]> {
   const params = new URLSearchParams();
   params.append('category', 'creator');
+  params.append('limit', '500');
   if (bu) params.append('bu', bu);
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch creators');
-  const data = await res.json();
-  // Map to legacy Creator format for compatibility
-  return (data.partners || []).map((p: any) => ({
+  const response = await res.json();
+  return (response.data || []).map((p: any) => ({
     id: p.id,
     bu_code: p.owner_bu_code,
     name: p.display_name,
@@ -797,13 +802,13 @@ export async function fetchPartners(bu?: BU): Promise<{ id: number; display_name
 export async function fetchPartnerCompanies(bu?: BU): Promise<any[]> {
   const params = new URLSearchParams();
   params.append('entity_type', 'organization');
+  params.append('limit', '500');
   if (bu) params.append('bu', bu);
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch partner companies');
-  const data = await res.json();
-  // Map to legacy format for compatibility
-  return (data.partners || []).map((p: any) => ({
+  const response = await res.json();
+  return (response.data || []).map((p: any) => ({
     id: p.id,
     company_name_ko: p.display_name,
     company_name_en: p.name_en || p.display_name,
@@ -818,13 +823,13 @@ export async function fetchPartnerCompanies(bu?: BU): Promise<any[]> {
 export async function fetchPartnerWorkers(bu?: BU): Promise<any[]> {
   const params = new URLSearchParams();
   params.append('entity_type', 'person');
+  params.append('limit', '500');
   if (bu) params.append('bu', bu);
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch partner workers');
-  const data = await res.json();
-  // Map to legacy format for compatibility
-  return (data.partners || []).map((p: any) => ({
+  const response = await res.json();
+  return (response.data || []).map((p: any) => ({
     id: p.id,
     name_ko: p.display_name,
     name_en: p.name_en || p.display_name,
@@ -882,13 +887,13 @@ export async function deleteExternalWorker(id: number): Promise<void> {
 export async function fetchArtists(bu?: BU): Promise<Artist[]> {
   const params = new URLSearchParams();
   params.append('category', 'artist');
+  params.append('limit', '500');
   if (bu) params.append('bu', bu);
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch artists');
-  const data = await res.json();
-  // Map to legacy Artist format for compatibility
-  return (data.partners || []).map((p: any) => ({
+  const response = await res.json();
+  return (response.data || []).map((p: any) => ({
     id: p.id,
     bu_code: p.owner_bu_code,
     name: p.display_name,
@@ -1018,9 +1023,8 @@ export async function fetchDancers(
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch dancers');
-  const data = await res.json();
-  // Map to legacy Dancer format for compatibility
-  const dancers = (data.partners || []).map((p: any) => ({
+  const response = await res.json();
+  const dancers = (response.data || []).map((p: any) => ({
     id: p.id,
     bu_code: p.owner_bu_code,
     name: p.display_name,
@@ -1044,7 +1048,7 @@ export async function fetchDancers(
   }));
   return {
     data: dancers,
-    pagination: data.pagination || { page, limit, total: dancers.length, totalPages: 1 },
+    pagination: response.pagination || { page, limit, total: dancers.length, totalPages: 1 },
   };
 }
 

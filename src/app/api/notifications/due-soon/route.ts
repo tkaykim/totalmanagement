@@ -89,7 +89,8 @@ export async function GET(request: NextRequest) {
         task.assignee_id!,
         task.title,
         format(new Date(task.due_date), 'yyyy-MM-dd'),
-        String(task.id)
+        String(task.id),
+        projectName
       );
 
       results.push({

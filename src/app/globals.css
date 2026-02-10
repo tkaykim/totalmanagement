@@ -67,3 +67,166 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── TipTap 에디터 스타일 ── */
+.rich-text-content {
+  @apply text-sm text-slate-800 dark:text-slate-200 leading-relaxed;
+}
+.rich-text-content p {
+  @apply mb-3;
+}
+.rich-text-content h1 {
+  @apply text-2xl font-bold text-slate-900 dark:text-slate-50 mt-6 mb-3 pb-2 border-b border-slate-200 dark:border-slate-700;
+}
+.rich-text-content h2 {
+  @apply text-xl font-bold text-slate-900 dark:text-slate-50 mt-5 mb-2;
+}
+.rich-text-content h3 {
+  @apply text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4 mb-2;
+}
+.rich-text-content ul {
+  @apply list-disc pl-5 mb-3 space-y-1;
+}
+.rich-text-content ol {
+  @apply list-decimal pl-5 mb-3 space-y-1;
+}
+.rich-text-content li {
+  @apply text-sm;
+}
+.rich-text-content blockquote {
+  @apply border-l-4 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-600 dark:text-slate-400 my-3;
+}
+.rich-text-content hr {
+  @apply border-slate-200 dark:border-slate-700 my-4;
+}
+.rich-text-content img.manual-image {
+  @apply max-w-full rounded-lg border border-slate-200 dark:border-slate-700 my-3;
+}
+.rich-text-content div[data-youtube-video] {
+  @apply my-4;
+}
+.rich-text-content div[data-youtube-video] iframe {
+  @apply w-full aspect-video rounded-lg border border-slate-200 dark:border-slate-700;
+}
+.rich-text-content a.manual-link {
+  @apply text-blue-600 dark:text-blue-400 underline decoration-blue-300 dark:decoration-blue-700 underline-offset-2 hover:decoration-blue-500;
+}
+.rich-text-content mark.manual-highlight {
+  @apply bg-yellow-200 dark:bg-yellow-800/50 rounded px-0.5;
+}
+.rich-text-content code {
+  @apply bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 text-xs px-1.5 py-0.5 rounded font-mono;
+}
+.rich-text-content pre {
+  @apply bg-slate-900 dark:bg-slate-950 text-slate-100 p-4 rounded-lg overflow-x-auto my-3;
+}
+.rich-text-content pre code {
+  @apply bg-transparent text-slate-100 p-0;
+}
+.rich-text-content p.is-editor-empty:first-child::before {
+  @apply text-slate-400 dark:text-slate-500;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* ── 매뉴얼 뷰어 스타일 ── */
+.manual-viewer h1 {
+  @apply text-2xl font-bold text-slate-900 dark:text-slate-50 mt-6 mb-3 pb-2 border-b border-slate-200 dark:border-slate-700;
+}
+.manual-viewer h2 {
+  @apply text-xl font-bold text-slate-900 dark:text-slate-50 mt-5 mb-2;
+}
+.manual-viewer h3 {
+  @apply text-lg font-semibold text-slate-800 dark:text-slate-100 mt-5 mb-2;
+}
+.manual-viewer h4 {
+  @apply text-base font-medium text-slate-700 dark:text-slate-200 mt-4 mb-2;
+}
+.manual-viewer p {
+  @apply text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-3;
+}
+.manual-viewer ul {
+  @apply list-disc pl-5 mb-3 space-y-1 text-sm text-slate-600 dark:text-slate-300;
+}
+.manual-viewer ol {
+  @apply list-decimal pl-5 mb-3 space-y-1 text-sm text-slate-600 dark:text-slate-300;
+}
+.manual-viewer ul.checklist {
+  @apply list-none pl-0 space-y-1.5;
+}
+.manual-viewer ul.checklist li {
+  @apply flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300 pl-1;
+}
+.manual-viewer ul.checklist li::before {
+  content: "☐";
+  @apply text-emerald-500 flex-shrink-0 mt-px;
+}
+.manual-viewer ol.step-list {
+  @apply list-none pl-0 space-y-1.5;
+}
+.manual-viewer ol.step-list li {
+  @apply flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300 pl-1;
+  counter-increment: step-counter;
+}
+.manual-viewer ol.step-list li::before {
+  content: "▸";
+  @apply text-blue-500 flex-shrink-0 font-bold;
+}
+.manual-viewer blockquote.tip {
+  @apply rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20 p-4 my-3 not-italic;
+}
+.manual-viewer blockquote.tip::before {
+  content: "💡 팁";
+  @apply text-xs font-bold text-amber-600 dark:text-amber-400 block mb-1;
+}
+.manual-viewer blockquote.tip p {
+  @apply text-amber-800 dark:text-amber-200 mb-0;
+}
+.manual-viewer blockquote.warning {
+  @apply rounded-lg border border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/20 p-4 my-3 not-italic;
+}
+.manual-viewer blockquote.warning::before {
+  content: "⚠️ 주의";
+  @apply text-xs font-bold text-red-600 dark:text-red-400 block mb-1;
+}
+.manual-viewer blockquote.warning p {
+  @apply text-red-800 dark:text-red-200 mb-0;
+}
+.manual-viewer blockquote {
+  @apply border-l-4 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3;
+}
+.manual-viewer figure {
+  @apply my-4;
+}
+.manual-viewer figure img {
+  @apply max-w-full rounded-lg border border-slate-200 dark:border-slate-700;
+}
+.manual-viewer figure figcaption {
+  @apply text-xs text-slate-400 dark:text-slate-500 italic text-center mt-1;
+}
+.manual-viewer img {
+  @apply max-w-full rounded-lg border border-slate-200 dark:border-slate-700 my-3;
+}
+.manual-viewer a {
+  @apply text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-700;
+}
+.manual-viewer mark {
+  @apply bg-yellow-200 dark:bg-yellow-800/50 rounded px-0.5;
+}
+.manual-viewer code {
+  @apply bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 text-xs px-1.5 py-0.5 rounded font-mono;
+}
+.manual-viewer pre {
+  @apply bg-slate-900 dark:bg-slate-950 text-slate-100 p-4 rounded-lg overflow-x-auto my-3;
+}
+.manual-viewer pre code {
+  @apply bg-transparent text-slate-100 p-0;
+}
+.manual-viewer hr {
+  @apply border-slate-200 dark:border-slate-700 my-5;
+}
+.manual-viewer iframe {
+  @apply w-full aspect-video rounded-lg border border-slate-200 dark:border-slate-700 my-4;
+}

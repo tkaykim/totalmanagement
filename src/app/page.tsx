@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ChartLine,
   Check,
@@ -24,6 +24,7 @@ import {
   ClipboardList,
   Bug,
   CalendarDays,
+  FileText,
 } from 'lucide-react';
 import {
   useWorkStatus,
@@ -52,6 +53,7 @@ import {
   useUpdateProject,
   useDeleteProject,
   useUpdateFinancialEntry,
+  useDeleteFinancialEntry,
   useOrgMembers,
   useCreateOrgMember,
   useUpdateOrgMember,
@@ -66,6 +68,8 @@ import {
   usePartners,
   usePartnerCompanies,
   usePartnerWorkers,
+  useArtists,
+  useChannels,
 } from '@/features/erp/hooks';
 import {
   dbProjectToFrontend,
@@ -98,9 +102,13 @@ import { PartnersView } from '@/features/partners/components/PartnersView';
 import { MeetingRoomView } from '@/features/reservations/components/MeetingRoomView';
 import { EquipmentRentalView } from '@/features/reservations/components/EquipmentRentalView';
 import { VehicleLogView } from '@/features/reservations/components/VehicleLogView';
-import { WorkLogView } from '@/features/work-log';
+import { WorkLogView, AdminWorkLogView } from '@/features/work-log';
 import { BugReportsView } from '@/features/bug-reports';
 import { ExclusiveArtistsView } from '@/features/exclusive-artists';
+import { TaskTemplateView } from '@/features/task-template/components/TaskTemplateView';
+import { TaskTemplateSelector, type PendingTask } from '@/features/task-template/components/TaskTemplateSelector';
+import { ManualsView } from '@/features/manuals';
+import { PushTestView } from '@/features/push-test';
 import {
   Sheet,
   SheetContent,
@@ -128,11 +136,29 @@ const isDateInRange = (date: string, start?: string, end?: string) => {
   return isWithinInterval(target, { start: parseISO(start), end: parseISO(end) });
 };
 
-export default function HomePage() {
+export default function HomePageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" /></div>}>
+      <HomePage />
+    </Suspense>
+  );
+}
+
+function HomePage() {
   const router = useRouter();
-  const [view, setView] = useState<View>('dashboard');
+  const searchParams = useSearchParams();
+  const initialView = (searchParams.get('view') as View) || 'dashboard';
+  const [view, setView] = useState<View>(initialView);
   const [bu, setBu] = useState<BU | 'ALL'>('GRIGO');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // URL 파라미터에서 view 변경 감지 (알림 클릭 등으로 URL이 변할 때)
+  useEffect(() => {
+    const urlView = searchParams.get('view') as View | null;
+    if (urlView && urlView !== view) {
+      setView(urlView);
+    }
+  }, [searchParams]);
 
   // BU 변경 핸들러 - 모든 BU 버튼은 동일하게 BU만 변경하고 뷰는 유지
   const handleBuChange = (newBu: BU | 'ALL') => {
@@ -193,6 +219,8 @@ export default function HomePage() {
   const { data: partnersData = [] } = usePartners(bu === 'ALL' ? undefined : bu);
   const { data: partnerCompaniesData = [] } = usePartnerCompanies(bu === 'ALL' ? undefined : bu);
   const { data: partnerWorkersData = [] } = usePartnerWorkers(bu === 'ALL' ? undefined : bu);
+  const { data: artistsData = [] } = useArtists(bu === 'ALL' ? undefined : bu);
+  const { data: channelsData = [] } = useChannels(bu === 'ALL' ? undefined : bu);
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
 
@@ -209,6 +237,7 @@ export default function HomePage() {
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
   const updateFinancialMutation = useUpdateFinancialEntry();
+  const deleteFinancialMutation = useDeleteFinancialEntry();
   const createOrgMemberMutation = useCreateOrgMember();
   const updateOrgMemberMutation = useUpdateOrgMember();
   const deleteOrgMemberMutation = useDeleteOrgMember();
@@ -236,6 +265,7 @@ export default function HomePage() {
   const [isExternalWorkerModalOpen, setExternalWorkerModalOpen] = useState<boolean>(false);
   const [isEditExternalWorkerModalOpen, setEditExternalWorkerModalOpen] = useState<any | null>(null);
   const [deleteExternalWorkerId, setDeleteExternalWorkerId] = useState<number | null>(null);
+  const [templateSelectorProjectId, setTemplateSelectorProjectId] = useState<number | null>(null);
   const [formState, setFormState] = useState<{
     type: 'revenue' | 'expense';
     cat: string;
@@ -567,11 +597,32 @@ export default function HomePage() {
     channel_id?: number | null;
     status?: string;
     participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role?: string }>;
+    pendingTasks?: PendingTask[];
   }) => {
     if (!payload.name || !payload.cat) return;
     try {
-      const dbData = frontendProjectToDb(payload);
-      await createProjectMutation.mutateAsync(dbData);
+      const { pendingTasks: tasksToCreate, ...projectPayload } = payload;
+      const dbData = frontendProjectToDb(projectPayload);
+      const createdProject = await createProjectMutation.mutateAsync(dbData);
+
+      // 프로젝트 생성 후 pending tasks 일괄 생성
+      if (tasksToCreate && tasksToCreate.length > 0 && createdProject?.id) {
+        const projectId = createdProject.id;
+        await Promise.all(
+          tasksToCreate.map((task) =>
+            createTaskMutation.mutateAsync({
+              project_id: projectId,
+              bu_code: payload.bu,
+              title: task.title,
+              due_date: task.dueDate || '',
+              status: 'todo',
+              priority: task.priority || 'medium',
+              manual_id: task.manual_id || undefined,
+            })
+          )
+        );
+      }
+
       setProjectModalOpen(false);
     } catch (error) {
       console.error('Failed to create project:', error);
@@ -641,6 +692,7 @@ export default function HomePage() {
     dueDate: string;
     status: TaskItem['status'];
     priority: TaskItem['priority'];
+    manual_id?: number | null;
   }): Promise<string | null> => {
     if (!payload.title?.trim()) {
       return '제목을 입력해주세요.';
@@ -761,6 +813,7 @@ export default function HomePage() {
     dueDate: string;
     status: TaskItem['status'];
     priority: TaskItem['priority'];
+    manual_id?: number | null;
   }): Promise<string | null> => {
     if (!payload.id) return '할 일 ID가 없습니다.';
     if (!payload.title?.trim()) return '제목을 입력해주세요.';
@@ -777,6 +830,7 @@ export default function HomePage() {
         dueDate: payload.dueDate,
         status: payload.status,
         priority: payload.priority,
+        manual_id: payload.manual_id,
       });
       await updateTaskMutation.mutateAsync({ id: Number(payload.id), data: dbData });
       setEditTaskModalOpen(null);
@@ -907,7 +961,9 @@ export default function HomePage() {
                     ? '할일 관리'
                     : view === 'workLog'
                       ? '업무일지'
-                      : view === 'attendance'
+                      : view === 'workLogAdmin'
+                        ? '업무일지 열람'
+                        : view === 'attendance'
                         ? '근태 관리'
                         : view === 'attendanceAdmin'
                           ? '전체 근무현황'
@@ -927,7 +983,11 @@ export default function HomePage() {
                                     ? '차량 일지'
                                     : view === 'bugReports'
                                       ? '버그 리포트'
-                                      : '조직 현황'
+                                      : view === 'manuals'
+                                        ? '매뉴얼'
+                                        : view === 'pushTest'
+                                          ? '푸시 알림 테스트'
+                                          : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
           periodType={periodType}
@@ -1166,6 +1226,10 @@ export default function HomePage() {
             <WorkLogView />
           )}
 
+          {view === 'workLogAdmin' && (
+            <AdminWorkLogView />
+          )}
+
           {view === 'bugReports' && (
             <BugReportsView
               isAdmin={user?.profile?.role === 'admin' || user?.profile?.role === 'leader'}
@@ -1174,6 +1238,29 @@ export default function HomePage() {
 
           {view === 'exclusiveArtists' && (
             <ExclusiveArtistsView />
+          )}
+
+          {view === 'taskTemplates' && (
+            <TaskTemplateView
+              currentBu={bu}
+              currentUserBu={user?.profile?.bu_code as BU | null}
+            />
+          )}
+
+          {view === 'manuals' && (
+            <ManualsView
+              currentBu={bu}
+              currentUser={user?.profile ? {
+                id: user.profile.id,
+                role: user.profile.role,
+                bu_code: user.profile.bu_code,
+                name: user.profile.name,
+              } : null}
+            />
+          )}
+
+          {view === 'pushTest' && (
+            <PushTestView />
           )}
 
         </div>
@@ -1187,6 +1274,8 @@ export default function HomePage() {
           usersData={usersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
+          artistsData={artistsData}
+          channelsData={channelsData}
         />
       )}
       {isTaskModalOpen && (
@@ -1223,6 +1312,14 @@ export default function HomePage() {
           entry={isEditFinanceModalOpen}
           onClose={() => setEditFinanceModalOpen(null)}
           onSubmit={handleUpdateFinance}
+          onDelete={async (id) => {
+            try {
+              await deleteFinancialMutation.mutateAsync(Number(id));
+              setEditFinanceModalOpen(null);
+            } catch (error) {
+              console.error('Failed to delete financial entry:', error);
+            }
+          }}
           projects={projects}
           partnersData={partnersData}
           calculateActualAmount={calculateActualAmount}
@@ -1287,6 +1384,13 @@ export default function HomePage() {
                 console.error('Failed to quick update task:', error);
               }
             }}
+            onProjectClick={(projectId) => {
+              const targetProject = projects.find((p) => p.id === projectId);
+              if (targetProject) {
+                setEditTaskModalOpen(null);
+                setEditProjectModalOpen(targetProject);
+              }
+            }}
             defaultBu={isEditTaskModalOpen.bu}
             projects={projects}
             orgData={orgData}
@@ -1307,6 +1411,8 @@ export default function HomePage() {
           usersData={usersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
+          artistsData={artistsData}
+          channelsData={channelsData}
           financeData={allFinancial
             .filter((f) => f.projectId === isEditProjectModalOpen.id)
             .map((f) => ({
@@ -1345,6 +1451,9 @@ export default function HomePage() {
           onAddTask={() => {
             setTaskModalProjectId(isEditProjectModalOpen.id);
             setTaskModalOpen(true);
+          }}
+          onAddTaskFromTemplate={() => {
+            setTemplateSelectorProjectId(Number(isEditProjectModalOpen.id));
           }}
           onViewTaskDetail={(task) => {
             const matchedTask = tasks.find((t) => t.id === task.id);
@@ -1499,6 +1608,19 @@ export default function HomePage() {
             }
           }}
           isAdmin={user?.profile?.role === 'admin'}
+        />
+      )}
+
+      {templateSelectorProjectId && (
+        <TaskTemplateSelector
+          projectId={templateSelectorProjectId}
+          projectBu={projects.find((p) => p.id === String(templateSelectorProjectId))?.bu || 'GRIGO'}
+          projectEndDate={projects.find((p) => p.id === String(templateSelectorProjectId))?.endDate}
+          onSuccess={() => {
+            // 할일 목록 새로고침
+            // React Query가 자동으로 갱신됨
+          }}
+          onClose={() => setTemplateSelectorProjectId(null)}
         />
       )}
     </div>

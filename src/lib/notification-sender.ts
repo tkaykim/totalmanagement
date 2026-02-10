@@ -1,5 +1,6 @@
 import { createPureClient } from '@/lib/supabase/server';
 import { formatTimeKST, formatKST } from '@/lib/timezone';
+import { sendPushToUser, sendPushToUsers } from '@/lib/push-sender';
 
 type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -67,6 +68,9 @@ async function getManagerIds(): Promise<string[]> {
 /**
  * 알림 생성 유틸리티 함수
  * 서버 사이드에서만 사용 가능
+ * 
+ * 1. DB에 인앱 알림 레코드 생성
+ * 2. FCM을 통해 디바이스 Push 알림 전송 (비동기, 실패해도 인앱 알림은 유지)
  */
 export async function createNotification(data: NotificationData) {
   try {
@@ -90,6 +94,20 @@ export async function createNotification(data: NotificationData) {
       return { success: false, error };
     }
 
+    // FCM Push 알림 전송 (비동기 - 인앱 알림 응답을 블로킹하지 않음)
+    sendPushToUser(data.userId, {
+      title: data.title,
+      body: data.message,
+      data: {
+        type: data.type || 'info',
+        ...(data.entityType ? { entity_type: data.entityType } : {}),
+        ...(data.entityId ? { entity_id: data.entityId } : {}),
+        ...(data.actionUrl ? { action_url: data.actionUrl } : {}),
+      },
+    }).catch((err) => {
+      console.error('[Push] FCM 전송 실패 (인앱 알림은 정상):', err);
+    });
+
     return { success: true };
   } catch (error) {
     console.error('Create notification error:', error);
@@ -99,18 +117,50 @@ export async function createNotification(data: NotificationData) {
 
 /**
  * 여러 사용자에게 알림 전송
+ * 
+ * 1. 각 사용자에게 인앱 알림 생성
+ * 2. 전체 대상에게 FCM Push 일괄 전송
  */
 export async function createNotificationForUsers(
   userIds: string[],
   notification: Omit<NotificationData, 'userId'>
 ) {
-  const results = await Promise.all(
-    userIds.map(userId =>
-      createNotification({ ...notification, userId })
-    )
-  );
-  
-  return results;
+  // 인앱 알림 생성
+  const supabase = await createPureClient();
+  const insertData = userIds.map(userId => ({
+    user_id: userId,
+    title: notification.title,
+    message: notification.message,
+    type: notification.type || 'info',
+    entity_type: notification.entityType,
+    entity_id: notification.entityId,
+    action_url: notification.actionUrl,
+    read: false,
+  }));
+
+  const { error } = await supabase
+    .from('notifications')
+    .insert(insertData);
+
+  if (error) {
+    console.error('Failed to create bulk notifications:', error);
+  }
+
+  // FCM Push 알림 일괄 전송 (비동기)
+  sendPushToUsers(userIds, {
+    title: notification.title,
+    body: notification.message,
+    data: {
+      type: notification.type || 'info',
+      ...(notification.entityType ? { entity_type: notification.entityType } : {}),
+      ...(notification.entityId ? { entity_id: notification.entityId } : {}),
+      ...(notification.actionUrl ? { action_url: notification.actionUrl } : {}),
+    },
+  }).catch((err) => {
+    console.error('[Push] FCM 일괄 전송 실패:', err);
+  });
+
+  return [{ success: !error }];
 }
 
 // === 알림 타입별 헬퍼 함수 ===
@@ -147,12 +197,17 @@ export async function notifyTaskDueSoon(
   assigneeId: string,
   taskTitle: string,
   dueDate: string,
-  taskId: string
+  taskId: string,
+  projectName?: string
 ) {
+  const message = projectName
+    ? `[${projectName}] "${taskTitle}" - 마감일: ${dueDate}`
+    : `"${taskTitle}" - 마감일: ${dueDate}`;
+
   return createNotification({
     userId: assigneeId,
     title: '할일 마감이 임박했습니다',
-    message: `"${taskTitle}" - 마감일: ${dueDate}`,
+    message,
     type: 'warning',
     entityType: 'task',
     entityId: taskId,
@@ -223,7 +278,7 @@ export async function notifyAutoCheckout(
     type: 'warning',
     entityType: 'attendance',
     entityId: logId,
-    actionUrl: '/attendance',
+    actionUrl: '/?view=attendance',
   });
 }
 
@@ -250,7 +305,7 @@ export async function notifyWorkRequestApproved(
     type: 'success',
     entityType: 'work_request',
     entityId: requestId,
-    actionUrl: '/attendance',
+    actionUrl: '/?view=attendance',
   });
 }
 
@@ -280,7 +335,7 @@ export async function notifyWorkRequestRejected(
     type: 'error',
     entityType: 'work_request',
     entityId: requestId,
-    actionUrl: '/attendance',
+    actionUrl: '/?view=attendance',
   });
 }
 
@@ -308,7 +363,7 @@ export async function notifyLeaveRequestApproved(
     type: 'success',
     entityType: 'leave',
     entityId: requestId,
-    actionUrl: '/leave',
+    actionUrl: '/?view=leave',
   });
 }
 
@@ -339,7 +394,7 @@ export async function notifyLeaveRequestRejected(
     type: 'error',
     entityType: 'leave',
     entityId: requestId,
-    actionUrl: '/leave',
+    actionUrl: '/?view=leave',
   });
 }
 
@@ -447,7 +502,7 @@ export async function notifyLeaveRequestCreated(
     type: 'info',
     entityType: 'leave',
     entityId: requestId,
-    actionUrl: '/leave/admin',
+    actionUrl: '/?view=leaveAdmin',
   });
 }
 
@@ -549,11 +604,11 @@ function formatTimeRange(startTime: string, endTime: string): string {
 
 function getReservationUrl(resourceType: string): string {
   const urls: Record<string, string> = {
-    meeting_room: '/reservations/meeting-rooms',
-    equipment: '/reservations/equipment',
-    vehicle: '/reservations/vehicles',
+    meeting_room: '/?view=meetingRooms',
+    equipment: '/?view=equipment',
+    vehicle: '/?view=vehicles',
   };
-  return urls[resourceType] || '/reservations';
+  return urls[resourceType] || '/?view=meetingRooms';
 }
 
 // === HEAD-ADMIN 출퇴근 알림 ===
@@ -577,7 +632,7 @@ export async function notifyCheckInToHeadAdmin(
     type: 'info',
     entityType: 'attendance',
     entityId: logId,
-    actionUrl: '/attendance/admin',
+    actionUrl: '/?view=attendanceAdmin',
   });
 }
 
@@ -600,6 +655,6 @@ export async function notifyCheckOutToHeadAdmin(
     type: 'info',
     entityType: 'attendance',
     entityId: logId,
-    actionUrl: '/attendance/admin',
+    actionUrl: '/?view=attendanceAdmin',
   });
 }

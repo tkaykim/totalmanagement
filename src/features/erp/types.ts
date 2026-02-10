@@ -1,5 +1,5 @@
 export type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
-export type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'organization' | 'reactstudio' | 'attendance' | 'attendanceAdmin' | 'leave' | 'leaveAdmin' | 'partners' | 'meetingRooms' | 'equipment' | 'vehicles' | 'workLog' | 'bugReports' | 'exclusiveArtists';
+export type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'taskTemplates' | 'manuals' | 'organization' | 'reactstudio' | 'attendance' | 'attendanceAdmin' | 'leave' | 'leaveAdmin' | 'partners' | 'meetingRooms' | 'equipment' | 'vehicles' | 'workLog' | 'workLogAdmin' | 'bugReports' | 'exclusiveArtists' | 'pushTest';
 
 export type Project = {
   id: string;
@@ -51,6 +51,7 @@ export type TaskItem = {
   dueDate: string;
   status: 'todo' | 'in-progress' | 'done';
   priority: TaskPriority;
+  manual_id?: number | null;
 };
 
 export const BU_TITLES: Record<BU, string> = {

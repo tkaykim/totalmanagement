@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, Building2, User, Calculator, Calendar, Tag, FileText, Wallet, ChevronDown, Check, Search, Users, MapPin, ExternalLink, MessageCircle } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Building2, User, Calculator, Calendar, Tag, FileText, Wallet, ChevronDown, Check, Search, Users, MapPin, ExternalLink, MessageCircle, Trash2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FinancialEntry, Project, BU, FinancialEntryStatus } from '@/features/erp/types';
 import { CommentSection } from '@/features/comments/components/CommentSection';
@@ -303,7 +303,7 @@ function HeaderChipDropdown({
         <ChevronDown className={cn("h-3 w-3 transition", isOpen && "rotate-180")} />
       </button>
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 z-10 min-w-[140px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg py-1">
+        <div className="absolute top-full left-0 mt-1 z-50 min-w-[140px] max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg py-1">
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -654,6 +654,7 @@ export function EditFinanceModal({
   entry,
   onClose,
   onSubmit,
+  onDelete,
   projects,
   partnersData,
   calculateActualAmount,
@@ -674,6 +675,7 @@ export function EditFinanceModal({
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
   }) => void | Promise<void>;
+  onDelete?: (id: string) => void | Promise<void>;
   projects: Project[];
   partnersData?: { id: number; display_name: string; entity_type: string }[];
   calculateActualAmount: (amount: number, paymentMethod: string) => number | null;
@@ -696,6 +698,8 @@ export function EditFinanceModal({
   });
   const [showPaymentOptions, setShowPaymentOptions] = useState(!!form.partnerId || !!form.paymentMethod);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // 지급처 옵션 생성 (필터링 + 검색용)
   const editPartnerOptions = useMemo(() => {
@@ -925,23 +929,34 @@ export function EditFinanceModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2">
-          {onGoToProject && form.projectId && (
-            <button
-              onClick={() => {
-                onGoToProject(form.projectId);
-              }}
-              disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ExternalLink className="h-4 w-4" />
-              프로젝트 상세
-            </button>
-          )}
-          {(!onGoToProject || !form.projectId) && <div />}
+          <div className="flex items-center gap-2">
+            {onGoToProject && form.projectId && (
+              <button
+                onClick={() => {
+                  onGoToProject(form.projectId);
+                }}
+                disabled={isSubmitting || isDeleting}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ExternalLink className="h-4 w-4" />
+                프로젝트 상세
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isSubmitting || isDeleting}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition border border-red-200 dark:border-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="h-4 w-4" />
+                삭제
+              </button>
+            )}
+          </div>
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
               className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               취소
@@ -968,7 +983,7 @@ export function EditFinanceModal({
                   setIsSubmitting(false);
                 }
               }}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
               className={cn(
                 "px-4 py-2 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2",
                 isRevenue ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"
@@ -985,6 +1000,59 @@ export function EditFinanceModal({
           </div>
         </div>
       </div>
+
+      {/* 삭제 확인 다이얼로그 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 shadow-2xl overflow-hidden">
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">항목 삭제</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">이 작업은 되돌릴 수 없습니다</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                <span className="font-semibold">&ldquo;{form.name}&rdquo;</span> 항목을 정말 삭제하시겠습니까?
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={async () => {
+                  if (isDeleting) return;
+                  setIsDeleting(true);
+                  try {
+                    await onDelete?.(entry.id);
+                  } finally {
+                    setIsDeleting(false);
+                    setShowDeleteConfirm(false);
+                  }
+                }}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting && (
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {isDeleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

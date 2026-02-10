@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { BuTabs } from './BuTabs';
 import { BU, BU_TITLES, Project, TaskItem, TaskPriority } from '../types';
-import { Circle, Clock, CheckCircle2, Calendar, User, ArrowRight, Lock, Search } from 'lucide-react';
+import { Circle, Clock, CheckCircle2, Calendar, User, ArrowRight, Lock, Search, BookOpen } from 'lucide-react';
 
 type CurrentUser = {
   id: string;
@@ -143,7 +143,7 @@ function TaskCard({
           {task.title}
         </h4>
 
-        {/* 담당자 + 마감일 */}
+        {/* 담당자 + 마감일 + 매뉴얼 */}
         <div className="flex items-center gap-3 text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">
           {task.assignee && (
             <div className="flex items-center gap-1">
@@ -155,6 +155,12 @@ function TaskCard({
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
               <span>{task.dueDate}</span>
+            </div>
+          )}
+          {task.manual_id && (
+            <div className="flex items-center gap-1 text-indigo-500 dark:text-indigo-400" title="매뉴얼 연결됨">
+              <BookOpen className="w-3 h-3" />
+              <span className="text-[9px] sm:text-[10px] font-medium">매뉴얼</span>
             </div>
           )}
         </div>

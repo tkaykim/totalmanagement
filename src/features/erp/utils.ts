@@ -53,19 +53,22 @@ export function dbTaskToFrontend(t: ProjectTask): {
   status: 'todo' | 'in-progress' | 'done';
   priority: 'high' | 'medium' | 'low';
   tag?: string;
+  manual_id?: number | null;
+  manual_title?: string;
 } {
   return {
     id: String(t.id),
     bu: t.bu_code,
     projectId: String(t.project_id),
     title: t.title,
-    description: (t as any).description || undefined,
+    description: t.description || undefined,
     assignee_id: t.assignee_id || undefined,
     assignee: t.assignee || '',
     dueDate: t.due_date,
     status: t.status === 'in_progress' ? 'in-progress' : t.status,
     priority: t.priority || 'medium',
     tag: t.tag,
+    manual_id: t.manual_id ?? undefined,
   };
 }
 
@@ -202,6 +205,7 @@ export function frontendTaskToDb(t: {
   status?: 'todo' | 'in-progress' | 'done';
   priority?: 'high' | 'medium' | 'low';
   tag?: string;
+  manual_id?: number | null;
 }): {
   project_id: number;
   bu_code: BU;
@@ -213,6 +217,7 @@ export function frontendTaskToDb(t: {
   status: 'todo' | 'in_progress' | 'done';
   priority?: 'high' | 'medium' | 'low';
   tag?: string;
+  manual_id?: number | null;
 } {
   const today = getTodayKST();
   return {
@@ -226,6 +231,7 @@ export function frontendTaskToDb(t: {
     status: t.status === 'in-progress' ? 'in_progress' : (t.status || 'todo'),
     priority: t.priority || 'medium',
     tag: t.tag,
+    manual_id: t.manual_id ?? null,
   };
 }
 

@@ -1,4 +1,4 @@
-import type { ActivityLog, DailyWorkLog, WorkLogFormData } from './types';
+import type { ActivityLog, DailyWorkLog, WorkLogFormData, AdminWorkLogOverview, AdminUserWorkLogDetail } from './types';
 
 const API_BASE = '/api';
 
@@ -80,4 +80,57 @@ export async function deleteWorkLog(id: number): Promise<void> {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.error || 'Failed to delete work log');
   }
+}
+
+// ============================================
+// 관리자 전용 API
+// ============================================
+
+// 관리자: 날짜별 전체 사용자 업무일지 제출 현황 조회
+export async function getAdminWorkLogOverview(date?: string): Promise<AdminWorkLogOverview> {
+  const params = new URLSearchParams();
+  if (date) params.set('date', date);
+  
+  const url = `${API_BASE}/work-logs/admin${params.toString() ? `?${params}` : ''}`;
+  const res = await fetch(url);
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to get admin work log overview');
+  }
+  
+  return res.json();
+}
+
+// 관리자: 특정 사용자의 업무일지 상세 조회
+export async function getAdminUserWorkLog(userId: string, date?: string): Promise<AdminUserWorkLogDetail> {
+  const params = new URLSearchParams();
+  if (date) params.set('date', date);
+  
+  const url = `${API_BASE}/work-logs/admin/${userId}${params.toString() ? `?${params}` : ''}`;
+  const res = await fetch(url);
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to get user work log');
+  }
+  
+  return res.json();
+}
+
+// 관리자: 특정 사용자의 활동 로그 조회
+export async function getAdminActivityLogs(userId: string, date?: string): Promise<ActivityLog[]> {
+  const params = new URLSearchParams();
+  params.set('userId', userId);
+  if (date) params.set('date', date);
+  
+  const url = `${API_BASE}/activity-logs/admin?${params}`;
+  const res = await fetch(url);
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to get user activity logs');
+  }
+  
+  return res.json();
 }

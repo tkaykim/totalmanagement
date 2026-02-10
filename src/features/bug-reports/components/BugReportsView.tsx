@@ -25,7 +25,7 @@ const STATUS_CONFIG: Record<
     headerBg: 'bg-amber-100 dark:bg-amber-900/40',
   },
   resolved: {
-    label: '접수완료',
+    label: '처리완료',
     color: 'text-emerald-600 dark:text-emerald-400',
     bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
     borderColor: 'border-emerald-200 dark:border-emerald-800',

@@ -115,12 +115,17 @@ export async function PATCH(
       }
     }
 
+    const updateData = {
+      ...body,
+      updated_at: new Date().toISOString(),
+    };
+    if (body.bu_code || body.project_id) {
+      updateData.bu_code = project.bu_code;
+    }
+
     const { data, error } = await supabase
       .from('project_tasks')
-      .update({
-        ...body,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
