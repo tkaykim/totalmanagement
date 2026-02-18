@@ -65,8 +65,47 @@ npx cap open android
 npx cap open ios
 ```
 
+## 7. 서버/푸시 발송 설정
+
+푸시 알림을 **발송**하려면 다음 중 하나(또는 둘 다)를 설정합니다.
+
+### A) Vercel (Next.js API용)
+
+웹앱이 Vercel에 배포된 경우, Next.js API(`/api/push/test`, `push-sender.ts`)에서 FCM을 쓰려면 환경 변수를 설정합니다.
+
+1. Vercel 대시보드 → 프로젝트 → **Settings** → **Environment Variables**
+2. 다음 변수 추가 (Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → 키 추가 → JSON 다운로드 후 값 복사):
+   - `FIREBASE_PROJECT_ID`: JSON의 `project_id`
+   - `FIREBASE_CLIENT_EMAIL`: JSON의 `client_email`
+   - `FIREBASE_PRIVATE_KEY`: JSON의 `private_key` (따옴표 제거, `\n`은 그대로 두거나 실제 줄바꿈으로 넣어도 됨)
+
+설정 후 재배포하면 관리자 푸시 테스트 화면에서 전송이 동작합니다.
+
+### B) Supabase Edge Function (send-push)
+
+Supabase에서 푸시를 보내려면 Edge Function 시크릿을 설정합니다.
+
+1. Supabase 대시보드 → **Project Settings** → **Edge Functions** → **Secrets**
+2. **Add new secret**
+   - Name: `FIREBASE_SERVICE_ACCOUNT_JSON`
+   - Value: Firebase 서비스 계정 JSON **전체** 붙여넣기 (한 줄이어도 됨)
+
+호출 예 (Bearer에는 Supabase anon key 또는 사용자 JWT):
+
+```bash
+curl -X POST 'https://<project-ref>.supabase.co/functions/v1/send-push' \
+  -H 'Authorization: Bearer <SUPABASE_ANON_KEY>' \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":"<uuid>","title":"테스트","body":"본문 내용"}'
+```
+
+- `user_id`: 전송 대상 사용자 UUID (push_tokens에 등록된 토큰으로 전송)
+- 또는 `token`: FCM 토큰 직접 지정
+- `data`, `image`(URL) 선택 가능
+
 ## 주의사항
 
 - Firebase 인증 파일은 절대 Git에 커밋하지 마세요 (`.gitignore`에 추가됨)
 - iOS 앱 푸시 테스트는 실제 기기에서만 가능합니다
 - APNs 설정 없이는 iOS 푸시 알림이 작동하지 않습니다
+- 서비스 계정 키(JSON/환경변수)는 서버·Edge Function 전용으로만 사용하고, 클라이언트·Git에 넣지 마세요

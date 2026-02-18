@@ -11,6 +11,7 @@ import {
 import { ThemeProvider } from 'next-themes';
 import { initPushNotifications, isNativePlatform } from '@/lib/capacitor';
 import { Toaster } from '@/components/ui/toaster';
+import { toast } from '@/hooks/use-toast';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -55,7 +56,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           console.log('[App] 푸시 토큰 등록됨:', token.substring(0, 20) + '...');
         },
         onNotificationReceived: (notification) => {
-          console.log('[App] 푸시 알림 수신:', notification.title);
+          const title = notification.title ?? (notification.data && (notification.data as Record<string, string>).title) ?? '알림';
+          const body = notification.body ?? (notification.data && (notification.data as Record<string, string>).body) ?? '';
+          toast({ title, description: body || undefined });
         },
         onNotificationActionPerformed: (action) => {
           // 알림 클릭 시 특정 페이지로 이동

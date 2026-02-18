@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Send, Users, Filter } from 'lucide-react';
+import { Bell, Send, Users, Filter, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PushAllTab } from './PushAllTab';
 import { PushUserTab } from './PushUserTab';
 import { PushConditionalTab } from './PushConditionalTab';
+import { PushScenarioTab } from './PushScenarioTab';
 import { PushStatusPanel } from './PushStatusPanel';
 
-type TabType = 'all' | 'user' | 'conditional';
+type TabType = 'all' | 'user' | 'conditional' | 'scenario';
 
 const TABS: { id: TabType; label: string; icon: React.ReactNode; description: string }[] = [
   {
@@ -28,6 +29,12 @@ const TABS: { id: TabType; label: string; icon: React.ReactNode; description: st
     label: '조건부 푸시',
     icon: <Filter className="h-4 w-4" />,
     description: '역할, 사업부 등 조건에 맞는 사용자에게 푸시를 전송합니다.',
+  },
+  {
+    id: 'scenario',
+    label: '시나리오 테스트',
+    icon: <ListChecks className="h-4 w-4" />,
+    description: '프로젝트·할일·댓글·출퇴근·마감일 등 시나리오별로 테스트 발송합니다.',
   },
 ];
 
@@ -86,6 +93,7 @@ export function PushTestView() {
       {activeTab === 'all' && <PushAllTab />}
       {activeTab === 'user' && <PushUserTab />}
       {activeTab === 'conditional' && <PushConditionalTab />}
+      {activeTab === 'scenario' && <PushScenarioTab />}
     </div>
   );
 }

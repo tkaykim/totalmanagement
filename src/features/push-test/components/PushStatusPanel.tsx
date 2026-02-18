@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Activity, CheckCircle, XCircle, RefreshCw, Smartphone } from 'lucide-react';
+import { Activity, CheckCircle, XCircle, RefreshCw, Smartphone, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isNativePlatform, requestPermissionAndRegister } from '@/lib/capacitor';
 
 interface PushStatus {
   firebaseConfigured: boolean;
@@ -23,6 +24,7 @@ export function PushStatusPanel() {
   const [status, setStatus] = useState<PushStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [requestingPermission, setRequestingPermission] = useState(false);
 
   const fetchStatus = async () => {
     setLoading(true);
@@ -127,6 +129,36 @@ export function PushStatusPanel() {
           </div>
         </div>
       </div>
+
+      {/* 네이티브 앱에서 알림 허용 버튼 (토큰이 없을 때 또는 항상 노출) */}
+      {isNativePlatform() && (
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <button
+            type="button"
+            onClick={async () => {
+              setRequestingPermission(true);
+              try {
+                const granted = await requestPermissionAndRegister();
+                if (granted) await fetchStatus();
+              } finally {
+                setRequestingPermission(false);
+              }
+            }}
+            disabled={requestingPermission}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800/50 disabled:opacity-50"
+          >
+            {requestingPermission ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Bell className="h-3.5 w-3.5" />
+            )}
+            {requestingPermission ? '요청 중...' : '알림 허용 요청'}
+          </button>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+            알림 팝업이 안 뜬다면 위 버튼을 누르거나, 기기 설정 → 앱 → 알림에서 허용해 주세요.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

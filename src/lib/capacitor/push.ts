@@ -42,6 +42,7 @@ export async function requestPushPermission(): Promise<boolean> {
 
 /**
  * 푸시 알림 초기화
+ * - 리스너를 먼저 등록한 뒤, 짧은 지연 후 권한 요청 → 등록하여 앱 실행 시 알림 허용 팝업이 노출되도록 함
  */
 export async function initPushNotifications(handlers?: PushNotificationHandlers): Promise<void> {
   if (!isNativePlatform()) {
@@ -55,20 +56,10 @@ export async function initPushNotifications(handlers?: PushNotificationHandlers)
   }
 
   try {
-    // 권한 요청
-    const granted = await requestPushPermission();
-    if (!granted) {
-      console.log('[Push] 권한이 거부되었습니다.');
-      return;
-    }
-
-    // 리스너 등록
+    // 리스너 먼저 등록 (권한 허용 후 토큰이 오면 처리)
     await PushNotifications.addListener('registration', async (token: Token) => {
       console.log('[Push] 토큰 등록 성공:', token.value);
-      
-      // 서버에 토큰 저장
       await savePushToken(token.value);
-      
       handlers?.onRegistration?.(token.value);
     });
 
@@ -87,13 +78,40 @@ export async function initPushNotifications(handlers?: PushNotificationHandlers)
       handlers?.onNotificationActionPerformed?.(action);
     });
 
-    // 푸시 알림 등록
-    await PushNotifications.register();
+    // 앱 UI가 뜬 뒤 알림 권한 요청이 노출되도록 지연 후 실행 (Android 13+ 등)
+    const requestAndRegister = async () => {
+      const granted = await requestPushPermission();
+      if (!granted) {
+        console.log('[Push] 권한이 거부되었거나 아직 허용되지 않았습니다. 설정에서 허용 후 앱을 다시 열어주세요.');
+      }
+      await PushNotifications.register();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.setTimeout(requestAndRegister, 1200);
+    } else {
+      await requestPushPermission();
+      await PushNotifications.register();
+    }
+
     isInitialized = true;
     console.log('[Push] 초기화 완료');
   } catch (error) {
     console.error('[Push] 초기화 실패:', error);
   }
+}
+
+/**
+ * 알림 권한만 요청 (UI 버튼 등에서 호출용). 이미 초기화된 경우 register()는 호출된 상태이므로 권한 허용 시 토큰이 옴.
+ */
+export async function requestPermissionAndRegister(handlers?: PushNotificationHandlers): Promise<boolean> {
+  if (!isNativePlatform()) return false;
+  const granted = await requestPushPermission();
+  if (granted) {
+    await PushNotifications.register();
+    console.log('[Push] 권한 허용 후 등록 요청 완료');
+  }
+  return granted;
 }
 
 /**

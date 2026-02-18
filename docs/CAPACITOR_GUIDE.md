@@ -192,6 +192,29 @@ const picked = await pickImage();
 - `GET /api/push-tokens`: 현재 사용자의 토큰 조회
 - `POST /api/push-tokens`: 토큰 등록/업데이트
 - `DELETE /api/push-tokens`: 토큰 비활성화 (로그아웃 시)
+- **Supabase Edge Function** `send-push`: FCM 푸시 발송 (시크릿 `FIREBASE_SERVICE_ACCOUNT_JSON` 설정 후 사용). body: `user_id` 또는 `token`, `title`, `body`, `data`(선택), `image`(선택)
+
+## 웹앱 배포 및 푸시 세팅 체크리스트
+
+### 웹 배포 (Vercel)
+
+1. **빌드**: `npm run build` 성공 확인
+2. **배포**: Vercel에 연결 후 자동 배포 또는 `vercel --prod`
+3. **Capacitor URL**: `capacitor.config.ts`의 `server.url`이 실제 프로덕션 URL과 일치하는지 확인 (예: `https://totalmanagement.vercel.app`)
+
+### 푸시 알림 세팅
+
+| 단계 | 내용 | 확인 |
+|------|------|------|
+| Firebase | Android 앱 등록, `google-services.json` → `android/app/` | [ ] |
+| Firebase | (iOS) `GoogleService-Info.plist` → `ios/App/App/` | [ ] |
+| Firebase | 서비스 계정 키 JSON 다운로드 | [ ] |
+| Vercel | `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` 환경 변수 설정 | [ ] |
+| Supabase | 시크릿 `FIREBASE_SERVICE_ACCOUNT_JSON` 등록 (Edge Function send-push 사용 시) | [ ] |
+| DB | `push_tokens` 테이블 및 RLS 적용됨 (마이그레이션 20260121) | [ ] |
+| 앱 | 네이티브에서 알림 권한 허용 후 토큰이 `/api/push-tokens`로 저장됨 | [ ] |
+
+앱 실행 → 로그인 → 푸시 권한 허용 시 토큰이 자동 등록됩니다. 관리자 푸시 테스트 화면에서 수신 여부를 확인할 수 있습니다.
 
 ## 주의사항
 
@@ -222,3 +245,15 @@ npx cap sync ios
 1. Firebase 인증 파일 위치 확인
 2. Firebase Console에서 앱 패키지명/Bundle ID 일치 확인
 3. iOS의 경우 APNs 키 설정 확인
+
+### 앱 실행 시 알림 허용 팝업이 안 뜨는 경우
+- 앱이 뜬 뒤 약 1.2초 후에 권한 요청을 하도록 되어 있습니다. 그래도 안 뜨면 **관리자 → 푸시 알림 테스트** 화면의 **「알림 허용 요청」** 버튼을 눌러 보세요.
+- 기기 **설정 → 앱 → TotalManagements → 알림** 에서 알림을 켜도 됩니다.
+
+### 포그라운드에서 알림 표시 (토스트)
+- 앱을 사용 중일 때 푸시가 오면 **인앱 토스트**로 제목/본문이 표시됩니다. (제목·본문은 FCM의 `notification` 또는 `data`에서 가져옵니다.)
+
+### 긴 글·사진 첨부 알림 (확장 알림)
+- **긴 본문**이나 **이미지 URL**이 포함된 푸시를 알림 트레이에서 확장 표시(BigTextStyle/BigPictureStyle)하려면 Android **커스텀 FirebaseMessagingService** 구현이 필요합니다.
+- 자세한 흐름과 예시는 `docs/PUSH_NOTIFICATION_ARCHITECTURE.md`의 「6. 푸시 알림 종류 및 구현」「6.3 Android 확장 알림」을 참고하세요.
+- 현재는 FCM `data`에 `title`, `body`, `action_url`(및 선택 시 `image`)을 넣어 전송하고 있으며, 포그라운드에서는 토스트로 전체 내용을 볼 수 있습니다.
