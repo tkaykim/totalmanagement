@@ -85,10 +85,16 @@ npx cap open ios
 
 Supabase에서 푸시를 보내려면 Edge Function 시크릿을 설정합니다.
 
-1. Supabase 대시보드 → **Project Settings** → **Edge Functions** → **Secrets**
-2. **Add new secret**
-   - Name: `FIREBASE_SERVICE_ACCOUNT_JSON`
-   - Value: Firebase 서비스 계정 JSON **전체** 붙여넣기 (한 줄이어도 됨)
+**방법 A) 개별 시크릿 3개 (권장)**  
+Supabase 대시보드 → **Edge Functions** → **Secrets**에서 다음을 각각 추가:
+
+- `FIREBASE_PROJECT_ID`: 프로젝트 ID  
+- `FIREBASE_CLIENT_EMAIL`: 서비스 계정 이메일  
+- `FIREBASE_PRIVATE_KEY`: private key (로컬과 동일하게 `\n` 으로 줄바꿈. 예: `-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n`)
+
+**방법 B) JSON 한 개**  
+- Name: `FIREBASE_SERVICE_ACCOUNT_JSON`  
+- Value: Firebase 서비스 계정 JSON **전체** 붙여넣기 (한 줄이어도 됨)
 
 호출 예 (Bearer에는 Supabase anon key 또는 사용자 JWT):
 
@@ -102,6 +108,16 @@ curl -X POST 'https://<project-ref>.supabase.co/functions/v1/send-push' \
 - `user_id`: 전송 대상 사용자 UUID (push_tokens에 등록된 토큰으로 전송)
 - 또는 `token`: FCM 토큰 직접 지정
 - `data`, `image`(URL) 선택 가능
+
+## GitHub "Possible valid secrets detected" 알림이 뜬 경우
+
+- **원인**: 푸시 발송은 Supabase Edge Function(시크릿은 대시보드에만 저장)으로 하더라도, **Android 앱**이 FCM을 쓰려면 `android/app/google-services.json`이 필요합니다. 이 파일 안에 **Google API Key**가 들어 있어서, **이 파일이 과거에 한 번이라도 커밋되면** GitHub 시크릿 스캔이 “노출된 시크릿”으로 알림을 보냅니다.
+- **즉**, 알림은 “Edge Function 시크릿”이 아니라 **`google-services.json` 안의 Google API Key** 때문에 뜨는 것입니다.
+- **대응**:
+  1. `.gitignore`에 `google-services.json`, `android/app/google-services.json` 등이 있는지 확인하고, **앞으로는 절대 커밋하지 않기**.
+  2. 이미 커밋된 적이 있다면:  
+     `git rm --cached android/app/google-services.json` 후 커밋·푸시해서 **추적만 제거**합니다. (히스토리에는 남으므로)  
+     **Google Cloud Console**에서 해당 프로젝트 → API 및 서비스 → 사용자 인증 정보로 가서 **노출된 API 키를 비활성화·삭제**하고, 필요하면 새 키를 만들어 `google-services.json`을 다시 다운로드한 뒤 **로컬에만** 보관하세요.
 
 ## 주의사항
 

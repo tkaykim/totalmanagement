@@ -1,5 +1,7 @@
 // Supabase Edge Function: FCM HTTP v1로 푸시 알림 전송
-// 시크릿: FIREBASE_SERVICE_ACCOUNT_JSON (Firebase 서비스 계정 JSON 전체)
+// 시크릿 (둘 중 하나 사용):
+//   방법 A) FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY 각각 설정
+//   방법 B) FIREBASE_SERVICE_ACCOUNT_JSON (서비스 계정 JSON 전체)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import * as jose from "npm:jose@5";
@@ -10,12 +12,33 @@ const corsHeaders = {
 };
 
 interface ServiceAccount {
-  type: string;
+  type?: string;
   project_id: string;
-  private_key_id: string;
+  private_key_id?: string;
   private_key: string;
   client_email: string;
-  client_id: string;
+  client_id?: string;
+}
+
+/** 시크릿에서 Firebase 인증 정보 로드. 개별 3개 시크릿 우선, 없으면 JSON 사용 */
+function getFirebaseCreds(): ServiceAccount {
+  const projectId = (Deno.env.get("FIREBASE_PROJECT_ID") ?? "").trim();
+  const clientEmail = (Deno.env.get("FIREBASE_CLIENT_EMAIL") ?? "").trim();
+  let privateKey = (Deno.env.get("FIREBASE_PRIVATE_KEY") ?? "").trim();
+  // 앞뒤 따옴표 제거 (실수로 "..." 붙여 넣은 경우)
+  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+    privateKey = privateKey.slice(1, -1);
+  }
+  if (projectId && clientEmail && privateKey) {
+    return { project_id: projectId, client_email: clientEmail, private_key: privateKey };
+  }
+  const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
+  if (!raw) {
+    throw new Error(
+      "Set either (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) or FIREBASE_SERVICE_ACCOUNT_JSON in Edge Function Secrets"
+    );
+  }
+  return JSON.parse(raw) as ServiceAccount;
 }
 
 interface SendPushBody {
@@ -29,7 +52,11 @@ interface SendPushBody {
 
 async function getGoogleAccessToken(sa: ServiceAccount): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const privateKeyPem = sa.private_key.replace(/\\n/g, "\n");
+  // PEM: JSON/환경변수에서 \n이 literal(백슬래시+n)으로 들어오는 경우 실제 줄바꿈으로 변환
+  const privateKeyPem = sa.private_key
+    .replace(/\\\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .trim();
   const key = await jose.importPKCS8(privateKeyPem, "RS256");
   const jwt = await new jose.SignJWT({
     iss: sa.client_email,
@@ -115,20 +142,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
-    if (!raw) {
-      return new Response(
-        JSON.stringify({
-          error: "FIREBASE_SERVICE_ACCOUNT_JSON secret is not set",
-          sent: 0,
-          total: 0,
-          results: [],
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const sa = JSON.parse(raw) as ServiceAccount;
+    const sa = getFirebaseCreds();
     const body = (await req.json()) as SendPushBody;
 
     if (!body.title || !body.body) {

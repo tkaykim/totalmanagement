@@ -31,8 +31,15 @@ function getFirebaseAdmin(): admin.app.App {
     throw new Error('Firebase Admin SDK 환경변수가 설정되지 않았습니다.');
   }
 
-  // private key는 환경변수에서 \\n이 literal로 들어오므로 실제 줄바꿈으로 변환
-  const privateKey = privateKeyRaw.replace(/\\n/g, '\n');
+  // private key: 환경변수에서 \n이 literal(백슬래시+n)으로 들어오는 경우 실제 줄바꿈으로 변환
+  // PEM 형식 오류 방지: 이중 이스케이프(\\\\n) 및 일반 \\n 모두 처리 후 trim
+  let privateKey = privateKeyRaw
+    .replace(/\\\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .trim();
+  if (!privateKey.includes('-----BEGIN')) {
+    throw new Error('FIREBASE_PRIVATE_KEY: PEM 형식이 아닙니다. 서비스 계정 JSON의 private_key 값을 그대로 넣고, 줄바꿈은 \\n 으로 넣어주세요.');
+  }
 
   const app = admin.initializeApp({
     credential: admin.credential.cert({

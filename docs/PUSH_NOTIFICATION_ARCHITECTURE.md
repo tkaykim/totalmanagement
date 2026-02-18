@@ -176,12 +176,23 @@ create policy "push_tokens_own" on push_tokens
 
 ### 4.2 Edge Function 시크릿
 
-- **Supabase Dashboard** → **Project Settings** → **Edge Functions** → **Secrets**
-- **Add new secret**
-  - Name: `FIREBASE_SERVICE_ACCOUNT_JSON`
-  - Value: Firebase 서비스 계정 JSON **전체** 붙여넣기 (한 줄이어도 됨)
+**방법 A) 개별 시크릿 3개 (권장, PEM 오류 방지)**
 
-CLI 예시 (PowerShell):
+- **Supabase Dashboard** → **Project Settings** → **Edge Functions** → **Secrets**
+- 다음 세 개를 각각 추가:
+  - `FIREBASE_PROJECT_ID`: Firebase 프로젝트 ID (예: `myproject-12345`)
+  - `FIREBASE_CLIENT_EMAIL`: 서비스 계정 이메일 (예: `firebase-adminsdk-xxx@myproject.iam.gserviceaccount.com`)
+  - `FIREBASE_PRIVATE_KEY`: private key **한 줄**로, 줄바꿈 자리는 `\n` (백슬래시+n) 그대로 넣기.  
+    예: `-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANB...\n-----END PRIVATE KEY-----\n`
+
+로컬 `.env.local`과 동일한 형식으로 넣으면 됨.
+
+**방법 B) JSON 한 개**
+
+- Name: `FIREBASE_SERVICE_ACCOUNT_JSON`
+- Value: Firebase 서비스 계정 JSON **전체** 붙여넣기 (한 줄이어도 됨)
+
+CLI 예시 (PowerShell, 방법 B):
 
 ```powershell
 supabase secrets set FIREBASE_SERVICE_ACCOUNT_JSON="$(Get-Content -Path 'C:\path\to\service-account.json' -Raw)"
