@@ -59,10 +59,14 @@ export async function POST(request: NextRequest) {
     if (targetUserIds && targetUserIds.length > 0) {
       // 특정 사용자들에게 전송
       const results = await createNotificationForUsers(targetUserIds, notificationData);
+      const pushResult = results[0]?.pushResult;
+      const pushSuccess = pushResult?.success !== false;
       return NextResponse.json({
-        success: true,
+        success: pushSuccess,
         targetCount: targetUserIds.length,
         results,
+        pushResult,
+        ...(!pushSuccess && pushResult?.errors?.length ? { message: pushResult.errors.join('; ') } : {}),
       });
     } else {
       // 전체 사용자에게 전송
@@ -72,11 +76,15 @@ export async function POST(request: NextRequest) {
 
       const allUserIds = allUsers?.map(u => u.id) || [];
       const results = await createNotificationForUsers(allUserIds, notificationData);
+      const pushResult = results[0]?.pushResult;
+      const pushSuccess = pushResult?.success !== false;
 
       return NextResponse.json({
-        success: true,
+        success: pushSuccess,
         targetCount: allUserIds.length,
         results,
+        pushResult,
+        ...(!pushSuccess && pushResult?.errors?.length ? { message: pushResult.errors.join('; ') } : {}),
       });
     }
   } catch (error: any) {

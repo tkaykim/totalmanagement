@@ -23,72 +23,136 @@ interface PushResult {
   errors?: string[];
 }
 
-/**
- * 특정 사용자에게 Push 알림 전송
- */
-export async function sendPushToUser(
+/** 배포(Vercel)에 Firebase env가 없을 때 Supabase Edge Function send-push로 발송 */
+async function sendPushViaEdgeFunction(
   userId: string,
   payload: PushPayload
 ): Promise<PushResult> {
-  if (!isFirebaseAdminReady()) {
-    console.log('[Push] Firebase Admin이 설정되지 않아 Push 전송을 건너뜁니다.');
-    return { success: false, successCount: 0, failureCount: 0, errors: ['Firebase not configured'] };
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    return { success: false, successCount: 0, failureCount: 0, errors: ['Supabase URL or service key missing'] };
   }
-
   try {
-    const tokens = await getUserPushTokens(userId);
-
-    if (tokens.length === 0) {
-      console.log(`[Push] 사용자 ${userId}에 등록된 토큰이 없습니다.`);
-      return { success: true, successCount: 0, failureCount: 0 };
+    const res = await fetch(`${url}/functions/v1/send-push`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        title: payload.title,
+        body: payload.body,
+        data: payload.data ?? {},
+        image: payload.imageUrl,
+      }),
+    });
+    const data = (await res.json()) as { sent?: number; total?: number; error?: string; message?: string };
+    if (!res.ok) {
+      return {
+        success: false,
+        successCount: 0,
+        failureCount: 1,
+        errors: [data.error ?? res.statusText],
+      };
     }
-
-    return await sendPushToTokens(tokens, payload, userId);
-  } catch (error) {
-    console.error(`[Push] 사용자 ${userId}에게 전송 실패:`, error);
+    const sent = data.sent ?? 0;
+    const total = data.total ?? 0;
+    const noDelivery = sent === 0 && total === 0;
+    return {
+      success: sent > 0,
+      successCount: sent,
+      failureCount: total - sent,
+      ...(noDelivery ? { errors: [data.message || data.error || '푸시가 전달되지 않았습니다 (등록된 기기 없음 또는 설정 확인)'] } : {}),
+    };
+  } catch (e) {
     return {
       success: false,
       successCount: 0,
       failureCount: 0,
-      errors: [error instanceof Error ? error.message : String(error)],
+      errors: [e instanceof Error ? e.message : String(e)],
     };
   }
 }
 
 /**
+ * 특정 사용자에게 Push 알림 전송
+ * Firebase Admin 미설정 시(배포 환경) Supabase Edge Function send-push로 대체 발송
+ */
+export async function sendPushToUser(
+  userId: string,
+  payload: PushPayload
+): Promise<PushResult> {
+  if (isFirebaseAdminReady()) {
+    try {
+      const tokens = await getUserPushTokens(userId);
+      if (tokens.length === 0) {
+        console.log(`[Push] 사용자 ${userId}에 등록된 토큰이 없습니다.`);
+        return { success: true, successCount: 0, failureCount: 0 };
+      }
+      return await sendPushToTokens(tokens, payload, userId);
+    } catch (error) {
+      console.error(`[Push] 사용자 ${userId}에게 전송 실패:`, error);
+      return {
+        success: false,
+        successCount: 0,
+        failureCount: 0,
+        errors: [error instanceof Error ? error.message : String(error)],
+      };
+    }
+  }
+  console.log('[Push] Firebase 미설정 → Supabase Edge Function(send-push)으로 발송');
+  return sendPushViaEdgeFunction(userId, payload);
+}
+
+/**
  * 여러 사용자에게 Push 알림 전송
+ * Firebase Admin 미설정 시 Supabase Edge Function으로 사용자별 발송
  */
 export async function sendPushToUsers(
   userIds: string[],
   payload: PushPayload
 ): Promise<PushResult> {
-  if (!isFirebaseAdminReady()) {
-    console.log('[Push] Firebase Admin이 설정되지 않아 Push 전송을 건너뜁니다.');
-    return { success: false, successCount: 0, failureCount: 0, errors: ['Firebase not configured'] };
-  }
-
   if (userIds.length === 0) {
     return { success: true, successCount: 0, failureCount: 0 };
   }
 
-  try {
-    const tokens = await getMultipleUserPushTokens(userIds);
-
-    if (tokens.length === 0) {
-      console.log('[Push] 전송 대상에 등록된 토큰이 없습니다.');
-      return { success: true, successCount: 0, failureCount: 0 };
+  if (isFirebaseAdminReady()) {
+    try {
+      const tokens = await getMultipleUserPushTokens(userIds);
+      if (tokens.length === 0) {
+        console.log('[Push] 전송 대상에 등록된 토큰이 없습니다.');
+        return { success: true, successCount: 0, failureCount: 0 };
+      }
+      return await sendPushToTokens(tokens, payload);
+    } catch (error) {
+      console.error('[Push] 다중 사용자 전송 실패:', error);
+      return {
+        success: false,
+        successCount: 0,
+        failureCount: 0,
+        errors: [error instanceof Error ? error.message : String(error)],
+      };
     }
-
-    return await sendPushToTokens(tokens, payload);
-  } catch (error) {
-    console.error('[Push] 다중 사용자 전송 실패:', error);
-    return {
-      success: false,
-      successCount: 0,
-      failureCount: 0,
-      errors: [error instanceof Error ? error.message : String(error)],
-    };
   }
+
+  console.log('[Push] Firebase 미설정 → Supabase Edge Function(send-push)으로 사용자별 발송');
+  let totalSent = 0;
+  let totalFailure = 0;
+  const errors: string[] = [];
+  for (const uid of userIds) {
+    const r = await sendPushViaEdgeFunction(uid, payload);
+    totalSent += r.successCount;
+    totalFailure += r.failureCount;
+    if (r.errors?.length) errors.push(...r.errors);
+  }
+  return {
+    success: totalSent > 0,
+    successCount: totalSent,
+    failureCount: totalFailure,
+    ...(errors.length ? { errors } : {}),
+  };
 }
 
 /**

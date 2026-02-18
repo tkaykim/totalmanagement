@@ -60,14 +60,18 @@ export async function POST(request: NextRequest) {
     };
 
     const results = await createNotificationForUsers([recipientUserId], notificationData);
+    const pushResult = results[0]?.pushResult;
+    const pushSuccess = pushResult?.success !== false;
 
     return NextResponse.json({
-      success: true,
+      success: pushSuccess,
       scenarioId: scenario.id,
       scenarioName: scenario.name,
       targetUserId: recipientUserId,
       targetAudience: scenario.targetAudience,
       results,
+      pushResult,
+      ...(!pushSuccess && pushResult?.errors?.length ? { message: pushResult.errors.join('; ') } : {}),
     });
   } catch (error: unknown) {
     console.error('Push scenario error:', error);

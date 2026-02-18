@@ -94,8 +94,8 @@ export async function createNotification(data: NotificationData) {
       return { success: false, error };
     }
 
-    // FCM Push 알림 전송 (비동기 - 인앱 알림 응답을 블로킹하지 않음)
-    sendPushToUser(data.userId, {
+    // FCM Push 알림 전송 (await하여 결과 반환 - 배포에서 실패 시 UI에 반영)
+    const pushPayload = {
       title: data.title,
       body: data.message,
       data: {
@@ -104,11 +104,13 @@ export async function createNotification(data: NotificationData) {
         ...(data.entityId ? { entity_id: data.entityId } : {}),
         ...(data.actionUrl ? { action_url: data.actionUrl } : {}),
       },
-    }).catch((err) => {
-      console.error('[Push] FCM 전송 실패 (인앱 알림은 정상):', err);
-    });
+    };
+    const pushResult = await sendPushToUser(data.userId, pushPayload);
+    if (!pushResult.success) {
+      console.error('[Push] FCM 전송 실패 (인앱 알림은 정상):', pushResult.errors);
+    }
 
-    return { success: true };
+    return { success: true, pushResult };
   } catch (error) {
     console.error('Create notification error:', error);
     return { success: false, error };
@@ -146,8 +148,8 @@ export async function createNotificationForUsers(
     console.error('Failed to create bulk notifications:', error);
   }
 
-  // FCM Push 알림 일괄 전송 (비동기)
-  sendPushToUsers(userIds, {
+  // FCM Push 알림 일괄 전송 (await하여 결과 반환 - 배포에서 실패 시 UI에 반영)
+  const pushPayload = {
     title: notification.title,
     body: notification.message,
     data: {
@@ -156,11 +158,13 @@ export async function createNotificationForUsers(
       ...(notification.entityId ? { entity_id: notification.entityId } : {}),
       ...(notification.actionUrl ? { action_url: notification.actionUrl } : {}),
     },
-  }).catch((err) => {
-    console.error('[Push] FCM 일괄 전송 실패:', err);
-  });
+  };
+  const pushResult = await sendPushToUsers(userIds, pushPayload);
+  if (!pushResult.success) {
+    console.error('[Push] FCM 일괄 전송 실패:', pushResult.errors);
+  }
 
-  return [{ success: !error }];
+  return [{ success: !error, pushResult }];
 }
 
 // === 알림 타입별 헬퍼 함수 ===

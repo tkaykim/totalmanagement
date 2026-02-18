@@ -50,7 +50,11 @@ export function PushScenarioTab() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '전송 실패');
-      setResult({ scenarioId: scenario.id, success: true, message: `대상: ${sendToSelf ? '나에게' : '선택 사용자'}` });
+      setResult({
+        scenarioId: scenario.id,
+        success: data.success !== false,
+        message: data.message || (data.success !== false ? `대상: ${sendToSelf ? '나에게' : '선택 사용자'}` : '푸시 전송 실패'),
+      });
     } catch (e) {
       setResult({
         scenarioId: scenario.id,
