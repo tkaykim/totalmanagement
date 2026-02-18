@@ -35,23 +35,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Firebase 설정 확인
-    if (!isFirebaseAdminReady()) {
-      return NextResponse.json(
-        {
-          error: 'Firebase Admin SDK가 설정되지 않았습니다.',
-          hint: 'FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY 환경변수를 확인하세요.',
-        },
-        { status: 500 }
-      );
-    }
-
     const body = await request.json();
     const targetUserId = body.userId || user.id;
     const title = body.title || 'Push 테스트';
     const message = body.message || '이것은 Push 알림 테스트입니다. 정상적으로 수신되었다면 성공!';
 
-    // Push 전송
+    // Push 전송 (Firebase 미설정 시 Edge Function 사용)
     const result = await sendPushToUser(targetUserId, {
       title,
       body: message,
@@ -66,6 +55,7 @@ export async function POST(request: NextRequest) {
       success: result.success,
       targetUserId,
       result,
+      ...(result.errors?.length ? { message: result.errors.join('; ') } : {}),
     });
   } catch (error: any) {
     console.error('Push test error:', error);
@@ -93,6 +83,11 @@ export async function GET(request: NextRequest) {
 
     // Firebase 설정 상태
     const firebaseReady = isFirebaseAdminReady();
+    // 배포 환경에서 Edge Function 호출 가능 여부 (Supabase URL + Service Role Key)
+    const edgeFunctionAvailable = !!(
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
 
     // 현재 사용자의 Push 토큰
     const { data: tokens } = await supabase
@@ -105,6 +100,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       firebaseConfigured: firebaseReady,
+      edgeFunctionAvailable,
       userId: user.id,
       totalTokens: tokens?.length || 0,
       activeTokens: activeTokens.length,

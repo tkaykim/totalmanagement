@@ -7,6 +7,7 @@ import { isNativePlatform, requestPermissionAndRegister } from '@/lib/capacitor'
 
 interface PushStatus {
   firebaseConfigured: boolean;
+  edgeFunctionAvailable?: boolean;
   userId: string;
   totalTokens: number;
   activeTokens: number;
@@ -89,23 +90,36 @@ export function PushStatusPanel() {
           'flex items-center gap-3 rounded-lg px-3 py-2.5 border',
           status?.firebaseConfigured
             ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50'
-            : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50'
+            : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50'
         )}>
           {status?.firebaseConfigured ? (
             <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           ) : (
-            <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+            <XCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           )}
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Firebase Admin</p>
             <p className={cn(
               'text-[10px]',
-              status?.firebaseConfigured ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+              status?.firebaseConfigured ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
             )}>
-              {status?.firebaseConfigured ? '연결됨' : '미설정'}
+              {status?.firebaseConfigured ? '연결됨' : '미설정 → Supabase send-push 사용'}
             </p>
           </div>
         </div>
+        {!status?.firebaseConfigured && (
+          <div className="col-span-full rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-3 py-2 text-[10px] text-amber-800 dark:text-amber-200 space-y-1">
+            {status?.edgeFunctionAvailable === false ? (
+              <>
+                <strong>배포에서 푸시가 안 오는 이유:</strong> Vercel에 <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code>, <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code>가 설정되어 있어야 Edge Function(send-push) 호출이 가능합니다. 프로젝트 설정 → Environment Variables에서 Production에 추가해주세요.
+              </>
+            ) : (
+              <>
+                <strong>배포 링크에서 푸시가 안 올 때:</strong> 이 환경은 Supabase Edge Function(send-push)으로 발송합니다. Supabase 대시보드 → Edge Functions → Secrets에 <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">FIREBASE_SERVICE_ACCOUNT_JSON</code>을 설정해 두면 푸시가 발송됩니다. (Vercel에 FIREBASE_* 변수를 넣어도 됨)
+              </>
+            )}
+          </div>
+        )}
 
         {/* 등록된 토큰 */}
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 border bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700">
