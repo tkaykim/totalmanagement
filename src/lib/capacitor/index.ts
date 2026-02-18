@@ -23,6 +23,7 @@ export {
   initPushNotifications,
   requestPushPermission,
   requestPermissionAndRegister,
+  retryPushRegistration,
   removePushListeners,
   clearBadge,
 } from './push';

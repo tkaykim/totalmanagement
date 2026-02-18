@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { retryPushRegistration } from '@/lib/capacitor';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,9 @@ export default function LoginPage() {
       }
 
       if (data.user) {
+        // 네이티브 앱: 로그인 직후 푸시 토큰 재등록 (처음 401로 저장 실패했을 수 있음)
+        retryPushRegistration().catch(() => {});
+
         // 사용자 프로필에서 사업부 및 역할 정보 가져오기
         const { data: appUser } = await supabase
           .from('app_users')

@@ -58,14 +58,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         onNotificationReceived: (notification) => {
           try {
             const data = (notification.data ?? {}) as Record<string, string>;
-            const title = notification.title ?? data.title ?? '알림';
-            const body = notification.body ?? data.body ?? '';
+            const title = (notification.title ?? data.title ?? '알림').trim() || '알림';
+            const body = (notification.body ?? data.body ?? '').trim();
             const hasImage = !!(data.image ?? (notification as unknown as { image?: string }).image);
-            const description = [body, hasImage ? '[이미지 첨부]' : ''].filter(Boolean).join(' ') || undefined;
+            const description = [body, hasImage ? '[이미지 첨부]' : ''].filter(Boolean).join(' ').trim() || '새 알림이 도착했습니다.';
             // 다음 틱에서 토스트 표시 (React/Toaster 마운트 보장)
             setTimeout(() => {
               toast({ title, description });
-            }, 0);
+            }, 100);
           } catch (e) {
             console.warn('[Push] 토스트 표시 실패:', e);
             toast({ title: '알림', description: '새 알림이 도착했습니다.' });

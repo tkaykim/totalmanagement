@@ -19,6 +19,7 @@
     "@capacitor/geolocation": "^8.0.0",
     "@capacitor/ios": "^8.0.1",
     "@capacitor/push-notifications": "^8.0.0",
+    "@capacitor/toast": "^8.0.1",
     "@hookform/resolvers": "^4",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.15",

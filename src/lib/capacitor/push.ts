@@ -89,6 +89,20 @@ export async function initPushNotifications(handlers?: PushNotificationHandlers)
 
     if (typeof window !== 'undefined') {
       window.setTimeout(requestAndRegister, 1200);
+      // 앱 포커스 시 토큰 재등록 시도 (로그인 후 저장 실패·토큰 갱신 시 대비), 30초 간격으로만
+      let lastFocusRegister = 0;
+      const FOCUS_REGISTER_INTERVAL_MS = 30_000;
+      const onVisibilityChange = () => {
+        if (document.visibilityState !== 'visible' || !isInitialized) return;
+        const now = Date.now();
+        if (now - lastFocusRegister < FOCUS_REGISTER_INTERVAL_MS) return;
+        lastFocusRegister = now;
+        window.setTimeout(() => {
+          PushNotifications.register().catch(() => {});
+        }, 500);
+      };
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      window.addEventListener('focus', onVisibilityChange);
     } else {
       await requestPushPermission();
       await PushNotifications.register();
@@ -98,6 +112,24 @@ export async function initPushNotifications(handlers?: PushNotificationHandlers)
     console.log('[Push] 초기화 완료');
   } catch (error) {
     console.error('[Push] 초기화 실패:', error);
+  }
+}
+
+/**
+ * 푸시 토큰 재등록 (로그인 직후 등에서 호출 권장)
+ * 처음 토큰 저장이 401로 실패했을 때, 로그인 후 이 함수를 호출하면 토큰이 다시 저장됨
+ */
+export async function retryPushRegistration(): Promise<void> {
+  if (!isNativePlatform()) return;
+  if (!isInitialized) {
+    await initPushNotifications();
+    return;
+  }
+  try {
+    await PushNotifications.register();
+    console.log('[Push] 토큰 재등록 요청 완료');
+  } catch (e) {
+    console.warn('[Push] 토큰 재등록 실패:', e);
   }
 }
 

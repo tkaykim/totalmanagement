@@ -22,21 +22,27 @@ import java.util.Map;
 
 /**
  * FCM 수신 시 짧은/긴 메시지·이미지 알림 표시.
- * - notification payload: 플러그인 기본 처리
+ * - notification payload: 제목/본문 직접 표시 (백그라운드에서도 메시지 노출)
  * - data-only (title/body/image in data): BigTextStyle / BigPictureStyle 로 표시
  */
 public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifications.MessagingService {
 
     private static final String CHANNEL_ID = "default";
     private static final int NOTIFICATION_ID_BASE = 1000;
+    private static int notificationIdCounter = 0;
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         RemoteMessage.Notification notif = remoteMessage.getNotification();
         Map<String, String> data = remoteMessage.getData();
 
+        ensureChannel();
+
         if (notif != null) {
-            super.onMessageReceived(remoteMessage);
+            String title = notif.getTitle() != null ? notif.getTitle() : "알림";
+            String body = notif.getBody() != null ? notif.getBody() : "";
+            showBigTextNotification(title, body, data);
+            PushNotificationsPlugin.sendRemoteMessage(remoteMessage);
             return;
         }
 
@@ -46,7 +52,6 @@ public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifica
         if (title == null) title = "알림";
         if (body == null) body = "";
 
-        ensureChannel();
         if (imageUrl != null && !imageUrl.isEmpty()) {
             showBigPictureNotification(title, body, imageUrl, data);
         } else {
@@ -54,6 +59,10 @@ public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifica
         }
 
         PushNotificationsPlugin.sendRemoteMessage(remoteMessage);
+    }
+
+    private int nextNotificationId() {
+        return NOTIFICATION_ID_BASE + (Math.abs(notificationIdCounter++) % 100000);
     }
 
     private void ensureChannel() {
@@ -65,34 +74,40 @@ public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifica
             );
             channel.setDescription("푸시 알림");
             channel.enableVibration(true);
+            channel.enableLights(true);
+            channel.setShowBadge(true);
+            channel.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) nm.createNotificationChannel(channel);
         }
     }
 
     private void showBigTextNotification(String title, String body, Map<String, String> data) {
-        Intent intent = new Intent(this, MainActivity.class);
+        Context ctx = getApplicationContext();
+        Intent intent = new Intent(ctx, MainActivity.class);
         if (data != null && data.containsKey("action_url")) {
             intent.putExtra("action_url", data.get("action_url"));
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
+            ctx, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(ctx, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent);
 
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) {
-            nm.notify(CHANNEL_ID, NOTIFICATION_ID_BASE + (int) (System.currentTimeMillis() % 10000), builder.build());
+            nm.notify(nextNotificationId(), builder.build());
         }
     }
 
@@ -101,21 +116,24 @@ public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifica
         new Thread(() -> {
             Bitmap bitmap = fetchBitmap(imageUrl);
             mainHandler.post(() -> {
-                Intent intent = new Intent(this, MainActivity.class);
+                Context ctx = getApplicationContext();
+                Intent intent = new Intent(ctx, MainActivity.class);
                 if (data != null && data.containsKey("action_url")) {
                     intent.putExtra("action_url", data.get("action_url"));
                 }
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 PendingIntent pendingIntent = PendingIntent.getActivity(
-                    this, 0, intent,
+                    ctx, 0, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
                 );
 
-                NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(ctx, CHANNEL_ID)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(title)
                     .setContentText(body)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setDefaults(NotificationCompat.DEFAULT_ALL)
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent);
 
@@ -127,7 +145,7 @@ public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifica
 
                 NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 if (nm != null) {
-                    nm.notify(CHANNEL_ID, NOTIFICATION_ID_BASE + (int) (System.currentTimeMillis() % 10000), builder.build());
+                    nm.notify(nextNotificationId(), builder.build());
                 }
             });
         }).start();

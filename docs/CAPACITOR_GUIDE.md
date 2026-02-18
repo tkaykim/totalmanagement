@@ -246,6 +246,13 @@ npx cap sync ios
 2. Firebase Console에서 앱 패키지명/Bundle ID 일치 확인
 3. iOS의 경우 APNs 키 설정 확인
 
+### 푸시가 잘 되다가 갑자기 안 될 때 (Android)
+1. **알림 권한**: 기기 설정 → 앱 → TotalManagements → 알림이 켜져 있는지 확인.
+2. **로그인 후 재등록**: 앱을 완전히 종료한 뒤 다시 실행 → 로그인하면 푸시 토큰이 자동으로 다시 저장됨. (로그인 직후 `retryPushRegistration` 호출됨)
+3. **앱 포커스**: 앱을 백그라운드에서 다시 열면 30초 간격으로 토큰 재등록을 시도함.
+4. **관리자 화면**: 푸시 알림 테스트 → 시스템 상태에서 "등록된 디바이스"가 0이면 토큰이 서버에 없는 것. "알림 허용 요청" 버튼으로 권한 요청 후, 로그인 상태에서 앱을 한 번 백그라운드로 보냈다가 다시 열기.
+5. **서버 발송 설정**: Vercel 환경 변수 `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`가 설정돼 있는지 확인. (또는 Supabase `send-push` 사용 시 시크릿 `FIREBASE_SERVICE_ACCOUNT_JSON` 확인)
+
 ### 앱 실행 시 알림 허용 팝업이 안 뜨는 경우
 - 앱이 뜬 뒤 약 1.2초 후에 권한 요청을 하도록 되어 있습니다. 그래도 안 뜨면 **관리자 → 푸시 알림 테스트** 화면의 **「알림 허용 요청」** 버튼을 눌러 보세요.
 - 기기 **설정 → 앱 → TotalManagements → 알림** 에서 알림을 켜도 됩니다.
