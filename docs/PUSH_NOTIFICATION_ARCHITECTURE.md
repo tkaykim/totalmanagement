@@ -291,12 +291,9 @@ npx cap sync android
 ### 6.3 Android 확장 알림 (BigText / BigPicture)
 
 - FCM **data-only** 메시지일 때만 커스텀 스타일 적용 가능.
-- 플러그인 기본 `MessagingService` 대신, 이를 **상속한 커스텀 서비스**를 등록하고:
-  - `onMessageReceived`에서 `data`의 `title`, `body`, `image`, `link` 추출.
-  - 본문 길이 > N 또는 `image` 존재 시:
-    - **긴 글**: `NotificationCompat.BigTextStyle().bigText(body)`.
-    - **이미지**: URL 다운로드 후 `NotificationCompat.BigPictureStyle().bigPicture(bitmap)`.
-  - 알림 채널은 **IMPORTANCE_HIGH**로 생성해 팝업(헤드업)이 나오게 함.
+- 본 프로젝트: **CustomMessagingService** (`android/app/src/main/java/.../CustomMessagingService.java`)가 플러그인 기본 서비스를 대체함.
+  - `notification` payload: 플러그인과 동일하게 처리 후 JS로 전달.
+  - **data-only** (`data.title`, `data.body`, `data.image`): `BigTextStyle` 또는 `BigPictureStyle`로 알림 표시 후 `PushNotificationsPlugin.sendRemoteMessage` 호출해 JS에도 전달.
 - 매니페스트에서 플러그인 기본 서비스는 `tools:node="remove"`로 제거하고, 커스텀 서비스만 등록해 중복 알림 방지.
 
 ---

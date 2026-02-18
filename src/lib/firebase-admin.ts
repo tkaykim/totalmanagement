@@ -32,7 +32,6 @@ function getFirebaseAdmin(): admin.app.App {
   }
 
   // private key: 환경변수에서 \n이 literal(백슬래시+n)으로 들어오는 경우 실제 줄바꿈으로 변환
-  // PEM 형식 오류 방지: 이중 이스케이프(\\\\n) 및 일반 \\n 모두 처리 후 trim
   let privateKey = privateKeyRaw
     .replace(/\\\\n/g, '\n')
     .replace(/\\n/g, '\n')
@@ -63,13 +62,16 @@ export function getMessaging(): admin.messaging.Messaging {
 
 /**
  * Firebase Admin SDK가 사용 가능한 상태인지 확인
+ * PEM 형식이 아니면 false → 배포(Vercel)에서 Edge Function으로 푸시 발송
  */
 export function isFirebaseAdminReady(): boolean {
   try {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-    return !!(projectId && clientEmail && privateKey);
+    const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
+    if (!projectId || !clientEmail || !privateKeyRaw) return false;
+    const normalized = privateKeyRaw.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n').trim();
+    return normalized.includes('-----BEGIN');
   } catch {
     return false;
   }

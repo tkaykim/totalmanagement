@@ -56,9 +56,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           console.log('[App] 푸시 토큰 등록됨:', token.substring(0, 20) + '...');
         },
         onNotificationReceived: (notification) => {
-          const title = notification.title ?? (notification.data && (notification.data as Record<string, string>).title) ?? '알림';
-          const body = notification.body ?? (notification.data && (notification.data as Record<string, string>).body) ?? '';
-          toast({ title, description: body || undefined });
+          try {
+            const data = (notification.data ?? {}) as Record<string, string>;
+            const title = notification.title ?? data.title ?? '알림';
+            const body = notification.body ?? data.body ?? '';
+            const hasImage = !!(data.image ?? (notification as unknown as { image?: string }).image);
+            const description = [body, hasImage ? '[이미지 첨부]' : ''].filter(Boolean).join(' ') || undefined;
+            // 다음 틱에서 토스트 표시 (React/Toaster 마운트 보장)
+            setTimeout(() => {
+              toast({ title, description });
+            }, 0);
+          } catch (e) {
+            console.warn('[Push] 토스트 표시 실패:', e);
+            toast({ title: '알림', description: '새 알림이 도착했습니다.' });
+          }
         },
         onNotificationActionPerformed: (action) => {
           // 알림 클릭 시 특정 페이지로 이동
