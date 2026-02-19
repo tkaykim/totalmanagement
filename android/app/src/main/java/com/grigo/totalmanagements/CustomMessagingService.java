@@ -27,7 +27,7 @@ import java.util.Map;
  */
 public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifications.MessagingService {
 
-    private static final String CHANNEL_ID = "default";
+    private static final String CHANNEL_ID = MainActivity.CHANNEL_ID;
     private static final int NOTIFICATION_ID_BASE = 1000;
     private static int notificationIdCounter = 0;
 
@@ -95,7 +95,8 @@ public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifica
         );
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(ctx, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF2563EB)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
@@ -128,7 +129,8 @@ public class CustomMessagingService extends com.capacitorjs.plugins.pushnotifica
                 );
 
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(ctx, CHANNEL_ID)
-                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setColor(0xFF2563EB)
                     .setContentTitle(title)
                     .setContentText(body)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)

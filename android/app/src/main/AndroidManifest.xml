@@ -35,6 +35,17 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
+        <!-- FCM 백그라운드 알림: 기본 채널·아이콘·색상 지정 -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="default_high" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+
         <!-- 푸시: 짧은/긴 메시지·이미지 확장 알림 (BigTextStyle/BigPictureStyle) -->
         <service
             android:name=".CustomMessagingService"
