@@ -129,6 +129,23 @@ export async function GET(request: NextRequest) {
       projects = projects.filter((p: any) => p.status === status);
     }
 
+    // PM 이름 조회 (pm_id → app_users.name)
+    const pmIds = [...new Set(projects.map((p: any) => p.pm_id).filter(Boolean))];
+    const pmNameMap: Record<string, string> = {};
+    if (pmIds.length > 0) {
+      const { data: pmUsers } = await supabase
+        .from('app_users')
+        .select('id, name')
+        .in('id', pmIds);
+      (pmUsers || []).forEach((u: any) => {
+        pmNameMap[u.id] = u.name ?? '';
+      });
+    }
+    projects = projects.map((p: any) => ({
+      ...p,
+      pm_name: p.pm_id ? pmNameMap[p.pm_id] ?? null : null,
+    }));
+
     // 상태별 분류 정보 추가
     const result = {
       projects,

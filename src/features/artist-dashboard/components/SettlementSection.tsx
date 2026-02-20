@@ -5,32 +5,7 @@ import { Wallet, Calendar, ChevronDown, ChevronUp, FileText } from 'lucide-react
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import type { ArtistSettlement, SettlementTab } from '../types';
-
-interface PartnerSettlement {
-  id: number;
-  partner_id: number;
-  period_start: string;
-  period_end: string;
-  status: 'draft' | 'confirmed' | 'paid';
-  total_revenue: number;
-  total_expense: number;
-  net_profit: number;
-  partner_amount: number;
-  company_amount: number;
-  memo: string | null;
-  created_at: string;
-  partner_settlement_projects?: Array<{
-    id: number;
-    project_id: number;
-    project?: { id: number; name: string };
-    revenue: number;
-    expense: number;
-    net_profit: number;
-    share_rate: number;
-    partner_amount: number;
-  }>;
-}
+import type { ArtistSettlement, PartnerSettlement, SettlementDetailPayload, SettlementTab } from '../types';
 
 interface SettlementSectionProps {
   settlements: ArtistSettlement[];
@@ -44,7 +19,7 @@ interface SettlementSectionProps {
     total: { count: number; amount: number };
     this_month?: { count: number; amount: number };
   };
-  onSettlementClick?: (settlement: ArtistSettlement) => void;
+  onSettlementClick?: (payload: SettlementDetailPayload) => void;
 }
 
 const STATUS_STYLES: Record<string, { label: string; bg: string; text: string }> = {
@@ -204,7 +179,10 @@ export function SettlementSection({
                   className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 overflow-hidden"
                 >
                   <button
-                    onClick={() => setExpandedId(isExpanded ? null : settlement.id)}
+                    onClick={() => {
+                      setExpandedId(isExpanded ? null : settlement.id);
+                      onSettlementClick?.({ type: 'partner', data: settlement });
+                    }}
                     className="flex items-center justify-between w-full p-3 text-left hover:bg-slate-100 dark:hover:bg-slate-700/60 transition"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -325,7 +303,10 @@ export function SettlementSection({
                         className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 overflow-hidden"
                       >
                         <button
-                          onClick={() => setExpandedId(isExpanded ? null : settlement.id)}
+                          onClick={() => {
+                            setExpandedId(isExpanded ? null : settlement.id);
+                            onSettlementClick?.({ type: 'legacy', data: settlement });
+                          }}
                           className="flex items-center justify-between w-full p-3 text-left hover:bg-slate-100 dark:hover:bg-slate-700/60 transition"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">

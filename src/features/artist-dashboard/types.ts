@@ -1,5 +1,8 @@
 import type { ProjectStatus, TaskStatus, FinancialStatus, BU } from '@/types/database';
 
+// 아티스트 제안 응답
+export type ArtistResponseValue = 'pending' | 'accepted' | 'rejected';
+
 // 아티스트 프로젝트 타입
 export interface ArtistProject {
   id: number;
@@ -16,6 +19,10 @@ export interface ArtistProject {
   created_at: string;
   updated_at: string;
   connection_type: 'partner' | 'participant';
+  pm_name?: string | null;
+  artist_response?: ArtistResponseValue | null;
+  artist_response_note?: string | null;
+  artist_responded_at?: string | null;
 }
 
 export interface ArtistProjectsResponse {
@@ -96,9 +103,36 @@ export interface SettlementSummaryItem {
   amount: number;
 }
 
+export interface PartnerSettlementProject {
+  id: number;
+  project_id: number;
+  project?: { id: number; name: string };
+  revenue: number;
+  expense: number;
+  net_profit: number;
+  share_rate: number;
+  partner_amount: number;
+}
+
+export interface PartnerSettlement {
+  id: number;
+  partner_id: number;
+  period_start: string;
+  period_end: string;
+  status: 'draft' | 'confirmed' | 'paid';
+  total_revenue: number;
+  total_expense: number;
+  net_profit: number;
+  partner_amount: number;
+  company_amount: number;
+  memo: string | null;
+  created_at: string;
+  partner_settlement_projects?: PartnerSettlementProject[];
+}
+
 export interface ArtistSettlementsResponse {
   settlements: ArtistSettlement[];
-  partnerSettlements?: any[];
+  partnerSettlements?: PartnerSettlement[];
   summary: {
     draft?: SettlementSummaryItem;
     confirmed?: SettlementSummaryItem;
@@ -110,10 +144,43 @@ export interface ArtistSettlementsResponse {
   };
 }
 
+// 정산 상세 다이얼로그 payload (레거시 | 파트너)
+export type SettlementDetailPayload =
+  | { type: 'legacy'; data: ArtistSettlement }
+  | { type: 'partner'; data: PartnerSettlement };
+
+// 알림
+export interface ArtistNotification {
+  id: number;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  data: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+}
+
 // 대시보드 탭 타입
 export type ProjectTab = 'proposal' | 'in_progress' | 'completed';
 export type TaskTab = 'all' | 'todo' | 'in_progress' | 'done';
 export type SettlementTab = 'all' | 'planned' | 'paid';
+
+// 아티스트 프로필 (민감정보 제외)
+export interface ArtistProfile {
+  id: number;
+  display_name?: string | null;
+  name_ko?: string | null;
+  name_en?: string | null;
+  nationality?: string | null;
+  entity_type?: string | null;
+  job_titles?: string[];
+  contract_start?: string | null;
+  contract_end?: string | null;
+  visa_type?: string | null;
+  visa_expiry?: string | null;
+  photo_url?: string | null;
+}
 
 // 통합 대시보드 데이터
 export interface ArtistDashboardData {

@@ -2,17 +2,20 @@
 
 import { FolderKanban, CheckCircle2, Wallet, RefreshCw, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useArtistDashboard, useUpdateArtistTaskStatus } from '../hooks';
+import { useArtistDashboard, useUpdateArtistTaskStatus, useArtistProfile } from '../hooks';
+import { ArtistProfileCard } from './ArtistProfileCard';
 import { ProjectsSection } from './ProjectsSection';
 import { TasksSection } from './TasksSection';
 import { SettlementSection } from './SettlementSection';
-import type { ArtistProject, ArtistTask, ArtistSettlement } from '../types';
+import { ScheduleCalendar } from './ScheduleCalendar';
+import { IncomeChart } from './IncomeChart';
+import type { ArtistProject, ArtistTask, SettlementDetailPayload } from '../types';
 
 interface ArtistDashboardProps {
   userName?: string;
   onProjectClick?: (project: ArtistProject) => void;
   onTaskClick?: (task: ArtistTask) => void;
-  onSettlementClick?: (settlement: ArtistSettlement) => void;
+  onSettlementClick?: (payload: SettlementDetailPayload) => void;
 }
 
 const formatCurrency = (value: number) =>
@@ -26,6 +29,7 @@ export function ArtistDashboard({
 }: ArtistDashboardProps) {
   const { projects, tasks, settlements, isLoading, error, refetch } = useArtistDashboard();
   const updateTaskStatus = useUpdateArtistTaskStatus();
+  const { data: profileData, isLoading: profileLoading } = useArtistProfile();
 
   const handleStatusChange = (taskId: number, status: 'todo' | 'in_progress' | 'done') => {
     updateTaskStatus.mutate({ taskId, status });
@@ -86,6 +90,12 @@ export function ArtistDashboard({
           새로고침
         </button>
       </div>
+
+      {/* 프로필 카드 */}
+      <ArtistProfileCard
+        profile={profileData?.profile ?? null}
+        isLoading={profileLoading}
+      />
 
       {/* 요약 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -154,6 +164,12 @@ export function ArtistDashboard({
         />
       </div>
 
+      {/* 캘린더 뷰 */}
+      <ScheduleCalendar
+        projects={projects?.projects || []}
+        tasks={tasks?.tasks || []}
+      />
+
       {/* 정산 섹션 */}
       <SettlementSection
         settlements={settlements?.settlements || []}
@@ -165,6 +181,12 @@ export function ArtistDashboard({
           total: { count: 0, amount: 0 },
         }}
         onSettlementClick={onSettlementClick}
+      />
+
+      {/* 수입 통계 차트 */}
+      <IncomeChart
+        settlements={settlements?.settlements || []}
+        partnerSettlements={settlements?.partnerSettlements || []}
       />
     </div>
   );

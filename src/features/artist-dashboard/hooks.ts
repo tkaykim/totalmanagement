@@ -5,7 +5,11 @@ import {
   fetchArtistProjects,
   fetchArtistTasks,
   fetchArtistSettlements,
+  fetchArtistProfile,
+  fetchArtistNotifications,
+  markArtistNotificationsRead,
   updateArtistTaskStatus,
+  submitArtistProposal,
 } from './api';
 
 // 아티스트 프로젝트 조회 훅
@@ -33,6 +37,45 @@ export function useUpdateArtistTaskStatus() {
       updateArtistTaskStatus(taskId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['artist-tasks'] });
+    },
+  });
+}
+
+// 아티스트 프로필 조회 훅
+export function useArtistProfile() {
+  return useQuery({
+    queryKey: ['artist-profile'],
+    queryFn: fetchArtistProfile,
+  });
+}
+
+// 아티스트 알림 조회 훅
+export function useArtistNotifications(params?: { unread_only?: boolean; limit?: number }) {
+  return useQuery({
+    queryKey: ['artist-notifications', params],
+    queryFn: () => fetchArtistNotifications(params),
+  });
+}
+
+// 아티스트 알림 읽음 처리 훅
+export function useMarkNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: markArtistNotificationsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artist-notifications'] });
+    },
+  });
+}
+
+// 아티스트 제안 수락/거절 훅
+export function useSubmitArtistProposal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: submitArtistProposal,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artist-projects'] });
     },
   });
 }

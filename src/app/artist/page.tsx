@@ -3,7 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArtistDashboard } from '@/features/artist-dashboard';
+import {
+  ArtistDashboard,
+  useArtistDashboard,
+  useUpdateArtistTaskStatus,
+  ProjectDetailSheet,
+  TaskDetailDialog,
+  SettlementDetailDialog,
+  ArtistNotificationBell,
+} from '@/features/artist-dashboard';
+import type { ArtistProject, ArtistTask, SettlementDetailPayload } from '@/features/artist-dashboard';
 import { RefreshCw, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { canAccessArtistPage, type Role, type BuCode } from '@/lib/permissions';
@@ -115,14 +124,57 @@ export default function ArtistPage() {
   }
 
   return (
+    <ArtistPageContent user={user} onLogout={handleLogout} />
+  );
+}
+
+function ArtistPageContent({
+  user,
+  onLogout,
+}: {
+  user: UserInfo;
+  onLogout: () => void;
+}) {
+  const { projects, tasks, settlements, refetch } = useArtistDashboard();
+  const updateTaskStatus = useUpdateArtistTaskStatus();
+
+  const [selectedProject, setSelectedProject] = useState<ArtistProject | null>(null);
+  const [projectSheetOpen, setProjectSheetOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<ArtistTask | null>(null);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [settlementPayload, setSettlementPayload] = useState<SettlementDetailPayload | null>(null);
+  const [settlementDialogOpen, setSettlementDialogOpen] = useState(false);
+
+  const handleProjectClick = (project: ArtistProject) => {
+    setSelectedProject(project);
+    setProjectSheetOpen(true);
+  };
+
+  const handleTaskClick = (task: ArtistTask) => {
+    setSelectedTask(task);
+    setTaskDialogOpen(true);
+  };
+
+  const handleSettlementClick = (payload: SettlementDetailPayload) => {
+    setSettlementPayload(payload);
+    setSettlementDialogOpen(true);
+  };
+
+  const handleTaskStatusChange = (taskId: number, status: 'todo' | 'in_progress' | 'done') => {
+    updateTaskStatus.mutate({ taskId, status });
+    setTaskDialogOpen(false);
+    setSelectedTask(null);
+  };
+
+  const partnerSettlements = settlements?.partnerSettlements ?? [];
+
+  return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      {/* 헤더 */}
       <header className="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              {/* artist role은 루트 페이지 접근 불가, 그 외(leader/admin + HEAD)는 링크로 표시 */}
-              {user?.role === 'artist' ? (
+              {user.role === 'artist' ? (
                 <span className="text-xl font-black text-slate-900 dark:text-slate-100">
                   GRIGO
                 </span>
@@ -135,12 +187,13 @@ export default function ArtistPage() {
                 / 아티스트
               </span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <ArtistNotificationBell />
               <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {user?.name}
+                {user.name}
               </span>
               <button
-                onClick={handleLogout}
+                onClick={onLogout}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition"
               >
                 <LogOut className="h-3.5 w-3.5" />
@@ -151,24 +204,45 @@ export default function ArtistPage() {
         </div>
       </header>
 
-      {/* 메인 콘텐츠 */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ArtistDashboard 
-          userName={user?.name}
-          onProjectClick={(project) => {
-            console.log('Project clicked:', project);
-            // TODO: 프로젝트 상세 모달 또는 페이지로 이동
-          }}
-          onTaskClick={(task) => {
-            console.log('Task clicked:', task);
-            // TODO: 할일 상세 모달 열기
-          }}
-          onSettlementClick={(settlement) => {
-            console.log('Settlement clicked:', settlement);
-            // TODO: 정산 상세 모달 열기
-          }}
+        <ArtistDashboard
+          userName={user.name}
+          onProjectClick={handleProjectClick}
+          onTaskClick={handleTaskClick}
+          onSettlementClick={handleSettlementClick}
         />
       </main>
+
+      <ProjectDetailSheet
+        open={projectSheetOpen}
+        onOpenChange={setProjectSheetOpen}
+        project={
+          selectedProject
+            ? (projects?.projects?.find((p) => p.id === selectedProject.id) ?? selectedProject)
+            : null
+        }
+        tasks={tasks?.tasks ?? []}
+        settlements={settlements?.settlements ?? []}
+        partnerSettlements={partnerSettlements}
+        pmName={
+          selectedProject
+            ? (projects?.projects?.find((p) => p.id === selectedProject.id)?.pm_name ?? selectedProject.pm_name ?? null)
+            : undefined
+        }
+      />
+
+      <TaskDetailDialog
+        open={taskDialogOpen}
+        onOpenChange={setTaskDialogOpen}
+        task={selectedTask}
+        onStatusChange={handleTaskStatusChange}
+      />
+
+      <SettlementDetailDialog
+        open={settlementDialogOpen}
+        onOpenChange={setSettlementDialogOpen}
+        payload={settlementPayload}
+      />
     </div>
   );
 }
