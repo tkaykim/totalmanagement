@@ -191,6 +191,19 @@ async function sendPushToTokens(
           defaultVibrateTimings: true,
         },
       },
+      webpush: {
+        headers: {
+          Urgency: 'high',
+        },
+        notification: {
+          icon: '/easynext.png',
+          badge: '/easynext.png',
+          requireInteraction: false,
+        },
+        fcmOptions: {
+          link: payload.data?.action_url || '/',
+        },
+      },
       apns: {
         payload: {
           aps: {

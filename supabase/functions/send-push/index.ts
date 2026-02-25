@@ -105,6 +105,16 @@ async function sendFcm(
       priority: "high",
       notification: { channel_id: "default", sound: "default" },
     },
+    webpush: {
+      headers: { Urgency: "high" },
+      notification: {
+        icon: "/easynext.png",
+        badge: "/easynext.png",
+      },
+      fcm_options: {
+        link: payload.data?.action_url || "/",
+      },
+    },
     apns: {
       payload: { aps: { sound: "default", badge: 1 } },
     },
