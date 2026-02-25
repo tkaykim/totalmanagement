@@ -27,37 +27,41 @@ const messaging = firebase.messaging();
 
 /**
  * 백그라운드 메시지 핸들러
- * 앱이 포커스되지 않은 상태(백그라운드/종료)에서 푸시 수신 시 호출됩니다.
+ * 
+ * FCM이 notification 페이로드가 있는 메시지는 자동으로 표시합니다.
+ * 여기서는 data-only 메시지(notification 없는 경우)만 수동 표시합니다.
+ * 양쪽 모두 표시하면 알림이 2번 뜨는 중복 현상이 발생합니다.
  */
 messaging.onBackgroundMessage((payload) => {
     console.log('[SW] 백그라운드 메시지 수신:', payload);
 
-    const notification = payload.notification || {};
-    const data = payload.data || {};
+    // notification 페이로드가 있으면 FCM이 자동 표시하므로 건너뜀
+    if (payload.notification) {
+        console.log('[SW] notification 페이로드 → FCM 자동 표시 (수동 표시 안 함)');
+        return;
+    }
 
-    const title = notification.title || data.title || '알림';
-    const body = notification.body || data.body || '새 알림이 도착했습니다.';
-    const icon = '/easynext.png';
-    const badge = '/easynext.png';
+    // data-only 메시지만 수동 표시
+    const data = payload.data || {};
+    const title = data.title || '알림';
+    const body = data.body || '새 알림이 도착했습니다.';
 
     const options = {
         body,
-        icon,
-        badge,
+        icon: '/easynext.png',
+        badge: '/easynext.png',
         tag: data.entity_id || 'default',
         data: {
             action_url: data.action_url || '/',
             entity_type: data.entity_type || '',
             entity_id: data.entity_id || '',
         },
-        // iOS에서 진동 및 소리
         vibrate: [200, 100, 200],
         requireInteraction: false,
     };
 
-    // 이미지가 있으면 첨부
-    if (notification.image || data.image) {
-        options.image = notification.image || data.image;
+    if (data.image) {
+        options.image = data.image;
     }
 
     return self.registration.showNotification(title, options);
