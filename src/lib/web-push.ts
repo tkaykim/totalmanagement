@@ -47,6 +47,19 @@ export function isIOSSafari(): boolean {
 }
 
 /**
+ * 브라우저 고유 Device ID 가져오기 (없으면 생성)
+ */
+export function getWebDeviceId(): string {
+    if (typeof window === 'undefined') return '';
+    let deviceId = localStorage.getItem('web_push_device_id');
+    if (!deviceId) {
+        deviceId = crypto.randomUUID?.() || Math.random().toString(36).substring(2);
+        localStorage.setItem('web_push_device_id', deviceId);
+    }
+    return deviceId;
+}
+
+/**
  * 웹 푸시 알림이 지원되는 환경인지 확인
  */
 export function isWebPushSupported(): boolean {
@@ -197,6 +210,7 @@ async function registerWebPushToken(
             body: JSON.stringify({
                 token,
                 platform: 'web',
+                device_id: getWebDeviceId(),
             }),
         });
 
