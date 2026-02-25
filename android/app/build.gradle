@@ -1,5 +1,18 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def releaseSigningConfig = null
+if (keystorePropertiesFile.exists()) {
+    def keystoreProperties = new Properties()
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    releaseSigningConfig = [
+        storeFile: file(keystoreProperties['storeFile']?.trim()),
+        storePassword: keystoreProperties['storePassword']?.trim(),
+        keyAlias: keystoreProperties['keyAlias']?.trim(),
+        keyPassword: keystoreProperties['keyPassword']?.trim()
+    ]
+}
+
 android {
     namespace = "com.grigo.totalmanagements"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +29,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (releaseSigningConfig != null) {
+            release {
+                storeFile releaseSigningConfig.storeFile
+                storePassword releaseSigningConfig.storePassword
+                keyAlias releaseSigningConfig.keyAlias
+                keyPassword releaseSigningConfig.keyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (releaseSigningConfig != null) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
         }
     }
 }

@@ -10,6 +10,8 @@ import {
 } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { initPushNotifications, isNativePlatform } from '@/lib/capacitor';
+import { initWebPush } from '@/lib/web-push';
+import { IOSPushPrompt } from '@/components/IOSPushPrompt';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
 
@@ -79,6 +81,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }
         },
       });
+    } else {
+      // 웹/PWA 환경: Web Push 초기화 (iOS PWA 포함)
+      initWebPush({
+        onNotificationReceived: (payload) => {
+          setTimeout(() => {
+            toast({
+              title: payload.title,
+              description: payload.body || '새 알림이 도착했습니다.',
+            });
+          }, 100);
+        },
+      });
     }
   }, []);
 
@@ -91,6 +105,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         {children}
+        <IOSPushPrompt />
         <Toaster />
       </QueryClientProvider>
     </ThemeProvider>
