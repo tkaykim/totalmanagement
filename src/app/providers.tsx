@@ -9,11 +9,12 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { initPushNotifications, isNativePlatform } from '@/lib/capacitor';
-import { initWebPush } from '@/lib/web-push';
+import { initPushNotifications, isNativePlatform, retryPushRegistration } from '@/lib/capacitor';
+import { initWebPush, retryWebPushRegistration } from '@/lib/web-push';
 import { IOSPushPrompt } from '@/components/IOSPushPrompt';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
+import { createClient } from '@/lib/supabase/client';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -94,6 +95,27 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         },
       });
     }
+  }, []);
+
+  // 로그인 후 푸시 토큰 재등록 (로그인 전 토큰 저장 실패 복구)
+  useEffect(() => {
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        // 로그인 완료 → 2초 대기 후 토큰 재등록 (세션 안정화 대기)
+        setTimeout(() => {
+          if (isNativePlatform()) {
+            retryPushRegistration();
+          } else {
+            retryWebPushRegistration();
+          }
+        }, 2000);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (

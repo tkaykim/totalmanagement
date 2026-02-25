@@ -164,6 +164,26 @@ export async function initWebPush(handlers?: WebPushHandlers): Promise<void> {
 }
 
 /**
+ * 로그인 후 웹 푸시 토큰 재등록
+ * 
+ * initWebPush가 로그인 전에 실행되어 토큰 저장이 401로 실패한 경우,
+ * 로그인 완료 후 이 함수를 호출하면 토큰이 올바르게 저장됩니다.
+ */
+export async function retryWebPushRegistration(): Promise<void> {
+    if (!isWebPushSupported()) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+        const swRegistration = await navigator.serviceWorker.getRegistration('/');
+        if (swRegistration) {
+            await registerWebPushToken(swRegistration);
+        }
+    } catch (error) {
+        console.error('[WebPush] 토큰 재등록 실패:', error);
+    }
+}
+
+/**
  * 웹 푸시 알림 권한 요청 및 토큰 등록
  * 
  * ⚠️ iOS Safari에서는 반드시 사용자 제스처(버튼 클릭 등)
