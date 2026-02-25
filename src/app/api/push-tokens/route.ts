@@ -62,20 +62,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // 1. 같은 사용자, 같은 플랫폼의 다른 토큰을 비활성화 (현재 토큰만 활성 유지)
-    const { error: cleanupError } = await supabase
-      .from('push_tokens')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('user_id', user.id)
-      .eq('platform', platform)
-      .neq('token', token);
-
-    if (cleanupError) {
-      console.warn('Stale token cleanup failed:', cleanupError);
-    }
-
-    // 2. 새 토큰 등록/업데이트
     const { data, error } = await supabase
       .from('push_tokens')
       .upsert(

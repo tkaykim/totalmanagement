@@ -268,42 +268,63 @@ async function sendPushToTokens(
 
 /**
  * 특정 사용자의 활성 Push 토큰 조회
+ * 플랫폼별 최신 토큰 1개만 반환하여 중복 전송 방지
  */
 async function getUserPushTokens(userId: string): Promise<string[]> {
   const supabase = await createPureClient();
 
   const { data, error } = await supabase
     .from('push_tokens')
-    .select('token')
+    .select('token, platform, updated_at')
     .eq('user_id', userId)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false });
 
   if (error) {
     console.error('[Push] 토큰 조회 실패:', error);
     return [];
   }
 
-  return data?.map((row) => row.token) ?? [];
+  // 플랫폼별 최신 토큰 1개만 사용 (중복 전송 방지)
+  const latestByPlatform = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (!latestByPlatform.has(row.platform)) {
+      latestByPlatform.set(row.platform, row.token);
+    }
+  }
+
+  return Array.from(latestByPlatform.values());
 }
 
 /**
  * 여러 사용자의 활성 Push 토큰 일괄 조회
+ * user_id + platform별 최신 토큰 1개만 반환하여 중복 전송 방지
  */
 async function getMultipleUserPushTokens(userIds: string[]): Promise<string[]> {
   const supabase = await createPureClient();
 
   const { data, error } = await supabase
     .from('push_tokens')
-    .select('token')
+    .select('token, user_id, platform, updated_at')
     .in('user_id', userIds)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false });
 
   if (error) {
     console.error('[Push] 다중 토큰 조회 실패:', error);
     return [];
   }
 
-  return data?.map((row) => row.token) ?? [];
+  // user_id + platform 별 최신 토큰 1개만 사용
+  const latestByUserPlatform = new Map<string, string>();
+  for (const row of data ?? []) {
+    const key = `${row.user_id}:${row.platform}`;
+    if (!latestByUserPlatform.has(key)) {
+      latestByUserPlatform.set(key, row.token);
+    }
+  }
+
+  return Array.from(latestByUserPlatform.values());
 }
 
 /**

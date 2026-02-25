@@ -1,11 +1,13 @@
 /* eslint-disable no-undef */
 /**
- * Firebase Messaging Service Worker
+ * Firebase Messaging Service Worker v2
  * 
  * PWA(iOS, 데스크탑 브라우저)에서 백그라운드 푸시 알림을 수신·표시합니다.
- * iOS Safari는 push 이벤트 수신 즉시 showNotification()을 호출해야 하며,
- * 지연하면 권한이 회수될 수 있습니다.
  */
+
+// 새 SW가 설치되면 즉시 활성화 (오래된 SW 교체)
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
 // Firebase SDK (compat 버전 — Service Worker에서 사용)
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
