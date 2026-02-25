@@ -145,12 +145,27 @@ export function NotificationDrawer() {
     }
   };
 
+  // entity_type → view 매핑 (action_url 없을 때 fallback)
+  const getViewFromEntityType = (entityType?: string): string | null => {
+    const mapping: Record<string, string> = {
+      task: '/?view=tasks',
+      project: '/?view=projects',
+      comment: '/?view=tasks',
+      attendance: '/?view=attendance',
+      work_request: '/?view=attendance',
+      leave: '/?view=leave',
+      reservation: '/?view=meetingRooms',
+    };
+    return entityType ? mapping[entityType] || null : null;
+  };
+
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.read) {
       handleMarkAsRead(notification.id);
     }
-    if (notification.action_url) {
-      router.push(notification.action_url);
+    const targetUrl = notification.action_url || getViewFromEntityType(notification.entity_type);
+    if (targetUrl) {
+      router.push(targetUrl);
       setIsOpen(false);
     }
   };
@@ -174,8 +189,8 @@ export function NotificationDrawer() {
         </button>
       </SheetTrigger>
 
-      <SheetContent 
-        side="right" 
+      <SheetContent
+        side="right"
         className="w-full sm:w-[420px] p-0 flex flex-col bg-white dark:bg-slate-900"
       >
         <SheetHeader className="px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800">
@@ -300,8 +315,8 @@ function NotificationItem({ notification, onClick, onMarkAsRead, onDelete }: Not
       className={cn(
         'relative border-l-4 transition-all duration-200',
         borderColor,
-        !notification.read 
-          ? 'bg-blue-50/70 dark:bg-blue-900/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30' 
+        !notification.read
+          ? 'bg-blue-50/70 dark:bg-blue-900/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30'
           : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50'
       )}
     >

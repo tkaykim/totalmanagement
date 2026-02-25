@@ -155,8 +155,29 @@ function HomePage() {
   // URL 파라미터에서 view 변경 감지 (알림 클릭 등으로 URL이 변할 때)
   useEffect(() => {
     const urlView = searchParams.get('view') as View | null;
+    const urlId = searchParams.get('id');
+
     if (urlView && urlView !== view) {
       setView(urlView);
+    }
+
+    // id 파라미터가 있으면 해당 항목 모달 자동 오픈
+    if (urlId) {
+      const targetView = urlView || view;
+      if (targetView === 'projects') {
+        setModalProjectId(urlId);
+      } else if (targetView === 'tasks') {
+        // 할일 상세는 프로젝트 모달 내 할일이므로 project_id를 찾아야 함
+        // 할일 ID로 소속 프로젝트를 찾아서 프로젝트 모달 오픈
+        const task = tasks.find(t => String(t.id) === urlId);
+        if (task?.projectId) {
+          setModalProjectId(task.projectId);
+        }
+      }
+      // URL에서 id 제거 (뒤로가기 시 모달 재오픈 방지)
+      const url = new URL(window.location.href);
+      url.searchParams.delete('id');
+      window.history.replaceState({}, '', url.toString());
     }
   }, [searchParams]);
 

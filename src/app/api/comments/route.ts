@@ -124,12 +124,12 @@ export async function POST(request: NextRequest) {
 
       if (project) {
         const targetUserIds: string[] = [];
-        
+
         // PM 추가
         if (project.pm_id) {
           targetUserIds.push(project.pm_id);
         }
-        
+
         // 참여자들 추가
         if (project.participants && Array.isArray(project.participants)) {
           project.participants.forEach((p: any) => {
@@ -145,7 +145,8 @@ export async function POST(request: NextRequest) {
           appUser.data.name,
           project.name,
           String(data.id),
-          user.id
+          user.id,
+          String(entity_id)
         );
       }
     } else if (entity_type === 'task') {
@@ -169,7 +170,8 @@ export async function POST(request: NextRequest) {
           appUser.data.name,
           task.title,
           project?.name || '프로젝트',
-          String(data.id)
+          String(data.id),
+          String(entity_id)
         );
       }
     }
@@ -192,7 +194,8 @@ export async function POST(request: NextRequest) {
             appUser.data.name,
             entity_type as 'task' | 'project' | 'financial',
             entityTitle,
-            String(data.id)
+            String(data.id),
+            String(entity_id)
           );
         }
       }

@@ -25,7 +25,7 @@ async function getHeadAdminIds(): Promise<string[]> {
       .select('id')
       .eq('bu_code', 'HEAD')
       .eq('role', 'admin');
-    
+
     return data?.map(u => u.id) || [];
   } catch {
     return [];
@@ -41,7 +41,7 @@ async function getAllUserIds(): Promise<string[]> {
     const { data } = await supabase
       .from('app_users')
       .select('id');
-    
+
     return data?.map(u => u.id) || [];
   } catch {
     return [];
@@ -58,7 +58,7 @@ async function getManagerIds(): Promise<string[]> {
       .from('app_users')
       .select('id')
       .in('role', ['admin', 'leader']);
-    
+
     return data?.map(u => u.id) || [];
   } catch {
     return [];
@@ -75,7 +75,7 @@ async function getManagerIds(): Promise<string[]> {
 export async function createNotification(data: NotificationData) {
   try {
     const supabase = await createPureClient();
-    
+
     const { error } = await supabase
       .from('notifications')
       .insert({
@@ -182,7 +182,7 @@ export async function notifyTaskAssigned(
   const message = assignerName
     ? `${assignerName}님이 [${projectName}] "${taskTitle}" 할일을 배정했습니다.`
     : `[${projectName}] ${taskTitle}`;
-  
+
   return createNotification({
     userId: assigneeId,
     title: '새 할일이 배정되었습니다',
@@ -190,7 +190,7 @@ export async function notifyTaskAssigned(
     type: 'info',
     entityType: 'task',
     entityId: taskId,
-    actionUrl: '/?view=tasks',
+    actionUrl: `/?view=tasks&id=${taskId}`,
   });
 }
 
@@ -215,7 +215,7 @@ export async function notifyTaskDueSoon(
     type: 'warning',
     entityType: 'task',
     entityId: taskId,
-    actionUrl: '/?view=tasks',
+    actionUrl: `/?view=tasks&id=${taskId}`,
   });
 }
 
@@ -231,7 +231,7 @@ export async function notifyProjectPMAssigned(
   const message = assignerName
     ? `${assignerName}님이 "${projectName}" 프로젝트의 PM으로 지정했습니다.`
     : `"${projectName}" 프로젝트를 담당하게 되었습니다.`;
-  
+
   return createNotification({
     userId: pmId,
     title: '프로젝트 PM으로 배정되었습니다',
@@ -239,7 +239,7 @@ export async function notifyProjectPMAssigned(
     type: 'info',
     entityType: 'project',
     entityId: projectId,
-    actionUrl: '/?view=projects',
+    actionUrl: `/?view=projects&id=${projectId}`,
   });
 }
 
@@ -255,7 +255,7 @@ export async function notifyProjectParticipantAdded(
   const message = adderName
     ? `${adderName}님이 "${projectName}" 프로젝트에 참여자로 추가했습니다.`
     : `"${projectName}" 프로젝트에 참여자로 추가되었습니다.`;
-  
+
   return createNotification({
     userId: participantId,
     title: '프로젝트에 참여하게 되었습니다',
@@ -263,7 +263,7 @@ export async function notifyProjectParticipantAdded(
     type: 'info',
     entityType: 'project',
     entityId: projectId,
-    actionUrl: '/?view=projects',
+    actionUrl: `/?view=projects&id=${projectId}`,
   });
 }
 
@@ -333,7 +333,7 @@ export async function notifyWorkRequestRejected(
   return createNotification({
     userId: requesterId,
     title: `${typeLabel} 신청이 반려되었습니다`,
-    message: rejectionReason 
+    message: rejectionReason
       ? `${startDate} ${typeLabel} 신청이 반려되었습니다. 사유: ${rejectionReason}`
       : `${startDate} ${typeLabel} 신청이 반려되었습니다.`,
     type: 'error',
@@ -392,7 +392,7 @@ export async function notifyLeaveRequestRejected(
   return createNotification({
     userId: requesterId,
     title: `${typeLabel} 신청이 반려되었습니다`,
-    message: rejectionReason 
+    message: rejectionReason
       ? `${startDate} ${typeLabel} 신청이 반려되었습니다. 사유: ${rejectionReason}`
       : `${startDate} ${typeLabel} 신청이 반려되었습니다.`,
     type: 'error',
@@ -410,14 +410,15 @@ export async function notifyCommentMention(
   authorName: string,
   entityType: 'task' | 'project' | 'financial',
   entityTitle: string,
-  commentId: string
+  commentId: string,
+  entityId?: string
 ) {
-  const actionUrl = entityType === 'task' 
-    ? '/?view=tasks' 
-    : entityType === 'project' 
-    ? '/?view=projects' 
-    : '/?view=finance';
-  
+  const actionUrl = entityType === 'task'
+    ? `/?view=tasks${entityId ? `&id=${entityId}` : ''}`
+    : entityType === 'project'
+      ? `/?view=projects${entityId ? `&id=${entityId}` : ''}`
+      : '/?view=settlement';
+
   return createNotification({
     userId: mentionedUserId,
     title: `${authorName}님이 회원님을 언급했습니다`,
@@ -437,9 +438,10 @@ export async function notifyProjectComment(
   authorName: string,
   projectName: string,
   commentId: string,
-  excludeUserId?: string
+  excludeUserId?: string,
+  projectId?: string
 ) {
-  const recipients = excludeUserId 
+  const recipients = excludeUserId
     ? targetUserIds.filter(id => id !== excludeUserId)
     : targetUserIds;
 
@@ -451,7 +453,7 @@ export async function notifyProjectComment(
     type: 'info',
     entityType: 'comment',
     entityId: commentId,
-    actionUrl: '/?view=projects',
+    actionUrl: `/?view=projects${projectId ? `&id=${projectId}` : ''}`,
   });
 }
 
@@ -463,7 +465,8 @@ export async function notifyTaskComment(
   authorName: string,
   taskTitle: string,
   projectName: string,
-  commentId: string
+  commentId: string,
+  taskId?: string
 ) {
   return createNotification({
     userId: assigneeId,
@@ -472,7 +475,7 @@ export async function notifyTaskComment(
     type: 'info',
     entityType: 'comment',
     entityId: commentId,
-    actionUrl: '/?view=tasks',
+    actionUrl: `/?view=tasks${taskId ? `&id=${taskId}` : ''}`,
   });
 }
 
@@ -497,9 +500,9 @@ export async function notifyLeaveRequestCreated(
   };
   const label = typeLabel[leaveType] || leaveType;
   const dateRange = startDate === endDate ? startDate : `${startDate} ~ ${endDate}`;
-  
+
   const managerIds = await getManagerIds();
-  
+
   return createNotificationForUsers(managerIds, {
     title: '새로운 휴가 신청',
     message: `${requesterName}님이 ${label} 신청 (${dateRange})`,
@@ -533,7 +536,7 @@ export async function notifyReservationCreated(
   const label = RESOURCE_TYPE_LABELS[resourceType] || resourceType;
   const userIds = await getAllUserIds();
   const targetUsers = excludeUserId ? userIds.filter(id => id !== excludeUserId) : userIds;
-  
+
   return createNotificationForUsers(targetUsers, {
     title: `${label} 예약`,
     message: `${reserverName}님이 ${resourceName} 예약 (${formatTimeRange(startTime, endTime)})`,
@@ -559,7 +562,7 @@ export async function notifyReservationUpdated(
   const label = RESOURCE_TYPE_LABELS[resourceType] || resourceType;
   const userIds = await getAllUserIds();
   const targetUsers = excludeUserId ? userIds.filter(id => id !== excludeUserId) : userIds;
-  
+
   return createNotificationForUsers(targetUsers, {
     title: `${label} 예약 변경`,
     message: `${reserverName}님의 ${resourceName} 예약이 변경됨 (${formatTimeRange(startTime, endTime)})`,
@@ -584,7 +587,7 @@ export async function notifyReservationCancelled(
   const label = RESOURCE_TYPE_LABELS[resourceType] || resourceType;
   const userIds = await getAllUserIds();
   const targetUsers = excludeUserId ? userIds.filter(id => id !== excludeUserId) : userIds;
-  
+
   return createNotificationForUsers(targetUsers, {
     title: `${label} 예약 취소`,
     message: `${reserverName}님의 ${resourceName} 예약이 취소됨`,
@@ -627,9 +630,9 @@ export async function notifyCheckInToHeadAdmin(
 ) {
   const headAdminIds = await getHeadAdminIds();
   if (headAdminIds.length === 0) return { success: true };
-  
+
   const timeStr = formatTimeKST(checkInTime);
-  
+
   return createNotificationForUsers(headAdminIds, {
     title: '출근 알림',
     message: `${userName}님이 ${timeStr}에 출근했습니다.`,
@@ -650,9 +653,9 @@ export async function notifyCheckOutToHeadAdmin(
 ) {
   const headAdminIds = await getHeadAdminIds();
   if (headAdminIds.length === 0) return { success: true };
-  
+
   const timeStr = formatTimeKST(checkOutTime);
-  
+
   return createNotificationForUsers(headAdminIds, {
     title: '퇴근 알림',
     message: `${userName}님이 ${timeStr}에 퇴근했습니다.`,
