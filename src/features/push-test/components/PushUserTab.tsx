@@ -1,10 +1,17 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Send, Users, Search, X, AlertCircle, Loader2 } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Send, Users, Search, X, AlertCircle, Loader2, Smartphone, Globe, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { PushResultPanel } from './PushResultPanel';
+
+interface TokenInfo {
+  platform: string;
+  isActive: boolean;
+  updatedAt: string;
+  tokenPreview: string;
+}
 
 interface AppUserItem {
   id: string;
@@ -36,6 +43,8 @@ export function PushUserTab() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tokensByUser, setTokensByUser] = useState<Record<string, TokenInfo[]>>({});
+  const [tokensLoading, setTokensLoading] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -72,6 +81,30 @@ export function PushUserTab() {
     () => users.filter((u) => selectedUserIds.includes(u.id)),
     [users, selectedUserIds]
   );
+
+  // 선택된 사용자의 토큰 정보 조회
+  const fetchTokens = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) {
+      setTokensByUser({});
+      return;
+    }
+    setTokensLoading(true);
+    try {
+      const res = await fetch(`/api/push/tokens?userIds=${ids.join(',')}`);
+      const data = await res.json();
+      if (res.ok) {
+        setTokensByUser(data.tokensByUser || {});
+      }
+    } catch {
+      // 토큰 조회 실패해도 무시
+    } finally {
+      setTokensLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTokens(selectedUserIds);
+  }, [selectedUserIds, fetchTokens]);
 
   const handleSend = async () => {
     if (!title.trim() || !message.trim()) {
@@ -120,26 +153,75 @@ export function PushUserTab() {
           사용자 선택
         </h3>
 
-        {/* 선택된 사용자 뱃지 */}
+        {/* 선택된 사용자 뱃지 + 토큰 정보 */}
         {selectedUsers.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {selectedUsers.map((u) => (
-              <span
-                key={u.id}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 text-xs font-medium"
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {selectedUsers.map((u) => (
+                <span
+                  key={u.id}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 text-xs font-medium"
+                >
+                  {u.name}
+                  <button onClick={() => toggleUser(u.id)} className="hover:text-orange-900 dark:hover:text-orange-100">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={() => setSelectedUserIds([])}
+                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline"
               >
-                {u.name}
-                <button onClick={() => toggleUser(u.id)} className="hover:text-orange-900 dark:hover:text-orange-100">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-            <button
-              onClick={() => setSelectedUserIds([])}
-              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline"
-            >
-              전체 해제
-            </button>
+                전체 해제
+              </button>
+            </div>
+
+            {/* 토큰 정보 패널 */}
+            {tokensLoading ? (
+              <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                <Loader2 className="h-3 w-3 animate-spin" /> 토큰 조회 중...
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3 space-y-2">
+                <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">등록 디바이스</p>
+                {selectedUsers.map((u) => {
+                  const tokens = tokensByUser[u.id] || [];
+                  const activeTokens = tokens.filter(t => t.isActive);
+                  return (
+                    <div key={u.id} className="flex items-start gap-2">
+                      <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 min-w-[60px] pt-0.5">{u.name}</span>
+                      {activeTokens.length === 0 ? (
+                        <span className="text-[10px] text-red-400 dark:text-red-500 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" /> 활성 토큰 없음
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {activeTokens.map((t, i) => (
+                            <span
+                              key={i}
+                              className={cn(
+                                'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold',
+                                t.platform === 'android'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
+                                  : t.platform === 'web'
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                                    : 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300'
+                              )}
+                              title={`${t.tokenPreview} | ${new Date(t.updatedAt).toLocaleString('ko-KR')}`}
+                            >
+                              {t.platform === 'android' ? <Smartphone className="h-2.5 w-2.5" /> :
+                                t.platform === 'web' ? <Globe className="h-2.5 w-2.5" /> :
+                                  <Monitor className="h-2.5 w-2.5" />}
+                              {t.platform.toUpperCase()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -243,8 +325,8 @@ export function PushUserTab() {
                     type === t
                       ? t === 'info' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
                         : t === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
-                        : t === 'warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+                          : t === 'warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
                       : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                   )}
                 >
