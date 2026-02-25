@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock, Pencil, Search, Check, Circle, Clock, CheckCircle2, ListTodo, MessageCircle, FileText } from 'lucide-react';
+import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock, Pencil, Search, Check, Circle, Clock, CheckCircle2, ListTodo, MessageCircle, FileText, Paperclip, Download, Image as ImageIcon, File as FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
 import type { AppUser, Project as DbProject } from '@/types/database';
@@ -96,7 +96,7 @@ interface UnifiedProjectModalProps {
     status?: string;
     participants?: Participant[];
     pendingTasks?: PendingTask[];
-  }) => void | Promise<void>;
+  }) => void | Promise<void> | Promise<{ id: string } | void>;
   onDelete?: (id: string) => void | Promise<void>;
   defaultBu: BU;
   usersData?: { users: any[]; currentUser: any };
@@ -370,8 +370,8 @@ function TasksSection({
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const filteredTasks = statusFilter === 'all' 
-    ? tasks 
+  const filteredTasks = statusFilter === 'all'
+    ? tasks
     : tasks.filter((t) => t.status === statusFilter);
 
   const taskCounts = {
@@ -401,9 +401,9 @@ function TasksSection({
     today.setHours(0, 0, 0, 0);
     const dueDay = new Date(d);
     dueDay.setHours(0, 0, 0, 0);
-    
+
     const diffDays = Math.ceil((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) return { text: `${Math.abs(diffDays)}일 지남`, isOverdue: true };
     if (diffDays === 0) return { text: '오늘', isOverdue: false };
     if (diffDays === 1) return { text: '내일', isOverdue: false };
@@ -491,7 +491,7 @@ function TasksSection({
               filteredTasks.map((task) => {
                 const StatusIcon = TASK_STATUS_CONFIG[task.status].icon;
                 const dueInfo = formatDueDate(task.dueDate);
-                
+
                 return (
                   <div
                     key={task.id}
@@ -505,13 +505,13 @@ function TasksSection({
                     )}>
                       <StatusIcon className="h-3.5 w-3.5" />
                     </div>
-                    
+
                     {/* 할일 내용 */}
                     <div className="flex-1 min-w-0">
                       <p className={cn(
                         "text-sm font-medium truncate",
-                        task.status === 'done' 
-                          ? "text-slate-400 dark:text-slate-500 line-through" 
+                        task.status === 'done'
+                          ? "text-slate-400 dark:text-slate-500 line-through"
                           : "text-slate-700 dark:text-slate-200"
                       )}>
                         {task.title}
@@ -691,6 +691,36 @@ export function UnifiedProjectModal({
   const [inlineTaskPriority, setInlineTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [inlineTaskDueDate, setInlineTaskDueDate] = useState('');
 
+  // 설명 첨부파일 상태
+  type DescAttachment = { id: number; file_name: string; file_path: string; mime_type: string; file_size: number; public_url?: string };
+  const [descriptionFiles, setDescriptionFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<DescAttachment[]>([]);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<number[]>([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 기존 첨부파일 로드 (view/edit 모드)
+  useEffect(() => {
+    if (project?.id) {
+      fetch(`/api/projects/${project.id}/documents`)
+        .then((res) => res.json())
+        .then((docs: any[]) => {
+          if (Array.isArray(docs)) {
+            const mapped = docs.map((d: any) => ({
+              id: d.id,
+              file_name: d.file_name,
+              file_path: d.file_path,
+              mime_type: d.mime_type || '',
+              file_size: d.file_size || 0,
+              public_url: d.public_url || '',
+            }));
+            setExistingAttachments(mapped);
+          }
+        })
+        .catch(() => { });
+    }
+  }, [project?.id]);
+
   // 재무 요약
   const financeSummary = financeData.reduce(
     (acc, entry) => {
@@ -736,7 +766,7 @@ export function UnifiedProjectModal({
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
-    
+
     if (!form.name || !form.cat) {
       setHasValidationError(true);
       toast({
@@ -749,7 +779,7 @@ export function UnifiedProjectModal({
 
     setHasValidationError(false);
     setIsSubmitting(true);
-    
+
     try {
       const participants = selectedParticipants.map((p) => ({
         user_id: p.type === 'user' ? (p.id as string) : undefined,
@@ -758,7 +788,7 @@ export function UnifiedProjectModal({
         role: 'participant',
       }));
 
-      await onSubmit({
+      const result = await onSubmit({
         ...(project && { id: project.id }),
         name: form.name,
         bu: form.bu,
@@ -775,6 +805,40 @@ export function UnifiedProjectModal({
         participants,
         ...(isCreateMode && pendingTasks.length > 0 && { pendingTasks }),
       });
+
+      // 프로젝트 생성/수정 후 첨부파일 업로드
+      const projectId = (result as any)?.id || project?.id;
+      if (projectId) {
+        // 삭제된 첨부파일 처리
+        for (const docId of removedAttachmentIds) {
+          try {
+            await fetch(`/api/projects/${projectId}/documents/${docId}`, { method: 'DELETE' });
+          } catch (e) { /* ignore */ }
+        }
+
+        // 새 파일 업로드
+        if (descriptionFiles.length > 0) {
+          setIsUploadingFiles(true);
+          try {
+            const formData = new FormData();
+            descriptionFiles.forEach((file) => formData.append('files', file));
+            formData.append('file_type', 'description');
+            await fetch(`/api/projects/${projectId}/documents`, {
+              method: 'POST',
+              body: formData,
+            });
+          } catch (e) {
+            console.error('File upload failed:', e);
+            toast({
+              variant: 'destructive',
+              title: '파일 업로드 실패',
+              description: '일부 파일이 업로드되지 않았습니다.',
+            });
+          } finally {
+            setIsUploadingFiles(false);
+          }
+        }
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -855,7 +919,7 @@ export function UnifiedProjectModal({
   // 외주업체 선택에 따라 필터링된 외주담당자 목록
   const filteredPartnerWorkers = useMemo(() => {
     if (!partnerWorkersData) return [];
-    
+
     if (form.partner_company_id) {
       // 선택한 업체 소속 직원만 표시
       return partnerWorkersData.filter(
@@ -983,8 +1047,8 @@ export function UnifiedProjectModal({
                       placeholder="프로젝트명을 입력하세요 *"
                       className={cn(
                         "w-full text-xl font-bold bg-transparent border-b-2 text-slate-800 dark:text-slate-100 px-1 py-1 outline-none focus:border-blue-500 placeholder:text-slate-400",
-                        hasValidationError && !form.name 
-                          ? "border-red-500" 
+                        hasValidationError && !form.name
+                          ? "border-red-500"
                           : "border-slate-300 dark:border-slate-500"
                       )}
                     />
@@ -1004,8 +1068,8 @@ export function UnifiedProjectModal({
                       placeholder="카테고리 *"
                       className={cn(
                         "w-full text-sm bg-transparent border-b-2 text-slate-600 dark:text-slate-300 px-1 py-1 outline-none focus:border-blue-500 placeholder:text-slate-400",
-                        hasValidationError && !form.cat 
-                          ? "border-red-500" 
+                        hasValidationError && !form.cat
+                          ? "border-red-500"
                           : "border-slate-300 dark:border-slate-500"
                       )}
                     />
@@ -1074,24 +1138,151 @@ export function UnifiedProjectModal({
             <section className="space-y-2">
               <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">설명</h4>
               {isEditable ? (
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="프로젝트 설명을 입력하세요"
-                  rows={2}
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 resize-none"
-                />
+                <div className="space-y-3">
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="프로젝트 설명을 입력하세요"
+                    rows={2}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 resize-none"
+                  />
+                  {/* 파일 첨부 영역 */}
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.txt,.zip,.rar"
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setDescriptionFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+                        }
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition"
+                    >
+                      <Paperclip className="h-3.5 w-3.5" />
+                      파일 첨부 (PDF, 이미지 등)
+                    </button>
+                  </div>
+
+                  {/* 기존 첨부파일 목록 */}
+                  {existingAttachments.filter((a) => !removedAttachmentIds.includes(a.id)).length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase">기존 첨부</span>
+                      <div className="flex flex-wrap gap-2">
+                        {existingAttachments
+                          .filter((a) => !removedAttachmentIds.includes(a.id))
+                          .map((att) => {
+                            const isImage = att.mime_type?.startsWith('image/');
+                            return (
+                              <div
+                                key={att.id}
+                                className="group relative flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs"
+                              >
+                                {isImage ? (
+                                  <ImageIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                                ) : (
+                                  <FileIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                )}
+                                <span className="max-w-[140px] truncate text-slate-700 dark:text-slate-300">{att.file_name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setRemovedAttachmentIds((prev) => [...prev, att.id])}
+                                  className="ml-1 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 새 첨부파일 프리뷰 */}
+                  {descriptionFiles.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase">새 첨부 ({descriptionFiles.length}개)</span>
+                      <div className="flex flex-wrap gap-2">
+                        {descriptionFiles.map((file, idx) => {
+                          const isImage = file.type.startsWith('image/');
+                          return (
+                            <div
+                              key={`${file.name}-${idx}`}
+                              className="group relative flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-xs"
+                            >
+                              {isImage ? (
+                                <ImageIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                              ) : (
+                                <FileIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                              )}
+                              <span className="max-w-[140px] truncate text-slate-700 dark:text-slate-300">{file.name}</span>
+                              <span className="text-[10px] text-slate-400">
+                                {file.size < 1024 * 1024
+                                  ? `${Math.round(file.size / 1024)}KB`
+                                  : `${(file.size / (1024 * 1024)).toFixed(1)}MB`}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setDescriptionFiles((prev) => prev.filter((_, i) => i !== idx))}
+                                className="ml-1 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2">
-                  {form.description || '설명이 없습니다.'}
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2">
+                    {form.description || '설명이 없습니다.'}
+                  </p>
+                  {/* View 모드 첨부파일 표시 */}
+                  {existingAttachments.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase">첨부파일 ({existingAttachments.length}개)</span>
+                      <div className="flex flex-wrap gap-2">
+                        {existingAttachments.map((att) => {
+                          const isImage = att.mime_type?.startsWith('image/');
+                          return (
+                            <a
+                              key={att.id}
+                              href={att.public_url || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs hover:border-blue-300 dark:hover:border-blue-600 transition group"
+                            >
+                              {isImage ? (
+                                <ImageIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                              ) : (
+                                <FileIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                              )}
+                              <span className="max-w-[160px] truncate text-slate-700 dark:text-slate-300">{att.file_name}</span>
+                              <Download className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition flex-shrink-0" />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </section>
 
             {/* 담당자 섹션 */}
             <section className="space-y-4">
               <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">담당자</h4>
-              
+
               {isEditable ? (
                 <div className="space-y-4">
                   {/* PM (담당자) - 한 줄 전체 */}
@@ -1140,7 +1331,7 @@ export function UnifiedProjectModal({
                         ))}
                       </div>
                     </div>
-                    
+
                     {/* 검색 드롭다운 + 추가 버튼 */}
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
@@ -1148,14 +1339,14 @@ export function UnifiedProjectModal({
                           options={
                             participantSelectType === 'user'
                               ? (usersData?.users
-                                  .filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id))
-                                  .map((u: any) => ({
-                                    value: u.id,
-                                    label: u.name,
-                                    subLabel: u.department || '',
-                                  })) || [])
+                                .filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id))
+                                .map((u: any) => ({
+                                  value: u.id,
+                                  label: u.name,
+                                  subLabel: u.department || '',
+                                })) || [])
                               : participantSelectType === 'partner_worker'
-                              ? (partnerWorkersData
+                                ? (partnerWorkersData
                                   ?.filter((w: any) => !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === w.id))
                                   .map((w: any) => ({
                                     value: String(w.id),
@@ -1164,7 +1355,7 @@ export function UnifiedProjectModal({
                                       ? partnerCompaniesData?.find((c: any) => c.id === w.partner_company_id)?.company_name_ko || ''
                                       : '소속 없음',
                                   })) || [])
-                              : (partnerCompaniesData
+                                : (partnerCompaniesData
                                   ?.filter((c: any) => !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === c.id))
                                   .map((c: any) => ({
                                     value: String(c.id),
@@ -1177,8 +1368,8 @@ export function UnifiedProjectModal({
                             participantSelectType === 'user'
                               ? '직원 검색...'
                               : participantSelectType === 'partner_worker'
-                              ? '외주담당자 검색...'
-                              : '외주업체 검색...'
+                                ? '외주담당자 검색...'
+                                : '외주업체 검색...'
                           }
                           emptyLabel="선택하세요"
                         />
@@ -1251,8 +1442,8 @@ export function UnifiedProjectModal({
                         options={filteredPartnerWorkers.map((worker: any) => ({
                           value: String(worker.id),
                           label: worker.name_ko || worker.name_en || '',
-                          subLabel: worker.partner_company_id 
-                            ? partnerCompaniesData?.find((c: any) => c.id === worker.partner_company_id)?.company_name_ko 
+                          subLabel: worker.partner_company_id
+                            ? partnerCompaniesData?.find((c: any) => c.id === worker.partner_company_id)?.company_name_ko
                             : '소속 없음',
                         }))}
                         value={form.partner_worker_id}
@@ -1330,7 +1521,7 @@ export function UnifiedProjectModal({
                       </div>
                     )}
                   </div>
-                  
+
                   {/* 참여자 목록 (view 모드) */}
                   {selectedParticipants.length > 0 && (
                     <div className="space-y-1">
@@ -1413,8 +1604,8 @@ export function UnifiedProjectModal({
                     <span className="text-xs text-emerald-600 dark:text-emerald-400">순익</span>
                     <span className={cn(
                       "text-sm font-bold",
-                      financeSummary.totalRevenue - financeSummary.totalExpense >= 0 
-                        ? "text-emerald-700 dark:text-emerald-300" 
+                      financeSummary.totalRevenue - financeSummary.totalExpense >= 0
+                        ? "text-emerald-700 dark:text-emerald-300"
                         : "text-red-700 dark:text-red-300"
                     )}>
                       ₩{formatCurrency(financeSummary.totalRevenue - financeSummary.totalExpense)}
@@ -1460,8 +1651,8 @@ export function UnifiedProjectModal({
                         onClick={() => onViewFinanceDetail?.(entry)}
                         className={cn(
                           "flex items-center justify-between rounded-lg px-4 py-3 cursor-pointer transition",
-                          entry.kind === 'revenue' 
-                            ? "bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20" 
+                          entry.kind === 'revenue'
+                            ? "bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                             : "bg-red-50/50 dark:bg-red-900/10 hover:bg-red-50 dark:hover:bg-red-900/20"
                         )}
                       >
@@ -1478,9 +1669,9 @@ export function UnifiedProjectModal({
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap",
                             entry.status === 'paid' ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300" :
-                            entry.status === 'planned' ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300" :
-                            entry.status === 'canceled' ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300" :
-                            "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300"
+                              entry.status === 'planned' ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300" :
+                                entry.status === 'canceled' ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300" :
+                                  "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300"
                           )}>
                             {entry.status === 'paid' ? '지급완료' : entry.status === 'planned' ? '지급예정' : entry.status === 'canceled' ? '취소' : entry.status}
                           </span>

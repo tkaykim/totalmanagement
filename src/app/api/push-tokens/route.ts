@@ -63,24 +63,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. 기존 중복 토큰 정리 (같은 사용자, 같은 플랫폼)
-    // 웹의 경우 device_id가 있으면 (같은 기기 내에서만 정리) + 레거시(null) 정리
-    let cleanupQuery = supabase
+    // 1. 같은 사용자, 같은 플랫폼의 다른 토큰을 비활성화 (현재 토큰만 활성 유지)
+    const { error: cleanupError } = await supabase
       .from('push_tokens')
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('user_id', user.id)
       .eq('platform', platform)
       .neq('token', token);
 
-    if (platform === 'web' && device_id) {
-      // 웹이면서 device_id가 있으면: 같은 device_id 인 것들 + device_id가 없는 것(레거시) 모두 정리
-      cleanupQuery = cleanupQuery.or(`device_id.eq.${device_id},device_id.is.null`);
-    } else if (device_id) {
-      // 네이티브 등 다른 플랫폼인 경우
-      cleanupQuery = cleanupQuery.eq('device_id', device_id);
-    }
-
-    const { error: cleanupError } = await cleanupQuery;
     if (cleanupError) {
       console.warn('Stale token cleanup failed:', cleanupError);
     }

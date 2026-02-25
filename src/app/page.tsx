@@ -292,7 +292,7 @@ function HomePage() {
     const checkUser = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         router.push('/login');
         return;
@@ -344,17 +344,17 @@ function HomePage() {
     if (periodType === 'all') {
       return { start: undefined, end: undefined };
     }
-    
+
     if (periodType === 'custom') {
       return { start: customRange.start, end: customRange.end };
     }
-    
+
     if (periodType === 'year') {
       const yearStart = format(startOfYear(new Date(selectedYear, 0, 1)), 'yyyy-MM-dd');
       const yearEnd = format(endOfYear(new Date(selectedYear, 11, 31)), 'yyyy-MM-dd');
       return { start: yearStart, end: yearEnd };
     }
-    
+
     if (periodType === 'quarter') {
       const startMonth = (selectedQuarter - 1) * 3;
       const endMonth = selectedQuarter * 3 - 1;
@@ -362,13 +362,13 @@ function HomePage() {
       const quarterEnd = format(new Date(selectedQuarterYear, endMonth + 1, 0), 'yyyy-MM-dd');
       return { start: quarterStart, end: quarterEnd };
     }
-    
+
     if (periodType === 'month') {
       const monthStart = format(startOfMonth(new Date(selectedYear, selectedMonth - 1, 1)), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(new Date(selectedYear, selectedMonth - 1, 1)), 'yyyy-MM-dd');
       return { start: monthStart, end: monthEnd };
     }
-    
+
     return { start: undefined, end: undefined };
   }, [periodType, selectedYear, selectedQuarter, selectedQuarterYear, selectedMonth, customRange.start, customRange.end]);
 
@@ -510,7 +510,7 @@ function HomePage() {
 
   const calculateActualAmount = (amount: number, paymentMethod: string): number | null => {
     if (!paymentMethod || !amount) return null;
-    
+
     switch (paymentMethod) {
       case 'vat_included':
         // 부가세 포함 (10% 부가세 증액): 금액 * 1.1
@@ -531,23 +531,23 @@ function HomePage() {
 
   const handleAddEntry = async () => {
     if (!modalProjectId) return;
-    
+
     const missingFields: string[] = [];
     if (!formState.cat) missingFields.push('구분');
     if (!formState.name) missingFields.push('항목명');
     if (!formState.amount) missingFields.push('금액');
-    
+
     if (missingFields.length > 0) {
       setFormError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
       return;
     }
-    
+
     setFormError('');
     const project = projects.find((p) => p.id === modalProjectId);
     if (!project) return;
 
     const amount = Number(formState.amount);
-    const actualAmount = formState.paymentMethod 
+    const actualAmount = formState.paymentMethod
       ? calculateActualAmount(amount, formState.paymentMethod)
       : null;
 
@@ -566,11 +566,11 @@ function HomePage() {
         actual_amount: actualAmount,
       });
       await createFinancialMutation.mutateAsync(dbData);
-      setFormState((prev) => ({ 
-        ...prev, 
-        cat: '', 
-        name: '', 
-        amount: '', 
+      setFormState((prev) => ({
+        ...prev,
+        cat: '',
+        name: '',
+        amount: '',
         date: '',
         partnerEntityFilter: '',
         partnerId: '',
@@ -598,7 +598,7 @@ function HomePage() {
     status?: string;
     participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role?: string }>;
     pendingTasks?: PendingTask[];
-  }) => {
+  }): Promise<{ id: string } | void> => {
     if (!payload.name || !payload.cat) return;
     try {
       const { pendingTasks: tasksToCreate, ...projectPayload } = payload;
@@ -624,6 +624,7 @@ function HomePage() {
       }
 
       setProjectModalOpen(false);
+      return createdProject?.id ? { id: String(createdProject.id) } : undefined;
     } catch (error) {
       console.error('Failed to create project:', error);
     }
@@ -644,7 +645,7 @@ function HomePage() {
     channel_id?: number | null;
     status?: string;
     participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role?: string }>;
-  }) => {
+  }): Promise<{ id: string } | void> => {
     if (!payload.name || !payload.cat || !payload.id) return;
     try {
       const dbData = frontendProjectToDb({
@@ -664,6 +665,7 @@ function HomePage() {
       });
       await updateProjectMutation.mutateAsync({ id: Number(payload.id), data: dbData });
       setEditProjectModalOpen(null);
+      return { id: payload.id };
     } catch (error) {
       console.error('Failed to update project:', error);
     }
@@ -700,7 +702,7 @@ function HomePage() {
     if (!payload.projectId?.trim()) {
       return '프로젝트를 선택해주세요.';
     }
-    
+
     try {
       const dbData = frontendTaskToDb(payload);
       await createTaskMutation.mutateAsync(dbData);
@@ -730,16 +732,16 @@ function HomePage() {
     if (!payload.cat) missingFields.push('구분');
     if (!payload.name) missingFields.push('항목명');
     if (!payload.amount) missingFields.push('금액');
-    
+
     if (missingFields.length > 0) {
       return `다음 항목을 입력해주세요: ${missingFields.join(', ')}`;
     }
-    
+
     const amount = Number(payload.amount);
-    const actualAmount = payload.paymentMethod 
+    const actualAmount = payload.paymentMethod
       ? calculateActualAmount(amount, payload.paymentMethod)
       : null;
-    
+
     try {
       const dbData = frontendFinancialToDb({
         projectId: payload.projectId,
@@ -780,10 +782,10 @@ function HomePage() {
     try {
       const today = getTodayKST();
       const amount = Number(payload.amount);
-      const actualAmount = payload.paymentMethod 
+      const actualAmount = payload.paymentMethod
         ? calculateActualAmount(amount, payload.paymentMethod)
         : null;
-      
+
       const dbData = {
         kind: payload.type,
         category: payload.cat,
@@ -818,7 +820,7 @@ function HomePage() {
     if (!payload.id) return '할 일 ID가 없습니다.';
     if (!payload.title?.trim()) return '제목을 입력해주세요.';
     if (!payload.projectId) return '프로젝트를 선택해주세요.';
-    
+
     try {
       const dbData = frontendTaskToDb({
         projectId: payload.projectId,
@@ -964,30 +966,30 @@ function HomePage() {
                       : view === 'workLogAdmin'
                         ? '업무일지 열람'
                         : view === 'attendance'
-                        ? '근태 관리'
-                        : view === 'attendanceAdmin'
-                          ? '전체 근무현황'
-                          : view === 'leave'
-                            ? '휴가 관리'
-                            : view === 'leaveAdmin'
-                              ? '휴가 승인/관리'
-                              : view === 'partners'
-                            ? '파트너 관리'
-                            : view === 'exclusiveArtists'
-                              ? '전속 아티스트'
-                              : view === 'meetingRooms'
-                                ? '회의실 예약'
-                                : view === 'equipment'
-                                  ? '장비 대여'
-                                  : view === 'vehicles'
-                                    ? '차량 일지'
-                                    : view === 'bugReports'
-                                      ? '버그 리포트'
-                                      : view === 'manuals'
-                                        ? '매뉴얼'
-                                        : view === 'pushTest'
-                                          ? '푸시 알림 테스트'
-                                          : '조직 현황'
+                          ? '근태 관리'
+                          : view === 'attendanceAdmin'
+                            ? '전체 근무현황'
+                            : view === 'leave'
+                              ? '휴가 관리'
+                              : view === 'leaveAdmin'
+                                ? '휴가 승인/관리'
+                                : view === 'partners'
+                                  ? '파트너 관리'
+                                  : view === 'exclusiveArtists'
+                                    ? '전속 아티스트'
+                                    : view === 'meetingRooms'
+                                      ? '회의실 예약'
+                                      : view === 'equipment'
+                                        ? '장비 대여'
+                                        : view === 'vehicles'
+                                          ? '차량 일지'
+                                          : view === 'bugReports'
+                                            ? '버그 리포트'
+                                            : view === 'manuals'
+                                              ? '매뉴얼'
+                                              : view === 'pushTest'
+                                                ? '푸시 알림 테스트'
+                                                : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
           periodType={periodType}
@@ -1165,8 +1167,8 @@ function HomePage() {
           )}
 
           {view === 'leave' && (
-            <LeaveManagementView 
-              onNavigateToAdmin={() => setView('leaveAdmin')} 
+            <LeaveManagementView
+              onNavigateToAdmin={() => setView('leaveAdmin')}
             />
           )}
 
@@ -1850,11 +1852,11 @@ function ModalProject({
                 className={cn(
                   'rounded-md px-3 py-1 text-xs font-semibold border-0 outline-none',
                   statusValue === '준비중' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' :
-                  statusValue === '기획중' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' :
-                  statusValue === '진행중' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' :
-                  statusValue === '운영중' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' :
-                  statusValue === '완료' ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' :
-                  'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    statusValue === '기획중' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' :
+                      statusValue === '진행중' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' :
+                        statusValue === '운영중' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' :
+                          statusValue === '완료' ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' :
+                            'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 )}
               >
                 {statusOptions.map((opt) => (
@@ -1943,12 +1945,12 @@ function ModalProject({
                         <div className={cn(
                           'flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0',
                           task.status === 'done' ? 'bg-emerald-100 text-emerald-600' :
-                          task.status === 'in-progress' ? 'bg-blue-100 text-blue-600' :
-                          'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                            task.status === 'in-progress' ? 'bg-blue-100 text-blue-600' :
+                              'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                         )}>
                           {task.status === 'done' ? <Check className="h-4 w-4" /> :
-                           task.status === 'in-progress' ? <span className="text-xs font-bold">진행</span> :
-                           <span className="text-xs font-bold">할일</span>}
+                            task.status === 'in-progress' ? <span className="text-xs font-bold">진행</span> :
+                              <span className="text-xs font-bold">할일</span>}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{task.title}</p>
@@ -1960,8 +1962,8 @@ function ModalProject({
                       <span className={cn(
                         'rounded-full px-3 py-1 text-[10px] font-bold tracking-tight whitespace-nowrap flex-shrink-0 ml-3',
                         task.status === 'done' ? 'bg-emerald-100 text-emerald-700' :
-                        task.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                        'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300'
+                          task.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                            'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300'
                       )}>
                         {task.status === 'todo' ? '진행 전' : task.status === 'in-progress' ? '진행중' : '완료'}
                       </span>
@@ -2008,21 +2010,21 @@ function ModalProject({
                 <option value="">선택하세요</option>
                 {participantSelectType === 'user'
                   ? (usersData?.users ?? []).filter((u: any) => !selectedParticipants.some((p) => p.type === 'user' && p.id === u.id)).map((u: any) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))
                   : participantSelectType === 'partner_worker'
                     ? (partnerWorkersData ?? []).filter((w: any) => !selectedParticipants.some((p) => p.type === 'partner_worker' && p.id === w.id)).map((w: any) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name_ko || w.name_en || w.name || ''}
-                        </option>
-                      ))
+                      <option key={w.id} value={w.id}>
+                        {w.name_ko || w.name_en || w.name || ''}
+                      </option>
+                    ))
                     : (partnerCompaniesData ?? []).filter((c: any) => !selectedParticipants.some((p) => p.type === 'partner_company' && p.id === c.id)).map((c: any) => (
-                        <option key={c.id} value={c.id}>
-                          {c.company_name_ko || c.company_name_en || ''}
-                        </option>
-                      ))}
+                      <option key={c.id} value={c.id}>
+                        {c.company_name_ko || c.company_name_en || ''}
+                      </option>
+                    ))}
               </select>
               <button
                 type="button"
@@ -2112,9 +2114,9 @@ function ModalProject({
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-[9px] font-semibold whitespace-nowrap",
                             r.status === 'paid' ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300" :
-                            r.status === 'planned' ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300" :
-                            r.status === 'canceled' ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300" :
-                            "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300"
+                              r.status === 'planned' ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300" :
+                                r.status === 'canceled' ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300" :
+                                  "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300"
                           )}>
                             {r.status === 'paid' ? '지급완료' : r.status === 'planned' ? '지급예정' : r.status === 'canceled' ? '취소' : r.status}
                           </span>
@@ -2146,9 +2148,9 @@ function ModalProject({
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-[9px] font-semibold whitespace-nowrap",
                             e.status === 'paid' ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300" :
-                            e.status === 'planned' ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300" :
-                            e.status === 'canceled' ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300" :
-                            "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300"
+                              e.status === 'planned' ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300" :
+                                e.status === 'canceled' ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300" :
+                                  "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300"
                           )}>
                             {e.status === 'paid' ? '지급완료' : e.status === 'planned' ? '지급예정' : e.status === 'canceled' ? '취소' : e.status}
                           </span>
@@ -2199,7 +2201,7 @@ function ModalProject({
                   className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-bold outline-none"
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <div className="space-y-1">
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">지급처 유형</label>
@@ -2207,8 +2209,8 @@ function ModalProject({
                     value={formState.partnerEntityFilter}
                     onChange={(e) => {
                       const newFilter = e.target.value as 'person' | 'organization' | '';
-                      onFormChange((prev) => ({ 
-                        ...prev, 
+                      onFormChange((prev) => ({
+                        ...prev,
                         partnerEntityFilter: newFilter,
                         partnerId: '',
                       }));
@@ -2220,7 +2222,7 @@ function ModalProject({
                     <option value="person">개인/인력</option>
                   </select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">지급처</label>
                   <select
@@ -2238,7 +2240,7 @@ function ModalProject({
                       ))}
                   </select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">지급 방식</label>
                   <select
@@ -2253,7 +2255,7 @@ function ModalProject({
                     <option value="actual_payment">실지급액</option>
                   </select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] text-slate-500 dark:text-slate-400">실지급액</label>
@@ -2271,7 +2273,7 @@ function ModalProject({
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
@@ -2281,8 +2283,8 @@ function ModalProject({
                       onClick={() => onFormChange((prev) => ({ ...prev, date: '' }))}
                       className={cn(
                         'text-[9px] font-semibold px-2 py-0.5 rounded transition',
-                        formState.date === '' 
-                          ? 'bg-blue-100 text-blue-600' 
+                        formState.date === ''
+                          ? 'bg-blue-100 text-blue-600'
                           : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-800'
                       )}
                     >
@@ -2307,7 +2309,7 @@ function ModalProject({
                   </select>
                 </div>
               </div>
-              
+
               {formError && (
                 <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
                   <p className="text-xs font-semibold text-red-600">{formError}</p>
@@ -2422,8 +2424,8 @@ function LabeledDate({
           onClick={() => onChange('')}
           className={cn(
             'text-[9px] font-semibold px-1.5 py-0.5 rounded transition ml-1',
-            value === '' 
-              ? 'bg-blue-100 text-blue-600' 
+            value === ''
+              ? 'bg-blue-100 text-blue-600'
               : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-800'
           )}
         >
