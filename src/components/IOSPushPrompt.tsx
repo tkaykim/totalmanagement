@@ -2,50 +2,66 @@
 
 import { useState, useEffect } from 'react';
 import {
-    isIOSPWA,
-    isIOSSafari,
     isWebPushSupported,
     getNotificationPermission,
     requestWebPushPermission,
+    isIOSSafari,
 } from '@/lib/web-push';
 import { Button } from '@/components/ui/button';
 
 /**
- * iOS PWA 사용자를 위한 푸시 알림 활성화 프롬프트
+ * 웹/PWA 사용자를 위한 푸시 알림 활성화 프롬프트
  * 
- * iOS Safari에서는 알림 권한 요청이 반드시 사용자 제스처(클릭 등)에서
- * 발생해야 하므로, 명시적인 "알림 켜기" 버튼을 제공합니다.
+ * 모든 웹/PWA 환경(iOS, Android Chrome, 데스크탑)에서 동작합니다.
+ * 알림 권한이 아직 요청되지 않은 경우 "알림 켜기" 버튼을 표시합니다.
  * 
- * 표시 조건:
- * - iOS PWA에서 알림 권한이 아직 요청되지 않은 경우 → 알림 켜기 버튼
- * - iOS Safari(비 PWA)에서 접속한 경우 → "홈 화면에 추가" 안내
- * - 이미 허용/거부된 경우 또는 Android/데스크탑 → 표시하지 않음
+ * - iOS Safari(비 PWA)에서는 "홈 화면에 추가" 안내
+ * - PWA 또는 브라우저에서는 "알림 켜기" 버튼
+ * - Capacitor 네이티브 앱에서는 표시하지 않음
  */
 export function IOSPushPrompt() {
     const [showPrompt, setShowPrompt] = useState(false);
     const [promptType, setPromptType] = useState<'enable' | 'install' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [dismissed, setDismissed] = useState(false);
+    const [isNative, setIsNative] = useState(false);
 
     useEffect(() => {
-        // SSR 방지
         if (typeof window === 'undefined') return;
 
         // 이전에 닫은 적이 있으면 표시하지 않음
-        const wasDismissed = localStorage.getItem('ios-push-prompt-dismissed');
+        const wasDismissed = localStorage.getItem('web-push-prompt-dismissed');
         if (wasDismissed) return;
 
-        if (isIOSPWA()) {
-            // iOS PWA: 알림 권한 확인
-            if (isWebPushSupported() && getNotificationPermission() === 'default') {
+        // Capacitor 네이티브 앱이면 표시하지 않음
+        const checkNative = async () => {
+            try {
+                const { Capacitor } = await import('@capacitor/core');
+                if (Capacitor.isNativePlatform()) {
+                    setIsNative(true);
+                    return;
+                }
+            } catch {
+                // Capacitor가 없으면 웹 환경
+            }
+
+            // 웹 푸시 지원 여부 확인
+            if (!isWebPushSupported()) return;
+
+            const permission = getNotificationPermission();
+
+            if (isIOSSafari()) {
+                // iOS Safari (비 PWA): 홈 화면 추가 안내
+                setPromptType('install');
+                setShowPrompt(true);
+            } else if (permission === 'default') {
+                // 아직 권한을 요청하지 않은 경우: 알림 켜기 버튼
                 setPromptType('enable');
                 setShowPrompt(true);
             }
-        } else if (isIOSSafari()) {
-            // iOS Safari (비 PWA): 홈 화면 추가 안내
-            setPromptType('install');
-            setShowPrompt(true);
-        }
+        };
+
+        checkNative();
     }, []);
 
     const handleEnable = async () => {
@@ -63,10 +79,10 @@ export function IOSPushPrompt() {
     const handleDismiss = () => {
         setDismissed(true);
         setShowPrompt(false);
-        localStorage.setItem('ios-push-prompt-dismissed', 'true');
+        localStorage.setItem('web-push-prompt-dismissed', 'true');
     };
 
-    if (!showPrompt || dismissed) return null;
+    if (!showPrompt || dismissed || isNative) return null;
 
     return (
         <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md animate-in slide-in-from-bottom-4 duration-300">

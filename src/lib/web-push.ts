@@ -111,9 +111,21 @@ export async function initWebPush(handlers?: WebPushHandlers): Promise<void> {
         );
         console.log('[WebPush] Service Worker 등록 완료:', swRegistration.scope);
 
-        // 2. 이미 권한이 허용된 경우 토큰 발급
+        // 2. 알림 권한 처리
         if (Notification.permission === 'granted') {
+            // 이미 허용된 경우 바로 토큰 발급
             await registerWebPushToken(swRegistration);
+        } else if (Notification.permission === 'default' && !isIOSPWA() && !isIOSSafari()) {
+            // iOS가 아닌 환경(Android Chrome, 데스크탑)에서는 자동 권한 요청
+            // iOS는 반드시 사용자 제스처에서 요청해야 하므로 IOSPushPrompt UI를 사용
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    await registerWebPushToken(swRegistration);
+                }
+            } catch {
+                console.log('[WebPush] 자동 권한 요청 실패 (수동 허용 필요)');
+            }
         }
 
         // 3. 포그라운드 메시지 리스너
