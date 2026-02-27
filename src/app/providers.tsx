@@ -12,6 +12,7 @@ import { ThemeProvider } from 'next-themes';
 import { initPushNotifications, isNativePlatform, retryPushRegistration } from '@/lib/capacitor';
 import { initWebPush, retryWebPushRegistration } from '@/lib/web-push';
 import { IOSPushPrompt } from '@/components/IOSPushPrompt';
+import { CapacitorBackButton } from '@/components/CapacitorBackButton';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
@@ -127,6 +128,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         {children}
+        <CapacitorBackButton />
         <IOSPushPrompt />
         <Toaster />
       </QueryClientProvider>

@@ -40,6 +40,7 @@ import { createClient } from '@/lib/supabase/client';
 import { format, isWithinInterval, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getTodayKST } from '@/lib/timezone';
+import { useBackHandler } from '@/hooks/useBackHandler';
 import { getVisibleMenus, canViewAllBuStats, canCreateProject, canEditTask, type AppUser as PermAppUser, type Task as PermTask, type Project as PermProject } from '@/lib/permissions';
 import {
   useProjects,
@@ -307,6 +308,76 @@ function HomePage() {
     paymentMethod: '',
   });
   const [formError, setFormError] = useState<string>('');
+
+  // Android 뒤로가기: 열린 UI를 우선순위대로 닫음 (앱 종료 방지)
+  const closeTopUI = useCallback(() => {
+    if (workStatusHook.showLogoutConfirm) workStatusHook.setShowLogoutConfirm(false);
+    else if (workStatusHook.showOvertimeConfirm) workStatusHook.setShowOvertimeConfirm(false);
+    else if (workStatusHook.showAutoCheckoutWarning) workStatusHook.dismissAutoCheckoutWarning();
+    else if (deleteProjectId) setDeleteProjectId(null);
+    else if (deleteOrgMemberId) setDeleteOrgMemberId(null);
+    else if (deleteExternalWorkerId) setDeleteExternalWorkerId(null);
+    else if (isEditProjectModalOpen) setEditProjectModalOpen(null);
+    else if (isEditTaskModalOpen) setEditTaskModalOpen(null);
+    else if (isEditFinanceModalOpen) setEditFinanceModalOpen(null);
+    else if (isEditOrgMemberModalOpen) setEditOrgMemberModalOpen(null);
+    else if (isEditUserModalOpen) setEditUserModalOpen(null);
+    else if (isEditExternalWorkerModalOpen) setEditExternalWorkerModalOpen(null);
+    else if (isProjectModalOpen) setProjectModalOpen(false);
+    else if (isTaskModalOpen) setTaskModalOpen(false);
+    else if (isFinanceModalOpen) setFinanceModalOpen(null);
+    else if (isOrgMemberModalOpen) setOrgMemberModalOpen(false);
+    else if (isCreateUserModalOpen) setCreateUserModalOpen(false);
+    else if (isExternalWorkerModalOpen) setExternalWorkerModalOpen(false);
+    else if (templateSelectorProjectId) setTemplateSelectorProjectId(null);
+    else if (mobileMenuOpen) setMobileMenuOpen(false);
+  }, [
+    workStatusHook.showLogoutConfirm,
+    workStatusHook.showOvertimeConfirm,
+    workStatusHook.showAutoCheckoutWarning,
+    workStatusHook.setShowLogoutConfirm,
+    workStatusHook.setShowOvertimeConfirm,
+    workStatusHook.dismissAutoCheckoutWarning,
+    deleteProjectId,
+    deleteOrgMemberId,
+    deleteExternalWorkerId,
+    isEditProjectModalOpen,
+    isEditTaskModalOpen,
+    isEditFinanceModalOpen,
+    isEditOrgMemberModalOpen,
+    isEditUserModalOpen,
+    isEditExternalWorkerModalOpen,
+    isProjectModalOpen,
+    isTaskModalOpen,
+    isFinanceModalOpen,
+    isOrgMemberModalOpen,
+    isCreateUserModalOpen,
+    isExternalWorkerModalOpen,
+    templateSelectorProjectId,
+    mobileMenuOpen,
+  ]);
+  const hasAnyOpen =
+    workStatusHook.showLogoutConfirm ||
+    workStatusHook.showOvertimeConfirm ||
+    workStatusHook.showAutoCheckoutWarning ||
+    !!deleteProjectId ||
+    !!deleteOrgMemberId ||
+    !!deleteExternalWorkerId ||
+    !!isEditProjectModalOpen ||
+    !!isEditTaskModalOpen ||
+    !!isEditFinanceModalOpen ||
+    !!isEditOrgMemberModalOpen ||
+    !!isEditUserModalOpen ||
+    !!isEditExternalWorkerModalOpen ||
+    isProjectModalOpen ||
+    isTaskModalOpen ||
+    !!isFinanceModalOpen ||
+    isOrgMemberModalOpen ||
+    isCreateUserModalOpen ||
+    isExternalWorkerModalOpen ||
+    !!templateSelectorProjectId ||
+    mobileMenuOpen;
+  useBackHandler(hasAnyOpen ? closeTopUI : null);
 
   // 인증 상태 확인
   useEffect(() => {
@@ -963,7 +1034,7 @@ function HomePage() {
 
       {/* 모바일 사이드바 */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="w-[280px] sm:w-[320px] bg-slate-900 text-white p-0 border-slate-700 overflow-hidden">
+        <SheetContent side="left" className="w-[280px] sm:w-[320px] bg-slate-900 text-white p-0 border-slate-700 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <SheetHeader className="sr-only">
             <SheetTitle>메뉴</SheetTitle>
           </SheetHeader>
@@ -1028,7 +1099,7 @@ function HomePage() {
           yearOptions={yearOptions}
         />
 
-        <div className={`mx-auto w-full px-3 sm:px-4 py-3 sm:py-8 space-y-3 sm:space-y-6 ${view === 'leaveAdmin' ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
+        <div className={`mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-8 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-[calc(2rem+env(safe-area-inset-bottom))] space-y-3 sm:space-y-6 ${view === 'leaveAdmin' ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
           <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4 sm:gap-3">
             <QuickAction
               title="프로젝트 등록"
