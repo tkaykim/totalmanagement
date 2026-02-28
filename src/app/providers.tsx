@@ -9,7 +9,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { initPushNotifications, isNativePlatform, retryPushRegistration } from '@/lib/capacitor';
+import { initPushNotifications, isNativePlatform, retryPushRegistration, initBackButtonHandler } from '@/lib/capacitor';
 import { initWebPush, retryWebPushRegistration } from '@/lib/web-push';
 import { IOSPushPrompt } from '@/components/IOSPushPrompt';
 import { Toaster } from '@/components/ui/toaster';
@@ -51,9 +51,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   //       render if it suspends and there is no boundary
   const queryClient = getQueryClient();
 
-  // Capacitor 푸시 알림 초기화 (네이티브 앱에서만)
+  // Capacitor 푸시 알림 초기화 + 뒤로가기 버튼 핸들러 (네이티브 앱에서만)
   useEffect(() => {
     if (isNativePlatform()) {
+      // 하드웨어 뒤로가기 버튼 핸들러 초기화
+      initBackButtonHandler();
+
       initPushNotifications({
         onRegistration: (token) => {
           console.log('[App] 푸시 토큰 등록됨:', token.substring(0, 20) + '...');

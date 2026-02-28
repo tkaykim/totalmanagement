@@ -82,6 +82,7 @@ import {
 import { UnifiedProjectModal } from '@/features/erp/components/UnifiedProjectModal';
 import { DashboardView } from '@/features/erp/components/DashboardView';
 import { AdminResourceView } from '@/features/erp/components/AdminResourceView';
+import { registerBackButtonCallback } from '@/lib/capacitor';
 import { StatCard } from '@/features/erp/components/StatCard';
 import { ProjectsView } from '@/features/erp/components/ProjectsView';
 import { SettlementView } from '@/features/erp/components/SettlementView';
@@ -241,6 +242,51 @@ function HomePage() {
   }, []);
 
   const workStatusHook = useWorkStatus();
+
+  // Android 하드웨어 뒤로가기 버튼 처리
+  useEffect(() => {
+    const cleanup = registerBackButtonCallback(() => {
+      // 1. 열린 모달 닫기 (먼저 체크)
+      if (isEditProjectModalOpen) { setEditProjectModalOpen(null); return true; }
+      if (isEditTaskModalOpen) { setEditTaskModalOpen(null); return true; }
+      if (isEditFinanceModalOpen) { setEditFinanceModalOpen(null); return true; }
+      if (isProjectModalOpen) { setProjectModalOpen(false); return true; }
+      if (isTaskModalOpen) { setTaskModalOpen(false); setTaskModalProjectId(undefined); return true; }
+      if (isFinanceModalOpen) { setFinanceModalOpen(null); setFinanceDefaultProjectId(null); return true; }
+      if (isOrgMemberModalOpen) { setOrgMemberModalOpen(false); return true; }
+      if (isEditOrgMemberModalOpen) { setEditOrgMemberModalOpen(null); return true; }
+      if (isCreateUserModalOpen) { setCreateUserModalOpen(false); return true; }
+      if (isEditUserModalOpen) { setEditUserModalOpen(null); return true; }
+      if (isExternalWorkerModalOpen) { setExternalWorkerModalOpen(false); return true; }
+      if (isEditExternalWorkerModalOpen) { setEditExternalWorkerModalOpen(null); return true; }
+      if (deleteProjectId) { setDeleteProjectId(null); return true; }
+      if (deleteOrgMemberId) { setDeleteOrgMemberId(null); return true; }
+      if (deleteExternalWorkerId) { setDeleteExternalWorkerId(null); return true; }
+      if (modalProjectId) { setModalProjectId(null); return true; }
+      if (templateSelectorProjectId) { setTemplateSelectorProjectId(null); return true; }
+      if (mobileMenuOpen) { setMobileMenuOpen(false); return true; }
+
+      // 2. 대시보드가 아닌 뷰에 있으면 대시보드로 이동
+      if (view !== 'dashboard') {
+        setView('dashboard');
+        return true;
+      }
+
+      // 3. 대시보드에 있으면 처리 안 함 → backButton.ts에서 앱 최소화
+      return false;
+    });
+
+    return cleanup;
+  }, [
+    view, mobileMenuOpen,
+    isEditProjectModalOpen, isEditTaskModalOpen, isEditFinanceModalOpen,
+    isProjectModalOpen, isTaskModalOpen, isFinanceModalOpen,
+    isOrgMemberModalOpen, isEditOrgMemberModalOpen,
+    isCreateUserModalOpen, isEditUserModalOpen,
+    isExternalWorkerModalOpen, isEditExternalWorkerModalOpen,
+    deleteProjectId, deleteOrgMemberId, deleteExternalWorkerId,
+    modalProjectId, templateSelectorProjectId,
+  ]);
 
   // 권한에 따른 메뉴 표시 설정
   const visibleMenus = useMemo(() => {

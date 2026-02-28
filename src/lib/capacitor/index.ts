@@ -51,3 +51,9 @@ export {
   dataUrlToFile,
   type CapturedImage,
 } from './camera';
+
+// 하드웨어 뒤로가기 버튼
+export {
+  initBackButtonHandler,
+  registerBackButtonCallback,
+} from './backButton';
