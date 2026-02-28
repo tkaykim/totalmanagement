@@ -176,26 +176,23 @@ async function sendPushToTokens(
 
     const message: MulticastMessage = {
       tokens: batch,
-      notification: {
+      // data-only 메시지: CustomMessagingService가 직접 IMPORTANCE_HIGH 채널로 알림 표시
+      data: {
         title: payload.title,
         body: payload.body,
-        ...(payload.imageUrl ? { imageUrl: payload.imageUrl } : {}),
+        ...(payload.imageUrl ? { image: payload.imageUrl } : {}),
+        ...(payload.data ?? {}),
       },
-      data: payload.data ?? {},
       android: {
         priority: 'high' as const,
-        notification: {
-          channelId: 'default',
-          sound: 'default',
-          priority: 'high' as const,
-          defaultVibrateTimings: true,
-        },
       },
       webpush: {
         headers: {
           Urgency: 'high',
         },
         notification: {
+          title: payload.title,
+          body: payload.body,
           icon: '/easynext.png',
           badge: '/easynext.png',
           requireInteraction: false,
@@ -207,9 +204,13 @@ async function sendPushToTokens(
       apns: {
         payload: {
           aps: {
-            badge: 1,
-            sound: 'default',
             contentAvailable: true,
+            'mutable-content': 1,
+            sound: 'default',
+            alert: {
+              title: payload.title,
+              body: payload.body,
+            },
           },
         },
       },

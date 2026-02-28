@@ -30,23 +30,15 @@ const messaging = firebase.messaging();
 /**
  * 백그라운드 메시지 핸들러
  * 
- * FCM이 notification 페이로드가 있는 메시지는 자동으로 표시합니다.
- * 여기서는 data-only 메시지(notification 없는 경우)만 수동 표시합니다.
- * 양쪽 모두 표시하면 알림이 2번 뜨는 중복 현상이 발생합니다.
+ * data-only 메시지를 수신하여 수동으로 알림을 표시합니다.
+ * (notification 페이로드는 사용하지 않으므로 중복 표시가 발생하지 않습니다)
  */
 messaging.onBackgroundMessage((payload) => {
     console.log('[SW] 백그라운드 메시지 수신:', payload);
 
-    // notification 페이로드가 있으면 FCM이 자동 표시하므로 건너뜀
-    if (payload.notification) {
-        console.log('[SW] notification 페이로드 → FCM 자동 표시 (수동 표시 안 함)');
-        return;
-    }
-
-    // data-only 메시지만 수동 표시
     const data = payload.data || {};
-    const title = data.title || '알림';
-    const body = data.body || '새 알림이 도착했습니다.';
+    const title = data.title || payload.notification?.title || '알림';
+    const body = data.body || payload.notification?.body || '새 알림이 도착했습니다.';
 
     const options = {
         body,
@@ -72,6 +64,7 @@ messaging.onBackgroundMessage((payload) => {
 /**
  * 알림 클릭 핸들러
  * 사용자가 알림을 클릭하면 해당 URL로 이동합니다.
+ * sessionStorage에 딥링크 플래그를 설정하여 근무상태 화면을 건너뜁니다.
  */
 self.addEventListener('notificationclick', (event) => {
     console.log('[SW] 알림 클릭:', event.notification);
@@ -85,12 +78,15 @@ self.addEventListener('notificationclick', (event) => {
             for (const client of clientList) {
                 if ('focus' in client) {
                     client.focus();
+                    // 딥링크 플래그 설정 후 네비게이션
+                    client.postMessage({ type: 'PUSH_DEEP_LINK', action_url: actionUrl });
                     client.navigate(actionUrl);
                     return;
                 }
             }
-            // 열린 창이 없으면 새 창 열기
-            return clients.openWindow(actionUrl);
+            // 열린 창이 없으면 딥링크 파라미터를 붙여서 새 창 열기
+            const separator = actionUrl.includes('?') ? '&' : '?';
+            return clients.openWindow(actionUrl + separator + '_deeplink=1');
         })
     );
 });

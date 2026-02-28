@@ -81,6 +81,7 @@ import {
 } from '@/features/erp/utils';
 import { UnifiedProjectModal } from '@/features/erp/components/UnifiedProjectModal';
 import { DashboardView } from '@/features/erp/components/DashboardView';
+import { AdminResourceView } from '@/features/erp/components/AdminResourceView';
 import { StatCard } from '@/features/erp/components/StatCard';
 import { ProjectsView } from '@/features/erp/components/ProjectsView';
 import { SettlementView } from '@/features/erp/components/SettlementView';
@@ -193,6 +194,51 @@ function HomePage() {
   const [customRange, setCustomRange] = useState<{ start?: string; end?: string }>({});
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // 딥링크 진입 감지 (알림 클릭으로 특정 뷰로 직접 이동 시)
+  const [isDeepLink, setIsDeepLink] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      // sessionStorage 플래그 (Capacitor 네이티브 앱에서 설정)
+      const flag = sessionStorage.getItem('push_deep_link');
+      if (flag) {
+        sessionStorage.removeItem('push_deep_link');
+        return true;
+      }
+      // URL 파라미터 (PWA 서비스 워커에서 새 창 열 때 설정)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('_deeplink') === '1') {
+        params.delete('_deeplink');
+        const newUrl = params.toString()
+          ? `${window.location.pathname}?${params.toString()}`
+          : window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+        return true;
+      }
+    } catch { }
+    return false;
+  });
+
+  // 딥링크 모드는 일정 시간 후 자동 해제 (이후 정상 동작)
+  useEffect(() => {
+    if (isDeepLink) {
+      const timer = setTimeout(() => setIsDeepLink(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isDeepLink]);
+
+  // 서비스 워커 postMessage 수신 (기존 창에서 알림 클릭 시)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PUSH_DEEP_LINK') {
+        setIsDeepLink(true);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleMessage);
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    };
+  }, []);
 
   const workStatusHook = useWorkStatus();
 
@@ -875,8 +921,8 @@ function HomePage() {
     );
   }
 
-  // 상태 로딩 중일 때는 로딩 화면 표시
-  if (workStatusHook.isStatusLoading) {
+  // 상태 로딩 중일 때는 로딩 화면 표시 (딥링크 진입 시에는 건너뜀)
+  if (workStatusHook.isStatusLoading && !isDeepLink) {
     return (
       <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col items-center justify-center p-6">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
@@ -886,7 +932,8 @@ function HomePage() {
   }
 
   // OFF_WORK 또는 BREAK 상태일 때는 전체 화면 페이지만 표시
-  if (workStatusHook.workStatus === 'OFF_WORK' || workStatusHook.workStatus === 'BREAK') {
+  // OFF_WORK 또는 BREAK 상태일 때 전체 화면 (딥링크 진입 시에는 건너뜀)
+  if ((workStatusHook.workStatus === 'OFF_WORK' || workStatusHook.workStatus === 'BREAK') && !isDeepLink) {
     return (
       <>
         <WorkStatusFullScreen
@@ -1010,7 +1057,9 @@ function HomePage() {
                                               ? '매뉴얼'
                                               : view === 'pushTest'
                                                 ? '푸시 알림 테스트'
-                                                : '조직 현황'
+                                                : view === 'resourceOverview'
+                                                  ? '리소스 현황'
+                                                  : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
           periodType={periodType}
@@ -1284,6 +1333,20 @@ function HomePage() {
 
           {view === 'pushTest' && (
             <PushTestView />
+          )}
+
+          {view === 'resourceOverview' && (
+            <AdminResourceView
+              projects={projects}
+              tasks={tasks}
+              usersData={usersData}
+              onProjectClick={(project) => {
+                setEditProjectModalOpen(project);
+              }}
+              onTaskClick={(task) => {
+                setEditTaskModalOpen(task);
+              }}
+            />
           )}
 
         </div>

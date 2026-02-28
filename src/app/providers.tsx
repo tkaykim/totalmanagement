@@ -78,6 +78,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           // 알림 클릭 시 특정 페이지로 이동
           const data = action.notification.data;
           if (data?.action_url) {
+            // 딥링크 플래그 설정 → page.tsx에서 근무상태 화면 건너뛰기
+            try { sessionStorage.setItem('push_deep_link', '1'); } catch { }
             window.location.href = data.action_url;
           }
         },

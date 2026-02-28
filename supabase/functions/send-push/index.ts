@@ -93,21 +93,23 @@ async function sendFcm(
   fcmToken: string,
   payload: { title: string; body: string; data?: Record<string, string>; image?: string }
 ): Promise<{ success: boolean; error?: string }> {
+  // data-only 메시지: Android CustomMessagingService가 직접 IMPORTANCE_HIGH 채널로 알림 표시
   const message: Record<string, unknown> = {
     token: fcmToken,
-    notification: {
+    data: {
       title: payload.title,
       body: payload.body,
       ...(payload.image ? { image: payload.image } : {}),
+      ...(payload.data ?? {}),
     },
-    data: payload.data ?? {},
     android: {
       priority: "high",
-      notification: { channel_id: "default", sound: "default" },
     },
     webpush: {
       headers: { Urgency: "high" },
       notification: {
+        title: payload.title,
+        body: payload.body,
         icon: "/easynext.png",
         badge: "/easynext.png",
       },
@@ -116,7 +118,17 @@ async function sendFcm(
       },
     },
     apns: {
-      payload: { aps: { sound: "default", badge: 1 } },
+      payload: {
+        aps: {
+          "content-available": 1,
+          "mutable-content": 1,
+          sound: "default",
+          alert: {
+            title: payload.title,
+            body: payload.body,
+          },
+        },
+      },
     },
   };
 

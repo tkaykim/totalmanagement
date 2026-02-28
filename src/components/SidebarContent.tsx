@@ -18,6 +18,7 @@ import {
   FileText,
   BookOpen,
   Bell,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { View } from '@/features/erp/types';
@@ -88,7 +89,7 @@ export const SidebarContent = memo(function SidebarContent({
           </p>
         </button>
       </div>
-      
+
       {/* 메뉴 영역 - 스크롤 가능 */}
       <nav className="flex-1 overflow-y-auto space-y-1 px-2 sm:px-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
 
@@ -306,6 +307,14 @@ export const SidebarContent = memo(function SidebarContent({
                   onClick={() => handleMenuClick('pushTest')}
                 />
               )}
+              {visibleMenus.includes('resourceOverview') && (
+                <SidebarButton
+                  label="리소스 현황"
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  active={view === 'resourceOverview'}
+                  onClick={() => handleMenuClick('resourceOverview')}
+                />
+              )}
             </>
           )}
         </div>
@@ -313,7 +322,7 @@ export const SidebarContent = memo(function SidebarContent({
         {/* nav 내부 하단 패딩 */}
         <div className="pb-4" />
       </nav>
-      
+
       {/* 하단 사용자 정보 - 고정 */}
       <div className="shrink-0 border-t border-slate-700 p-4 sm:p-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-3 sm:p-4">

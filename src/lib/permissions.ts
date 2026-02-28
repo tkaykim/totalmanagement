@@ -56,19 +56,19 @@ export interface FinancialEntry {
 export function canAccessProject(user: AppUser, project: Project): boolean {
   // admin: 전체 접근
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU + 본인 PM + 참여자
   if (user.role === 'leader') {
     if (project.bu_code === user.bu_code) return true;
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
   }
-  
+
   // PM이 지정되지 않은 프로젝트는 manager/member가 접근 불가
   // (단, 본인이 참여자로 지정된 경우는 예외)
   const hasPm = !!project.pm_id;
   const isParticipant = project.participants?.includes(user.id);
-  
+
   // manager: 본인 PM + 참여자 (PM 없으면 참여자인 경우만)
   if (user.role === 'manager') {
     if (project.pm_id === user.id) return true;
@@ -76,13 +76,13 @@ export function canAccessProject(user: AppUser, project: Project): boolean {
     // PM이 있는 경우에만 본인 BU 프로젝트 접근 가능
     if (hasPm && project.bu_code === user.bu_code) return true;
   }
-  
+
   // member: 본인 PM + 참여자 (bu_code 관계없이)
   if (user.role === 'member') {
     if (project.pm_id === user.id) return true;
     if (isParticipant) return true;
   }
-  
+
   return false;
 }
 
@@ -91,16 +91,16 @@ export function canAccessProject(user: AppUser, project: Project): boolean {
  * - 본인에게 할일이 할당된 경우 해당 프로젝트 기본 정보 열람 가능
  */
 export function canViewProjectBasicInfo(
-  user: AppUser, 
-  project: Project, 
+  user: AppUser,
+  project: Project,
   hasAssignedTasks: boolean
 ): boolean {
   // 기존 프로젝트 접근 권한이 있으면 당연히 OK
   if (canAccessProject(user, project)) return true;
-  
+
   // 본인에게 할당된 할일이 해당 프로젝트에 있으면 기본 정보 조회 가능
   if (hasAssignedTasks) return true;
-  
+
   return false;
 }
 
@@ -116,16 +116,16 @@ export function canCreateProject(user: AppUser): boolean {
  */
 export function canEditProject(user: AppUser, project: Project): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 또는 본인 PM인 프로젝트
   if (user.role === 'leader') {
     if (project.bu_code === user.bu_code) return true;
     if (project.pm_id === user.id) return true;
   }
-  
+
   // manager: 본인 PM만
   if (user.role === 'manager' && project.pm_id === user.id) return true;
-  
+
   return false;
 }
 
@@ -145,30 +145,30 @@ export function canDeleteProject(user: AppUser, project: Project): boolean {
  */
 export function canAccessTask(user: AppUser, task: Task, project: Project): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 프로젝트 전체 + 본인 할당 할일
   if (user.role === 'leader') {
     if (project.bu_code === user.bu_code) return true;
     if (task.assignee_id === user.id) return true;
   }
-  
+
   // manager: PM이거나 참여자이면 프로젝트의 모든 할일 접근 가능
   if (user.role === 'manager') {
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
     if (task.assignee_id === user.id) return true;
   }
-  
+
   // member: PM이거나 참여자이면 프로젝트의 모든 할일 접근 가능
   if (user.role === 'member') {
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
     if (task.assignee_id === user.id) return true;
   }
-  
+
   // viewer/artist: 본인 할당만
   if (task.assignee_id === user.id) return true;
-  
+
   return false;
 }
 
@@ -177,22 +177,22 @@ export function canAccessTask(user: AppUser, task: Task, project: Project): bool
  */
 export function canCreateTask(user: AppUser, project: Project): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 프로젝트
   if (user.role === 'leader' && project.bu_code === user.bu_code) return true;
-  
+
   // manager: 본인 PM 프로젝트 또는 참여자
   if (user.role === 'manager') {
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
   }
-  
+
   // member: 본인 PM 프로젝트 또는 참여자
   if (user.role === 'member') {
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
   }
-  
+
   return false;
 }
 
@@ -201,26 +201,26 @@ export function canCreateTask(user: AppUser, project: Project): boolean {
  */
 export function canEditTask(user: AppUser, task: Task, project: Project): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 프로젝트 또는 본인 할당
   if (user.role === 'leader') {
     if (project.bu_code === user.bu_code) return true;
     if (task.assignee_id === user.id) return true;
   }
-  
+
   // manager: PM이면 전체, 참여자 또는 본인 할당도 가능
   if (user.role === 'manager') {
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
     if (task.assignee_id === user.id) return true;
   }
-  
+
   // member: PM이면 전체, 아니면 본인 할당만
   if (user.role === 'member') {
     if (project.pm_id === user.id) return true;
     if (task.assignee_id === user.id) return true;
   }
-  
+
   return false;
 }
 
@@ -232,10 +232,10 @@ export function canOnlyUpdateTaskStatus(user: AppUser, task: Task, project: Proj
   if (user.role === 'admin') return false;
   if (user.role === 'leader' && project.bu_code === user.bu_code) return false;
   if (user.role === 'manager' && project.pm_id === user.id) return false;
-  
+
   // 본인 할당이면 상태만 수정 가능
   if (task.assignee_id === user.id) return true;
-  
+
   return false;
 }
 
@@ -244,22 +244,22 @@ export function canOnlyUpdateTaskStatus(user: AppUser, task: Task, project: Proj
  */
 export function canDeleteTask(user: AppUser, task: Task, project: Project): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 프로젝트
   if (user.role === 'leader' && project.bu_code === user.bu_code) return true;
-  
+
   // manager: 본인 PM 또는 참여자
   if (user.role === 'manager') {
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
   }
-  
+
   // member: 본인 PM 또는 참여자
   if (user.role === 'member') {
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
   }
-  
+
   return false;
 }
 
@@ -271,12 +271,12 @@ export function canDeleteTask(user: AppUser, task: Task, project: Project): bool
  * 재무 항목 접근(열람) 권한 체크
  */
 export function canAccessFinance(
-  user: AppUser, 
-  entry: FinancialEntry, 
+  user: AppUser,
+  entry: FinancialEntry,
   project: Project
 ): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 전체 + PM 프로젝트 전체 + 참여 프로젝트는 본인 등록분만
   if (user.role === 'leader') {
     if (entry.bu_code === user.bu_code) return true;
@@ -284,16 +284,16 @@ export function canAccessFinance(
     // 참여 프로젝트는 본인 등록분만
     if (project.participants?.includes(user.id) && entry.created_by === user.id) return true;
   }
-  
+
   // manager: PM이면 전체, 아니면 본인 등록분만
   if (user.role === 'manager') {
     if (project.pm_id === user.id) return true;
     if (entry.created_by === user.id) return true;
   }
-  
+
   // member: 본인 등록분만
   if (user.role === 'member' && entry.created_by === user.id) return true;
-  
+
   return false;
 }
 
@@ -314,22 +314,22 @@ export function canViewNetProfit(user: AppUser, project: Project): boolean {
  */
 export function canCreateFinance(user: AppUser, project: Project): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 프로젝트 또는 PM 프로젝트
   if (user.role === 'leader') {
     if (project.bu_code === user.bu_code) return true;
     if (project.pm_id === user.id) return true;
   }
-  
+
   // manager: PM 프로젝트 또는 참여 프로젝트
   if (user.role === 'manager') {
     if (project.pm_id === user.id) return true;
     if (project.participants?.includes(user.id)) return true;
   }
-  
+
   // member: 참여 프로젝트
   if (user.role === 'member' && project.participants?.includes(user.id)) return true;
-  
+
   return false;
 }
 
@@ -337,27 +337,27 @@ export function canCreateFinance(user: AppUser, project: Project): boolean {
  * 재무 항목 수정 권한
  */
 export function canEditFinance(
-  user: AppUser, 
-  entry: FinancialEntry, 
+  user: AppUser,
+  entry: FinancialEntry,
   project: Project
 ): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 전체 또는 본인 등록분
   if (user.role === 'leader') {
     if (entry.bu_code === user.bu_code) return true;
     if (entry.created_by === user.id) return true;
   }
-  
+
   // manager: PM 프로젝트 전체 또는 본인 등록분
   if (user.role === 'manager') {
     if (project.pm_id === user.id) return true;
     if (entry.created_by === user.id) return true;
   }
-  
+
   // member: 본인 등록분만
   if (user.role === 'member' && entry.created_by === user.id) return true;
-  
+
   return false;
 }
 
@@ -365,19 +365,19 @@ export function canEditFinance(
  * 재무 항목 삭제 권한
  */
 export function canDeleteFinance(
-  user: AppUser, 
-  entry: FinancialEntry, 
+  user: AppUser,
+  entry: FinancialEntry,
   project: Project
 ): boolean {
   if (user.role === 'admin') return true;
-  
+
   // leader: 본인 BU 전체
   if (user.role === 'leader' && entry.bu_code === user.bu_code) return true;
-  
+
   // manager/member는 본인 등록분 삭제 불가 (정책에 따라 조정 가능)
   // 현재 계획서에서는 member 삭제 X로 되어있음
   if (user.role === 'manager' && entry.created_by === user.id) return true;
-  
+
   return false;
 }
 
@@ -389,8 +389,8 @@ export function canDeleteFinance(
  * 출퇴근 기록 접근 권한
  */
 export function canAccessAttendance(
-  user: AppUser, 
-  targetUserId: string, 
+  user: AppUser,
+  targetUserId: string,
   targetBuCode: BuCode | null
 ): boolean {
   if (user.role === 'admin') return true;
@@ -403,8 +403,8 @@ export function canAccessAttendance(
  * 출퇴근 기록 수정 권한
  */
 export function canEditAttendance(
-  user: AppUser, 
-  targetUserId: string, 
+  user: AppUser,
+  targetUserId: string,
   targetBuCode: BuCode | null
 ): boolean {
   if (user.role === 'admin') return true;
@@ -491,6 +491,10 @@ export function getVisibleMenus(user: AppUser): string[] {
   if (user.role === 'admin') {
     menus.push('workLogAdmin');
   }
+  // 리소스 현황: HEAD admin만
+  if (user.role === 'admin' && user.bu_code === 'HEAD') {
+    menus.push('resourceOverview');
+  }
   // 푸시 알림 테스트: admin만
   if (user.role === 'admin') {
     menus.push('pushTest');
@@ -551,8 +555,8 @@ export function getTaskPermissions(user: AppUser, task: Task, project: Project) 
 }
 
 export function getFinancePermissions(
-  user: AppUser, 
-  entry: FinancialEntry, 
+  user: AppUser,
+  entry: FinancialEntry,
   project: Project
 ) {
   return {
@@ -623,12 +627,12 @@ export function canAccessLeaveAdmin(user: AppUser): boolean {
 export function canAccessArtistPage(user: AppUser): boolean {
   // role이 artist인 경우 접근 가능
   if (user.role === 'artist') return true;
-  
+
   // role이 leader 또는 admin이면서 bu_code가 HEAD인 경우 접근 가능
   if ((user.role === 'leader' || user.role === 'admin') && user.bu_code === 'HEAD') {
     return true;
   }
-  
+
   return false;
 }
 
@@ -644,9 +648,9 @@ export function canAccessArtistPage(user: AppUser): boolean {
 export function canAccessExclusiveArtists(user: AppUser): boolean {
   const allowedBuCodes: BuCode[] = ['GRIGO', 'HEAD'];
   const allowedRoles: Role[] = ['admin', 'leader', 'manager'];
-  
+
   if (!user.bu_code) return false;
-  
+
   return allowedBuCodes.includes(user.bu_code) && allowedRoles.includes(user.role);
 }
 
@@ -657,9 +661,9 @@ export function canAccessExclusiveArtists(user: AppUser): boolean {
 export function canEditExclusiveArtist(user: AppUser): boolean {
   const allowedBuCodes: BuCode[] = ['GRIGO', 'HEAD'];
   const allowedRoles: Role[] = ['admin', 'leader'];
-  
+
   if (!user.bu_code) return false;
-  
+
   return allowedBuCodes.includes(user.bu_code) && allowedRoles.includes(user.role);
 }
 
