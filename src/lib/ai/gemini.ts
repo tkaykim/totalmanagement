@@ -1,5 +1,3 @@
-'use server';
-
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const AI_ALLOWED_EMAIL = 'tommy0621@naver.com';

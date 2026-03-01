@@ -137,7 +137,7 @@ export function AiWorkInsightView() {
           </h3>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          예: &quot;A단체 단체복 제작 프로젝트 만들어&quot; → 모두굿즈(MODOO)에 프로젝트 생성·PM 자동 지정.
+          프로젝트 생성/삭제, 할일 추가·수정·삭제, 재무 조회·등록 등. 예: &quot;인천대 프로젝트에 할일 &#39;견적 발송&#39; 3/15까지 김동현에게&quot;, &quot;FLAVA 재무 현황 알려줘&quot;
         </p>
         <textarea
           value={instruction}

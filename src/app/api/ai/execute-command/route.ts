@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createPureClient } from '@/lib/supabase/server';
 import { generateContent, isAllowedEmail } from '@/lib/ai/gemini';
-import { createActivityLog } from '@/lib/activity-logger';
-import { notifyProjectPMAssigned } from '@/lib/notification-sender';
+import { createActivityLog, createTaskAssignedLog } from '@/lib/activity-logger';
+import { notifyProjectPMAssigned, notifyTaskAssigned } from '@/lib/notification-sender';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +52,16 @@ function resolvePmByName(
   return null;
 }
 
+function resolveUserByName(
+  users: { id: string; name: string }[],
+  name: string | undefined
+): string | null {
+  if (!name || !name.trim()) return null;
+  const n = name.trim();
+  const u = users.find((x) => x.name && x.name.trim() === n);
+  return u?.id ?? null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authSupabase = await createClient();
@@ -96,20 +106,36 @@ export async function POST(request: NextRequest) {
     }));
     const buList = (bus ?? []).map((b: any) => ({ code: b.code, name: b.name }));
 
-    const prompt = `당신은 회사 ERP(프로젝트·할일 관리) 어시스턴트입니다.
-사용자 지시를 다음 중 하나로 분류하세요.
+    const { data: projectsForPrompt } = await supabase
+      .from('projects')
+      .select('id, name, bu_code')
+      .in('status', ['준비중', '진행중', '기획중'])
+      .limit(50);
+    const projectListForPrompt = (projectsForPrompt ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      bu_code: p.bu_code,
+    }));
 
-1) "프로젝트 생성" 요청 (예: OO 프로젝트 만들어, 단체복 프로젝트 추가해) → action: "create_project", bu_code/name/category/pm_name 채움
-2) "프로젝트 상황/현황" 질의 (예: OO 프로젝트 상황 어때? / OO 현황 알려줘 / OO 어떻게 되어가?) → action: "project_status", project_name_or_keyword: 프로젝트 이름 또는 검색할 키워드(한두 단어)
-3) 그 외 → action: "none", message에만 한국어 답변
+    const prompt = `당신은 회사 ERP(프로젝트·할일·재무) 어시스턴트입니다.
+사용자 지시를 아래 action 중 하나로 분류하고, 해당 필드만 채우세요.
 
-응답은 반드시 아래 JSON 하나만 출력하세요.
-{"action":"create_project"|"project_status"|"none","project_name_or_keyword":string|null,"bu_code":...,"name":...,"category":...,"pm_name":...,"message":string}
+action 종류:
+- create_project: 프로젝트 생성 (단체복/굿즈→MODOO, 댄스/안무→GRIGO|REACT). 필드: bu_code, name, category, pm_name
+- project_status: 프로젝트 상황/현황 질의. 필드: project_name_or_keyword (검색 키워드)
+- create_task: 할일 추가. 필드: project_name_or_keyword, task_title, due_date (YYYY-MM-DD), assignee_name?, priority? (high|medium|low)
+- update_task: 할일 수정(상태/담당자/기한). 필드: project_name_or_keyword, task_title (할일 제목 일부), status? (todo|in_progress|done), assignee_name?, due_date?
+- delete_task: 할일 삭제. 필드: project_name_or_keyword, task_title (할일 제목 일부)
+- financial_status: 재무 현황 질의. 필드: project_name_or_keyword
+- create_financial: 매출/지출 등록. 필드: project_name_or_keyword, kind ("revenue"|"expense"), category, name (항목명), amount (숫자), occurred_at? (YYYY-MM-DD), memo?
+- none: 위에 해당 없음. 필드: message (한국어 답변만)
 
-create_project일 때: 단체복/굿즈/유니폼→bu_code "MODOO", 댄스/안무/채널→"GRIGO"|"REACT". name은 프로젝트명, category 한두 단어, pm_name 지정 시 이름만.
-project_status일 때: project_name_or_keyword에 검색할 프로젝트명 또는 키워드만 (예: "인천대", "단체복", "FLAVA").
+JSON 하나만 출력. 사용하지 않는 필드는 null.
+{"action":"create_project"|"project_status"|"create_task"|"update_task"|"delete_task"|"financial_status"|"create_financial"|"none","project_name_or_keyword":string|null,"task_title":string|null,"bu_code":string|null,"name":string|null,"category":string|null,"pm_name":string|null,"due_date":string|null,"assignee_name":string|null,"priority":string|null,"status":string|null,"kind":string|null,"amount":number|null,"occurred_at":string|null,"memo":string|null,"message":string}
+
 사업부: ${JSON.stringify(buList)}
-담당자: ${JSON.stringify(userList.slice(0, 40).map((u) => u.name))}
+담당자(이름): ${JSON.stringify([...new Set(userList.map((u: any) => u.name))].slice(0, 40))}
+프로젝트(이름으로 검색용): ${JSON.stringify(projectListForPrompt.map((p: any) => p.name).slice(0, 30))}
 
 사용자 지시: "${instruction}"`;
 
@@ -166,6 +192,264 @@ ${JSON.stringify(payload, null, 2)}
 한국어로 짧고 명확하게 답변만 하세요.`;
       const statusMessage = await generateContent(statusPrompt);
       return NextResponse.json({ message: statusMessage, created: null });
+    }
+
+    if (action === 'financial_status' && projectKeyword) {
+      const { data: projs } = await supabase
+        .from('projects')
+        .select('id, name, bu_code')
+        .ilike('name', `%${projectKeyword}%`)
+        .limit(10);
+      const pList = projs ?? [];
+      const pIds = pList.map((p: any) => p.id);
+      if (pIds.length === 0) {
+        return NextResponse.json({
+          message: `"${projectKeyword}"에 해당하는 프로젝트를 찾지 못했습니다.`,
+          created: null,
+        });
+      }
+      const { data: entries } = await supabase
+        .from('financial_entries')
+        .select('id, project_id, kind, category, name, amount, occurred_at, status')
+        .in('project_id', pIds)
+        .order('occurred_at', { ascending: false });
+      const byProject: Record<number, any[]> = {};
+      (entries ?? []).forEach((e: any) => {
+        if (!byProject[e.project_id]) byProject[e.project_id] = [];
+        byProject[e.project_id].push(e);
+      });
+      const payload = pList.map((p: any) => ({
+        project: p,
+        entries: byProject[p.id] ?? [],
+      }));
+      const finPrompt = `아래는 DB에서 조회한 프로젝트별 재무(매출/지출) 데이터입니다. 사용자 질문에 맞춰 한국어로 요약하세요.
+데이터: ${JSON.stringify(payload, null, 2)}
+
+사용자 질문: "${instruction}"
+
+한국어로 짧고 명확하게 답변만 하세요.`;
+      const finMessage = await generateContent(finPrompt);
+      return NextResponse.json({ message: finMessage, created: null });
+    }
+
+    if (action === 'create_task' && projectKeyword) {
+      const taskTitle = (parsed?.task_title as string)?.trim();
+      const dueDate = (parsed?.due_date as string)?.trim();
+      if (!taskTitle || !dueDate) {
+        return NextResponse.json({
+          message: '할일 제목과 마감일(due_date)이 필요합니다.',
+          created: null,
+        });
+      }
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('id, name, bu_code')
+        .ilike('name', `%${projectKeyword}%`)
+        .limit(1)
+        .single();
+      if (!proj) {
+        return NextResponse.json({
+          message: `"${projectKeyword}" 프로젝트를 찾지 못했습니다.`,
+          created: null,
+        });
+      }
+      const assigneeName = (parsed?.assignee_name as string)?.trim();
+      const assigneeId = resolveUserByName(userList, assigneeName || undefined);
+      const priority = (parsed?.priority as string) === 'high' || (parsed?.priority as string) === 'low'
+        ? (parsed.priority as string)
+        : 'medium';
+      const { data: task, error: taskErr } = await supabase
+        .from('project_tasks')
+        .insert({
+          project_id: proj.id,
+          bu_code: proj.bu_code,
+          title: taskTitle,
+          due_date: dueDate,
+          assignee_id: assigneeId,
+          assignee: assigneeName || null,
+          status: 'todo',
+          priority,
+          created_by: authUser.id,
+        })
+        .select('id, title, project_id')
+        .single();
+      if (taskErr) {
+        return NextResponse.json({
+          message: `할일 생성 실패: ${taskErr.message}`,
+          created: null,
+        }, { status: 500 });
+      }
+      await createActivityLog({
+        userId: authUser.id,
+        actionType: 'task_created',
+        entityType: 'task',
+        entityId: String(task.id),
+        entityTitle: task.title,
+        metadata: { project_id: proj.id, source: 'ai_command' },
+      });
+      if (assigneeId && assigneeId !== authUser.id) {
+        const creatorName = userList.find((u: any) => u.id === authUser.id)?.name;
+        await createTaskAssignedLog(assigneeId, String(task.id), task.title, authUser.id);
+        await notifyTaskAssigned(assigneeId, task.title, proj.name, String(task.id), creatorName);
+      }
+      return NextResponse.json({
+        message: `"${task.title}" 할일을 [${proj.name}]에 추가했습니다.${assigneeId ? ' 담당자 지정됨.' : ''}`,
+        created: { task_id: task.id, title: task.title, project_name: proj.name },
+      });
+    }
+
+    if (action === 'update_task' && projectKeyword) {
+      const taskTitle = (parsed?.task_title as string)?.trim();
+      if (!taskTitle) {
+        return NextResponse.json({ message: '수정할 할일 제목(일부)이 필요합니다.', created: null });
+      }
+      const { data: projs } = await supabase
+        .from('projects')
+        .select('id, name')
+        .ilike('name', `%${projectKeyword}%`)
+        .limit(5);
+      const projIds = (projs ?? []).map((p: any) => p.id);
+      if (projIds.length === 0) {
+        return NextResponse.json({ message: `"${projectKeyword}" 프로젝트를 찾지 못했습니다.`, created: null });
+      }
+      const { data: tasks } = await supabase
+        .from('project_tasks')
+        .select('id, title, project_id')
+        .in('project_id', projIds)
+        .ilike('title', `%${taskTitle}%`)
+        .limit(5);
+      const taskList = tasks ?? [];
+      if (taskList.length === 0) {
+        return NextResponse.json({ message: `"${taskTitle}" 할일을 찾지 못했습니다.`, created: null });
+      }
+      const target = taskList[0];
+      const projName = projs?.find((p: any) => p.id === target.project_id)?.name ?? '';
+      const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      const newStatus = parsed?.status as string | undefined;
+      if (newStatus && ['todo', 'in_progress', 'done'].includes(newStatus)) {
+        updatePayload.status = newStatus;
+      }
+      const newAssigneeName = (parsed?.assignee_name as string)?.trim();
+      let newAssigneeId: string | null = null;
+      if (newAssigneeName) {
+        const aid = resolveUserByName(userList, newAssigneeName);
+        if (aid) {
+          updatePayload.assignee_id = aid;
+          newAssigneeId = aid;
+        }
+      }
+      const newDue = (parsed?.due_date as string)?.trim();
+      if (newDue) updatePayload.due_date = newDue;
+      const { data: updated, error: upErr } = await supabase
+        .from('project_tasks')
+        .update(updatePayload)
+        .eq('id', target.id)
+        .select()
+        .single();
+      if (upErr) {
+        return NextResponse.json({ message: `할일 수정 실패: ${upErr.message}`, created: null }, { status: 500 });
+      }
+      if (newAssigneeId && newAssigneeId !== authUser.id) {
+        const creatorName = userList.find((u: any) => u.id === authUser.id)?.name;
+        await notifyTaskAssigned(newAssigneeId, updated.title, projName, String(updated.id), creatorName);
+      }
+      return NextResponse.json({
+        message: `"${updated.title}" 할일을 수정했습니다.`,
+        created: { task_id: updated.id, title: updated.title },
+      });
+    }
+
+    if (action === 'delete_task' && projectKeyword) {
+      const taskTitle = (parsed?.task_title as string)?.trim();
+      if (!taskTitle) {
+        return NextResponse.json({ message: '삭제할 할일 제목(일부)이 필요합니다.', created: null });
+      }
+      const { data: projs } = await supabase
+        .from('projects')
+        .select('id')
+        .ilike('name', `%${projectKeyword}%`)
+        .limit(5);
+      const projIds = (projs ?? []).map((p: any) => p.id);
+      if (projIds.length === 0) {
+        return NextResponse.json({ message: `"${projectKeyword}" 프로젝트를 찾지 못했습니다.`, created: null });
+      }
+      const { data: tasks } = await supabase
+        .from('project_tasks')
+        .select('id, title')
+        .in('project_id', projIds)
+        .ilike('title', `%${taskTitle}%`)
+        .limit(5);
+      const taskList = tasks ?? [];
+      if (taskList.length === 0) {
+        return NextResponse.json({ message: `"${taskTitle}" 할일을 찾지 못했습니다.`, created: null });
+      }
+      const target = taskList[0];
+      const { error: delErr } = await supabase.from('project_tasks').delete().eq('id', target.id);
+      if (delErr) {
+        return NextResponse.json({ message: `할일 삭제 실패: ${delErr.message}`, created: null }, { status: 500 });
+      }
+      return NextResponse.json({
+        message: `"${target.title}" 할일을 삭제했습니다.`,
+        created: null,
+      });
+    }
+
+    if (action === 'create_financial' && projectKeyword) {
+      const kind = parsed?.kind as string;
+      const name = (parsed?.name as string)?.trim();
+      const amount = typeof parsed?.amount === 'number' ? parsed.amount : parseInt(String(parsed?.amount ?? '0'), 10);
+      const category = (parsed?.category as string)?.trim() || '기타';
+      if (!name || !amount || amount <= 0 || (kind !== 'revenue' && kind !== 'expense')) {
+        return NextResponse.json({
+          message: '재무 등록에는 kind(revenue/expense), name(항목명), amount(금액), category가 필요합니다.',
+          created: null,
+        });
+      }
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('id, name, bu_code')
+        .ilike('name', `%${projectKeyword}%`)
+        .limit(1)
+        .single();
+      if (!proj) {
+        return NextResponse.json({
+          message: `"${projectKeyword}" 프로젝트를 찾지 못했습니다.`,
+          created: null,
+        });
+      }
+      const occurredAt = (parsed?.occurred_at as string)?.trim() || new Date().toISOString().slice(0, 10);
+      const memo = (parsed?.memo as string)?.trim() || null;
+      const { data: entry, error: finErr } = await supabase
+        .from('financial_entries')
+        .insert({
+          project_id: proj.id,
+          bu_code: proj.bu_code,
+          kind,
+          category,
+          name,
+          amount,
+          occurred_at: occurredAt,
+          status: 'planned',
+          memo,
+          created_by: authUser.id,
+        })
+        .select('id, name, kind, amount, occurred_at')
+        .single();
+      if (finErr) {
+        return NextResponse.json({ message: `재무 등록 실패: ${finErr.message}`, created: null }, { status: 500 });
+      }
+      await createActivityLog({
+        userId: authUser.id,
+        actionType: 'financial_created',
+        entityType: 'financial_entry',
+        entityId: String(entry.id),
+        entityTitle: entry.name,
+        metadata: { kind, project_id: proj.id, source: 'ai_command' },
+      });
+      return NextResponse.json({
+        message: `[${proj.name}]에 ${kind === 'revenue' ? '매출' : '지출'} "${entry.name}" ${amount.toLocaleString()}원을 등록했습니다.`,
+        created: { financial_id: entry.id, name: entry.name, kind: entry.kind, amount: entry.amount },
+      });
     }
 
     const message =
