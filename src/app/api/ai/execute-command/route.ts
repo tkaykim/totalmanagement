@@ -194,9 +194,9 @@ export async function POST(request: NextRequest) {
       bu_code: p.bu_code,
     }));
 
-    const prompt = `${conversationContext}당신은 회사 ERP(프로젝트·할일·재무) 어시스턴트입니다.
-사용자 지시를 아래 action 중 하나로 분류하고, 해당 필드만 채우세요.
-중요: "PM은 OO", "담당 OO", "OO에게" 등 인명이 나오면 pm_name 또는 assignee_name에 넣으세요. 사용자가 프로젝트나 할일의 목적·내용을 자연어로 설명하면 project_description 또는 task_description에 요약해서 넣으세요.
+    const prompt = `${conversationContext}회사 ERP 어시스턴트. 목적: 프로젝트·할일 배분, 리소스 현황, 업무 부하, 예산 현황 등 DB 조회·확인.
+사용자 지시를 아래 action 중 하나로 분류하고 해당 필드만 채우세요. (action 분류만 하고 길게 쓰지 말 것)
+인명("PM은 OO", "담당 OO")은 pm_name/assignee_name에, 프로젝트·할일 설명은 project_description/task_description에 넣으세요.
 
 action 종류:
 - create_project: 프로젝트만 생성. 필드: bu_code, name, category, project_description? (프로젝트 설명), pm_name (지정 시 반드시 채움)
@@ -208,10 +208,11 @@ action 종류:
 - financial_status: 재무 현황 질의. 필드: project_name_or_keyword
 - create_financial: 매출/지출 등록. 필드: project_name_or_keyword, kind, category, name, amount, occurred_at?, memo?
 - person_busy: "OOO 바빠?", "OOO 상황 어때?" 등 특정 인물의 업무 부하·바쁨 질의. 필드: person_name (대상 인물 이름)
-- none: 위에 해당 없음. 필드: message
+- unassigned_summary: "담당자 미지정 할일/프로젝트 몇 건?" 등 미배정 건수 질의. 필드 없음.
+- none: 위에 해당 없음. 필드: message (1~2문장으로 짧게)
 
 JSON 하나만 출력. 사용하지 않는 필드는 null.
-{"action":"create_project"|"create_project_and_task"|"project_status"|"create_task"|"update_task"|"delete_task"|"financial_status"|"create_financial"|"person_busy"|"none","project_name_or_keyword":string|null,"task_title":string|null,"bu_code":string|null,"name":string|null,"category":string|null,"project_description":string|null,"task_description":string|null,"pm_name":string|null,"due_date":string|null,"assignee_name":string|null,"priority":string|null,"status":string|null,"kind":string|null,"amount":number|null,"occurred_at":string|null,"memo":string|null,"person_name":string|null,"message":string}
+{"action":"create_project"|"create_project_and_task"|"project_status"|"create_task"|"update_task"|"delete_task"|"financial_status"|"create_financial"|"person_busy"|"unassigned_summary"|"none","project_name_or_keyword":string|null,"task_title":string|null,"bu_code":string|null,"name":string|null,"category":string|null,"project_description":string|null,"task_description":string|null,"pm_name":string|null,"due_date":string|null,"assignee_name":string|null,"priority":string|null,"status":string|null,"kind":string|null,"amount":number|null,"occurred_at":string|null,"memo":string|null,"person_name":string|null,"message":string}
 
 사업부: ${JSON.stringify(buList)}
 담당자(이름): ${JSON.stringify([...new Set(userList.map((u: any) => u.name))].slice(0, 40))}
@@ -232,6 +233,38 @@ JSON 하나만 출력. 사용하지 않는 필드는 null.
       parsed = parseJsonFromGemini(rawResponse);
       action = parsed?.action as string | undefined;
       projectKeyword = (parsed?.project_name_or_keyword as string)?.trim();
+    }
+
+    if (action === 'unassigned_summary') {
+      const [{ count: projectCount }, { data: projectsNoPm }, { count: taskCount }, { data: tasksNoAssignee }] = await Promise.all([
+        supabase.from('projects').select('*', { count: 'exact', head: true }).in('status', ['준비중', '진행중', '기획중']).is('pm_id', null),
+        supabase.from('projects').select('id, name, bu_code, status').in('status', ['준비중', '진행중', '기획중']).is('pm_id', null).limit(10),
+        supabase.from('project_tasks').select('*', { count: 'exact', head: true }).is('assignee_id', null),
+        supabase.from('project_tasks').select('id, project_id, title, status, due_date').is('assignee_id', null).limit(15),
+      ]);
+
+      const pmNullCount = projectCount ?? 0;
+      const assigneeNullCount = taskCount ?? 0;
+      const sampleProjects = (projectsNoPm ?? []).map((p: any) => ({ name: p.name, bu_code: p.bu_code, status: p.status }));
+      const sampleTasks = (tasksNoAssignee ?? []).map((t: any) => ({ title: t.title, status: t.status, due_date: t.due_date }));
+
+      const payload = {
+        pm_미지정_프로젝트_건수: pmNullCount,
+        담당자_미지정_할일_건수: assigneeNullCount,
+        프로젝트_샘플: sampleProjects,
+        할일_샘플: sampleTasks,
+      };
+
+      const unassignedPrompt = `${conversationContext}DB 조회 결과입니다. 질문에 맞춰 숫자와 핵심만 짧게 답하세요. (2~3문장 이내)
+
+데이터:
+${JSON.stringify(payload, null, 2)}
+
+질문: "${instruction}"
+
+한국어로 건수와 핵심만 짧게. 과도한 설명 금지.`;
+      const unassignedMessage = await generateContent(unassignedPrompt);
+      return NextResponse.json({ message: unassignedMessage, created: null });
     }
 
     if (action === 'project_status' && projectKeyword) {
@@ -272,14 +305,14 @@ JSON 하나만 출력. 사용하지 않는 필드는 null.
           overdue: t.status !== 'done' && t.due_date < today,
         })),
       }));
-      const statusPrompt = `${conversationContext}아래는 DB에서 조회한 실제 프로젝트·할일 데이터입니다.
-${historyMessages.length > 0 ? '이전 대화 맥락을 반영하여 ' : ''}현재 상태를 분석하고, 문제나 지연이 있으면 해소 방안을 제안하세요. (상황, 진행률, 밀린 일, 담당자, 리스크 등)
+      const statusPrompt = `${conversationContext}DB 조회한 프로젝트·할일 데이터입니다. 상황·진행·담당·지연만 핵심으로 짧게 답하세요. (3~4문장 이내)
+
 데이터:
 ${JSON.stringify(payload, null, 2)}
 
-현재 사용자 질문: "${instruction}"
+질문: "${instruction}"
 
-한국어로 분석·제안을 포함해 충분히 서술하세요.`;
+한국어로 핵심만 짧게. 과도한 설명 금지.`;
       const statusMessage = await generateContent(statusPrompt);
       return NextResponse.json({ message: statusMessage, created: null });
     }
@@ -378,14 +411,14 @@ ${JSON.stringify(payload, null, 2)}
         },
       };
 
-      const busyPrompt = `${conversationContext}아래는 DB에서 조회한 실제 데이터입니다. "지금 OOO 바빠?", "OOO 상황 어때?" 등에 대해 프로젝트(PM/참여)와 할일(담당) 상태를 종합해 답하세요.
-${historyMessages.length > 0 ? '이전 대화 맥락을 반영하여 ' : ''}바쁨 정도, 부하 원인, 필요 시 조정 제안을 포함해 서술하세요.
+      const busyPrompt = `${conversationContext}DB 조회한 PM/참여 프로젝트·담당 할일 데이터입니다. 바쁨 정도와 숫자만 짧게 답하세요. (2~3문장 이내)
+
 데이터:
 ${JSON.stringify(payload, null, 2)}
 
-현재 사용자 질문: "${instruction}"
+질문: "${instruction}"
 
-한국어로 분석·제안을 포함해 충분히 서술하세요.`;
+한국어로 핵심만 짧게. 과도한 설명 금지.`;
       const busyMessage = await generateContent(busyPrompt);
       return NextResponse.json({ message: busyMessage, created: null });
     }
@@ -418,13 +451,13 @@ ${JSON.stringify(payload, null, 2)}
         project: p,
         entries: byProject[p.id] ?? [],
       }));
-      const finPrompt = `${conversationContext}아래는 DB에서 조회한 프로젝트별 재무(매출/지출) 데이터입니다.
-${historyMessages.length > 0 ? '이전 대화 맥락을 반영하여 ' : ''}현황을 분석하고 필요 시 인사이트나 제안을 포함하세요.
+      const finPrompt = `${conversationContext}DB 조회한 프로젝트별 매출/지출 데이터입니다. 현황과 숫자만 짧게 답하세요. (2~3문장 이내)
+
 데이터: ${JSON.stringify(payload, null, 2)}
 
-현재 사용자 질문: "${instruction}"
+질문: "${instruction}"
 
-한국어로 분석·제안을 포함해 충분히 서술하세요.`;
+한국어로 핵심만 짧게. 과도한 설명 금지.`;
       const finMessage = await generateContent(finPrompt);
       return NextResponse.json({ message: finMessage, created: null });
     }
