@@ -1,24 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { Sparkles, FileText, Send, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Sparkles, FileText, Send, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AiChatMessage, type ChatMessagePayload } from './AiChatMessage';
 
 export function AiWorkInsightView() {
   const [report, setReport] = useState<string | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
 
-  const [instruction, setInstruction] = useState('');
-  const [commandResult, setCommandResult] = useState<string | null>(null);
-  const [commandCreated, setCommandCreated] = useState<{
-    project_id: number;
-    name: string;
-    bu_code: string;
-    pm_id: string | null;
-  } | null>(null);
-  const [commandLoading, setCommandLoading] = useState(false);
-  const [commandError, setCommandError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessagePayload[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   const fetchDailyReport = async () => {
     setReportError(null);
@@ -36,31 +36,114 @@ export function AiWorkInsightView() {
     }
   };
 
-  const sendInstruction = async () => {
-    const trimmed = instruction.trim();
-    if (!trimmed) return;
-    setCommandError(null);
-    setCommandResult(null);
-    setCommandCreated(null);
-    setCommandLoading(true);
+  const sendMessage = async (executePayload?: { instruction: string; plan: Record<string, unknown> }) => {
+    const isExecute = !!executePayload;
+    const instruction = (executePayload?.instruction ?? input).trim();
+    if (!instruction) return;
+
+    setError(null);
+    if (!isExecute) {
+      setMessages((prev) => [
+        ...prev,
+        { id: `u-${Date.now()}`, role: 'user', content: instruction },
+      ]);
+      setInput('');
+    }
+
+    setLoading(true);
     try {
+      const payload: {
+        instruction: string;
+        execute: boolean;
+        plan?: Record<string, unknown>;
+        messages?: { role: string; content: string }[];
+      } = {
+        instruction,
+        execute: isExecute,
+      };
+      if (isExecute && executePayload?.plan) {
+        payload.plan = executePayload.plan;
+      }
+      if (!isExecute && messages.length > 0) {
+        payload.messages = messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+      }
+
       const res = await fetch('/api/ai/execute-command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instruction: trimmed }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to process');
-      setCommandResult(data.message ?? '');
-      if (data.created) {
-        setCommandCreated(data.created);
+
+      const replyContent = data.message ?? '';
+      const hasPlan = data.executed === false && data.plan;
+      const created = data.created ?? undefined;
+
+      if (isExecute) {
+        setMessages((prev) => {
+          const next = [...prev];
+          const lastIdx = next.length - 1;
+          if (lastIdx >= 0 && next[lastIdx].role === 'assistant' && next[lastIdx].plan) {
+            next[lastIdx] = {
+              ...next[lastIdx],
+              content: replyContent,
+              plan: undefined,
+              instructionForExecute: undefined,
+              created,
+            };
+          } else {
+            next.push({
+              id: `a-${Date.now()}`,
+              role: 'assistant',
+              content: replyContent,
+              created,
+            });
+          }
+          return next;
+        });
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `a-${Date.now()}`,
+            role: 'assistant',
+            content: replyContent,
+            plan: hasPlan ? data.plan : undefined,
+            instructionForExecute: hasPlan ? instruction : undefined,
+            created,
+          },
+        ]);
       }
     } catch (e) {
-      setCommandError(e instanceof Error ? e.message : '오류가 발생했습니다.');
+      setError(e instanceof Error ? e.message : '오류가 발생했습니다.');
+      if (!isExecute) {
+        setMessages((prev) => prev.slice(0, -1));
+        setInput(instruction);
+      }
     } finally {
-      setCommandLoading(false);
+      setLoading(false);
     }
   };
+
+  const handleExecute = (message: ChatMessagePayload) => {
+    if (message.plan && message.instructionForExecute) {
+      sendMessage({ instruction: message.instructionForExecute, plan: message.plan });
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+    setError(null);
+  };
+
+  const lastAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant'
+    ? messages[messages.length - 1]
+    : null;
+  const pendingPlanMessage = lastAssistant?.plan ? lastAssistant : null;
 
   return (
     <div className="space-y-8">
@@ -74,13 +157,12 @@ export function AiWorkInsightView() {
               업무파악, 지시 AI
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              오늘 업무 요약 보고를 생성하고, 지시문을 입력하면 AI가 해석·제안합니다.
+              대화 맥락을 유지하며 상태 분석·제안을 받고, 지시하면 실행 계획 후 반영할 수 있습니다.
             </p>
           </div>
         </div>
       </div>
 
-      {/* 오늘 업무 파악 */}
       <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-5">
         <div className="flex items-center gap-2 mb-3">
           <FileText className="h-5 w-5 text-slate-500" />
@@ -128,69 +210,98 @@ export function AiWorkInsightView() {
         )}
       </section>
 
-      {/* 지시 AI */}
       <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Send className="h-5 w-5 text-slate-500" />
-          <h3 className="font-semibold text-slate-800 dark:text-slate-200">
-            지시 AI
-          </h3>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <Send className="h-5 w-5 text-slate-500" />
+            <h3 className="font-semibold text-slate-800 dark:text-slate-200">
+              지시 AI (대화형)
+            </h3>
+          </div>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={clearChat}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              대화 초기화
+            </button>
+          )}
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          프로젝트 생성/삭제, 할일 추가·수정·삭제, 재무 조회·등록 등. 예: &quot;인천대 프로젝트에 할일 &#39;견적 발송&#39; 3/15까지 김동현에게&quot;, &quot;FLAVA 재무 현황 알려줘&quot;
+          이전 대화를 기억합니다. 상태 분석·해소 방안 제안을 요청하거나, 지시 후 확인하면 실행할 수 있습니다.
         </p>
-        <textarea
-          value={instruction}
-          onChange={(e) => setInstruction(e.target.value)}
-          placeholder="예: 모두굿즈에 2026 봄 단체복 프로젝트 추가하고 PM은 김동현으로 해줘"
-          className="w-full min-h-[100px] rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          disabled={commandLoading}
-        />
-        <button
-          onClick={sendInstruction}
-          disabled={commandLoading || !instruction.trim()}
-          className={cn(
-            'mt-3 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
-            commandLoading || !instruction.trim()
-              ? 'bg-slate-200 dark:bg-slate-600 text-slate-500 cursor-not-allowed'
-              : 'bg-violet-600 text-white hover:bg-violet-700'
-          )}
-        >
-          {commandLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              처리 중…
-            </>
-          ) : (
-            <>
-              <Send className="h-4 w-4" />
-              지시 보내기
-            </>
-          )}
-        </button>
-        {commandError && (
-          <p className="mt-3 text-sm text-red-600 dark:text-red-400">{commandError}</p>
-        )}
-        {commandResult && (
-          <div className="mt-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-4">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
-              AI 응답
-            </p>
-            <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-              {commandResult}
-            </div>
-            {commandCreated && (
-              <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
-                <p className="text-xs font-medium text-violet-600 dark:text-violet-400">
-                  프로젝트 생성됨
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {commandCreated.name} · {commandCreated.bu_code}
-                  {commandCreated.pm_id ? ' · PM 지정됨' : ''}
-                </p>
+
+        <div className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 min-h-[280px] max-h-[420px] overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-3 space-y-1">
+            {messages.length === 0 && !loading && (
+              <p className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+                메시지를 입력하고 보내면 AI가 맥락을 유지하며 답합니다.
+                <br />
+                예: &quot;지금 김동현 바빠?&quot;, &quot;OO 프로젝트 상황 어때?&quot;
+              </p>
+            )}
+            {messages.map((msg) => (
+              <AiChatMessage
+                key={msg.id}
+                message={msg}
+                onExecute={
+                  msg.role === 'assistant' && msg.plan
+                    ? () => handleExecute(msg)
+                    : undefined
+                }
+                isExecuting={loading && pendingPlanMessage?.id === msg.id}
+              />
+            ))}
+            {loading && messages[messages.length - 1]?.role === 'user' && (
+              <div className="flex gap-3 py-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/50">
+                  <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
+                </div>
+                <div className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-500">
+                  처리 중…
+                </div>
               </div>
             )}
+            <div ref={chatEndRef} />
           </div>
+
+          <div className="border-t border-slate-200 dark:border-slate-700 p-3">
+            <div className="flex gap-2">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (input.trim()) sendMessage();
+                  }
+                }}
+                placeholder="질문이나 지시를 입력하세요 (Enter로 전송, Shift+Enter 줄바꿈)"
+                rows={2}
+                className="min-h-[52px] flex-1 resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => sendMessage()}
+                disabled={loading || !input.trim()}
+                className={cn(
+                  'self-end rounded-lg p-2.5 transition-colors',
+                  loading || !input.trim()
+                    ? 'bg-slate-200 dark:bg-slate-600 text-slate-500 cursor-not-allowed'
+                    : 'bg-violet-600 text-white hover:bg-violet-700'
+                )}
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
         )}
       </section>
     </div>
