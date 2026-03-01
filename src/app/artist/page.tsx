@@ -49,13 +49,19 @@ export default function ArtistPage() {
       // app_users에서 사용자 정보 가져오기
       const { data: appUser, error: appUserError } = await supabase
         .from('app_users')
-        .select('id, name, email, role, bu_code, partner_id')
+        .select('id, name, email, role, bu_code, partner_id, status')
         .eq('id', authUser.id)
         .single();
 
       if (appUserError || !appUser) {
         setError('사용자 정보를 불러올 수 없습니다.');
         setLoading(false);
+        return;
+      }
+
+      if (appUser.status === 'retired') {
+        await supabase.auth.signOut();
+        router.push('/login');
         return;
       }
 

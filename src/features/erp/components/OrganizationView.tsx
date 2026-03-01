@@ -1,9 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BU, BU_TITLES } from '../types';
+
+const USER_STATUS_LABELS: Record<string, string> = {
+  active: '재직',
+  dormant: '휴면',
+  retired: '퇴사',
+};
 
 export function OrganizationView({
   bu,
@@ -29,7 +35,7 @@ export function OrganizationView({
   externalWorkersData: any[];
   partnerWorkersData: any[];
   partnerCompaniesData: any[];
-  usersData?: { users: any[]; currentUser: any };
+  usersData?: { users: any[]; retiredUsers?: any[]; currentUser: any };
   currentUser?: any;
   orgViewTab: 'org' | 'external' | 'users';
   onTabChange: (tab: 'org' | 'external' | 'users') => void;
@@ -44,6 +50,8 @@ export function OrganizationView({
 }) {
   const isAdmin = currentUser?.profile?.role === 'admin';
   const users = usersData?.users || [];
+  const retiredUsers = usersData?.retiredUsers ?? [];
+  const [usersListTab, setUsersListTab] = useState<'active' | 'retired'>('active');
 
   const internalEmployees = useMemo(() => {
     return users.filter((u: any) => u.bu_code != null);
@@ -385,13 +393,15 @@ export function OrganizationView({
 
       {orgViewTab === 'users' && (
         <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">회원 관리</h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500">전체 회원 리스트</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">재직/휴면/퇴사 구분 관리</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">총 {users.length}명</span>
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+                재직 {users.length}명 / 퇴사 {retiredUsers.length}명
+              </span>
               {isAdmin && (
                 <button
                   onClick={onAddUser}
@@ -404,10 +414,38 @@ export function OrganizationView({
             </div>
           </div>
 
+          <div className="mb-3 flex w-fit rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5">
+            <button
+              type="button"
+              onClick={() => setUsersListTab('active')}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-semibold transition',
+                usersListTab === 'active'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 shadow'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
+              )}
+            >
+              재직
+            </button>
+            <button
+              type="button"
+              onClick={() => setUsersListTab('retired')}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-semibold transition',
+                usersListTab === 'retired'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 shadow'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
+              )}
+            >
+              퇴사·휴면
+            </button>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[11px]">
               <thead className="bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500">
                 <tr>
+                  <th className="px-4 py-3 font-bold uppercase tracking-tight">상태</th>
                   <th className="px-4 py-3 font-bold uppercase tracking-tight">이름</th>
                   <th className="px-4 py-3 font-bold uppercase tracking-tight">이메일</th>
                   <th className="px-4 py-3 font-bold uppercase tracking-tight">역할</th>
@@ -420,15 +458,33 @@ export function OrganizationView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan={isAdmin ? 7 : 6} className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                      등록된 회원이 없습니다.
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((u: any) => (
-                    <tr key={u.id} className="transition hover:bg-slate-50 dark:bg-slate-900">
+                {(() => {
+                  const list = usersListTab === 'active' ? users : retiredUsers;
+                  if (list.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={isAdmin ? 8 : 7} className="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                          {usersListTab === 'active' ? '재직 중인 회원이 없습니다.' : '퇴사·휴면 인원이 없습니다.'}
+                        </td>
+                      </tr>
+                    );
+                  }
+                  return list.map((u: any) => (
+                    <tr key={u.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-900">
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-[9px] font-semibold',
+                            (u.status ?? 'active') === 'retired'
+                              ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                              : (u.status ?? 'active') === 'dormant'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
+                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+                          )}
+                        >
+                          {USER_STATUS_LABELS[u.status ?? 'active'] ?? '재직'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <span className="font-semibold text-slate-800 dark:text-slate-200">{u.name}</span>
                       </td>
@@ -478,8 +534,8 @@ export function OrganizationView({
                         </td>
                       )}
                     </tr>
-                  ))
-                )}
+                  ));
+                })()}
               </tbody>
             </table>
           </div>

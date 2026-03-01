@@ -264,7 +264,11 @@ export async function fetchBusinessUnits(): Promise<any[]> {
   return res.json();
 }
 
-export async function fetchUsers(): Promise<{ users: any[]; currentUser: any }> {
+export async function fetchUsers(): Promise<{
+  users: any[];
+  retiredUsers: any[];
+  currentUser: any;
+}> {
   const res = await fetch(`${API_BASE}/users`);
   if (!res.ok) throw new Error('Failed to fetch users');
   return res.json();
@@ -298,6 +302,8 @@ export async function updateUser(
     role?: string;
     bu_code?: string;
     position?: string;
+    hire_date?: string;
+    status?: 'active' | 'dormant' | 'retired';
   }>
 ): Promise<any> {
   const res = await fetch(`${API_BASE}/users/${id}`, {

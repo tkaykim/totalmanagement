@@ -22,16 +22,27 @@ export async function GET() {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
-    // 모든 사용자 조회 (모든 사용자가 볼 수 있음)
-    const { data: users, error: usersError } = await supabase
+    // 재직(active) 사용자만 기본 목록/선택용으로 사용
+    const { data: activeUsers, error: activeError } = await supabase
       .from('app_users')
       .select('*')
+      .in('status', ['active'])
       .order('created_at', { ascending: false });
 
-    if (usersError) throw usersError;
+    if (activeError) throw activeError;
+
+    // 휴면/퇴사 인원 별도 목록
+    const { data: retiredUsers, error: retiredError } = await supabase
+      .from('app_users')
+      .select('*')
+      .in('status', ['dormant', 'retired'])
+      .order('updated_at', { ascending: false });
+
+    if (retiredError) throw retiredError;
 
     return NextResponse.json({
-      users,
+      users: activeUsers ?? [],
+      retiredUsers: retiredUsers ?? [],
       currentUser,
     });
   } catch (error) {
@@ -86,7 +97,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: signUpError?.message || 'Failed to create user' }, { status: 500 });
     }
 
-    // app_users 테이블에 프로필 추가
+    // app_users 테이블에 프로필 추가 (신규는 항상 재직)
     const { data: appUser, error: profileCreateError } = await supabase
       .from('app_users')
       .insert({
@@ -97,6 +108,7 @@ export async function POST(request: NextRequest) {
         bu_code: body.bu_code || null,
         position: body.position || null,
         hire_date: body.hire_date || null,
+        status: 'active',
       })
       .select()
       .single();

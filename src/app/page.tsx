@@ -111,6 +111,7 @@ import { TaskTemplateView } from '@/features/task-template/components/TaskTempla
 import { TaskTemplateSelector, type PendingTask } from '@/features/task-template/components/TaskTemplateSelector';
 import { ManualsView } from '@/features/manuals';
 import { PushTestView } from '@/features/push-test';
+import { AiWorkInsightView } from '@/features/ai-work-insight';
 import {
   Sheet,
   SheetContent,
@@ -253,7 +254,11 @@ function HomePage() {
       name: user.profile.name,
       position: user.profile.position,
     };
-    return getVisibleMenus(permUser);
+    const menus = getVisibleMenus(permUser);
+    if (user?.email === 'tommy0621@naver.com') {
+      menus.push('aiWorkInsight');
+    }
+    return menus;
   }, [user]);
 
   // 전체 BU 통계 조회 권한 (admin만)
@@ -418,6 +423,13 @@ function HomePage() {
         .select('*')
         .eq('id', user.id)
         .single();
+
+      // 퇴사 처리된 사용자는 로그인 불가
+      if (appUser?.status === 'retired') {
+        await supabase.auth.signOut();
+        router.push('/login');
+        return;
+      }
 
       // bu_code가 null인 경우 로그인 페이지로 리디렉션
       if (!appUser?.bu_code) {
@@ -1106,7 +1118,9 @@ function HomePage() {
                                                 ? '푸시 알림 테스트'
                                                 : view === 'resourceOverview'
                                                   ? '리소스 현황'
-                                                  : '조직 현황'
+                                                  : view === 'aiWorkInsight'
+                                                    ? '업무파악, 지시 AI'
+                                                    : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
           periodType={periodType}
@@ -1394,6 +1408,10 @@ function HomePage() {
                 setEditTaskModalOpen(task);
               }}
             />
+          )}
+
+          {view === 'aiWorkInsight' && (
+            <AiWorkInsightView />
           )}
 
         </div>

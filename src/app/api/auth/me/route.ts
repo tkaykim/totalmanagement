@@ -17,6 +17,11 @@ export async function GET() {
       .eq('id', user.id)
       .single();
 
+    // 퇴사 처리된 사용자는 로그인 불가
+    if (appUser?.status === 'retired') {
+      return NextResponse.json({ user: null, blocked: 'retired' }, { status: 200 });
+    }
+
     return NextResponse.json({
       user: {
         ...user,

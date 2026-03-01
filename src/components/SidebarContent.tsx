@@ -19,6 +19,7 @@ import {
   BookOpen,
   Bell,
   BarChart3,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { View } from '@/features/erp/types';
@@ -256,6 +257,21 @@ export const SidebarContent = memo(function SidebarContent({
                 onClick={() => handleMenuClick('vehicles')}
               />
             )}
+          </div>
+        )}
+
+        {/* ── 업무파악/지시 AI (tommy0621@naver.com 전용) ── */}
+        {visibleMenus.includes('aiWorkInsight') && (
+          <div className="mt-2 pt-2 border-t border-slate-700">
+            <p className="px-2 sm:px-3 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              AI
+            </p>
+            <SidebarButton
+              label="업무파악, 지시 AI"
+              icon={<Sparkles className="h-4 w-4" />}
+              active={view === 'aiWorkInsight'}
+              onClick={() => handleMenuClick('aiWorkInsight')}
+            />
           </div>
         )}
 

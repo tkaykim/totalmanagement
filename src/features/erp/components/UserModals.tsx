@@ -19,6 +19,7 @@ export function EditUserModal({
     bu_code?: string;
     position?: string;
     hire_date?: string;
+    status?: 'active' | 'dormant' | 'retired';
   }) => Promise<void>;
   isAdmin?: boolean;
 }) {
@@ -29,6 +30,7 @@ export function EditUserModal({
     bu_code: user.bu_code || '',
     position: user.position || '',
     hire_date: user.hire_date || '',
+    status: (user.status || 'active') as 'active' | 'dormant' | 'retired',
   });
   const [error, setError] = useState<string>('');
 
@@ -87,6 +89,18 @@ export function EditUserModal({
             onChange={(v) => setForm((prev) => ({ ...prev, hire_date: v }))}
           />
         )}
+        {isAdmin && (
+          <SelectField
+            label="재직 상태"
+            value={form.status}
+            onChange={(val) => setForm((prev) => ({ ...prev, status: val as 'active' | 'dormant' | 'retired' }))}
+            options={[
+              { value: 'active', label: '재직' },
+              { value: 'dormant', label: '휴면' },
+              { value: 'retired', label: '퇴사' },
+            ]}
+          />
+        )}
       </div>
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
@@ -111,6 +125,7 @@ export function EditUserModal({
             bu_code: form.bu_code || undefined,
             position: form.position || undefined,
             hire_date: isAdmin ? (form.hire_date || undefined) : undefined,
+            status: isAdmin ? form.status : undefined,
           });
         }}
         onClose={onClose}

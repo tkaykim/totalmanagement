@@ -34,15 +34,22 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // 네이티브 앱: 로그인 직후 푸시 토큰 재등록 (처음 401로 저장 실패했을 수 있음)
-        retryPushRegistration().catch(() => {});
-
-        // 사용자 프로필에서 사업부 및 역할 정보 가져오기
+        // 사용자 프로필에서 상태 확인 (퇴사자는 로그인 불가)
         const { data: appUser } = await supabase
           .from('app_users')
-          .select('bu_code, role')
+          .select('bu_code, role, status')
           .eq('id', data.user.id)
           .single();
+
+        if (appUser?.status === 'retired') {
+          await supabase.auth.signOut();
+          setError('퇴사 처리된 계정은 로그인할 수 없습니다.');
+          setLoading(false);
+          return;
+        }
+
+        // 네이티브 앱: 로그인 직후 푸시 토큰 재등록 (처음 401로 저장 실패했을 수 있음)
+        retryPushRegistration().catch(() => {});
 
         // artist role인 경우 /artist로 리다이렉션
         if (appUser?.role === 'artist') {

@@ -32,7 +32,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    // 업데이트할 데이터 준비
+    // 업데이트할 데이터 준비 (휴면/퇴사 상태 포함)
     const updateData: any = {};
     if (body.name !== undefined) updateData.name = body.name;
     if (body.email !== undefined) updateData.email = body.email;
@@ -40,6 +40,9 @@ export async function PATCH(
     if (body.bu_code !== undefined) updateData.bu_code = body.bu_code || null;
     if (body.position !== undefined) updateData.position = body.position || null;
     if (body.hire_date !== undefined) updateData.hire_date = body.hire_date || null;
+    if (body.status !== undefined && ['active', 'dormant', 'retired'].includes(body.status)) {
+      updateData.status = body.status;
+    }
     updateData.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase
