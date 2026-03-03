@@ -403,6 +403,25 @@ export async function notifyLeaveRequestRejected(
 }
 
 /**
+ * 버그 리포트 처리완료 알림 (신고자에게)
+ */
+export async function notifyBugReportResolved(
+  reporterId: string,
+  bugReportTitle: string,
+  bugReportId: number
+) {
+  return createNotification({
+    userId: reporterId,
+    title: '버그 리포트가 처리 완료되었습니다',
+    message: `"${bugReportTitle}" 건이 처리 완료되었습니다.`,
+    type: 'success',
+    entityType: 'bug_report',
+    entityId: String(bugReportId),
+    actionUrl: '/?view=bugReports',
+  });
+}
+
+/**
  * 댓글 멘션 알림
  */
 export async function notifyCommentMention(

@@ -50,7 +50,7 @@ export function dbTaskToFrontend(t: ProjectTask): {
   assignee_id?: string;
   assignee: string;
   dueDate: string;
-  status: 'todo' | 'in-progress' | 'done';
+  status: 'todo' | 'in-progress' | 'on-hold' | 'done';
   priority: 'high' | 'medium' | 'low';
   tag?: string;
   manual_id?: number | null;
@@ -65,7 +65,7 @@ export function dbTaskToFrontend(t: ProjectTask): {
     assignee_id: t.assignee_id || undefined,
     assignee: t.assignee || '',
     dueDate: t.due_date,
-    status: t.status === 'in_progress' ? 'in-progress' : t.status,
+    status: t.status === 'in_progress' ? 'in-progress' : t.status === 'on_hold' ? 'on-hold' : (t.status as 'todo' | 'in-progress' | 'on-hold' | 'done'),
     priority: t.priority || 'medium',
     tag: t.tag,
     manual_id: t.manual_id ?? undefined,
@@ -202,7 +202,7 @@ export function frontendTaskToDb(t: {
   assignee_id?: string;
   assignee: string;
   dueDate: string;
-  status?: 'todo' | 'in-progress' | 'done';
+  status?: 'todo' | 'in-progress' | 'on-hold' | 'done';
   priority?: 'high' | 'medium' | 'low';
   tag?: string;
   manual_id?: number | null;
@@ -214,12 +214,13 @@ export function frontendTaskToDb(t: {
   assignee_id?: string;
   assignee: string;
   due_date: string;
-  status: 'todo' | 'in_progress' | 'done';
+  status: 'todo' | 'in_progress' | 'on_hold' | 'done';
   priority?: 'high' | 'medium' | 'low';
   tag?: string;
   manual_id?: number | null;
 } {
   const today = getTodayKST();
+  const statusDb = t.status === 'in-progress' ? 'in_progress' : t.status === 'on-hold' ? 'on_hold' : (t.status || 'todo');
   return {
     project_id: Number(t.projectId),
     bu_code: t.bu,
@@ -228,7 +229,7 @@ export function frontendTaskToDb(t: {
     assignee_id: t.assignee_id || undefined,
     assignee: t.assignee || '',
     due_date: t.dueDate || today,
-    status: t.status === 'in-progress' ? 'in_progress' : (t.status || 'todo'),
+    status: statusDb as 'todo' | 'in_progress' | 'on_hold' | 'done',
     priority: t.priority || 'medium',
     tag: t.tag,
     manual_id: t.manual_id ?? null,

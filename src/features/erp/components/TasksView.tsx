@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { BuTabs } from './BuTabs';
 import { BU, BU_TITLES, Project, TaskItem, TaskPriority } from '../types';
-import { Circle, Clock, CheckCircle2, Calendar, User, ArrowRight, Lock, Search, BookOpen } from 'lucide-react';
+import { Circle, Clock, CheckCircle2, PauseCircle, Calendar, User, ArrowRight, Lock, Search, BookOpen } from 'lucide-react';
 
 type CurrentUser = {
   id: string;
@@ -51,7 +51,7 @@ function canEditTaskStatus(
   return false;
 }
 
-type TaskStatus = 'todo' | 'in-progress' | 'done';
+type TaskStatus = 'todo' | 'in-progress' | 'on-hold' | 'done';
 
 const STATUS_CONFIG: Record<TaskStatus, { 
   label: string; 
@@ -79,6 +79,15 @@ const STATUS_CONFIG: Record<TaskStatus, {
     borderColor: 'border-blue-200 dark:border-blue-800',
     icon: Clock,
     headerBg: 'bg-blue-100 dark:bg-blue-900/40',
+  },
+  'on-hold': { 
+    label: '보류', 
+    shortLabel: '보류',
+    color: 'text-orange-600 dark:text-orange-400', 
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    borderColor: 'border-orange-200 dark:border-orange-800',
+    icon: PauseCircle,
+    headerBg: 'bg-orange-100 dark:bg-orange-900/40',
   },
   'done': { 
     label: '완료', 
@@ -171,7 +180,7 @@ function TaskCard({
           className="flex items-center gap-1 mt-3 pt-2 border-t border-slate-100 dark:border-slate-700"
         >
           {canEdit ? (
-            (['todo', 'in-progress', 'done'] as const).map((status) => {
+            (['todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => {
               const config = STATUS_CONFIG[status];
               const isActive = task.status === status;
               return (
@@ -313,6 +322,7 @@ export function TasksView({
   const tasksByStatus = useMemo(() => ({
     todo: buTasks.filter((t) => t.status === 'todo'),
     'in-progress': buTasks.filter((t) => t.status === 'in-progress'),
+    'on-hold': buTasks.filter((t) => t.status === 'on-hold'),
     done: buTasks.filter((t) => t.status === 'done'),
   }), [buTasks]);
 
@@ -349,7 +359,7 @@ export function TasksView({
       <div className="lg:hidden">
         {/* 탭 헤더 */}
         <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 mb-4">
-          {(['todo', 'in-progress', 'done'] as const).map((status) => {
+          {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => {
             const config = STATUS_CONFIG[status];
             const count = tasksByStatus[status].length;
             const isActive = mobileTab === status;
@@ -377,11 +387,12 @@ export function TasksView({
         </div>
 
         {/* 모바일 카드 리스트 */}
-        <div className="space-y-2">
-          {tasksByStatus[mobileTab].length === 0 ? (
+            <div className="space-y-2">
+              {tasksByStatus[mobileTab].length === 0 ? (
             <div className="flex items-center justify-center h-32 text-sm text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-700">
               {mobileTab === 'todo' && '진행 전인 할일이 없습니다'}
               {mobileTab === 'in-progress' && '진행 중인 할일이 없습니다'}
+              {mobileTab === 'on-hold' && '보류된 할일이 없습니다'}
               {mobileTab === 'done' && '완료된 할일이 없습니다'}
             </div>
           ) : (
@@ -412,7 +423,7 @@ export function TasksView({
 
       {/* 데스크톱: 칸반 보드 */}
       <div className="hidden lg:flex gap-4">
-        {(['todo', 'in-progress', 'done'] as const).map((status) => (
+        {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => (
           <KanbanColumn
             key={status}
             status={status}
@@ -427,7 +438,7 @@ export function TasksView({
 
       {/* 태블릿: 가로 스크롤 칸반 */}
       <div className="hidden sm:flex lg:hidden overflow-x-auto gap-4 pb-4 -mx-4 px-4 snap-x snap-mandatory">
-        {(['todo', 'in-progress', 'done'] as const).map((status) => (
+        {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => (
           <div key={status} className="snap-center flex-shrink-0">
             <KanbanColumn
               status={status}

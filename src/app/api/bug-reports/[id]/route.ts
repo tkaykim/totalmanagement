@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { notifyBugReportResolved } from '@/lib/notification-sender';
 
 export async function PATCH(
   request: NextRequest,
@@ -48,6 +49,14 @@ export async function PATCH(
     if (error) {
       console.error('Error updating bug report:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (body.status === 'resolved' && data?.reporter_id && data.title) {
+      notifyBugReportResolved(
+        data.reporter_id as string,
+        data.title as string,
+        data.id as number
+      ).catch((err) => console.error('Bug report resolved notification failed:', err));
     }
 
     return NextResponse.json(data);

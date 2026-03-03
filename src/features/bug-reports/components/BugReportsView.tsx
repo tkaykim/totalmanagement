@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Bug, Plus, Clock, User, ChevronRight, Inbox } from 'lucide-react';
+import { Bug, Plus, Clock, User, Inbox } from 'lucide-react';
 import { useBugReports, useUpdateBugReport } from '../hooks';
 import {
   BugReport,
@@ -12,6 +12,15 @@ import { BugReportModal } from './BugReportModal';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const BUG_REPORT_STATUSES: BugReportStatus[] = ['pending', 'on_hold', 'resolved'];
 
 const STATUS_CONFIG: Record<
   BugReportStatus,
@@ -23,6 +32,13 @@ const STATUS_CONFIG: Record<
     bgColor: 'bg-amber-50 dark:bg-amber-900/20',
     borderColor: 'border-amber-200 dark:border-amber-800',
     headerBg: 'bg-amber-100 dark:bg-amber-900/40',
+  },
+  on_hold: {
+    label: '보류',
+    color: 'text-slate-600 dark:text-slate-400',
+    bgColor: 'bg-slate-50 dark:bg-slate-900/20',
+    borderColor: 'border-slate-200 dark:border-slate-800',
+    headerBg: 'bg-slate-100 dark:bg-slate-900/40',
   },
   resolved: {
     label: '처리완료',
@@ -49,13 +65,12 @@ function BugReportCard({
   const [expanded, setExpanded] = useState(false);
   const updateMutation = useUpdateBugReport();
   const config = STATUS_CONFIG[report.status];
-  const targetStatus: BugReportStatus = report.status === 'pending' ? 'resolved' : 'pending';
   const hasDetail = report.description || report.improvement_request;
+  const otherStatuses = BUG_REPORT_STATUSES.filter((s) => s !== report.status);
 
-  const handleMove = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await updateMutation.mutateAsync({ id: report.id, data: { status: targetStatus } });
-    onStatusChange(report.id, targetStatus);
+  const handleStatusSelect = async (newStatus: BugReportStatus) => {
+    await updateMutation.mutateAsync({ id: report.id, data: { status: newStatus } });
+    onStatusChange(report.id, newStatus);
   };
 
   return (
@@ -108,23 +123,22 @@ function BugReportCard({
 
       {isAdmin && (
         <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={handleMove}
+          <Select
+            value=""
+            onValueChange={(value) => handleStatusSelect(value as BugReportStatus)}
             disabled={updateMutation.isPending}
-            className={cn(
-              'w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-colors',
-              targetStatus === 'resolved'
-                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-300'
-                : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300'
-            )}
           >
-            {updateMutation.isPending ? (
-              <div className="h-3 w-3 animate-spin rounded-full border-2 border-current/30 border-t-current" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
-            )}
-            {BUG_STATUS_LABELS[targetStatus]}로 이동
-          </button>
+            <SelectTrigger className="h-8 text-[11px]">
+              <SelectValue placeholder="상태 변경" />
+            </SelectTrigger>
+            <SelectContent>
+              {otherStatuses.map((status) => (
+                <SelectItem key={status} value={status} className="text-[11px]">
+                  {BUG_STATUS_LABELS[status]}로 변경
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
     </div>
@@ -177,7 +191,9 @@ function KanbanColumn({
         {reports.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-24 text-xs text-slate-400 dark:text-slate-500">
             <Inbox className="h-8 w-8 mb-2 opacity-40" />
-            {status === 'pending' ? '접수 대기 중인 리포트가 없습니다' : '처리 완료된 리포트가 없습니다'}
+            {STATUS_CONFIG[status].label === '접수됨' && '접수 대기 중인 리포트가 없습니다'}
+            {STATUS_CONFIG[status].label === '보류' && '보류 중인 리포트가 없습니다'}
+            {STATUS_CONFIG[status].label === '처리완료' && '처리 완료된 리포트가 없습니다'}
           </div>
         ) : (
           reports.map((report) => (
@@ -198,10 +214,16 @@ export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
   const { data: bugReports = [], isLoading } = useBugReports();
   const [showReportModal, setShowReportModal] = useState(false);
   const [mobileTab, setMobileTab] = useState<BugReportStatus>('pending');
+  const emptyMessages: Record<BugReportStatus, string> = {
+    pending: '접수 대기 중인 리포트가 없습니다',
+    on_hold: '보류 중인 리포트가 없습니다',
+    resolved: '처리 완료된 리포트가 없습니다',
+  };
 
   const reportsByStatus = useMemo(
     () => ({
       pending: bugReports.filter((r) => r.status === 'pending'),
+      on_hold: bugReports.filter((r) => r.status === 'on_hold'),
       resolved: bugReports.filter((r) => r.status === 'resolved'),
     }),
     [bugReports]
@@ -246,7 +268,7 @@ export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
       {/* 모바일: 탭 전환 */}
       <div className="lg:hidden">
         <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 mb-4">
-          {(['pending', 'resolved'] as const).map((status) => {
+          {BUG_REPORT_STATUSES.map((status) => {
             const config = STATUS_CONFIG[status];
             const count = reportsByStatus[status].length;
             const isActive = mobileTab === status;
@@ -278,9 +300,7 @@ export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
           {reportsByStatus[mobileTab].length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-sm text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-700">
               <Inbox className="h-10 w-10 mb-2 opacity-40" />
-              {mobileTab === 'pending'
-                ? '접수 대기 중인 리포트가 없습니다'
-                : '처리 완료된 리포트가 없습니다'}
+              {emptyMessages[mobileTab]}
             </div>
           ) : (
             reportsByStatus[mobileTab].map((report) => (
@@ -297,7 +317,7 @@ export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
 
       {/* 데스크톱: 칸반 보드 */}
       <div className="hidden lg:flex gap-4">
-        {(['pending', 'resolved'] as const).map((status) => (
+        {BUG_REPORT_STATUSES.map((status) => (
           <KanbanColumn
             key={status}
             status={status}
@@ -310,7 +330,7 @@ export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
 
       {/* 태블릿: 가로 스크롤 칸반 */}
       <div className="hidden sm:flex lg:hidden overflow-x-auto gap-4 pb-4 -mx-4 px-4 snap-x snap-mandatory">
-        {(['pending', 'resolved'] as const).map((status) => (
+        {BUG_REPORT_STATUSES.map((status) => (
           <div key={status} className="snap-center flex-shrink-0">
             <KanbanColumn
               status={status}

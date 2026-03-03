@@ -51,7 +51,7 @@ export function ProjectsView({
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
+  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중', '보류'];
   const completedProjectStatuses = ['완료'];
 
   const formatDateShort = (dateString: string): string => {

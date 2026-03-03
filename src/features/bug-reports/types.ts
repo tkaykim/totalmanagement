@@ -1,4 +1,4 @@
-export type BugReportStatus = 'pending' | 'resolved';
+export type BugReportStatus = 'pending' | 'on_hold' | 'resolved';
 
 export interface BugReport {
   id: number;
@@ -30,10 +30,12 @@ export interface UpdateBugReportPayload {
 
 export const BUG_STATUS_LABELS: Record<BugReportStatus, string> = {
   pending: '접수됨',
+  on_hold: '보류',
   resolved: '처리완료',
 };
 
 export const BUG_STATUS_COLORS: Record<BugReportStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
+  on_hold: 'bg-slate-100 text-slate-700 dark:bg-slate-900/50 dark:text-slate-300',
   resolved: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
 };

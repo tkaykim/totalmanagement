@@ -49,7 +49,7 @@ export type TaskItem = {
   assignee_id?: string;
   assignee: string;
   dueDate: string;
-  status: 'todo' | 'in-progress' | 'done';
+  status: 'todo' | 'in-progress' | 'on-hold' | 'done';
   priority: TaskPriority;
   manual_id?: number | null;
 };

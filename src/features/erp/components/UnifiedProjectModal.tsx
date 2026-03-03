@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock, Pencil, Search, Check, Circle, Clock, CheckCircle2, ListTodo, MessageCircle, FileText, Paperclip, Download, Image as ImageIcon, File as FileIcon } from 'lucide-react';
+import { X, Plus, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Lock, Pencil, Search, Check, Circle, Clock, CheckCircle2, PauseCircle, ListTodo, MessageCircle, FileText, Paperclip, Download, Image as ImageIcon, File as FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
 import type { AppUser, Project as DbProject } from '@/types/database';
@@ -24,7 +24,7 @@ type FinanceEntry = {
   occurred_at: string;
 };
 
-type TaskStatus = 'todo' | 'in-progress' | 'done';
+type TaskStatus = 'todo' | 'in-progress' | 'on-hold' | 'done';
 
 type TaskEntry = {
   id: string;
@@ -73,6 +73,7 @@ const STATUS_OPTIONS = [
   { value: '기획중', label: '기획중' },
   { value: '진행중', label: '진행중' },
   { value: '운영중', label: '운영중' },
+  { value: '보류', label: '보류' },
   { value: '완료', label: '완료' },
 ];
 
@@ -248,6 +249,7 @@ function SearchDropdown({
 const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; icon: typeof Circle }> = {
   'todo': { label: '할 일', color: 'text-slate-500 bg-slate-100 dark:bg-slate-700', icon: Circle },
   'in-progress': { label: '진행중', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/50', icon: Clock },
+  'on-hold': { label: '보류', color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/50', icon: PauseCircle },
   'done': { label: '완료', color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/50', icon: CheckCircle2 },
 };
 
@@ -378,6 +380,7 @@ function TasksSection({
     all: tasks.length,
     todo: tasks.filter((t) => t.status === 'todo').length,
     'in-progress': tasks.filter((t) => t.status === 'in-progress').length,
+    'on-hold': tasks.filter((t) => t.status === 'on-hold').length,
     done: tasks.filter((t) => t.status === 'done').length,
   };
 
@@ -448,8 +451,8 @@ function TasksSection({
       {isExpanded && (
         <>
           {/* 상태 필터 탭 */}
-          <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
-            {(['all', 'todo', 'in-progress', 'done'] as const).map((status) => (
+          <div className="flex flex-wrap gap-1 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
+            {(['all', 'todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -544,7 +547,7 @@ function TasksSection({
                           TASK_STATUS_CONFIG[task.status].color
                         )}
                       >
-                        {(['todo', 'in-progress', 'done'] as const).map((s) => (
+                        {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((s) => (
                           <option key={s} value={s}>
                             {TASK_STATUS_CONFIG[s].label}
                           </option>
@@ -950,6 +953,7 @@ export function UnifiedProjectModal({
       case '기획중': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300';
       case '진행중': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300';
       case '운영중': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300';
+      case '보류': return 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300';
       case '완료': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300';
       default: return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
     }

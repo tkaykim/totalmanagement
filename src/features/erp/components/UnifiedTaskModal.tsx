@@ -10,11 +10,12 @@ import { useManuals } from '../hooks';
 import { BU, BU_TITLES, Project, TaskItem, TaskPriority } from '../types';
 
 type ModalMode = 'create' | 'view' | 'edit';
-type TaskStatus = 'todo' | 'in-progress' | 'done';
+type TaskStatus = 'todo' | 'in-progress' | 'on-hold' | 'done';
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bgColor: string }> = {
   'todo': { label: '진행 전', color: 'text-violet-600 dark:text-violet-400', bgColor: 'bg-violet-100 dark:bg-violet-900/40' },
   'in-progress': { label: '진행중', color: 'text-sky-600 dark:text-sky-400', bgColor: 'bg-sky-100 dark:bg-sky-900/40' },
+  'on-hold': { label: '보류', color: 'text-orange-600 dark:text-orange-400', bgColor: 'bg-orange-100 dark:bg-orange-900/40' },
   'done': { label: '완료', color: 'text-teal-600 dark:text-teal-400', bgColor: 'bg-teal-100 dark:bg-teal-900/40' },
 };
 
@@ -258,7 +259,7 @@ function ClickableStatusChip({
       </button>
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 z-10 min-w-[120px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg py-1">
-          {(['todo', 'in-progress', 'done'] as const).map((s) => {
+          {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((s) => {
             const sConfig = STATUS_CONFIG[s];
             return (
               <button
@@ -852,8 +853,8 @@ export function UnifiedTaskModal({
             {/* 상태 */}
             <FormField label="상태">
               {isEditable ? (
-                <div className="flex gap-2">
-                  {(['todo', 'in-progress', 'done'] as const).map((status) => (
+                <div className="flex flex-wrap gap-2">
+                  {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => (
                     <StatusButton
                       key={status}
                       status={status}

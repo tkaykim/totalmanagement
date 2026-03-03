@@ -1,6 +1,6 @@
 export type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
-export type ProjectStatus = '준비중' | '진행중' | '운영중' | '기획중' | '완료';
-export type TaskStatus = 'todo' | 'in_progress' | 'done';
+export type ProjectStatus = '준비중' | '진행중' | '운영중' | '기획중' | '보류' | '완료';
+export type TaskStatus = 'todo' | 'in_progress' | 'on_hold' | 'done';
 export type FinancialKind = 'revenue' | 'expense';
 export type FinancialStatus = 'planned' | 'paid' | 'canceled';
 export type PaymentMethod = 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment';
