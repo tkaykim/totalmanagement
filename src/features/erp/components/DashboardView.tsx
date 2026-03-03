@@ -171,7 +171,7 @@ export function DashboardView({
 
       <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-8">
         <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
+          <div className="mb-3 flex flex-wrap items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-2">
               <FolderKanban className="h-5 w-5 text-blue-500" />
               <h3 className="font-bold text-slate-800 dark:text-slate-200 dark:text-slate-200">
@@ -181,8 +181,6 @@ export function DashboardView({
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-400">
               {filteredProjects.length}개
             </span>
-          </div>
-          <div className="mb-4 space-y-2">
             <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 p-1">
               <button
                 onClick={() => setProjectFilter('active')}
@@ -207,6 +205,8 @@ export function DashboardView({
                 완료
               </button>
             </div>
+          </div>
+          <div className="mb-4">
             <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 p-1">
               <button
                 onClick={() => setProjectAssigneeFilter('all')}

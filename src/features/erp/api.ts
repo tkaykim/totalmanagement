@@ -92,6 +92,13 @@ export async function deleteProject(id: number): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete project');
 }
 
+function normalizeTaskStatusFromApi(task: any): any {
+  if (!task || task.status == null) return task;
+  const status =
+    task.status === 'on_hold' ? 'on-hold' : task.status === 'in_progress' ? 'in-progress' : task.status;
+  return { ...task, status };
+}
+
 export async function fetchTasks(bu?: BU, projectId?: number): Promise<ProjectTask[]> {
   const params = new URLSearchParams();
   if (bu) params.append('bu', bu);
@@ -99,7 +106,9 @@ export async function fetchTasks(bu?: BU, projectId?: number): Promise<ProjectTa
   const url = `${API_BASE}/tasks${params.toString() ? `?${params}` : ''}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch tasks');
-  return res.json();
+  const data = await res.json();
+  if (!Array.isArray(data)) return data;
+  return data.map(normalizeTaskStatusFromApi);
 }
 
 export async function createTask(data: {
@@ -122,7 +131,8 @@ export async function createTask(data: {
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create task');
-  return res.json();
+  const task = await res.json();
+  return normalizeTaskStatusFromApi(task);
 }
 
 export async function updateTask(id: number, data: Partial<ProjectTask>): Promise<ProjectTask> {
@@ -132,7 +142,8 @@ export async function updateTask(id: number, data: Partial<ProjectTask>): Promis
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to update task');
-  return res.json();
+  const task = await res.json();
+  return normalizeTaskStatusFromApi(task);
 }
 
 export async function deleteTask(id: number): Promise<void> {
