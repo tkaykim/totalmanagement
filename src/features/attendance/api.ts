@@ -229,9 +229,9 @@ export async function getApprovalQueue(): Promise<ApprovalQueueItem[]> {
     const error = await res.json();
     throw new Error(error.error || 'Failed to get approval queue');
   }
-  
+
   const requests = await res.json();
-  
+
   return requests.map((req: any) => ({
     id: req.id,
     requester_name: req.requester?.name || 'Unknown',
@@ -245,6 +245,41 @@ export async function getApprovalQueue(): Promise<ApprovalQueueItem[]> {
     status: req.status,
     created_at: req.created_at,
   }));
+}
+
+/** 정정 신청 이력 (승인/반려된 근무정정만, 관리자용) */
+export interface CorrectionHistoryItem {
+  id: string;
+  requester_name: string;
+  start_date: string;
+  end_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  status: ApprovalStatus;
+  reason: string;
+  created_at: string;
+}
+
+export async function getCorrectionHistory(): Promise<CorrectionHistoryItem[]> {
+  const all = await getWorkRequests({});
+  return all
+    .filter(
+      (req: any) =>
+        req.request_type === 'attendance_correction' &&
+        (req.status === 'approved' || req.status === 'rejected')
+    )
+    .map((req: any) => ({
+      id: req.id,
+      requester_name: req.requester?.name || 'Unknown',
+      start_date: req.start_date,
+      end_date: req.end_date,
+      start_time: req.start_time ?? null,
+      end_time: req.end_time ?? null,
+      status: req.status,
+      reason: req.reason ?? '',
+      created_at: req.created_at,
+    }))
+    .sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
 }
 
 export interface AutoCheckoutLog {

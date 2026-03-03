@@ -51,11 +51,15 @@ export interface FinancialEntry {
 
 /**
  * 프로젝트 접근(열람) 권한 체크
+ * - 생성자(created_by) 또는 PM이면 조회 가능
  * - PM이 지정되지 않은 프로젝트는 leader/admin만 접근 가능
  */
 export function canAccessProject(user: AppUser, project: Project): boolean {
   // admin: 전체 접근
   if (user.role === 'admin') return true;
+
+  // 생성자: 본인이 만든 프로젝트는 PM과 관계없이 조회 가능
+  if (project.created_by === user.id) return true;
 
   // leader: 본인 BU + 본인 PM + 참여자
   if (user.role === 'leader') {
@@ -113,9 +117,13 @@ export function canCreateProject(user: AppUser): boolean {
 
 /**
  * 프로젝트 수정 권한
+ * - 생성자(created_by) 또는 PM이면 수정 가능
  */
 export function canEditProject(user: AppUser, project: Project): boolean {
   if (user.role === 'admin') return true;
+
+  // 생성자: 본인이 만든 프로젝트는 PM이 바뀌어도 수정 가능
+  if (project.created_by === user.id) return true;
 
   // leader: 본인 BU 또는 본인 PM인 프로젝트
   if (user.role === 'leader') {
@@ -123,8 +131,11 @@ export function canEditProject(user: AppUser, project: Project): boolean {
     if (project.pm_id === user.id) return true;
   }
 
-  // manager: 본인 PM만
+  // manager: 본인 PM인 프로젝트
   if (user.role === 'manager' && project.pm_id === user.id) return true;
+
+  // member: 본인 PM인 프로젝트 (생성자는 위 created_by에서 이미 처리)
+  if (user.role === 'member' && project.pm_id === user.id) return true;
 
   return false;
 }

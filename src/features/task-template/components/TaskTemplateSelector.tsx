@@ -23,6 +23,9 @@ export interface PendingTask {
   dueDate: string;
   days_before: number;
   assignee_role?: string;
+  assignee_id?: string;
+  assignee?: string;
+  description?: string;
   manual_id?: number | null;
   templateName?: string;
 }

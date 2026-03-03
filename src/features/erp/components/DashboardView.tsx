@@ -1,60 +1,35 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  BarChart3,
-  BookOpen,
-  ChartLine,
-  Coins,
-  DollarSign,
-  FolderKanban,
-  Search,
-} from 'lucide-react';
+import { BookOpen, FolderKanban, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BU,
   BU_TITLES,
-  BU_LABELS,
   BU_CHIP_STYLES,
   Project,
   TaskItem,
-  FinancialEntry,
-  formatCurrency,
 } from '../types';
-import { StatCard } from './StatCard';
 import { Input } from '@/components/ui/input';
 
-function PieLikeIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
-      <path d="M12 3v9l7.8 4.5A9 9 0 1 1 12 3Z" />
-      <path d="M12 12 21 9a9 9 0 0 0-9-6" />
-    </svg>
-  );
-}
-
 export interface DashboardViewProps {
-  totals: { totalRev: number; totalExp: number; totalProfit: number };
-  buCards: { bu: BU; projects: number; revenue: number; expense: number; profit: number }[];
-  share: { bu: BU; amount: number; ratio: number }[];
   tasks: TaskItem[];
   projects: Project[];
-  revenues: FinancialEntry[];
-  expenses: FinancialEntry[];
   currentUser?: any;
   onProjectClick: (project: Project) => void;
   onTaskClick: (task: TaskItem) => void;
   usersData?: { users: any[]; currentUser: any };
+  /** @deprecated 대시보드에서 재무 지표 미표시. 호환용으로 전달 가능 */
+  totals?: { totalRev: number; totalExp: number; totalProfit: number };
+  buCards?: { bu: BU; projects: number; revenue: number; expense: number; profit: number }[];
+  share?: { bu: BU; amount: number; ratio: number }[];
+  revenues?: unknown[];
+  expenses?: unknown[];
 }
 
 export function DashboardView({
-  totals,
-  buCards,
-  share,
   tasks,
   projects,
-  revenues,
-  expenses,
   currentUser,
   onProjectClick,
   onTaskClick,
@@ -69,7 +44,7 @@ export function DashboardView({
 
   const searchLower = searchQuery.trim().toLowerCase();
 
-  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
+  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중', '보류'];
   const completedProjectStatuses = ['완료'];
   
   const filteredProjects = useMemo(() => {
@@ -150,33 +125,6 @@ export function DashboardView({
     return filtered;
   }, [filteredTasksByProject, taskFilter, taskAssigneeFilter, currentUser, searchLower, projects]);
 
-  const filteredTotals = useMemo(() => {
-    if (selectedBu === 'ALL') {
-      return totals;
-    }
-    
-    const buProjectIds = new Set(projects.filter((p) => p.bu === selectedBu).map((p) => p.id));
-    
-    const buRevenues = revenues.filter((r) => buProjectIds.has(r.projectId));
-    const buExpenses = expenses.filter((e) => buProjectIds.has(e.projectId));
-    
-    const totalRev = buRevenues.reduce((sum, r) => sum + r.amount, 0);
-    const totalExp = buExpenses.reduce((sum, e) => sum + e.amount, 0);
-    
-    return {
-      totalRev,
-      totalExp,
-      totalProfit: totalRev - totalExp,
-    };
-  }, [selectedBu, totals, revenues, expenses, projects]);
-
-  const userId = currentUser?.profile?.id ?? currentUser?.id;
-  const isPmOfAnyProject = Boolean(userId && projects.some((p) => p.pm_id === userId));
-  const canViewFinancialData =
-    currentUser?.profile?.role === 'manager' ||
-    currentUser?.profile?.role === 'admin' ||
-    isPmOfAnyProject;
-
   return (
     <section className="space-y-4 sm:space-y-8">
       <div className="relative">
@@ -186,7 +134,7 @@ export function DashboardView({
           placeholder="프로젝트, 할일 검색 (이름·카테고리·담당자 등)"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 h-9 sm:h-10 bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 max-w-md"
+          className="pl-9 h-9 sm:h-10 bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 w-full max-w-2xl"
         />
       </div>
 
@@ -220,30 +168,7 @@ export function DashboardView({
         </div>
       </div>
 
-      {canViewFinancialData && (
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
-          <StatCard
-            title={selectedBu === 'ALL' ? '선택 기간 총 매출' : `${BU_TITLES[selectedBu]} 총 매출`}
-            value={filteredTotals.totalRev}
-            icon={<DollarSign className="h-5 w-5 text-blue-500" />}
-            accent="text-blue-600"
-          />
-          <StatCard
-            title={selectedBu === 'ALL' ? '선택 기간 총 지출' : `${BU_TITLES[selectedBu]} 총 지출`}
-            value={filteredTotals.totalExp}
-            icon={<Coins className="h-5 w-5 text-red-500" />}
-            accent="text-red-500"
-          />
-          <StatCard
-            title={selectedBu === 'ALL' ? '선택 기간 순이익' : `${BU_TITLES[selectedBu]} 순이익`}
-            value={filteredTotals.totalProfit}
-            icon={<ChartLine className={cn('h-5 w-5', filteredTotals.totalProfit >= 0 ? 'text-emerald-500' : 'text-red-500')} />}
-            accent={filteredTotals.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}
-          />
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-8">
         <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
@@ -317,7 +242,7 @@ export function DashboardView({
               </button>
             </div>
           </div>
-          <div className="space-y-3 max-h-[600px] overflow-y-auto">
+          <div className="space-y-3 max-h-[min(70vh,800px)] overflow-y-auto">
             {filteredProjects.length === 0 ? (
               <p className="text-center text-xs text-slate-400 dark:text-slate-500 py-8">
                 {projectAssigneeFilter === 'my'
@@ -370,7 +295,9 @@ export function DashboardView({
                                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
                                     : project.status === '운영중'
                                       ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
-                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300',
+                                      : project.status === '보류'
+                                        ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300',
                             )}
                           >
                             {project.status}
@@ -491,7 +418,7 @@ export function DashboardView({
               </button>
             </div>
           </div>
-          <div className="space-y-3 max-h-[600px] overflow-y-auto">
+          <div className="space-y-3 max-h-[min(70vh,800px)] overflow-y-auto">
             {filteredTasks.length === 0 ? (
               <p className="text-center text-xs text-slate-400 dark:text-slate-500 py-8">
                 {taskFilter === 'active'
@@ -549,71 +476,6 @@ export function DashboardView({
           </div>
         </div>
       </div>
-
-      {canViewFinancialData && (
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
-            <div className="mb-6 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-500" />
-              <h3 className="font-bold text-slate-800 dark:text-slate-200">사업부별 성과 요약</h3>
-            </div>
-            <div className="space-y-4">
-              {buCards.map((item) => (
-                <div
-                  key={item.bu}
-                  className="flex items-center justify-between rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-700/60 p-5 transition hover:border-blue-200 dark:hover:border-blue-600"
-                >
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-tight text-slate-400 dark:text-slate-500">
-                      {BU_LABELS[item.bu]}
-                    </p>
-                    <p className="text-sm font-black text-slate-800 dark:text-slate-200">{BU_TITLES[item.bu]}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      {item.projects} Active Projects
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-black text-blue-600 dark:text-blue-400">{formatCurrency(item.revenue)}</p>
-                    <p className="mt-0.5 text-[10px] font-bold text-red-500 dark:text-red-400">- {formatCurrency(item.expense)}</p>
-                    <p className={cn('mt-1 text-[11px] font-black', item.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>Net: {formatCurrency(item.profit)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <PieLikeIcon className="h-5 w-5 text-blue-500" />
-                <h3 className="font-bold text-slate-800 dark:text-slate-200">사업부별 매출 비율</h3>
-              </div>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">필터 적용 기준</span>
-            </div>
-            <div className="space-y-3">
-              {share.map((item) => (
-                <div key={item.bu}>
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    <span>{BU_TITLES[item.bu]}</span>
-                    <span className="text-slate-500 dark:text-slate-400">
-                      {item.ratio}% • {formatCurrency(item.amount)}
-                    </span>
-                  </div>
-                  <div className="mt-1 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                      style={{ width: `${item.ratio}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {share.every((s) => s.amount === 0) && (
-                <p className="text-center text-xs text-slate-400 dark:text-slate-500">매출 데이터가 없습니다.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

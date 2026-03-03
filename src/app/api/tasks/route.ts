@@ -185,6 +185,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
+    const taskStatus = body.status || 'todo';
+    const statusDb = taskStatus === 'on-hold' ? 'on_hold' : taskStatus;
+
     const { data, error } = await supabase
       .from('project_tasks')
       .insert({
@@ -195,7 +198,7 @@ export async function POST(request: NextRequest) {
         assignee_id: body.assignee_id,
         assignee: body.assignee,
         due_date: body.due_date,
-        status: body.status || 'todo',
+        status: statusDb,
         priority: body.priority || 'medium',
         tag: body.tag,
         manual_id: body.manual_id ?? null,

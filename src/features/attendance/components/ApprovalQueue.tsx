@@ -7,6 +7,12 @@ import { CheckCircle2, XCircle, Clock, MapPin, Home, Moon, X } from 'lucide-reac
 import { cn } from '@/lib/utils';
 import type { ApprovalQueueItem } from '../types';
 
+function formatTime(t: string | null | undefined): string {
+  if (!t) return '-';
+  if (t.length >= 5) return t.slice(0, 5);
+  return t;
+}
+
 const requestTypeLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   external_work: { label: '외근', icon: <MapPin size={12} />, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' },
   remote_work: { label: '재택', icon: <Home size={12} />, color: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' },
@@ -116,6 +122,12 @@ export function ApprovalQueue() {
                   {item.start_date === item.end_date
                     ? item.start_date
                     : `${item.start_date} ~ ${item.end_date}`}
+                  {item.request_type === 'attendance_correction' &&
+                    (item.start_time || item.end_time) && (
+                      <span className="ml-1 font-medium text-slate-700 dark:text-slate-300">
+                        ({formatTime(item.start_time)} ~ {formatTime(item.end_time)})
+                      </span>
+                    )}
                 </span>
               </div>
 

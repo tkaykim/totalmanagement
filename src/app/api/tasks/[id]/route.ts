@@ -115,12 +115,15 @@ export async function PATCH(
       }
     }
 
-    const updateData = {
+    const updateData: Record<string, unknown> = {
       ...body,
       updated_at: new Date().toISOString(),
     };
     if (body.bu_code || body.project_id) {
       updateData.bu_code = project.bu_code;
+    }
+    if (body.status !== undefined) {
+      updateData.status = body.status === 'on-hold' ? 'on_hold' : body.status;
     }
 
     const { data, error } = await supabase

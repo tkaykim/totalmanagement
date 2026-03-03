@@ -64,6 +64,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
     '기획중': { label: '기획중', bg: 'bg-yellow-100 dark:bg-yellow-900/40', text: 'text-yellow-700 dark:text-yellow-300' },
     '진행중': { label: '진행중', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-300' },
     '운영중': { label: '운영중', bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-700 dark:text-green-300' },
+    '보류': { label: '보류', bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-700 dark:text-orange-300' },
     '완료': { label: '완료', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400' },
 };
 
@@ -90,7 +91,7 @@ export function AdminResourceView({
     const [buFilter, setBuFilter] = useState<BU | 'ALL'>('ALL');
     const [statusFilter, setStatusFilter] = useState<'active' | 'all'>('active');
 
-    const activeStatuses = ['준비중', '기획중', '진행중', '운영중'];
+    const activeStatuses = ['준비중', '기획중', '진행중', '운영중', '보류'];
 
     const filteredProjects = useMemo(() => {
         let result = projects;
@@ -465,7 +466,7 @@ function TeamResourceMatrix({
     // Build member data: for each user, compute their projects and tasks
     const memberData = useMemo(() => {
         const activeTasks = tasks.filter((t) => t.status !== 'done');
-        const activeStatuses = ['준비중', '기획중', '진행중', '운영중'];
+        const activeStatuses = ['준비중', '기획중', '진행중', '운영중', '보류'];
         const activeProjects = projects.filter((p) => activeStatuses.includes(p.status));
 
         return users
@@ -753,7 +754,7 @@ function UpcomingDeadlines({
             .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
         // Also show project deadlines
-        const activeStatuses = ['준비중', '기획중', '진행중', '운영중'];
+        const activeStatuses = ['준비중', '기획중', '진행중', '운영중', '보류'];
         const projectDeadlines = projects
             .filter((p) => activeStatuses.includes(p.status) && p.endDate)
             .filter((p) => p.endDate >= today && p.endDate <= rangeEndStr)
