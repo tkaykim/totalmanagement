@@ -10,6 +10,7 @@ import {
   useEquipmentList,
   useReservations,
   useCreateReservation,
+  useUpdateReservation,
   useCancelReservation,
   useCreateVehicle,
   useUpdateVehicle,
@@ -26,7 +27,7 @@ import { ResourceManageModal } from './ResourceManageModal';
 import { MonthlyCalendar } from './MonthlyCalendar';
 import { ReservationList } from './ReservationList';
 import { DayDetailModal } from './DayDetailModal';
-import type { Reservation, CreateReservationPayload, Vehicle } from '../types';
+import type { Reservation, CreateReservationPayload, UpdateReservationPayload, Vehicle } from '../types';
 import type { Project, TaskItem } from '@/features/erp/types';
 
 interface VehicleLogViewProps {
@@ -65,6 +66,7 @@ export function VehicleLogView({
   });
 
   const createReservationMutation = useCreateReservation();
+  const updateReservationMutation = useUpdateReservation();
   const cancelReservationMutation = useCancelReservation();
   const createVehicleMutation = useCreateVehicle();
   const updateVehicleMutation = useUpdateVehicle();
@@ -121,6 +123,10 @@ export function VehicleLogView({
 
   const handleSubmitReservation = async (payload: CreateReservationPayload) => {
     await createReservationMutation.mutateAsync(payload);
+  };
+
+  const handleUpdateReservation = async (id: number, payload: UpdateReservationPayload) => {
+    await updateReservationMutation.mutateAsync({ id, payload });
   };
 
   const handleCancelReservation = async (id: number) => {
@@ -297,6 +303,7 @@ export function VehicleLogView({
         currentUserId={currentUserId}
         isAdmin={isAdmin}
         onSubmit={handleSubmitReservation}
+        onUpdate={handleUpdateReservation}
         onCancel={handleCancelReservation}
         title={modalMode === 'create' ? '차량 예약' : '운행 상세'}
       />

@@ -10,6 +10,7 @@ import {
   useVehicles,
   useReservations,
   useCreateReservation,
+  useUpdateReservation,
   useCancelReservation,
   useCreateEquipment,
   useUpdateEquipment,
@@ -27,7 +28,7 @@ import { MonthlyCalendar } from './MonthlyCalendar';
 import { ReservationList } from './ReservationList';
 import { DayDetailModal } from './DayDetailModal';
 import { MultiEquipmentRentalModal } from './MultiEquipmentRentalModal';
-import type { Reservation, CreateReservationPayload, Equipment } from '../types';
+import type { Reservation, CreateReservationPayload, UpdateReservationPayload, Equipment } from '../types';
 import type { Project, TaskItem } from '@/features/erp/types';
 
 interface EquipmentRentalViewProps {
@@ -70,6 +71,7 @@ export function EquipmentRentalView({
   });
 
   const createReservationMutation = useCreateReservation();
+  const updateReservationMutation = useUpdateReservation();
   const cancelReservationMutation = useCancelReservation();
   const createEquipmentMutation = useCreateEquipment();
   const updateEquipmentMutation = useUpdateEquipment();
@@ -223,6 +225,10 @@ export function EquipmentRentalView({
 
   const handleSubmitReservation = async (payload: CreateReservationPayload) => {
     await createReservationMutation.mutateAsync(payload);
+  };
+
+  const handleUpdateReservation = async (id: number, payload: UpdateReservationPayload) => {
+    await updateReservationMutation.mutateAsync({ id, payload });
   };
 
   const handleCancelReservation = async (id: number) => {
@@ -501,6 +507,7 @@ export function EquipmentRentalView({
         currentUserId={currentUserId}
         isAdmin={isAdmin}
         onSubmit={handleSubmitReservation}
+        onUpdate={handleUpdateReservation}
         onCancel={handleCancelReservation}
         title={modalMode === 'create' ? '장비 대여' : '대여 상세'}
       />

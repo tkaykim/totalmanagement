@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import type { 
   Reservation, 
   CreateReservationPayload, 
+  UpdateReservationPayload,
   ReservationResourceType,
   MeetingRoom,
   Vehicle,
@@ -15,6 +16,7 @@ import type {
 import type { Project, TaskItem } from '@/features/erp/types';
 import { ParticipantSelector, type Participant } from './ParticipantSelector';
 import { RecurrenceSelector, defaultRecurrenceSettings, type RecurrenceSettings } from './RecurrenceSelector';
+import { ProjectSearchDropdown } from './ProjectSearchDropdown';
 
 interface AppUser {
   id: string;
@@ -48,6 +50,7 @@ interface ReservationModalProps {
   currentUserId?: string;
   isAdmin?: boolean;
   onSubmit: (payload: CreateReservationPayload) => Promise<void>;
+  onUpdate?: (id: number, payload: UpdateReservationPayload) => Promise<void>;
   onCancel?: (id: number) => Promise<void>;
   fixedResourceType?: ReservationResourceType;
   hideResourceTypeSelector?: boolean;
@@ -72,6 +75,7 @@ export function ReservationModal({
   currentUserId,
   isAdmin,
   onSubmit,
+  onUpdate,
   onCancel,
   fixedResourceType,
   hideResourceTypeSelector = false,
@@ -266,20 +270,40 @@ export function ReservationModal({
     setIsSubmitting(true);
 
     try {
-      const recurringDates = generateRecurringDates(startDateTime, endDateTime, recurrence);
-      
-      for (const { start, end } of recurringDates) {
-        await onSubmit({
-          resource_type: resourceType,
-          resource_id: Number(resourceId),
+      if (reservation && onUpdate) {
+        const recurringDates = generateRecurringDates(startDateTime, endDateTime, recurrence);
+        const first = recurringDates[0];
+        if (!first) {
+          setError('일시를 확인해주세요.');
+          return;
+        }
+        await onUpdate(reservation.id, {
           project_id: projectId ? Number(projectId) : null,
           task_id: taskId ? Number(taskId) : null,
           title: title.trim(),
-          start_time: start.toISOString(),
-          end_time: end.toISOString(),
+          start_time: first.start.toISOString(),
+          end_time: first.end.toISOString(),
           notes: notes.trim() || undefined,
         });
+        onClose();
+        return;
       }
+
+      const recurringDates = generateRecurringDates(startDateTime, endDateTime, recurrence);
+      await Promise.all(
+        recurringDates.map(({ start, end }) =>
+          onSubmit({
+            resource_type: resourceType,
+            resource_id: Number(resourceId),
+            project_id: projectId ? Number(projectId) : null,
+            task_id: taskId ? Number(taskId) : null,
+            title: title.trim(),
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
+            notes: notes.trim() || undefined,
+          })
+        )
+      );
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : '예약 중 오류가 발생했습니다.');
@@ -398,20 +422,17 @@ export function ReservationModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">연결 프로젝트</label>
-              <select
+              <ProjectSearchDropdown
+                projects={projects}
                 value={projectId}
-                onChange={(e) => {
-                  setProjectId(e.target.value ? Number(e.target.value) : '');
+                onChange={(v) => {
+                  setProjectId(v);
                   setTaskId('');
                 }}
+                placeholder="프로젝트 검색..."
+                emptyLabel="선택 안함"
                 disabled={!isEditing}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm"
-              >
-                <option value="">선택 안함</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">연결 할일</label>

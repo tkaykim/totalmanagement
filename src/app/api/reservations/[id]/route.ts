@@ -80,13 +80,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
+    const allowedKeys = ['project_id', 'task_id', 'title', 'start_time', 'end_time', 'notes', 'status'] as const;
+    const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    for (const key of allowedKeys) {
+      if (key in body) updatePayload[key] = body[key];
+    }
 
     const { data, error } = await pureClient
       .from('reservations')
-      .update({
-        ...body,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select(`
         *,
@@ -103,11 +105,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       throw error;
     }
 
-    // 리소스 이름 조회 및 알림 전송
+    // 알림은 비동기로 전송하여 응답 지연 방지
     const resourceName = await getResourceName(pureClient, data.resource_type, data.resource_id);
     const reserverName = (data as any).reserver?.name || appUser?.name || '사용자';
-    
-    await notifyReservationUpdated(
+    notifyReservationUpdated(
       data.resource_type,
       resourceName,
       reserverName,
@@ -115,7 +116,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       data.end_time,
       id,
       user.id
-    );
+    ).catch(() => {});
 
     return NextResponse.json(data);
   } catch (error) {
@@ -178,18 +179,17 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
     if (error) throw error;
 
-    // 리소스 이름 조회 및 알림 전송
+    // 알림은 비동기로 전송하여 응답 지연 방지
     const resourceName = await getResourceName(pureClient, existingReservation.resource_type, existingReservation.resource_id);
     const reserverName = reserver?.name || '사용자';
-    
-    await notifyReservationCancelled(
+    notifyReservationCancelled(
       existingReservation.resource_type,
       resourceName,
       reserverName,
       existingReservation.start_time,
       id,
       user.id
-    );
+    ).catch(() => {});
 
     return NextResponse.json(data);
   } catch (error) {

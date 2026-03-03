@@ -11,6 +11,7 @@ import {
   useEquipmentList,
   useReservations,
   useCreateReservation,
+  useUpdateReservation,
   useCancelReservation,
   useCreateMeetingRoom,
   useUpdateMeetingRoom,
@@ -25,7 +26,7 @@ import {
 import { ReservationModal } from './ReservationModal';
 import { ResourceManageModal } from './ResourceManageModal';
 import { ReservationCalendar } from './ReservationCalendar';
-import type { Reservation, ReservationResourceType, CreateReservationPayload } from '../types';
+import type { Reservation, ReservationResourceType, CreateReservationPayload, UpdateReservationPayload } from '../types';
 import type { Project, TaskItem } from '@/features/erp/types';
 
 interface ReservationsViewProps {
@@ -66,6 +67,7 @@ export function ReservationsView({
   });
 
   const createReservationMutation = useCreateReservation();
+  const updateReservationMutation = useUpdateReservation();
   const cancelReservationMutation = useCancelReservation();
   const createMeetingRoomMutation = useCreateMeetingRoom();
   const updateMeetingRoomMutation = useUpdateMeetingRoom();
@@ -118,6 +120,10 @@ export function ReservationsView({
 
   const handleSubmitReservation = async (payload: CreateReservationPayload) => {
     await createReservationMutation.mutateAsync(payload);
+  };
+
+  const handleUpdateReservation = async (id: number, payload: UpdateReservationPayload) => {
+    await updateReservationMutation.mutateAsync({ id, payload });
   };
 
   const handleCancelReservation = async (id: number) => {
@@ -411,6 +417,7 @@ export function ReservationsView({
         currentUserId={currentUserId}
         isAdmin={isAdmin}
         onSubmit={handleSubmitReservation}
+        onUpdate={handleUpdateReservation}
         onCancel={handleCancelReservation}
       />
 

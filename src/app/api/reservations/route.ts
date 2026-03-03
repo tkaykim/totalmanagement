@@ -114,29 +114,36 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // 리소스 이름 조회
-    let resourceName = '예약 항목';
-    if (body.resource_type === 'meeting_room') {
-      const { data: room } = await pureClient.from('meeting_rooms').select('name').eq('id', body.resource_id).single();
-      resourceName = room?.name || '회의실';
-    } else if (body.resource_type === 'equipment') {
-      const { data: eq } = await pureClient.from('equipment').select('name').eq('id', body.resource_id).single();
-      resourceName = eq?.name || '장비';
-    } else if (body.resource_type === 'vehicle') {
-      const { data: veh } = await pureClient.from('vehicles').select('name').eq('id', body.resource_id).single();
-      resourceName = veh?.name || '차량';
-    }
-
-    // 모든 사용자에게 알림 전송 (본인 제외)
-    await notifyReservationCreated(
-      body.resource_type,
-      resourceName,
-      appUser.name,
-      body.start_time,
-      body.end_time,
-      String(data.id),
-      appUser.id
-    );
+    // 알림은 비동기로 전송하여 응답 지연 방지
+    const resourceType = body.resource_type;
+    const resourceId = body.resource_id;
+    const startTime = body.start_time;
+    const endTime = body.end_time;
+    const reservationId = String(data.id);
+    const reserverName = appUser.name;
+    const excludeUserId = appUser.id;
+    (async () => {
+      let resourceName = '예약 항목';
+      if (resourceType === 'meeting_room') {
+        const { data: room } = await pureClient.from('meeting_rooms').select('name').eq('id', resourceId).single();
+        resourceName = room?.name || '회의실';
+      } else if (resourceType === 'equipment') {
+        const { data: eq } = await pureClient.from('equipment').select('name').eq('id', resourceId).single();
+        resourceName = eq?.name || '장비';
+      } else if (resourceType === 'vehicle') {
+        const { data: veh } = await pureClient.from('vehicles').select('name').eq('id', resourceId).single();
+        resourceName = veh?.name || '차량';
+      }
+      await notifyReservationCreated(
+        resourceType,
+        resourceName,
+        reserverName,
+        startTime,
+        endTime,
+        reservationId,
+        excludeUserId
+      );
+    })().catch(() => {});
 
     return NextResponse.json(data);
   } catch (error) {

@@ -9,6 +9,8 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/hooks/use-toast';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { TaskTemplateSelector, type PendingTask } from '@/features/task-template/components/TaskTemplateSelector';
+import { UnifiedTaskModal } from '@/features/erp/components/UnifiedTaskModal';
+import type { Project as ErpProject, TaskPriority as ErpTaskPriority } from '@/features/erp/types';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type ModalMode = 'create' | 'view' | 'edit';
@@ -114,6 +116,8 @@ interface UnifiedProjectModalProps {
   onAddTaskFromTemplate?: () => void;
   onViewTaskDetail?: (task: TaskEntry) => void;
   onTaskStatusChange?: (taskId: string, status: TaskStatus) => void | Promise<void>;
+  /** create 모드에서 할일 추가 시 UnifiedTaskModal에 전달 (담당자 등 동일 UI) */
+  orgData?: any[];
 }
 
 function formatCurrency(amount: number): string {
@@ -328,6 +332,11 @@ function CreateModeTasksSection({
                         <span className={cn('w-1.5 h-1.5 rounded-full', pConfig.dot)} />
                         <span className="text-[10px] text-slate-500">{pConfig.label}</span>
                       </div>
+                      {task.assignee && (
+                        <span className="text-[10px] text-slate-500 truncate max-w-[80px]" title={task.assignee}>
+                          {task.assignee}
+                        </span>
+                      )}
                       {task.dueDate && (
                         <span className="text-[10px] text-slate-400">{task.dueDate}</span>
                       )}
@@ -589,6 +598,7 @@ export function UnifiedProjectModal({
   onAddTaskFromTemplate,
   onViewTaskDetail,
   onTaskStatusChange,
+  orgData = [],
 }: UnifiedProjectModalProps) {
   const [mode, setMode] = useState<ModalMode>(() => {
     if (!project) return 'create';
@@ -689,10 +699,7 @@ export function UnifiedProjectModal({
   // 프로젝트 생성 시 로컬 할일 관리
   const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
   const [showTemplateSelectorLocal, setShowTemplateSelectorLocal] = useState(false);
-  const [showAddTaskInline, setShowAddTaskInline] = useState(false);
-  const [inlineTaskTitle, setInlineTaskTitle] = useState('');
-  const [inlineTaskPriority, setInlineTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [inlineTaskDueDate, setInlineTaskDueDate] = useState('');
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
 
   // 설명 첨부파일 상태
   type DescAttachment = { id: number; file_name: string; file_path: string; mime_type: string; file_size: number; public_url?: string };
@@ -1556,7 +1563,7 @@ export function UnifiedProjectModal({
               <CreateModeTasksSection
                 pendingTasks={pendingTasks}
                 onRemoveTask={(index) => setPendingTasks((prev) => prev.filter((_, i) => i !== index))}
-                onAddTask={() => setShowAddTaskInline(true)}
+                onAddTask={() => setShowAddTaskModal(true)}
                 onAddFromTemplate={() => setShowTemplateSelectorLocal(true)}
               />
             ) : (
@@ -1813,80 +1820,46 @@ export function UnifiedProjectModal({
         </div>
       )}
 
-      {/* 인라인 할일 추가 모달 (create 모드) */}
-      {showAddTaskInline && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur" onClick={() => setShowAddTaskInline(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-              <Plus className="h-5 w-5 text-blue-600" />
-              할일 추가
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">제목 *</label>
-                <input
-                  type="text"
-                  value={inlineTaskTitle}
-                  onChange={(e) => setInlineTaskTitle(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
-                  placeholder="할일 제목을 입력하세요"
-                  autoFocus
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">우선순위</label>
-                  <select
-                    value={inlineTaskPriority}
-                    onChange={(e) => setInlineTaskPriority(e.target.value as 'low' | 'medium' | 'high')}
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
-                  >
-                    <option value="low">낮음</option>
-                    <option value="medium">보통</option>
-                    <option value="high">높음</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">마감일</label>
-                  <input
-                    type="date"
-                    value={inlineTaskDueDate}
-                    onChange={(e) => setInlineTaskDueDate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => { setShowAddTaskInline(false); setInlineTaskTitle(''); setInlineTaskDueDate(''); }}
-                className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => {
-                  if (!inlineTaskTitle.trim()) return;
-                  setPendingTasks((prev) => [...prev, {
-                    title: inlineTaskTitle.trim(),
-                    priority: inlineTaskPriority,
-                    dueDate: inlineTaskDueDate || form.endDate || '',
-                    days_before: 0,
-                  }]);
-                  setInlineTaskTitle('');
-                  setInlineTaskDueDate('');
-                  setInlineTaskPriority('medium');
-                  setShowAddTaskInline(false);
-                }}
-                disabled={!inlineTaskTitle.trim()}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                추가
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 할일 추가 모달 (create 모드) - 할일 생성 모달과 동일 UI로 담당자 설정 가능 */}
+      {showAddTaskModal && (() => {
+        const virtualProject: ErpProject = {
+          id: '__pending__',
+          bu: form.bu as ErpProject['bu'],
+          name: form.name || '새 프로젝트',
+          cat: form.cat,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          status: form.status || '준비중',
+        };
+        return (
+          <UnifiedTaskModal
+            mode="create"
+            onClose={() => setShowAddTaskModal(false)}
+            onSubmit={async (payload) => {
+              setPendingTasks((prev) => [
+                ...prev,
+                {
+                  title: payload.title,
+                  description: payload.description,
+                  priority: payload.priority as ErpTaskPriority,
+                  dueDate: payload.dueDate,
+                  days_before: 0,
+                  assignee_id: payload.assignee_id,
+                  assignee: payload.assignee,
+                  manual_id: payload.manual_id ?? undefined,
+                },
+              ]);
+              setShowAddTaskModal(false);
+              return null;
+            }}
+            defaultBu={form.bu as ErpProject['bu']}
+            projects={[virtualProject]}
+            defaultProjectId="__pending__"
+            orgData={orgData}
+            usersData={usersData}
+          />
+        );
+      })()}
 
       {/* 로컬 템플릿 선택기 (create 모드) */}
       {showTemplateSelectorLocal && (
