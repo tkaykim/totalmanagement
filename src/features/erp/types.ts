@@ -10,6 +10,7 @@ export type Project = {
   endDate: string;
   status: string;
   pm_id?: string | null;
+  created_by?: string | null;
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role: string }>;
 };
 

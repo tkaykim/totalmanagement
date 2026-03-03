@@ -19,6 +19,7 @@ export function dbProjectToFrontend(p: Project): {
   artist_id?: number;
   pm_id?: string | null;
   pm_name?: string | null;
+  created_by?: string | null;
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role: string; is_pm: boolean }>;
 } {
   return {
@@ -37,6 +38,7 @@ export function dbProjectToFrontend(p: Project): {
     artist_id: p.artist_id,
     pm_id: (p as any).pm_id || null,
     pm_name: p.pm_name || null,
+    created_by: p.created_by ?? null,
     participants: p.participants,
   };
 }

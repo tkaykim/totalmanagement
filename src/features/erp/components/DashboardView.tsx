@@ -38,9 +38,9 @@ export function DashboardView({
   const [selectedBu, setSelectedBu] = useState<BU | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
-  const [projectAssigneeFilter, setProjectAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
+  const [projectAssigneeFilter, setProjectAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('my');
   const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
-  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('all');
+  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('my');
 
   const searchLower = searchQuery.trim().toLowerCase();
 
@@ -63,10 +63,11 @@ export function DashboardView({
     if (projectAssigneeFilter === 'my' && currentUser) {
       filtered = filtered.filter((p) => {
         const isPM = p.pm_id === currentUser.id;
+        const isCreator = p.created_by === currentUser.id;
         const isParticipant = p.participants?.some(
           (participant) => participant.user_id === currentUser.id
-        ) || false;
-        return isPM || isParticipant;
+        ) ?? false;
+        return isPM || isCreator || isParticipant;
       });
     }
     if (projectAssigneeFilter === 'unassigned') {
@@ -421,9 +422,13 @@ export function DashboardView({
           <div className="space-y-3 max-h-[min(70vh,800px)] overflow-y-auto">
             {filteredTasks.length === 0 ? (
               <p className="text-center text-xs text-slate-400 dark:text-slate-500 py-8">
-                {taskFilter === 'active'
-                  ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 진행 예정이거나 진행 중인 할일이 없습니다.`
-                  : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 할일이 없습니다.`
+                {taskAssigneeFilter === 'my'
+                  ? '내 담당 할일이 없습니다.'
+                  : taskAssigneeFilter === 'unassigned'
+                    ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 담당자 미지정 할일이 없습니다.`
+                    : taskFilter === 'active'
+                      ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 진행 예정이거나 진행 중인 할일이 없습니다.`
+                      : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 할일이 없습니다.`
                 }
               </p>
             ) : (
