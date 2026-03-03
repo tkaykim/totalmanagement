@@ -339,8 +339,8 @@ export const SidebarContent = memo(function SidebarContent({
         <div className="pb-4" />
       </nav>
 
-      {/* 하단 사용자 정보 - 고정 */}
-      <div className="shrink-0 border-t border-slate-700 p-4 sm:p-4">
+      {/* 하단 사용자 정보 - 고정 (Capacitor 앱에서 하단 네비게이션 바와 겹치지 않도록 safe area 적용) */}
+      <div className="shrink-0 border-t border-slate-700 p-4 sm:p-4 pb-safe-area">
         <div className="rounded-2xl border border-slate-800 bg-slate-800/60 p-3 sm:p-4">
           <p className="mb-1 text-[9px] sm:text-[10px] uppercase tracking-tighter text-slate-500 dark:text-slate-400">
             Signed in as

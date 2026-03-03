@@ -66,7 +66,7 @@ export function DatePicker({
           mode="single"
           selected={selectedDate}
           onSelect={handleSelect}
-          captionLayout="label"
+          captionLayout="dropdown-months"
           fromYear={2020}
           toYear={2030}
           locale={ko}

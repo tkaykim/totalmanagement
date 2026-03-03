@@ -73,6 +73,14 @@
   }
 }
 
+/* Capacitor/Android: 하단 시스템 UI와 겹치지 않도록 safe area 패딩 (웹에서는 1rem 유지) */
+.pb-safe-area {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+.pt-safe-area {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 /* ── TipTap 에디터 스타일 ── */
 .rich-text-content {
   @apply text-sm text-slate-800 dark:text-slate-200 leading-relaxed;

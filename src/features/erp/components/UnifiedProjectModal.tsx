@@ -967,8 +967,8 @@ export function UnifiedProjectModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
-        <div className="w-full max-w-3xl max-h-[calc(100vh-2rem)] flex flex-col rounded-2xl bg-white dark:bg-slate-800 shadow-2xl overflow-hidden">
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur pb-safe-area">
+        <div className="w-full max-w-3xl max-h-[calc(100vh-2rem-env(safe-area-inset-bottom,0px))] flex flex-col rounded-2xl bg-white dark:bg-slate-800 shadow-2xl overflow-hidden">
           {/* Hero Header */}
           <div className="flex-shrink-0 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 px-6 py-5">
             {/* Top row: close button */}
@@ -1695,8 +1695,8 @@ export function UnifiedProjectModal({
 
           </div>
 
-          {/* Footer */}
-          <div className="flex-shrink-0 border-t border-slate-100 dark:border-slate-700 px-6 py-4">
+          {/* Footer - Capacitor 앱에서 하단 네비게이션 바와 겹치지 않도록 safe area 적용 */}
+          <div className="flex-shrink-0 border-t border-slate-100 dark:border-slate-700 px-6 py-4 pb-safe-area">
             <div className="flex items-center justify-between">
               {/* 왼쪽: 삭제 버튼 (edit 모드에서만) */}
               <div>
@@ -1778,7 +1778,7 @@ export function UnifiedProjectModal({
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur pb-safe-area">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl p-6">
             <h3 className="mb-2 text-lg font-bold text-slate-800 dark:text-slate-200">프로젝트 삭제</h3>
             <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
