@@ -10,6 +10,8 @@ import { toast } from '@/hooks/use-toast';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { TaskTemplateSelector, type PendingTask } from '@/features/task-template/components/TaskTemplateSelector';
 import { UnifiedTaskModal } from '@/features/erp/components/UnifiedTaskModal';
+import { UnifiedPartnerModal } from '@/features/partners/components/UnifiedPartnerModal';
+import { ProjectAttachmentDisplay } from '@/features/erp/components/ProjectAttachmentDisplay';
 import type { Project as ErpProject, TaskPriority as ErpTaskPriority } from '@/features/erp/types';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
@@ -118,10 +120,78 @@ interface UnifiedProjectModalProps {
   onTaskStatusChange?: (taskId: string, status: TaskStatus) => void | Promise<void>;
   /** create 모드에서 할일 추가 시 UnifiedTaskModal에 전달 (담당자 등 동일 UI) */
   orgData?: any[];
+  /** 파트너(외주업체/외주담당자/아티스트) 추가 후 목록 갱신용 */
+  onPartnerCreated?: () => void;
+  /** 채널 추가 요청 (이름만 전달, 생성 후 id 반환). 없으면 채널 추가 비노출 */
+  createChannelRequest?: (name: string) => Promise<number | null>;
+  /** 채널 추가 후 목록 갱신용 */
+  onChannelCreated?: () => void;
 }
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount);
+}
+
+function ChannelAddDialog({
+  initialName,
+  onClose,
+  onCreate,
+}: {
+  initialName: string;
+  onClose: () => void;
+  onCreate: (name: string) => Promise<void>;
+}) {
+  const [name, setName] = useState(initialName);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setIsSubmitting(true);
+    try {
+      await onCreate(trimmed);
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: '채널 추가 실패',
+        description: String(e),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+      <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 shadow-2xl p-6">
+        <h3 className="mb-3 text-lg font-bold text-slate-800 dark:text-slate-200">채널 추가</h3>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="채널명 입력"
+          className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!name.trim() || isSubmitting}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSubmitting ? '등록 중...' : '등록'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 type SearchDropdownOption = {
@@ -137,6 +207,8 @@ function SearchDropdown({
   placeholder = '검색...',
   emptyLabel = '선택 안함',
   disabled = false,
+  onAddNew,
+  addNewLabel = '파트너 등록',
 }: {
   options: SearchDropdownOption[];
   value: string;
@@ -144,6 +216,8 @@ function SearchDropdown({
   placeholder?: string;
   emptyLabel?: string;
   disabled?: boolean;
+  onAddNew?: (searchQuery: string) => void;
+  addNewLabel?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -169,6 +243,8 @@ function SearchDropdown({
 
   const selectedOption = options.find((opt) => opt.value === value);
   const displayLabel = selectedOption ? selectedOption.label : emptyLabel;
+  const hasNoResults = filteredOptions.length === 0;
+  const canAddNew = onAddNew && hasNoResults && search.trim().length > 0;
 
   return (
     <div ref={containerRef} className="relative">
@@ -216,8 +292,25 @@ function SearchDropdown({
               <span className="text-slate-500 dark:text-slate-400">{emptyLabel}</span>
               {!value && <Check className="h-4 w-4 text-blue-600" />}
             </button>
-            {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-slate-400 text-center">검색 결과가 없습니다</div>
+            {hasNoResults ? (
+              <div className="px-3 py-4 text-center">
+                {canAddNew ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAddNew(search.trim());
+                      setIsOpen(false);
+                      setSearch('');
+                    }}
+                    className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {addNewLabel}
+                  </button>
+                ) : (
+                  <span className="text-sm text-slate-400">검색 결과가 없습니다</span>
+                )}
+              </div>
             ) : (
               filteredOptions.map((opt) => (
                 <button
@@ -599,7 +692,14 @@ export function UnifiedProjectModal({
   onViewTaskDetail,
   onTaskStatusChange,
   orgData = [],
+  onPartnerCreated,
+  createChannelRequest,
+  onChannelCreated,
 }: UnifiedProjectModalProps) {
+  type PartnerAddKind = 'company' | 'worker' | 'artist' | 'participant_company' | 'participant_worker';
+  const [partnerAddModal, setPartnerAddModal] = useState<{ kind: PartnerAddKind; initialName: string } | null>(null);
+  const [channelAddModal, setChannelAddModal] = useState<{ initialName: string } | null>(null);
+
   const [mode, setMode] = useState<ModalMode>(() => {
     if (!project) return 'create';
     return initialMode || 'view';
@@ -772,6 +872,25 @@ export function UnifiedProjectModal({
 
   const handleRemoveParticipant = (index: number) => {
     setSelectedParticipants((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePartnerCreated = (partner: { id: number; display_name: string; name_ko?: string; name_en?: string }) => {
+    if (!partnerAddModal) return;
+    const { kind } = partnerAddModal;
+    const name = partner.display_name || partner.name_ko || partner.name_en || '';
+    if (kind === 'company') {
+      setForm((prev) => ({ ...prev, partner_company_id: String(partner.id), partner_worker_id: '' }));
+    } else if (kind === 'worker') {
+      setForm((prev) => ({ ...prev, partner_worker_id: String(partner.id) }));
+    } else if (kind === 'artist') {
+      setForm((prev) => ({ ...prev, artist_id: String(partner.id) }));
+    } else if (kind === 'participant_company') {
+      setSelectedParticipants((prev) => [...prev, { type: 'partner_company', id: partner.id, name }]);
+    } else if (kind === 'participant_worker') {
+      setSelectedParticipants((prev) => [...prev, { type: 'partner_worker', id: partner.id, name }]);
+    }
+    setPartnerAddModal(null);
+    onPartnerCreated?.();
   };
 
   const handleSubmit = async () => {
@@ -1163,7 +1282,7 @@ export function UnifiedProjectModal({
                       ref={fileInputRef}
                       type="file"
                       multiple
-                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.txt,.zip,.rar"
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.txt,.zip,.rar,.psd,.ai"
                       onChange={(e) => {
                         if (e.target.files) {
                           setDescriptionFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
@@ -1178,7 +1297,7 @@ export function UnifiedProjectModal({
                       className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition"
                     >
                       <Paperclip className="h-3.5 w-3.5" />
-                      파일 첨부 (PDF, 이미지 등)
+                      파일 첨부 (PDF, 이미지, PSD, AI, ZIP 등)
                     </button>
                   </div>
 
@@ -1189,29 +1308,14 @@ export function UnifiedProjectModal({
                       <div className="flex flex-wrap gap-2">
                         {existingAttachments
                           .filter((a) => !removedAttachmentIds.includes(a.id))
-                          .map((att) => {
-                            const isImage = att.mime_type?.startsWith('image/');
-                            return (
-                              <div
-                                key={att.id}
-                                className="group relative flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs"
-                              >
-                                {isImage ? (
-                                  <ImageIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                                ) : (
-                                  <FileIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                )}
-                                <span className="max-w-[140px] truncate text-slate-700 dark:text-slate-300">{att.file_name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => setRemovedAttachmentIds((prev) => [...prev, att.id])}
-                                  className="ml-1 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            );
-                          })}
+                          .map((att) => (
+                            <ProjectAttachmentDisplay
+                              key={att.id}
+                              attachment={att}
+                              variant="edit"
+                              onRemove={() => setRemovedAttachmentIds((prev) => [...prev, att.id])}
+                            />
+                          ))}
                       </div>
                     </div>
                   )}
@@ -1223,6 +1327,7 @@ export function UnifiedProjectModal({
                       <div className="flex flex-wrap gap-2">
                         {descriptionFiles.map((file, idx) => {
                           const isImage = file.type.startsWith('image/');
+                          const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
                           return (
                             <div
                               key={`${file.name}-${idx}`}
@@ -1230,6 +1335,8 @@ export function UnifiedProjectModal({
                             >
                               {isImage ? (
                                 <ImageIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                              ) : isPdf ? (
+                                <FileText className="h-4 w-4 text-red-500 flex-shrink-0" />
                               ) : (
                                 <FileIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
                               )}
@@ -1258,31 +1365,18 @@ export function UnifiedProjectModal({
                   <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2">
                     {form.description || '설명이 없습니다.'}
                   </p>
-                  {/* View 모드 첨부파일 표시 */}
+                  {/* View 모드 첨부파일 표시 (PDF 미리보기 + 다운로드) */}
                   {existingAttachments.length > 0 && (
                     <div className="space-y-1.5">
                       <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase">첨부파일 ({existingAttachments.length}개)</span>
-                      <div className="flex flex-wrap gap-2">
-                        {existingAttachments.map((att) => {
-                          const isImage = att.mime_type?.startsWith('image/');
-                          return (
-                            <a
-                              key={att.id}
-                              href={att.public_url || '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs hover:border-blue-300 dark:hover:border-blue-600 transition group"
-                            >
-                              {isImage ? (
-                                <ImageIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                              ) : (
-                                <FileIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                              )}
-                              <span className="max-w-[160px] truncate text-slate-700 dark:text-slate-300">{att.file_name}</span>
-                              <Download className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition flex-shrink-0" />
-                            </a>
-                          );
-                        })}
+                      <div className="flex flex-col gap-3">
+                        {existingAttachments.map((att) => (
+                          <ProjectAttachmentDisplay
+                            key={att.id}
+                            attachment={att}
+                            variant="view"
+                          />
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1383,6 +1477,14 @@ export function UnifiedProjectModal({
                                 : '외주업체 검색...'
                           }
                           emptyLabel="선택하세요"
+                          onAddNew={
+                            participantSelectType === 'partner_worker'
+                              ? (searchQuery) => setPartnerAddModal({ kind: 'participant_worker', initialName: searchQuery })
+                              : participantSelectType === 'partner_company'
+                                ? (searchQuery) => setPartnerAddModal({ kind: 'participant_company', initialName: searchQuery })
+                                : undefined
+                          }
+                          addNewLabel="파트너 등록"
                         />
                       </div>
                       <button
@@ -1445,6 +1547,8 @@ export function UnifiedProjectModal({
                         }}
                         placeholder="클라이언트 검색..."
                         emptyLabel="선택 안함"
+                        onAddNew={(searchQuery) => setPartnerAddModal({ kind: 'company', initialName: searchQuery })}
+                        addNewLabel="파트너 등록"
                       />
                     </div>
                     <div className="space-y-1">
@@ -1461,6 +1565,8 @@ export function UnifiedProjectModal({
                         onChange={(value) => setForm({ ...form, partner_worker_id: value })}
                         placeholder="담당자 검색..."
                         emptyLabel={form.partner_company_id ? '담당자 없음' : '선택 안함'}
+                        onAddNew={(searchQuery) => setPartnerAddModal({ kind: 'worker', initialName: searchQuery })}
+                        addNewLabel="파트너 등록"
                       />
                     </div>
                   </div>
@@ -1478,6 +1584,8 @@ export function UnifiedProjectModal({
                         onChange={(value) => setForm({ ...form, artist_id: value })}
                         placeholder="아티스트 검색..."
                         emptyLabel="선택 안함"
+                        onAddNew={(searchQuery) => setPartnerAddModal({ kind: 'artist', initialName: searchQuery })}
+                        addNewLabel="파트너 등록"
                       />
                     </div>
                     <div className="space-y-1">
@@ -1491,6 +1599,8 @@ export function UnifiedProjectModal({
                         onChange={(value) => setForm({ ...form, channel_id: value })}
                         placeholder="채널 검색..."
                         emptyLabel="선택 안함"
+                        onAddNew={createChannelRequest ? (searchQuery) => setChannelAddModal({ initialName: searchQuery }) : undefined}
+                        addNewLabel="채널 추가"
                       />
                     </div>
                   </div>
@@ -1818,6 +1928,38 @@ export function UnifiedProjectModal({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 파트너 등록 모달 (검색 결과 없을 때 바로 추가) */}
+      {partnerAddModal && (
+        <UnifiedPartnerModal
+          isOpen={true}
+          onClose={() => setPartnerAddModal(null)}
+          mode="create"
+          defaultEntityType={
+            partnerAddModal.kind === 'company' || partnerAddModal.kind === 'participant_company'
+              ? 'organization'
+              : 'person'
+          }
+          initialDisplayName={partnerAddModal.initialName}
+          onCreated={handlePartnerCreated}
+        />
+      )}
+
+      {/* 채널 추가 다이얼로그 */}
+      {channelAddModal && createChannelRequest && (
+        <ChannelAddDialog
+          initialName={channelAddModal.initialName}
+          onClose={() => setChannelAddModal(null)}
+          onCreate={async (name) => {
+            const id = await createChannelRequest(name);
+            if (id != null) {
+              setForm((prev) => ({ ...prev, channel_id: String(id) }));
+              onChannelCreated?.();
+              setChannelAddModal(null);
+            }
+          }}
+        />
       )}
 
       {/* 할일 추가 모달 (create 모드) - 할일 생성 모달과 동일 UI로 담당자 설정 가능 */}

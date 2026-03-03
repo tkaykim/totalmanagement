@@ -18,7 +18,15 @@ export async function GET(
 
     if (error) throw error;
 
-    return NextResponse.json(documents || []);
+    const list = documents || [];
+    const withPublicUrls = list.map((doc: { file_path: string; [key: string]: unknown }) => {
+      const { data } = supabase.storage
+        .from('project-documents')
+        .getPublicUrl(doc.file_path);
+      return { ...doc, public_url: data.publicUrl };
+    });
+
+    return NextResponse.json(withPublicUrls);
   } catch (error: any) {
     console.error('Failed to fetch project documents:', error);
     return NextResponse.json(

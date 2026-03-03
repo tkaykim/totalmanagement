@@ -60,6 +60,10 @@ interface UnifiedPartnerModalProps {
   partner?: Partner | null;
   mode: 'create' | 'edit';
   defaultEntityType?: PartnerEntityType;
+  /** create 모드에서 폼 초기 표시명 (검색어에서 바로 추가할 때 사용) */
+  initialDisplayName?: string;
+  /** create 성공 시 생성된 파트너 전달 (프로젝트 모달 등에서 선택 반영용) */
+  onCreated?: (partner: Partner) => void;
 }
 
 export function UnifiedPartnerModal({
@@ -68,6 +72,8 @@ export function UnifiedPartnerModal({
   partner,
   mode,
   defaultEntityType = 'person',
+  initialDisplayName,
+  onCreated,
 }: UnifiedPartnerModalProps) {
   const { toast } = useToast();
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -165,7 +171,7 @@ export function UnifiedPartnerModal({
       setSelectedEntityType(partner.entity_type);
     } else {
       reset({
-        display_name: '',
+        display_name: initialDisplayName ?? '',
         entity_type: defaultEntityType,
         security_level: 'internal',
         sharing_policy: 'request_only',
@@ -177,7 +183,7 @@ export function UnifiedPartnerModal({
       });
       setSelectedEntityType(defaultEntityType);
     }
-  }, [partner, mode, reset, defaultEntityType, isOpen]);
+  }, [partner, mode, reset, defaultEntityType, initialDisplayName, isOpen]);
 
   useEffect(() => {
     setSelectedEntityType(entityType);
@@ -209,8 +215,9 @@ export function UnifiedPartnerModal({
       };
 
       if (mode === 'create') {
-        await createMutation.mutateAsync(formData);
+        const created = await createMutation.mutateAsync(formData);
         toast({ title: '파트너가 등록되었습니다' });
+        onCreated?.(created);
       } else if (partner) {
         await updateMutation.mutateAsync({ id: partner.id, data: formData });
         toast({ title: '파트너 정보가 수정되었습니다' });

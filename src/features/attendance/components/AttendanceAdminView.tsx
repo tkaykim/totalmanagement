@@ -157,7 +157,7 @@ export function AttendanceAdminView() {
   const [selectedBu, setSelectedBu] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [showApprovalQueue, setShowApprovalQueue] = useState(false);
-  const [showCorrectionHistory, setShowCorrectionHistory] = useState(true);
+  const [mainTab, setMainTab] = useState<'overview' | 'correction-history'>('overview');
   const [selectedUser, setSelectedUser] = useState<UserAttendance | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -246,6 +246,49 @@ export function AttendanceAdminView() {
 
   return (
     <div className="space-y-4 p-4 lg:p-6">
+      {/* 탭: 근무 현황 | 정정 신청 이력 */}
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-lg w-fit">
+        <button
+          type="button"
+          onClick={() => setMainTab('overview')}
+          className={cn(
+            'px-3 py-1.5 text-sm font-medium rounded-md transition',
+            mainTab === 'overview'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          )}
+        >
+          근무 현황
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainTab('correction-history')}
+          className={cn(
+            'px-3 py-1.5 text-sm font-medium rounded-md transition flex items-center gap-1.5',
+            mainTab === 'correction-history'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          )}
+        >
+          <History className="h-3.5 w-3.5" />
+          정정 신청 이력
+        </button>
+      </div>
+
+      {mainTab === 'correction-history' ? (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <History className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              정정 신청 이력
+            </h2>
+          </div>
+          <div className="p-3">
+            <CorrectionHistory />
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Date Navigation & Filters */}
       <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-800 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-1">
@@ -371,32 +414,6 @@ export function AttendanceAdminView() {
           )}
         </div>
       )}
-
-      {/* 정정 신청 이력 (승인/반려된 기록) */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowCorrectionHistory(!showCorrectionHistory)}
-          className="w-full px-3 py-2 flex items-center justify-between bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700/70 transition"
-        >
-          <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
-              정정 신청 이력
-            </span>
-          </div>
-          {showCorrectionHistory ? (
-            <ChevronUp className="h-4 w-4 text-slate-500" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-slate-500" />
-          )}
-        </button>
-        {showCorrectionHistory && (
-          <div className="p-3 border-t border-slate-200 dark:border-slate-700">
-            <CorrectionHistory />
-          </div>
-        )}
-      </div>
 
       {/* User List */}
       {isLoading ? (
@@ -524,6 +541,8 @@ export function AttendanceAdminView() {
         user={selectedUser}
         selectedDate={selectedDate}
       />
+        </>
+      )}
     </div>
   );
 }
