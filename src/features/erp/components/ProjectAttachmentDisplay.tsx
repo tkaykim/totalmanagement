@@ -106,16 +106,28 @@ export function ProjectAttachmentDisplay({
           </a>
         </>
       ) : image && url !== '#' ? (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs hover:border-blue-300 dark:hover:border-blue-600 transition group"
-        >
-          <ImageIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-          <span className="max-w-[160px] truncate text-slate-700 dark:text-slate-300">{attachment.file_name}</span>
-          <Download className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition flex-shrink-0" />
-        </a>
+        <>
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-50 dark:bg-slate-800/50">
+            <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+              <img
+                src={url}
+                alt={attachment.file_name}
+                className="max-h-[280px] w-full object-contain"
+              />
+            </a>
+          </div>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            download={attachment.file_name}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs hover:border-blue-300 dark:hover:border-blue-600 transition group"
+          >
+            <ImageIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+            <span className="max-w-[160px] truncate text-slate-700 dark:text-slate-300">{attachment.file_name}</span>
+            <Download className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition flex-shrink-0" />
+          </a>
+        </>
       ) : (
         <a
           href={url}

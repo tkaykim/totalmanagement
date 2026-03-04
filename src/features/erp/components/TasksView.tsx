@@ -172,6 +172,9 @@ function TaskCard({
               <span className="text-[9px] sm:text-[10px] font-medium">매뉴얼</span>
             </div>
           )}
+          {task.creator_name && (
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500">· 생성: {task.creator_name}</span>
+          )}
         </div>
 
         {/* 빠른 상태 변경 버튼들 */}
@@ -210,6 +213,29 @@ function TaskCard({
   );
 }
 
+type TaskTabKey = 'active' | 'onhold' | 'done';
+
+const TASK_TAB_CONFIG: Record<TaskTabKey, { label: string; shortLabel: string; statuses: TaskStatus[]; emptyMessage: string }> = {
+  active: {
+    label: '진행예정/진행중',
+    shortLabel: '진행예정/진행중',
+    statuses: ['todo', 'in-progress'],
+    emptyMessage: '진행 예정이거나 진행 중인 할일이 없습니다',
+  },
+  onhold: {
+    label: '보류',
+    shortLabel: '보류',
+    statuses: ['on-hold'],
+    emptyMessage: '보류된 할일이 없습니다',
+  },
+  done: {
+    label: '완료',
+    shortLabel: '완료',
+    statuses: ['done'],
+    emptyMessage: '완료된 할일이 없습니다',
+  },
+};
+
 function KanbanColumn({
   status,
   tasks,
@@ -217,6 +243,8 @@ function KanbanColumn({
   onEditTask,
   onStatusChange,
   currentUser,
+  customLabel,
+  customEmptyMessage,
 }: {
   status: TaskStatus;
   tasks: TaskItem[];
@@ -224,10 +252,16 @@ function KanbanColumn({
   onEditTask: (task: TaskItem) => void;
   onStatusChange: (id: string, status: TaskStatus) => void;
   currentUser?: CurrentUser | null;
+  customLabel?: string;
+  customEmptyMessage?: string;
 }) {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
   const findProject = (id: string) => projects.find((p) => p.id === id);
+  const label = customLabel ?? config.label;
+  const emptyMessage =
+    customEmptyMessage ??
+    (status === 'todo' ? '진행 전인 할일이 없습니다' : status === 'in-progress' ? '진행 중인 할일이 없습니다' : status === 'on-hold' ? '보류된 할일이 없습니다' : '완료된 할일이 없습니다');
 
   return (
     <div className="flex flex-col min-w-[280px] sm:min-w-[300px] lg:min-w-0 lg:flex-1">
@@ -238,7 +272,7 @@ function KanbanColumn({
       )}>
         <div className="flex items-center gap-2">
           <Icon className={cn('w-4 h-4', config.color)} />
-          <span className={cn('text-sm font-bold', config.color)}>{config.label}</span>
+          <span className={cn('text-sm font-bold', config.color)}>{label}</span>
         </div>
         <span className={cn(
           'px-2 py-0.5 rounded-full text-xs font-bold',
@@ -258,9 +292,7 @@ function KanbanColumn({
       >
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center h-24 text-xs text-slate-400 dark:text-slate-500">
-            {status === 'todo' && '진행 전인 할일이 없습니다'}
-            {status === 'in-progress' && '진행 중인 할일이 없습니다'}
-            {status === 'done' && '완료된 할일이 없습니다'}
+            {emptyMessage}
           </div>
         ) : (
           tasks.map((task) => {
@@ -299,7 +331,7 @@ export function TasksView({
   onEditTask: (task: TaskItem) => void;
   currentUser?: CurrentUser | null;
 }) {
-  const [mobileTab, setMobileTab] = useState<TaskStatus>('todo');
+  const [mobileTab, setMobileTab] = useState<TaskTabKey>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
   const buProjects = bu === 'ALL' ? projects : projects.filter((p) => p.bu === bu);
@@ -325,6 +357,12 @@ export function TasksView({
     'on-hold': buTasks.filter((t) => t.status === 'on-hold'),
     done: buTasks.filter((t) => t.status === 'done'),
   }), [buTasks]);
+
+  const tasksByTab = useMemo(() => ({
+    active: [...tasksByStatus.todo, ...tasksByStatus['in-progress']],
+    onhold: tasksByStatus['on-hold'],
+    done: tasksByStatus.done,
+  }), [tasksByStatus]);
 
   const totalCount = buTasks.length;
 
@@ -355,29 +393,30 @@ export function TasksView({
         </span>
       </div>
 
-      {/* 모바일: 탭 전환 */}
+      {/* 모바일: 탭 전환 (진행예정/진행중, 완료, 보류) */}
       <div className="lg:hidden">
         {/* 탭 헤더 */}
         <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 mb-4">
-          {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => {
-            const config = STATUS_CONFIG[status];
-            const count = tasksByStatus[status].length;
-            const isActive = mobileTab === status;
+          {(Object.keys(TASK_TAB_CONFIG) as TaskTabKey[]).map((tabKey) => {
+            const tabConfig = TASK_TAB_CONFIG[tabKey];
+            const count = tasksByTab[tabKey].length;
+            const isActive = mobileTab === tabKey;
+            const styleConfig = tabKey === 'active' ? STATUS_CONFIG['in-progress'] : tabKey === 'onhold' ? STATUS_CONFIG['on-hold'] : STATUS_CONFIG['done'];
             return (
               <button
-                key={status}
-                onClick={() => setMobileTab(status)}
+                key={tabKey}
+                onClick={() => setMobileTab(tabKey)}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-semibold transition-all',
                   isActive
-                    ? cn('bg-white dark:bg-slate-700 shadow-sm', config.color)
+                    ? cn('bg-white dark:bg-slate-700 shadow-sm', styleConfig.color)
                     : 'text-slate-500 dark:text-slate-400'
                 )}
               >
-                <span>{config.shortLabel}</span>
+                <span>{tabConfig.shortLabel}</span>
                 <span className={cn(
                   'px-1.5 py-0.5 rounded-full text-[10px]',
-                  isActive ? config.headerBg : 'bg-slate-200 dark:bg-slate-600'
+                  isActive ? styleConfig.headerBg : 'bg-slate-200 dark:bg-slate-600'
                 )}>
                   {count}
                 </span>
@@ -387,16 +426,13 @@ export function TasksView({
         </div>
 
         {/* 모바일 카드 리스트 */}
-            <div className="space-y-2">
-              {tasksByStatus[mobileTab].length === 0 ? (
+        <div className="space-y-2">
+          {tasksByTab[mobileTab].length === 0 ? (
             <div className="flex items-center justify-center h-32 text-sm text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-700">
-              {mobileTab === 'todo' && '진행 전인 할일이 없습니다'}
-              {mobileTab === 'in-progress' && '진행 중인 할일이 없습니다'}
-              {mobileTab === 'on-hold' && '보류된 할일이 없습니다'}
-              {mobileTab === 'done' && '완료된 할일이 없습니다'}
+              {TASK_TAB_CONFIG[mobileTab].emptyMessage}
             </div>
           ) : (
-            tasksByStatus[mobileTab].map((task) => {
+            tasksByTab[mobileTab].map((task) => {
               const project = projects.find((p) => p.id === task.projectId);
               return (
                 <TaskCard
@@ -413,7 +449,7 @@ export function TasksView({
         </div>
 
         {/* 모바일: 빠른 이동 안내 */}
-        {tasksByStatus[mobileTab].length > 0 && mobileTab !== 'done' && (
+        {tasksByTab[mobileTab].length > 0 && mobileTab !== 'done' && (
           <div className="flex items-center justify-center gap-2 mt-4 text-xs text-slate-400 dark:text-slate-500">
             <ArrowRight className="w-3 h-3" />
             <span>카드를 클릭하여 상세 정보를 확인하세요</span>
@@ -421,35 +457,81 @@ export function TasksView({
         )}
       </div>
 
-      {/* 데스크톱: 칸반 보드 */}
+      {/* 데스크톱: 칸반 보드 (진행예정/진행중, 완료, 보류) */}
       <div className="hidden lg:flex gap-4">
-        {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => (
+        <KanbanColumn
+          key="active"
+          status="in-progress"
+          tasks={tasksByTab.active}
+          projects={projects}
+          onEditTask={onEditTask}
+          onStatusChange={onStatusChange}
+          currentUser={currentUser}
+          customLabel={TASK_TAB_CONFIG.active.label}
+          customEmptyMessage={TASK_TAB_CONFIG.active.emptyMessage}
+        />
+        <KanbanColumn
+          key="onhold"
+          status="on-hold"
+          tasks={tasksByTab.onhold}
+          projects={projects}
+          onEditTask={onEditTask}
+          onStatusChange={onStatusChange}
+          currentUser={currentUser}
+          customLabel={TASK_TAB_CONFIG.onhold.label}
+          customEmptyMessage={TASK_TAB_CONFIG.onhold.emptyMessage}
+        />
+        <KanbanColumn
+          key="done"
+          status="done"
+          tasks={tasksByTab.done}
+          projects={projects}
+          onEditTask={onEditTask}
+          onStatusChange={onStatusChange}
+          currentUser={currentUser}
+          customLabel={TASK_TAB_CONFIG.done.label}
+          customEmptyMessage={TASK_TAB_CONFIG.done.emptyMessage}
+        />
+      </div>
+
+      {/* 태블릿: 가로 스크롤 칸반 (진행예정/진행중, 완료, 보류) */}
+      <div className="hidden sm:flex lg:hidden overflow-x-auto gap-4 pb-4 -mx-4 px-4 snap-x snap-mandatory">
+        <div key="active" className="snap-center flex-shrink-0">
           <KanbanColumn
-            key={status}
-            status={status}
-            tasks={tasksByStatus[status]}
+            status="in-progress"
+            tasks={tasksByTab.active}
             projects={projects}
             onEditTask={onEditTask}
             onStatusChange={onStatusChange}
             currentUser={currentUser}
+            customLabel={TASK_TAB_CONFIG.active.label}
+            customEmptyMessage={TASK_TAB_CONFIG.active.emptyMessage}
           />
-        ))}
-      </div>
-
-      {/* 태블릿: 가로 스크롤 칸반 */}
-      <div className="hidden sm:flex lg:hidden overflow-x-auto gap-4 pb-4 -mx-4 px-4 snap-x snap-mandatory">
-        {(['todo', 'in-progress', 'on-hold', 'done'] as const).map((status) => (
-          <div key={status} className="snap-center flex-shrink-0">
-            <KanbanColumn
-              status={status}
-              tasks={tasksByStatus[status]}
-              projects={projects}
-              onEditTask={onEditTask}
-              onStatusChange={onStatusChange}
-              currentUser={currentUser}
-            />
-          </div>
-        ))}
+        </div>
+        <div key="onhold" className="snap-center flex-shrink-0">
+          <KanbanColumn
+            status="on-hold"
+            tasks={tasksByTab.onhold}
+            projects={projects}
+            onEditTask={onEditTask}
+            onStatusChange={onStatusChange}
+            currentUser={currentUser}
+            customLabel={TASK_TAB_CONFIG.onhold.label}
+            customEmptyMessage={TASK_TAB_CONFIG.onhold.emptyMessage}
+          />
+        </div>
+        <div key="done" className="snap-center flex-shrink-0">
+          <KanbanColumn
+            status="done"
+            tasks={tasksByTab.done}
+            projects={projects}
+            onEditTask={onEditTask}
+            onStatusChange={onStatusChange}
+            currentUser={currentUser}
+            customLabel={TASK_TAB_CONFIG.done.label}
+            customEmptyMessage={TASK_TAB_CONFIG.done.emptyMessage}
+          />
+        </div>
       </div>
     </section>
   );

@@ -35,10 +35,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 분배 설정 포함 시 파트너 정보도 조회
+    // 생성자(created_by → app_users) 및 분배 설정 포함 시 파트너 정보 조회
+    const creatorJoin = 'creator:app_users!projects_created_by_fkey(name)';
     const selectQuery = includeShare
-      ? `*, share_partner:partners!share_partner_id(id, display_name)`
-      : '*';
+      ? `*, ${creatorJoin}, share_partner:partners!share_partner_id(id, display_name)`
+      : `*, ${creatorJoin}`;
 
     let query = supabase.from('projects').select(selectQuery).order('created_at', { ascending: false });
 

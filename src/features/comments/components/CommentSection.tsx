@@ -37,41 +37,62 @@ function getPublicUrl(filePath: string): string {
   return data.publicUrl;
 }
 
-function AttachmentItem({ 
-  attachment, 
-  onDelete, 
+function AttachmentItem({
+  attachment,
+  onDelete,
   canDelete,
-  isDeleting 
-}: { 
-  attachment: CommentAttachment; 
+  isDeleting,
+}: {
+  attachment: CommentAttachment;
   onDelete: () => void;
   canDelete: boolean;
   isDeleting: boolean;
 }) {
-  const publicUrl = getPublicUrl(attachment.file_path);
+  const displayUrl =
+    attachment.signed_url || getPublicUrl(attachment.file_path);
   const isImage = attachment.file_type.startsWith('image/');
 
   return (
     <div className="group relative rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-800 shadow-sm hover:shadow-md transition-shadow">
       {isImage ? (
-        <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="block">
-          <div className="aspect-square">
-            <img
-              src={publicUrl}
-              alt={attachment.file_name}
-              className="w-full h-full object-cover hover:opacity-95 transition"
-              loading="lazy"
-            />
+        <div className="block">
+          <a
+            href={displayUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
+          >
+            <div className="aspect-square">
+              <img
+                src={displayUrl}
+                alt={attachment.file_name}
+                className="w-full h-full object-cover hover:opacity-95 transition"
+                loading="lazy"
+              />
+            </div>
+          </a>
+          <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate min-w-0">
+              {attachment.file_name}
+            </p>
+            <a
+              href={displayUrl}
+              download={attachment.file_name}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex-shrink-0"
+            >
+              <Download className="h-3 w-3" />
+              다운로드
+            </a>
           </div>
-          <p className="px-2 py-1.5 text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
-            {attachment.file_name}
-          </p>
-        </a>
+        </div>
       ) : (
         <a
-          href={publicUrl}
+          href={displayUrl}
           target="_blank"
           rel="noopener noreferrer"
+          download={attachment.file_name}
           className="flex items-center gap-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
         >
           {getFileIcon(attachment.file_type)}
@@ -83,10 +104,10 @@ function AttachmentItem({
               {formatFileSize(attachment.file_size)}
             </p>
           </div>
-          <ExternalLink className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+          <Download className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
         </a>
       )}
-      
+
       {canDelete && (
         <button
           type="button"

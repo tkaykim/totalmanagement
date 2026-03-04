@@ -48,10 +48,11 @@ export function ProjectsView({
   partnerWorkersData,
   partnerCompaniesData,
 }: ProjectsViewProps) {
-  const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
+  const [projectFilter, setProjectFilter] = useState<'active' | 'completed' | 'onhold'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중', '보류'];
+  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
+  const onHoldProjectStatuses = ['보류'];
   const completedProjectStatuses = ['완료'];
 
   const formatDateShort = (dateString: string): string => {
@@ -90,13 +91,15 @@ export function ProjectsView({
   
   const filteredProjects = useMemo(() => {
     let result = projects;
-    
+
     if (projectFilter === 'active') {
       result = result.filter((p) => activeProjectStatuses.includes(p.status));
+    } else if (projectFilter === 'onhold') {
+      result = result.filter((p) => onHoldProjectStatuses.includes(p.status));
     } else {
       result = result.filter((p) => completedProjectStatuses.includes(p.status));
     }
-    
+
     if (searchQuery.trim()) {
       const query = searchQuery.trim().toLowerCase();
       result = result.filter((p) => p.name.toLowerCase().includes(query));
@@ -134,6 +137,17 @@ export function ProjectsView({
             >
               완료
             </button>
+            <button
+              onClick={() => setProjectFilter('onhold')}
+              className={cn(
+                'px-2.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold transition whitespace-nowrap rounded-lg flex-shrink-0',
+                projectFilter === 'onhold'
+                  ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100'
+              )}
+            >
+              보류
+            </button>
           </div>
         </div>
         
@@ -156,7 +170,9 @@ export function ProjectsView({
               <p className="text-xs sm:text-sm font-semibold text-slate-400 dark:text-slate-500">
                 {projectFilter === 'active'
                   ? '현재 진행중인 프로젝트가 없습니다.'
-                  : '완료된 프로젝트가 없습니다.'}
+                  : projectFilter === 'onhold'
+                    ? '보류된 프로젝트가 없습니다.'
+                    : '완료된 프로젝트가 없습니다.'}
               </p>
             </div>
           </div>
@@ -202,6 +218,12 @@ export function ProjectsView({
                       <span className="font-medium">
                         PM <span className="text-slate-600 dark:text-slate-300">{getPmName(p.pm_id)}</span>
                       </span>
+                      {p.creator_name && (
+                        <>
+                          <span className="text-slate-300 dark:text-slate-600">|</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">생성: {p.creator_name}</span>
+                        </>
+                      )}
                       {(() => {
                         const participantNames = getParticipantNames(p.participants);
                         if (participantNames.length === 0) return null;

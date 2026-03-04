@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 댓글과 첨부파일 함께 조회
-    const { data, error } = await supabase
+    const { data: comments, error } = await supabase
       .from('comments')
       .select(`
         *,
@@ -37,7 +37,28 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // 첨부파일용 서명 URL 생성 (비공개 버킷 대응)
+    const pureClient = await createPureClient();
+    const EXPIRES_IN = 3600;
+    const withSignedUrls = await Promise.all(
+      (comments || []).map(async (comment: { attachments?: { file_path: string }[] }) => {
+        const attachments = comment.attachments || [];
+        const attachmentsWithUrls = await Promise.all(
+          attachments.map(async (att: { file_path: string }) => {
+            const { data: signData } = await pureClient.storage
+              .from('comment-attachments')
+              .createSignedUrl(att.file_path, EXPIRES_IN);
+            const signedUrl =
+              (signData as { signedUrl?: string })?.signedUrl ??
+              (signData as { signedURL?: string })?.signedURL;
+            return { ...att, signed_url: signedUrl ?? null };
+          })
+        );
+        return { ...comment, attachments: attachmentsWithUrls };
+      })
+    );
+
+    return NextResponse.json(withSignedUrls);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

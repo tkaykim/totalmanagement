@@ -19,14 +19,26 @@ export async function GET(
     if (error) throw error;
 
     const list = documents || [];
-    const withPublicUrls = list.map((doc: { file_path: string; [key: string]: unknown }) => {
-      const { data } = supabase.storage
-        .from('project-documents')
-        .getPublicUrl(doc.file_path);
-      return { ...doc, public_url: data.publicUrl };
-    });
+    const EXPIRES_IN = 3600; // 1 hour for preview/download
+    const withUrls = await Promise.all(
+      list.map(async (doc: { file_path: string; [key: string]: unknown }) => {
+        const { data } = await supabase.storage
+          .from('project-documents')
+          .createSignedUrl(doc.file_path, EXPIRES_IN);
+        const signedUrl =
+          (data as { signedUrl?: string })?.signedUrl ??
+          (data as { signedURL?: string })?.signedURL;
+        const { data: publicData } = supabase.storage
+          .from('project-documents')
+          .getPublicUrl(doc.file_path);
+        return {
+          ...doc,
+          public_url: signedUrl || publicData.publicUrl,
+        };
+      })
+    );
 
-    return NextResponse.json(withPublicUrls);
+    return NextResponse.json(withUrls);
   } catch (error: any) {
     console.error('Failed to fetch project documents:', error);
     return NextResponse.json(

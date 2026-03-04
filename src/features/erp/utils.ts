@@ -20,6 +20,7 @@ export function dbProjectToFrontend(p: Project): {
   pm_id?: string | null;
   pm_name?: string | null;
   created_by?: string | null;
+  creator_name?: string | null;
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role: string; is_pm: boolean }>;
 } {
   return {
@@ -39,6 +40,7 @@ export function dbProjectToFrontend(p: Project): {
     pm_id: (p as any).pm_id || null,
     pm_name: p.pm_name || null,
     created_by: p.created_by ?? null,
+    creator_name: (p as any).creator?.name ?? null,
     participants: p.participants,
   };
 }
@@ -57,6 +59,7 @@ export function dbTaskToFrontend(t: ProjectTask): {
   tag?: string;
   manual_id?: number | null;
   manual_title?: string;
+  creator_name?: string | null;
 } {
   return {
     id: String(t.id),
@@ -71,6 +74,7 @@ export function dbTaskToFrontend(t: ProjectTask): {
     priority: t.priority || 'medium',
     tag: t.tag,
     manual_id: t.manual_id ?? undefined,
+    creator_name: (t as any).creator?.name ?? null,
   };
 }
 

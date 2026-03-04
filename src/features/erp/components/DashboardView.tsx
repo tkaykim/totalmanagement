@@ -37,21 +37,24 @@ export function DashboardView({
 }: DashboardViewProps) {
   const [selectedBu, setSelectedBu] = useState<BU | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [projectFilter, setProjectFilter] = useState<'active' | 'completed'>('active');
+  const [projectFilter, setProjectFilter] = useState<'active' | 'completed' | 'onhold'>('active');
   const [projectAssigneeFilter, setProjectAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('my');
-  const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
+  const [taskFilter, setTaskFilter] = useState<'active' | 'completed' | 'onhold'>('active');
   const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('my');
 
   const searchLower = searchQuery.trim().toLowerCase();
 
-  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중', '보류'];
+  const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
+  const onHoldProjectStatuses = ['보류'];
   const completedProjectStatuses = ['완료'];
-  
+
   const filteredProjects = useMemo(() => {
     let filtered = projects;
-    
+
     if (projectFilter === 'active') {
       filtered = filtered.filter((p) => activeProjectStatuses.includes(p.status));
+    } else if (projectFilter === 'onhold') {
+      filtered = filtered.filter((p) => onHoldProjectStatuses.includes(p.status));
     } else {
       filtered = filtered.filter((p) => completedProjectStatuses.includes(p.status));
     }
@@ -98,9 +101,11 @@ export function DashboardView({
 
   const filteredTasks = useMemo(() => {
     let filtered = filteredTasksByProject;
-    
+
     if (taskFilter === 'active') {
       filtered = filtered.filter((t) => t.status === 'todo' || t.status === 'in-progress');
+    } else if (taskFilter === 'onhold') {
+      filtered = filtered.filter((t) => t.status === 'on-hold');
     } else {
       filtered = filtered.filter((t) => t.status === 'done');
     }
@@ -204,6 +209,17 @@ export function DashboardView({
               >
                 완료
               </button>
+              <button
+                onClick={() => setProjectFilter('onhold')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  projectFilter === 'onhold'
+                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
+                )}
+              >
+                보류
+              </button>
             </div>
           </div>
           <div className="mb-4">
@@ -250,9 +266,11 @@ export function DashboardView({
                   ? '내 프로젝트가 없습니다.'
                   : projectAssigneeFilter === 'unassigned'
                     ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 담당자 미정인 프로젝트가 없습니다.`
-                    : projectFilter === 'active' 
+                    : projectFilter === 'active'
                       ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 진행 예정이거나 진행 중인 프로젝트가 없습니다.`
-                      : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 프로젝트가 없습니다.`
+                      : projectFilter === 'onhold'
+                        ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 보류된 프로젝트가 없습니다.`
+                        : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 프로젝트가 없습니다.`
                 }
               </p>
             ) : (
@@ -260,6 +278,7 @@ export function DashboardView({
                 const projectTasks = filteredTasks.filter((t) => t.projectId === project.id);
                 const todoCount = projectTasks.filter((t) => t.status === 'todo').length;
                 const inProgressCount = projectTasks.filter((t) => t.status === 'in-progress').length;
+                const onHoldCount = projectTasks.filter((t) => t.status === 'on-hold').length;
                 const doneCount = projectTasks.filter((t) => t.status === 'done').length;
 
                 return (
@@ -317,6 +336,9 @@ export function DashboardView({
                             <p className="mt-1 text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 dark:text-slate-400">PM: {pmUser.name}</p>
                           ) : null;
                         })()}
+                        {project.creator_name && (
+                          <p className="mt-0.5 text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500">생성: {project.creator_name}</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                         {todoCount > 0 && (
@@ -327,6 +349,11 @@ export function DashboardView({
                         {inProgressCount > 0 && (
                           <span className="rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-[9px] font-semibold text-blue-700 dark:text-blue-300">
                             진행중 {inProgressCount}
+                          </span>
+                        )}
+                        {onHoldCount > 0 && (
+                          <span className="rounded-full bg-orange-100 dark:bg-orange-900/50 px-2 py-0.5 text-[9px] font-semibold text-orange-700 dark:text-orange-300">
+                            보류 {onHoldCount}
                           </span>
                         )}
                         {doneCount > 0 && (
@@ -382,6 +409,17 @@ export function DashboardView({
               >
                 완료
               </button>
+              <button
+                onClick={() => setTaskFilter('onhold')}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-semibold transition whitespace-nowrap rounded-lg',
+                  taskFilter === 'onhold'
+                    ? 'bg-white dark:bg-slate-800 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 dark:hover:text-slate-100'
+                )}
+              >
+                보류
+              </button>
             </div>
             <div className="flex w-fit overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 p-1">
               <button
@@ -428,7 +466,9 @@ export function DashboardView({
                     ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 담당자 미지정 할일이 없습니다.`
                     : taskFilter === 'active'
                       ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 진행 예정이거나 진행 중인 할일이 없습니다.`
-                      : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 할일이 없습니다.`
+                      : taskFilter === 'onhold'
+                        ? `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 보류된 할일이 없습니다.`
+                        : `${selectedBu === 'ALL' ? '전체' : BU_TITLES[selectedBu]}에서 완료된 할일이 없습니다.`
                 }
               </p>
             ) : (
@@ -460,6 +500,7 @@ export function DashboardView({
                         {task.assignee} •{' '}
                         {projects.find((p) => p.id === task.projectId)?.name ?? '미지정 프로젝트'} •{' '}
                         {task.dueDate}
+                        {task.creator_name && <span className="ml-1 text-slate-400 dark:text-slate-500">· 생성: {task.creator_name}</span>}
                       </p>
                     </div>
                   </div>
@@ -470,10 +511,12 @@ export function DashboardView({
                         ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
                         : task.status === 'in-progress'
                           ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
-                          : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                          : task.status === 'on-hold'
+                            ? 'bg-orange-100 dark:bg-orange-900/60 text-orange-700 dark:text-orange-300'
+                            : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
                     )}
                   >
-                    {task.status === 'todo' ? '진행 전' : task.status === 'in-progress' ? '진행중' : '완료'}
+                    {task.status === 'todo' ? '진행 전' : task.status === 'in-progress' ? '진행중' : task.status === 'on-hold' ? '보류' : '완료'}
                   </span>
                 </button>
               ))

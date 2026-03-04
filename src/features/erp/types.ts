@@ -11,6 +11,8 @@ export type Project = {
   status: string;
   pm_id?: string | null;
   created_by?: string | null;
+  /** 생성자 이름 (API 조인) */
+  creator_name?: string | null;
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; role: string }>;
 };
 
@@ -53,6 +55,8 @@ export type TaskItem = {
   status: 'todo' | 'in-progress' | 'on-hold' | 'done';
   priority: TaskPriority;
   manual_id?: number | null;
+  /** 생성자 이름 (API 조인) */
+  creator_name?: string | null;
 };
 
 export const BU_TITLES: Record<BU, string> = {

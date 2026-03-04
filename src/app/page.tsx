@@ -2051,6 +2051,9 @@ function ModalProject({
               </select>
             </div>
             <h3 className="text-2xl font-black text-slate-800 dark:text-slate-200">{project.name}</h3>
+            {project.creator_name && (
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">생성: {project.creator_name}</p>
+            )}
             <div className="mt-2 flex items-center gap-4">
               <LabeledDate
                 label="시작일"
@@ -2140,6 +2143,7 @@ function ModalProject({
                           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{task.title}</p>
                           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                             {task.assignee} • {task.dueDate}
+                            {task.creator_name && <span className="ml-1">· 생성: {task.creator_name}</span>}
                           </p>
                         </div>
                       </div>

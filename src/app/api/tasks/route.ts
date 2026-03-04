@@ -46,9 +46,11 @@ export async function GET(request: NextRequest) {
     
     let tasks: any[] = [];
     
+    const taskSelect = '*, creator:app_users!project_tasks_created_by_fkey(name)';
+
     if (bu) {
       // BU 필터가 있는 경우: 해당 BU 할일 + 본인 할당 할일을 병합
-      let buQuery = supabase.from('project_tasks').select('*');
+      let buQuery = supabase.from('project_tasks').select(taskSelect);
       buQuery = buQuery.eq('bu_code', bu);
       if (projectId) {
         buQuery = buQuery.eq('project_id', projectId);
@@ -58,7 +60,7 @@ export async function GET(request: NextRequest) {
       if (buError) throw buError;
       
       // 본인에게 할당된 할일 조회 (다른 BU 포함)
-      let assignedQuery = supabase.from('project_tasks').select('*');
+      let assignedQuery = supabase.from('project_tasks').select(taskSelect);
       assignedQuery = assignedQuery.eq('assignee_id', currentUser.id);
       if (projectId) {
         assignedQuery = assignedQuery.eq('project_id', projectId);
@@ -76,7 +78,7 @@ export async function GET(request: NextRequest) {
       // 프로젝트 ID만 있는 경우
       const { data, error } = await supabase
         .from('project_tasks')
-        .select('*')
+        .select(taskSelect)
         .eq('project_id', projectId);
       if (error) throw error;
       tasks = data || [];
@@ -84,7 +86,7 @@ export async function GET(request: NextRequest) {
       // 필터 없는 경우: 전체 조회
       const { data, error } = await supabase
         .from('project_tasks')
-        .select('*');
+        .select(taskSelect);
       if (error) throw error;
       tasks = data || [];
     }

@@ -116,6 +116,8 @@ export interface Project {
   assets?: ProjectAssets; // JSONB: 제작 자산 정보
   participants?: ProjectParticipant[]; // 프로젝트 참여자 목록
   created_by?: string;
+  /** API 조인으로 내려주는 생성자 정보 (app_users) */
+  creator?: { name: string } | null;
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +136,8 @@ export interface ProjectTask {
   tag?: string;
   manual_id?: number | null;
   created_by?: string;
+  /** API 조인으로 내려주는 생성자 정보 (app_users) */
+  creator?: { name: string } | null;
   created_at: string;
   updated_at: string;
 }
@@ -469,6 +473,8 @@ export interface CommentAttachment {
   file_size: number;
   created_at: string;
   updated_at: string;
+  /** 서명 URL (API에서 채워짐, 미리보기/다운로드용) */
+  signed_url?: string | null;
 }
 
 export interface Comment {
