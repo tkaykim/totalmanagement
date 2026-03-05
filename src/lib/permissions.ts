@@ -464,6 +464,8 @@ export function getVisibleMenus(user: AppUser): string[] {
   // ── 그룹 4: 지식 관리 ──
   // 매뉴얼: 모든 사용자 (열람)
   menus.push('manuals');
+  // 자료실: 모든 사용자 (사업자등록증, 통장사본, 소개서 등 업로드/다운로드)
+  menus.push('documentRoom');
   // 할일 템플릿: admin, leader, manager
   if (['admin', 'leader', 'manager'].includes(user.role)) {
     menus.push('taskTemplates');

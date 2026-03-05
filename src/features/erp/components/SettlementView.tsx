@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChartLine, Coins, DollarSign, PieChart, FileText, Search } from 'lucide-react';
+import { ChartLine, Coins, DollarSign, PieChart, FileText, Search, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BU,
@@ -14,8 +14,9 @@ import { BuTabs } from './BuTabs';
 import { StatCard } from './StatCard';
 import { Input } from '@/components/ui/input';
 import { ProjectShareTab, SettlementListTab } from '@/features/settlement/components';
+import { OutstandingTab } from './OutstandingTab';
 
-type SettlementTabType = 'overview' | 'project-share' | 'settlements';
+type SettlementTabType = 'overview' | 'project-share' | 'outstanding' | 'settlements';
 type FinanceViewType = 'revenue' | 'expense';
 
 export interface SettlementViewProps {
@@ -129,6 +130,7 @@ export function SettlementView({
   const tabs = [
     { id: 'overview' as const, label: '전체 정산', icon: ChartLine },
     { id: 'project-share' as const, label: '프로젝트별 분배', icon: PieChart },
+    { id: 'outstanding' as const, label: '미수 관리', icon: Wallet },
     { id: 'settlements' as const, label: '정산서 관리', icon: FileText },
   ];
 
@@ -161,6 +163,18 @@ export function SettlementView({
 
       {activeTab === 'project-share' && (
         <ProjectShareTab bu={bu} />
+      )}
+
+      {activeTab === 'outstanding' && (
+        <OutstandingTab
+          revRows={rows.revRows}
+          expRows={rows.expRows}
+          projects={projects}
+          onEditFinance={onEditFinance}
+          getPartnerName={getPartnerName}
+          getStatusLabel={getStatusLabel}
+          getStatusClass={getStatusClass}
+        />
       )}
 
       {activeTab === 'settlements' && (

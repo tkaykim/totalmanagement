@@ -51,6 +51,8 @@ function SidebarButton({ label, icon, active, onClick }: SidebarButtonProps) {
 interface SidebarContentProps {
   view: View;
   setView: (view: View) => void;
+  /** 메뉴 클릭 시 URL을 갱신해 뷰 전환 (알림→모달 닫은 뒤에도 사이드바 메뉴가 동작하도록) */
+  onNavigateToView?: (view: View) => void;
   user: {
     profile?: {
       name?: string;
@@ -66,13 +68,18 @@ interface SidebarContentProps {
 export const SidebarContent = memo(function SidebarContent({
   view,
   setView,
+  onNavigateToView,
   user,
   visibleMenus,
   handleLogout,
   onItemClick,
 }: SidebarContentProps) {
   const handleMenuClick = (newView: View) => {
-    setView(newView);
+    if (onNavigateToView) {
+      onNavigateToView(newView);
+    } else {
+      setView(newView);
+    }
     onItemClick?.();
   };
 
@@ -182,6 +189,14 @@ export const SidebarContent = memo(function SidebarContent({
               icon={<BookOpen className="h-4 w-4" />}
               active={view === 'manuals'}
               onClick={() => handleMenuClick('manuals')}
+            />
+          )}
+          {visibleMenus.includes('documentRoom') && (
+            <SidebarButton
+              label="자료실"
+              icon={<FileText className="h-4 w-4" />}
+              active={view === 'documentRoom'}
+              onClick={() => handleMenuClick('documentRoom')}
             />
           )}
           {visibleMenus.includes('taskTemplates') && (

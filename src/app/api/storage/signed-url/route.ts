@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 
-const ALLOWED_BUCKETS = ['comment-attachments', 'project-documents'] as const;
+const ALLOWED_BUCKETS = ['comment-attachments', 'project-documents', 'document-room'] as const;
 const DEFAULT_EXPIRES_IN = 3600; // 1 hour
 
 /**

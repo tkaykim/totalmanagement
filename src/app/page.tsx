@@ -112,6 +112,7 @@ import { ExclusiveArtistsView } from '@/features/exclusive-artists';
 import { TaskTemplateView } from '@/features/task-template/components/TaskTemplateView';
 import { TaskTemplateSelector, type PendingTask } from '@/features/task-template/components/TaskTemplateSelector';
 import { ManualsView } from '@/features/manuals';
+import { DocumentRoomView } from '@/features/document-room/components/DocumentRoomView';
 import { PushTestView } from '@/features/push-test';
 import { AiWorkInsightView } from '@/features/ai-work-insight';
 import {
@@ -276,13 +277,15 @@ function HomePage() {
   const projects = useMemo(() => projectsData.map(dbProjectToFrontend), [projectsData]);
   const tasks = useMemo(() => tasksData.map(dbTaskToFrontend), [tasksData]);
 
-  // URL 파라미터에서 view 변경 감지 (알림 클릭 등으로 URL이 변할 때)
+  // URL 파라미터에서 view 변경 감지 (알림 클릭 등으로 URL이 변할 때). URL을 단일 소스로 유지해 모달 닫은 뒤 사이드바 메뉴가 정상 동작하도록 함.
   useEffect(() => {
     const urlView = searchParams.get('view') as View | null;
     const urlId = searchParams.get('id');
 
-    if (urlView && urlView !== view) {
-      setView(urlView);
+    if (urlView) {
+      if (urlView !== view) setView(urlView);
+    } else {
+      if (view !== 'dashboard') setView('dashboard');
     }
 
     // id 파라미터가 있으면 해당 프로젝트/할일 모달 직접 오픈
@@ -309,6 +312,18 @@ function HomePage() {
       }
     }
   }, [searchParams, projects, tasks, view]);
+
+  // 사이드바 메뉴 클릭 시 URL을 갱신해 view와 URL이 항상 동기화되도록 함 (모달 닫은 뒤 다른 메뉴 클릭이 먹히도록)
+  const handleNavigateToView = useCallback(
+    (newView: View) => {
+      if (newView === 'dashboard') {
+        router.replace('/');
+      } else {
+        router.replace(`/?view=${newView}`);
+      }
+    },
+    [router]
+  );
 
   // Mutations
   const createProjectMutation = useCreateProject();
@@ -1063,10 +1078,11 @@ function HomePage() {
   }
 
 
-  // SidebarContent props
+  // SidebarContent props (onNavigateToView로 URL 갱신 → useEffect에서 view 동기화되어 모달 닫은 뒤에도 사이드바 메뉴 정상 동작)
   const sidebarProps = {
     view,
     setView,
+    onNavigateToView: handleNavigateToView,
     user,
     visibleMenus,
     handleLogout,
@@ -1126,7 +1142,9 @@ function HomePage() {
                                             ? '버그 리포트'
                                             : view === 'manuals'
                                               ? '매뉴얼'
-                                              : view === 'pushTest'
+                                              : view === 'documentRoom'
+                                                ? '자료실'
+                                                : view === 'pushTest'
                                                 ? '푸시 알림 테스트'
                                                 : view === 'resourceOverview'
                                                   ? '리소스 현황'
@@ -1311,7 +1329,7 @@ function HomePage() {
 
           {view === 'leave' && (
             <LeaveManagementView
-              onNavigateToAdmin={() => setView('leaveAdmin')}
+              onNavigateToAdmin={() => handleNavigateToView('leaveAdmin')}
             />
           )}
 
@@ -1402,6 +1420,10 @@ function HomePage() {
                 name: user.profile.name,
               } : null}
             />
+          )}
+
+          {view === 'documentRoom' && (
+            <DocumentRoomView />
           )}
 
           {view === 'pushTest' && (
