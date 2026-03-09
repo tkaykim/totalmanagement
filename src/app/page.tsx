@@ -111,6 +111,7 @@ import { BugReportsView } from '@/features/bug-reports';
 import { ExclusiveArtistsView } from '@/features/exclusive-artists';
 import { TaskTemplateView } from '@/features/task-template/components/TaskTemplateView';
 import { TaskTemplateSelector, type PendingTask } from '@/features/task-template/components/TaskTemplateSelector';
+import { toast } from '@/hooks/use-toast';
 import { ManualsView } from '@/features/manuals';
 import { DocumentRoomView } from '@/features/document-room/components/DocumentRoomView';
 import { PushTestView } from '@/features/push-test';
@@ -755,31 +756,48 @@ function HomePage() {
       const dbData = frontendProjectToDb(projectPayload);
       const createdProject = await createProjectMutation.mutateAsync(dbData);
 
-      // 프로젝트 생성 후 pending tasks 일괄 생성
-      if (tasksToCreate && tasksToCreate.length > 0 && createdProject?.id) {
-        const projectId = createdProject.id;
-        await Promise.all(
-          tasksToCreate.map((task) =>
-            createTaskMutation.mutateAsync({
+      const projectId = createdProject?.id != null ? Number(createdProject.id) : null;
+      if (projectId != null && tasksToCreate && tasksToCreate.length > 0) {
+        let failedCount = 0;
+        for (const task of tasksToCreate) {
+          try {
+            await createTaskMutation.mutateAsync({
               project_id: projectId,
               bu_code: payload.bu,
               title: task.title,
-              description: task.description,
+              description: task.description ?? undefined,
               due_date: task.dueDate || '',
               status: 'todo',
               priority: task.priority || 'medium',
-              manual_id: task.manual_id || undefined,
-              assignee_id: task.assignee_id,
-              assignee: task.assignee,
-            })
-          )
-        );
+              manual_id: task.manual_id ?? undefined,
+              assignee_id: task.assignee_id ?? undefined,
+              assignee: task.assignee ?? '',
+            });
+          } catch (taskErr) {
+            failedCount += 1;
+            console.error('Failed to create task:', taskErr);
+          }
+        }
+        if (failedCount > 0) {
+          toast({
+            variant: 'destructive',
+            title: '일부 할일 생성 실패',
+            description: `${failedCount}개의 할일 생성에 실패했습니다. 프로젝트는 생성되었습니다.`,
+          });
+        }
       }
 
       setProjectModalOpen(false);
-      return createdProject?.id ? { id: String(createdProject.id) } : undefined;
+      return createdProject?.id != null ? { id: String(createdProject.id) } : undefined;
     } catch (error) {
       console.error('Failed to create project:', error);
+      toast({
+        variant: 'destructive',
+        title: '프로젝트 생성 실패',
+        description: error instanceof Error ? error.message : String(error),
+      });
+      setProjectModalOpen(false);
+      return undefined;
     }
   };
 
