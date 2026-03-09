@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import { canEditProject, canDeleteProject, type AppUser, type Project as PermProject } from '@/lib/permissions';
 import { createActivityLog, createProjectStatusChangeLog } from '@/lib/activity-logger';
-import { notifyProjectPMAssigned, notifyProjectParticipantAdded } from '@/lib/notification-sender';
+import {
+  notifyProjectPMAssigned,
+  notifyProjectParticipantAdded,
+  notifyProjectStatusChange,
+} from '@/lib/notification-sender';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -118,6 +122,31 @@ export async function PATCH(
         oldProject?.status || '',
         body.status
       );
+
+      // 프로젝트 상태 변경 알림: PM, 생성자, 댓글 작성자에게
+      const recipientIds: string[] = [];
+      if (updatedProject.pm_id) recipientIds.push(updatedProject.pm_id);
+      if (updatedProject.created_by) recipientIds.push(updatedProject.created_by);
+      const { data: commentRows } = await supabase
+        .from('comments')
+        .select('author_id')
+        .eq('entity_type', 'project')
+        .eq('entity_id', Number(id));
+      const commenterIds = [...new Set((commentRows || []).map((r: { author_id: string }) => r.author_id))];
+      commenterIds.forEach((uid) => {
+        if (uid && !recipientIds.includes(uid)) recipientIds.push(uid);
+      });
+      if (recipientIds.length > 0) {
+        notifyProjectStatusChange(
+          recipientIds,
+          updatedProject.name,
+          id,
+          oldProject?.status || '',
+          body.status,
+          currentUser.name,
+          currentUser.id
+        ).catch(console.error);
+      }
     } else {
       // 일반 수정 로그
       await createActivityLog({

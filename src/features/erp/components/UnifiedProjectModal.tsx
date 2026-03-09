@@ -1978,21 +1978,31 @@ export function UnifiedProjectModal({
             mode="create"
             onClose={() => setShowAddTaskModal(false)}
             onSubmit={async (payload) => {
-              setPendingTasks((prev) => [
-                ...prev,
-                {
-                  title: payload.title,
-                  description: payload.description,
-                  priority: payload.priority as ErpTaskPriority,
-                  dueDate: payload.dueDate,
-                  days_before: 0,
-                  assignee_id: payload.assignee_id,
-                  assignee: payload.assignee,
-                  manual_id: payload.manual_id ?? undefined,
-                },
-              ]);
-              setShowAddTaskModal(false);
-              return null;
+              try {
+                setPendingTasks((prev) => [
+                  ...prev,
+                  {
+                    title: payload.title,
+                    description: payload.description,
+                    priority: payload.priority as ErpTaskPriority,
+                    dueDate: payload.dueDate,
+                    days_before: 0,
+                    assignee_id: payload.assignee_id,
+                    assignee: payload.assignee ?? '',
+                    manual_id: payload.manual_id ?? undefined,
+                  },
+                ]);
+                return null;
+              } catch (e) {
+                toast({
+                  variant: 'destructive',
+                  title: '할일 추가 실패',
+                  description: e instanceof Error ? e.message : String(e),
+                });
+                return e instanceof Error ? e.message : '할일 추가에 실패했습니다.';
+              } finally {
+                setShowAddTaskModal(false);
+              }
             }}
             defaultBu={form.bu as ErpProject['bu']}
             projects={[virtualProject]}

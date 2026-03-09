@@ -622,13 +622,14 @@ export function UnifiedTaskModal({
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
-    
+
     setError('');
     if (!form.title.trim()) {
       setError('제목을 입력해주세요.');
       return;
     }
-    if (!form.projectId) {
+    const effectiveProjectId = form.projectId || (defaultProjectId === '__pending__' ? '__pending__' : '');
+    if (!effectiveProjectId) {
       setError('프로젝트를 선택해주세요.');
       return;
     }
@@ -638,11 +639,11 @@ export function UnifiedTaskModal({
       const payload = {
         ...(task?.id && { id: task.id }),
         title: form.title.trim(),
-        description: form.description.trim() || undefined,
+        description: (form.description ?? '').trim() || undefined,
         bu: form.bu,
-        projectId: form.projectId,
+        projectId: effectiveProjectId,
         assignee_id: form.assignee_id || undefined,
-        assignee: form.assignee.trim(),
+        assignee: (form.assignee ?? '').trim(),
         dueDate: form.dueDate,
         status: form.status,
         priority: form.priority,
@@ -653,6 +654,8 @@ export function UnifiedTaskModal({
       if (result) {
         setError(result);
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }

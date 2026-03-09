@@ -9,7 +9,7 @@ import {
   type Project as PermProject 
 } from '@/lib/permissions';
 import { createTaskStatusChangeLog } from '@/lib/activity-logger';
-import { notifyTaskAssigned } from '@/lib/notification-sender';
+import { notifyTaskAssigned, notifyTaskStatusChange } from '@/lib/notification-sender';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const [authSupabase, supabase] = await Promise.all([
@@ -135,7 +135,7 @@ export async function PATCH(
 
     if (error) throw error;
 
-    // 상태가 변경된 경우 활동 로그 기록 (비동기, 응답 대기 안 함)
+    // 상태가 변경된 경우 활동 로그 기록 및 알림 (비동기, 응답 대기 안 함)
     if (body.status && oldStatus !== body.status) {
       createTaskStatusChangeLog(
         currentUser.id,
@@ -144,6 +144,33 @@ export async function PATCH(
         oldStatus || '',
         body.status
       ).catch(console.error);
+
+      // 할일 상태 변경 알림: 담당자, 생성자, PM, 댓글 작성자에게
+      const statusRecipientIds: string[] = [];
+      if (data.assignee_id) statusRecipientIds.push(data.assignee_id);
+      if (data.created_by) statusRecipientIds.push(data.created_by);
+      if (project.pm_id) statusRecipientIds.push(project.pm_id);
+      const { data: taskCommentRows } = await supabase
+        .from('comments')
+        .select('author_id')
+        .eq('entity_type', 'task')
+        .eq('entity_id', Number(id));
+      const taskCommenterIds = [...new Set((taskCommentRows || []).map((r: { author_id: string }) => r.author_id))];
+      taskCommenterIds.forEach((uid) => {
+        if (uid && !statusRecipientIds.includes(uid)) statusRecipientIds.push(uid);
+      });
+      if (statusRecipientIds.length > 0) {
+        notifyTaskStatusChange(
+          statusRecipientIds,
+          data.title || oldTitle || '',
+          projectName || '',
+          id,
+          oldStatus || '',
+          body.status,
+          currentUser.name,
+          currentUser.id
+        ).catch(console.error);
+      }
     }
 
     // 담당자가 변경된 경우 새 담당자에게 알림 전송 (누가 배정했는지 포함)

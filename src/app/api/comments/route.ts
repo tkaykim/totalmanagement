@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createPureClient } from '@/lib/supabase/server';
 import type { CommentEntityType } from '@/types/database';
-import { notifyProjectComment, notifyTaskComment, notifyCommentMention } from '@/lib/notification-sender';
+import {
+  notifyProjectComment,
+  notifyTaskCommentToUsers,
+  notifyCommentMention,
+} from '@/lib/notification-sender';
 
 export async function GET(request: NextRequest) {
   try {
@@ -136,31 +140,36 @@ export async function POST(request: NextRequest) {
 
     // 댓글 알림 전송
     if (entity_type === 'project') {
-      // 프로젝트 댓글: PM과 참여자들에게 알림
+      // 프로젝트 댓글: PM, 생성자, 참여자, 해당 프로젝트에 댓글 단 사람들에게 알림
       const { data: project } = await pureClient
         .from('projects')
-        .select('name, pm_id, participants')
+        .select('name, pm_id, created_by, participants')
         .eq('id', entity_id)
         .single();
 
       if (project) {
         const targetUserIds: string[] = [];
 
-        // PM 추가
-        if (project.pm_id) {
-          targetUserIds.push(project.pm_id);
+        if (project.pm_id) targetUserIds.push(project.pm_id);
+        if (project.created_by && !targetUserIds.includes(project.created_by)) {
+          targetUserIds.push(project.created_by);
         }
-
-        // 참여자들 추가
         if (project.participants && Array.isArray(project.participants)) {
-          project.participants.forEach((p: any) => {
-            if (p.user_id && !targetUserIds.includes(p.user_id)) {
-              targetUserIds.push(p.user_id);
-            }
+          project.participants.forEach((p: { user_id?: string }) => {
+            if (p.user_id && !targetUserIds.includes(p.user_id)) targetUserIds.push(p.user_id);
           });
         }
 
-        // 댓글 작성자 본인 제외하고 알림 전송
+        const { data: projectCommentRows } = await pureClient
+          .from('comments')
+          .select('author_id')
+          .eq('entity_type', 'project')
+          .eq('entity_id', Number(entity_id));
+        const projectCommenterIds = [...new Set((projectCommentRows || []).map((r: { author_id: string }) => r.author_id))];
+        projectCommenterIds.forEach((uid) => {
+          if (uid && !targetUserIds.includes(uid)) targetUserIds.push(uid);
+        });
+
         await notifyProjectComment(
           targetUserIds,
           appUser.data.name,
@@ -171,27 +180,45 @@ export async function POST(request: NextRequest) {
         );
       }
     } else if (entity_type === 'task') {
-      // 할일 댓글: 담당자에게 알림
+      // 할일 댓글: 담당자, 생성자, PM, 해당 할일에 댓글 단 사람들에게 알림
       const { data: task } = await pureClient
         .from('project_tasks')
-        .select('title, assignee_id, project_id')
+        .select('title, assignee_id, created_by, project_id')
         .eq('id', entity_id)
         .single();
 
-      if (task && task.assignee_id && task.assignee_id !== user.id) {
-        // 프로젝트명 조회
+      if (task) {
         const { data: project } = await pureClient
           .from('projects')
-          .select('name')
+          .select('name, pm_id')
           .eq('id', task.project_id)
           .single();
 
-        await notifyTaskComment(
-          task.assignee_id,
+        const taskTargetUserIds: string[] = [];
+        if (task.assignee_id) taskTargetUserIds.push(task.assignee_id);
+        if (task.created_by && !taskTargetUserIds.includes(task.created_by)) {
+          taskTargetUserIds.push(task.created_by);
+        }
+        if (project?.pm_id && !taskTargetUserIds.includes(project.pm_id)) {
+          taskTargetUserIds.push(project.pm_id);
+        }
+        const { data: taskCommentRows } = await pureClient
+          .from('comments')
+          .select('author_id')
+          .eq('entity_type', 'task')
+          .eq('entity_id', Number(entity_id));
+        const taskCommenterIds = [...new Set((taskCommentRows || []).map((r: { author_id: string }) => r.author_id))];
+        taskCommenterIds.forEach((uid) => {
+          if (uid && !taskTargetUserIds.includes(uid)) taskTargetUserIds.push(uid);
+        });
+
+        await notifyTaskCommentToUsers(
+          taskTargetUserIds,
           appUser.data.name,
           task.title,
           project?.name || '프로젝트',
           String(data.id),
+          user.id,
           String(entity_id)
         );
       }

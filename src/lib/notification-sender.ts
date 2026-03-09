@@ -498,6 +498,96 @@ export async function notifyTaskComment(
   });
 }
 
+/**
+ * 할일 댓글 알림 (여러 대상: 담당자, 생성자, PM, 댓글 작성자 등)
+ */
+export async function notifyTaskCommentToUsers(
+  targetUserIds: string[],
+  authorName: string,
+  taskTitle: string,
+  projectName: string,
+  commentId: string,
+  excludeUserId?: string,
+  taskId?: string
+) {
+  const recipients = excludeUserId
+    ? targetUserIds.filter((id) => id !== excludeUserId)
+    : targetUserIds;
+  if (recipients.length === 0) return { success: true };
+
+  return createNotificationForUsers(recipients, {
+    title: '할일에 새 댓글',
+    message: `${authorName}님이 [${projectName}] "${taskTitle}" 할일에 댓글을 남겼습니다.`,
+    type: 'info',
+    entityType: 'comment',
+    entityId: commentId,
+    actionUrl: `/?view=tasks${taskId ? `&id=${taskId}` : ''}`,
+  });
+}
+
+/**
+ * 프로젝트 상태 변경 알림 (PM, 생성자, 댓글 작성자 등 대상에게)
+ */
+export async function notifyProjectStatusChange(
+  targetUserIds: string[],
+  projectName: string,
+  projectId: string,
+  oldStatus: string,
+  newStatus: string,
+  changerName?: string,
+  excludeUserId?: string
+) {
+  const recipients = excludeUserId
+    ? targetUserIds.filter((id) => id !== excludeUserId)
+    : targetUserIds;
+  if (recipients.length === 0) return { success: true };
+
+  const message = changerName
+    ? `${changerName}님이 "${projectName}" 프로젝트 상태를 ${oldStatus || '(없음)'} → ${newStatus}(으)로 변경했습니다.`
+    : `"${projectName}" 프로젝트 상태가 ${oldStatus || '(없음)'} → ${newStatus}(으)로 변경되었습니다.`;
+
+  return createNotificationForUsers(recipients, {
+    title: '프로젝트 상태가 변경되었습니다',
+    message,
+    type: 'info',
+    entityType: 'project',
+    entityId: projectId,
+    actionUrl: `/?view=projects&id=${projectId}`,
+  });
+}
+
+/**
+ * 할일 상태 변경 알림 (담당자, 생성자, PM, 댓글 작성자 등 대상에게)
+ */
+export async function notifyTaskStatusChange(
+  targetUserIds: string[],
+  taskTitle: string,
+  projectName: string,
+  taskId: string,
+  oldStatus: string,
+  newStatus: string,
+  changerName?: string,
+  excludeUserId?: string
+) {
+  const recipients = excludeUserId
+    ? targetUserIds.filter((id) => id !== excludeUserId)
+    : targetUserIds;
+  if (recipients.length === 0) return { success: true };
+
+  const message = changerName
+    ? `${changerName}님이 [${projectName}] "${taskTitle}" 할일 상태를 ${oldStatus || '(없음)'} → ${newStatus}(으)로 변경했습니다.`
+    : `[${projectName}] "${taskTitle}" 할일 상태가 ${oldStatus || '(없음)'} → ${newStatus}(으)로 변경되었습니다.`;
+
+  return createNotificationForUsers(recipients, {
+    title: '할일 상태가 변경되었습니다',
+    message,
+    type: 'info',
+    entityType: 'task',
+    entityId: taskId,
+    actionUrl: `/?view=tasks&id=${taskId}`,
+  });
+}
+
 // === 휴가 관련 알림 ===
 
 /**
