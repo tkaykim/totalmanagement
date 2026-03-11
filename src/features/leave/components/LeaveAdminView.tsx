@@ -8,6 +8,7 @@ import {
   CheckSquare,
   Calendar,
   CalendarMinus,
+  FileText,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import { AdminLeaveGrant } from './AdminLeaveGrant';
 import { AdminLeaveUse } from './AdminLeaveUse';
 import { TeamLeaveTable } from './TeamLeaveTable';
 import { LeaveRequestList } from './LeaveRequestList';
+import { LeaveCreationUsageLog } from './LeaveCreationUsageLog';
 import {
   getPendingApprovals,
   getTeamLeaveStats,
@@ -57,7 +59,7 @@ export function LeaveAdminView() {
   const [useModalOpen, setUseModalOpen] = useState(false);
   const [preselectedUser, setPreselectedUser] = useState<{ id: string; name: string } | null>(null);
   const [usePreselectedUser, setUsePreselectedUser] = useState<{ id: string; name: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'pending' | 'team' | 'all'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'team' | 'all' | 'logs'>('pending');
 
   const fetchData = useCallback(async () => {
     try {
@@ -113,6 +115,12 @@ export function LeaveAdminView() {
   };
 
   const isHeadAdmin = currentUser?.role === 'admin' && currentUser?.bu_code === 'HEAD';
+
+  useEffect(() => {
+    if (!loading && !isHeadAdmin && activeTab === 'logs') {
+      setActiveTab('pending');
+    }
+  }, [loading, isHeadAdmin, activeTab]);
 
   if (loading) {
     return (
@@ -260,6 +268,19 @@ export function LeaveAdminView() {
           <Calendar className="h-4 w-4" />
           전체 신청
         </button>
+        {isHeadAdmin && (
+          <button
+            onClick={() => setActiveTab('logs')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition ${
+              activeTab === 'logs'
+                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            생성·소진 로그
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -332,6 +353,20 @@ export function LeaveAdminView() {
                   }
                 } : undefined}
               />
+            </CardContent>
+          </Card>
+        )}
+
+        {isHeadAdmin && activeTab === 'logs' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">생성·소진 로그</CardTitle>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                휴가가 누구에게 얼마나 생성되었는지, 누가 얼마나 사용했는지 기록을 조회합니다.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <LeaveCreationUsageLog year={selectedYear} />
             </CardContent>
           </Card>
         )}

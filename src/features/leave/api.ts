@@ -335,3 +335,40 @@ export async function getTeamLeaveStats(params?: {
   }
   return res.json();
 }
+
+// ============================================
+// Leave Creation / Usage Logs (관리자용)
+// ============================================
+
+export interface LeaveGrantLogItem {
+  id: number;
+  user_id: string;
+  leave_type: string;
+  days: number;
+  grant_type: string;
+  reason?: string | null;
+  granted_by?: string | null;
+  year: number;
+  granted_at: string;
+  created_at: string;
+  recipient?: { id: string; name: string } | null;
+  granter?: { id: string; name: string } | null;
+}
+
+export interface LeaveLogsResponse {
+  grants: LeaveGrantLogItem[];
+  usages: LeaveRequestWithUser[];
+}
+
+export async function getLeaveLogs(params?: { year?: number }): Promise<LeaveLogsResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.year) searchParams.append('year', String(params.year));
+
+  const url = `${API_BASE}/logs${searchParams.toString() ? `?${searchParams}` : ''}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || '휴가 생성·소진 로그 조회에 실패했습니다.');
+  }
+  return res.json();
+}
