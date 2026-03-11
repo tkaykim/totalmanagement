@@ -219,6 +219,28 @@ export async function notifyTaskDueSoon(
   });
 }
 
+/** 할일 마감 경과 알림 (담당자·PM 대상) - 완료 처리 또는 마감일 조정 안내 */
+export async function notifyTaskOverdue(
+  userId: string,
+  taskTitle: string,
+  dueDate: string,
+  taskId: string,
+  projectName?: string
+) {
+  const prefix = projectName ? `[${projectName}] "${taskTitle}"` : `"${taskTitle}"`;
+  const message = `${prefix} 마감일(${dueDate})이 지났습니다. 완료되었다면 완료 처리해 주시고, 연기된 경우 마감일을 조정해 주세요.`;
+
+  return createNotification({
+    userId,
+    title: '할일 마감이 지났습니다',
+    message,
+    type: 'warning',
+    entityType: 'task',
+    entityId: taskId,
+    actionUrl: `/?view=tasks&id=${taskId}`,
+  });
+}
+
 /**
  * 프로젝트 PM 배정 알림 (누가 배정했는지 포함)
  */
