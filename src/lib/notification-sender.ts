@@ -195,7 +195,7 @@ export async function notifyTaskAssigned(
 }
 
 /**
- * 할일 마감 임박 알림
+ * 할일 마감 임박 알림 (개별 발송용, 현재는 요약 알림으로 대체)
  */
 export async function notifyTaskDueSoon(
   assigneeId: string,
@@ -219,7 +219,34 @@ export async function notifyTaskDueSoon(
   });
 }
 
-/** 할일 마감 경과 알림 (담당자·PM 대상) - 완료 처리 또는 마감일 조정 안내 */
+/** 할일 마감 임박 요약 알림 (사용자당 1건): n개의 할일이 마감임박 + 제목 나열 */
+export type DueSoonTaskItem = { title: string; projectName?: string };
+
+export async function notifyDueSoonSummary(
+  userId: string,
+  tasks: DueSoonTaskItem[]
+) {
+  if (tasks.length === 0) return { success: true };
+
+  const count = tasks.length;
+  const titleLine = `${count}개의 할일이 마감임박했습니다.`;
+  const taskLines = tasks.map((t) =>
+    t.projectName ? `· [${t.projectName}] ${t.title}` : `· ${t.title}`
+  );
+  const message = [titleLine, '', ...taskLines].join('\n');
+
+  return createNotification({
+    userId,
+    title: '할일 마감이 임박했습니다',
+    message,
+    type: 'warning',
+    entityType: 'due_soon_summary',
+    entityId: 'due-soon-summary',
+    actionUrl: '/?view=tasks',
+  });
+}
+
+/** 할일 마감 경과 알림 (담당자·PM 대상) - 완료 처리 또는 마감일 조정 안내 - 개별 발송용, 현재는 요약 알림으로 대체 */
 export async function notifyTaskOverdue(
   userId: string,
   taskTitle: string,
@@ -238,6 +265,39 @@ export async function notifyTaskOverdue(
     entityType: 'task',
     entityId: taskId,
     actionUrl: `/?view=tasks&id=${taskId}`,
+  });
+}
+
+/**
+ * 마감 지난 할일·프로젝트 요약 알림 (사용자당 1건)
+ * n개의 할일 / m개의 프로젝트 마감 경과를 하나의 알림으로 전달해 알림 수 최소화
+ */
+export async function notifyOverdueSummary(
+  userId: string,
+  overdueTaskCount: number,
+  overdueProjectCount: number = 0
+) {
+  const parts: string[] = [];
+  if (overdueTaskCount > 0) {
+    parts.push(`${overdueTaskCount}개의 할일이 마감기한이 지났습니다`);
+  }
+  if (overdueProjectCount > 0) {
+    parts.push(`${overdueProjectCount}개의 프로젝트의 마감일이 지났습니다`);
+  }
+  if (parts.length === 0) return { success: true };
+
+  const message =
+    parts.join('. ') +
+    '. 빠른 처리가 필요합니다. 완료되었다면 상태를 변경하세요.';
+
+  return createNotification({
+    userId,
+    title: '마감이 지난 할일·프로젝트가 있습니다',
+    message,
+    type: 'warning',
+    entityType: 'overdue_summary',
+    entityId: 'overdue-summary',
+    actionUrl: '/?view=tasks',
   });
 }
 

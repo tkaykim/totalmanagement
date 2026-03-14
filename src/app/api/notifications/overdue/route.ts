@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
-import { notifyTaskOverdue } from '@/lib/notification-sender';
+import { notifyOverdueSummary } from '@/lib/notification-sender';
 import { format, startOfDay, endOfDay } from 'date-fns';
 
-const OVERDUE_TITLE = '할일 마감이 지났습니다';
+const OVERDUE_SUMMARY_TITLE = '마감이 지난 할일·프로젝트가 있습니다';
 
 /**
- * 마감일 경과(overdue) 할일 알림 발송 API
- * Cron으로 매일 오전 10시(KST) 호출하여, 마감일이 지난 미완료 할일에 대해
- * 담당자와 프로젝트 PM에게 알림 발송 (완료 처리 또는 마감일 조정 안내)
+ * 마감일 경과(overdue) 할일·프로젝트 요약 알림 발송 API
+ * Cron으로 매일 오전 10시(KST) 호출하여, 마감일이 지난 미완료 할일/프로젝트에 대해
+ * 담당자·PM당 하나의 요약 알림만 발송 (알림 최소화)
  *
  * GET /api/notifications/overdue
  * Query params:
@@ -25,92 +25,105 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createPureClient();
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const today = new Date();
+    const todayStart = startOfDay(today).toISOString();
+    const todayEnd = endOfDay(today).toISOString();
 
-    const { data: tasks, error } = await supabase
+    const { data: tasks, error: tasksError } = await supabase
       .from('project_tasks')
       .select(
         `
         id,
-        title,
-        due_date,
         assignee_id,
         project_id,
-        projects!project_tasks_project_id_fkey (
-          name,
-          pm_id
-        )
+        projects!project_tasks_project_id_fkey ( pm_id )
       `
       )
       .lt('due_date', todayStr)
       .neq('status', 'done');
 
-    if (error) {
-      throw error;
-    }
+    if (tasksError) throw tasksError;
 
-    if (!tasks || tasks.length === 0) {
+    const { data: projects, error: projectsError } = await supabase
+      .from('projects')
+      .select('id, pm_id')
+      .lt('end_date', todayStr)
+      .neq('status', '완료')
+      .not('pm_id', 'is', null);
+
+    if (projectsError) throw projectsError;
+
+    const overdueTaskCount = tasks?.length ?? 0;
+    const overdueProjectCount = projects?.length ?? 0;
+
+    if (overdueTaskCount === 0 && overdueProjectCount === 0) {
       return NextResponse.json({
-        message: '마감일 경과 할일이 없습니다.',
+        message: '마감일 경과 할일·프로젝트가 없습니다.',
         date: todayStr,
-        count: 0,
+        overdueTaskCount: 0,
+        overdueProjectCount: 0,
+        sentCount: 0,
       });
     }
 
-    const today = new Date();
-    const todayStart = startOfDay(today).toISOString();
-    const todayEnd = endOfDay(today).toISOString();
+    const userTaskCount = new Map<string, number>();
+    const userProjectCount = new Map<string, number>();
 
-    const { data: existingNotifications } = await supabase
-      .from('notifications')
-      .select('entity_id')
-      .eq('title', OVERDUE_TITLE)
-      .gte('created_at', todayStart)
-      .lte('created_at', todayEnd);
-
-    const alreadyNotifiedTaskIds = new Set(
-      existingNotifications?.map((n) => n.entity_id) || []
-    );
-
-    let sentCount = 0;
-    const results: { taskId: string; userId: string; success: boolean }[] = [];
-
-    for (const task of tasks) {
-      if (alreadyNotifiedTaskIds.has(String(task.id))) {
-        continue;
-      }
-
-      const project = (task as any).projects;
-      const projectName = project?.name || '프로젝트';
+    for (const task of tasks ?? []) {
+      const project = (task as unknown as { projects?: { pm_id: string | null } }).projects;
       const pmId = project?.pm_id ?? null;
       const assigneeId = task.assignee_id ?? null;
-      const dueDateStr = format(new Date(task.due_date), 'yyyy-MM-dd');
-      const taskIdStr = String(task.id);
-
-      const recipientIds = new Set<string>();
-      if (assigneeId) recipientIds.add(assigneeId);
-      if (pmId) recipientIds.add(pmId);
-
-      for (const userId of recipientIds) {
-        const result = await notifyTaskOverdue(
-          userId,
-          task.title,
-          dueDateStr,
-          taskIdStr,
-          projectName
-        );
-        results.push({
-          taskId: taskIdStr,
-          userId,
-          success: result.success,
-        });
-        if (result.success) sentCount++;
+      if (assigneeId) {
+        userTaskCount.set(assigneeId, (userTaskCount.get(assigneeId) ?? 0) + 1);
+      }
+      if (pmId) {
+        userTaskCount.set(pmId, (userTaskCount.get(pmId) ?? 0) + 1);
       }
     }
 
+    for (const project of projects ?? []) {
+      const pmId = project.pm_id;
+      if (pmId) {
+        userProjectCount.set(pmId, (userProjectCount.get(pmId) ?? 0) + 1);
+      }
+    }
+
+    const allUserIds = new Set<string>();
+    userTaskCount.forEach((_, id) => allUserIds.add(id));
+    userProjectCount.forEach((_, id) => allUserIds.add(id));
+
+    const { data: existingSummary } = await supabase
+      .from('notifications')
+      .select('user_id')
+      .eq('title', OVERDUE_SUMMARY_TITLE)
+      .eq('entity_id', 'overdue-summary')
+      .gte('created_at', todayStart)
+      .lte('created_at', todayEnd);
+
+    const alreadyNotifiedUserIds = new Set(
+      existingSummary?.map((n) => n.user_id) || []
+    );
+
+    let sentCount = 0;
+    const results: { userId: string; taskCount: number; projectCount: number; success: boolean }[] = [];
+
+    for (const userId of allUserIds) {
+      if (alreadyNotifiedUserIds.has(userId)) continue;
+
+      const taskCount = userTaskCount.get(userId) ?? 0;
+      const projectCount = userProjectCount.get(userId) ?? 0;
+      if (taskCount === 0 && projectCount === 0) continue;
+
+      const result = await notifyOverdueSummary(userId, taskCount, projectCount);
+      results.push({ userId, taskCount, projectCount, success: result.success ?? false });
+      if (result.success) sentCount++;
+    }
+
     return NextResponse.json({
-      message: '마감일 경과 알림 발송 완료',
+      message: '마감 경과 요약 알림 발송 완료',
       date: todayStr,
-      totalTasks: tasks.length,
+      overdueTaskCount,
+      overdueProjectCount,
       sentCount,
       results,
     });

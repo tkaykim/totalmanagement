@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
-import { notifyTaskDueSoon } from '@/lib/notification-sender';
+import { notifyDueSoonSummary, type DueSoonTaskItem } from '@/lib/notification-sender';
 import { format, addDays, startOfDay, endOfDay } from 'date-fns';
 
+const DUE_SOON_SUMMARY_TITLE = '할일 마감이 임박했습니다';
+
 /**
- * 마감 임박 할일 알림 발송 API
- * Cron Job으로 하루에 한 번 호출하여 마감 1일 전 할일에 대해 알림 발송
- * 
+ * 마감 임박 할일 요약 알림 발송 API
+ * Cron Job으로 하루에 한 번 호출하여, 마감 N일 전 할일을 담당자별로 묶어
+ * 사용자당 하나의 요약 알림만 발송 (n개의 할일이 마감임박 + 제목 나열)
+ *
  * GET /api/notifications/due-soon
  * Query params:
  *   - days: 마감까지 남은 일수 (기본값: 1)
@@ -16,8 +19,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const cronSecret = searchParams.get('key');
-    
-    // 보안 키 검증 (설정된 경우에만)
+
     if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -25,7 +27,6 @@ export async function GET(request: NextRequest) {
     const daysAhead = parseInt(searchParams.get('days') || '1');
     const supabase = await createPureClient();
 
-    // 마감일이 N일 후인 할일 조회 (미완료 상태만)
     const targetDate = addDays(new Date(), daysAhead);
     const targetDateStr = format(targetDate, 'yyyy-MM-dd');
 
@@ -37,84 +38,74 @@ export async function GET(request: NextRequest) {
         due_date,
         assignee_id,
         project_id,
-        projects!project_tasks_project_id_fkey (
-          name
-        )
+        projects!project_tasks_project_id_fkey ( name )
       `)
       .eq('due_date', targetDateStr)
       .neq('status', 'done')
       .not('assignee_id', 'is', null);
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     if (!tasks || tasks.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: '마감 임박 할일이 없습니다.',
         date: targetDateStr,
-        count: 0 
+        count: 0,
       });
     }
 
-    // 이미 오늘 같은 할일에 대해 알림을 보냈는지 확인 (중복 방지)
     const today = new Date();
     const todayStart = startOfDay(today).toISOString();
     const todayEnd = endOfDay(today).toISOString();
 
-    const { data: existingNotifications } = await supabase
+    const { data: existingSummary } = await supabase
       .from('notifications')
-      .select('entity_id')
-      .eq('title', '할일 마감이 임박했습니다')
+      .select('user_id')
+      .eq('title', DUE_SOON_SUMMARY_TITLE)
+      .eq('entity_id', 'due-soon-summary')
       .gte('created_at', todayStart)
       .lte('created_at', todayEnd);
 
-    const alreadyNotifiedTaskIds = new Set(
-      existingNotifications?.map(n => n.entity_id) || []
+    const alreadyNotifiedUserIds = new Set(
+      existingSummary?.map((n) => n.user_id) || []
     );
 
-    // 알림 발송
-    let sentCount = 0;
-    const results: { taskId: string; assigneeId: string; success: boolean }[] = [];
-
+    const byAssignee = new Map<string, DueSoonTaskItem[]>();
     for (const task of tasks) {
-      // 이미 오늘 알림을 보낸 할일은 건너뜀
-      if (alreadyNotifiedTaskIds.has(String(task.id))) {
-        continue;
-      }
+      const assigneeId = task.assignee_id!;
+      const projectName = (task as { projects?: { name?: string } }).projects?.name;
+      const list = byAssignee.get(assigneeId) ?? [];
+      list.push({ title: task.title, projectName: projectName ?? undefined });
+      byAssignee.set(assigneeId, list);
+    }
 
-      const projectName = (task as any).projects?.name || '프로젝트';
-      
-      const result = await notifyTaskDueSoon(
-        task.assignee_id!,
-        task.title,
-        format(new Date(task.due_date), 'yyyy-MM-dd'),
-        String(task.id),
-        projectName
-      );
+    let sentCount = 0;
+    const results: { assigneeId: string; taskCount: number; success: boolean }[] = [];
 
+    for (const [assigneeId, assigneeTasks] of byAssignee) {
+      if (alreadyNotifiedUserIds.has(assigneeId)) continue;
+
+      const result = await notifyDueSoonSummary(assigneeId, assigneeTasks);
       results.push({
-        taskId: String(task.id),
-        assigneeId: task.assignee_id!,
-        success: result.success,
+        assigneeId,
+        taskCount: assigneeTasks.length,
+        success: result.success ?? false,
       });
-
-      if (result.success) {
-        sentCount++;
-      }
+      if (result.success) sentCount++;
     }
 
     return NextResponse.json({
-      message: `마감 임박 알림 발송 완료`,
+      message: '마감 임박 요약 알림 발송 완료',
       date: targetDateStr,
       totalTasks: tasks.length,
       sentCount,
       results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { message?: string };
     console.error('Due soon notification error:', error);
     return NextResponse.json(
-      { error: error?.message || String(error) },
+      { error: err?.message || String(error) },
       { status: 500 }
     );
   }
