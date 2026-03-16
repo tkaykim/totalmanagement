@@ -24,6 +24,7 @@ export interface ProjectsViewProps {
   onEditFinance: (entry: FinancialEntry) => void;
   onEditTask: (task: TaskItem) => void;
   onEditProject: (project: Project) => void;
+  onViewProject: (project: Project) => void;
   onDeleteProject: (id: string) => void;
   tasks: TaskItem[];
   usersData?: { users: any[]; currentUser: any };
@@ -42,6 +43,7 @@ export function ProjectsView({
   onEditFinance,
   onEditTask,
   onEditProject,
+  onViewProject,
   onDeleteProject,
   tasks,
   usersData,
@@ -192,7 +194,7 @@ export function ProjectsView({
             >
               <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
                 <button
-                  onClick={() => onEditProject(p)}
+                  onClick={() => onViewProject(p)}
                   className="flex flex-1 items-center justify-between text-left min-w-0"
                 >
                   <div className="space-y-1 min-w-0 flex-1 overflow-hidden">

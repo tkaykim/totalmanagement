@@ -6,6 +6,7 @@ export type Project = {
   bu: BU;
   name: string;
   cat: string;
+  description?: string | null;
   startDate: string;
   endDate: string;
   status: string;

@@ -82,6 +82,7 @@ import {
   frontendFinancialToDb,
 } from '@/features/erp/utils';
 import { UnifiedProjectModal } from '@/features/erp/components/UnifiedProjectModal';
+import { ProjectDetailPanel } from '@/features/erp/components/ProjectDetailPanel';
 import { DashboardView } from '@/features/erp/components/DashboardView';
 import { AdminResourceView } from '@/features/erp/components/AdminResourceView';
 import { registerBackButtonCallback } from '@/lib/capacitor';
@@ -278,6 +279,15 @@ function HomePage() {
   const projects = useMemo(() => projectsData.map(dbProjectToFrontend), [projectsData]);
   const tasks = useMemo(() => tasksData.map(dbTaskToFrontend), [tasksData]);
 
+  useEffect(() => {
+    if (viewProjectDetail) {
+      const updated = projects.find((p) => p.id === viewProjectDetail.id);
+      if (updated) {
+        setViewProjectDetail(updated);
+      }
+    }
+  }, [projects]);
+
   // URL 파라미터에서 view 변경 감지 (알림 클릭 등으로 URL이 변할 때). URL을 단일 소스로 유지해 모달 닫은 뒤 사이드바 메뉴가 정상 동작하도록 함.
   useEffect(() => {
     const urlView = searchParams.get('view') as View | null;
@@ -296,7 +306,7 @@ function HomePage() {
       if (targetView === 'projects') {
         const project = projects.find(p => String(p.id) === urlId);
         if (project) {
-          setEditProjectModalOpen(project);
+          setViewProjectDetail(project);
           opened = true;
         }
       } else if (targetView === 'tasks') {
@@ -350,6 +360,7 @@ function HomePage() {
   const [isEditFinanceModalOpen, setEditFinanceModalOpen] = useState<FinancialEntry | null>(null);
   const [isEditTaskModalOpen, setEditTaskModalOpen] = useState<TaskItem | null>(null);
   const [isEditProjectModalOpen, setEditProjectModalOpen] = useState<Project | null>(null);
+  const [viewProjectDetail, setViewProjectDetail] = useState<Project | null>(null);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [modalProjectId, setModalProjectId] = useState<string | null>(null);
   const [taskModalProjectId, setTaskModalProjectId] = useState<string | undefined>(undefined);
@@ -370,6 +381,7 @@ function HomePage() {
     const cleanup = registerBackButtonCallback(() => {
       // 1. 열린 모달 닫기 (먼저 체크)
       if (isEditProjectModalOpen) { setEditProjectModalOpen(null); return true; }
+      if (viewProjectDetail) { setViewProjectDetail(null); return true; }
       if (isEditTaskModalOpen) { setEditTaskModalOpen(null); return true; }
       if (isEditFinanceModalOpen) { setEditFinanceModalOpen(null); return true; }
       if (isProjectModalOpen) { setProjectModalOpen(false); return true; }
@@ -401,7 +413,7 @@ function HomePage() {
     return cleanup;
   }, [
     view, mobileMenuOpen,
-    isEditProjectModalOpen, isEditTaskModalOpen, isEditFinanceModalOpen,
+    isEditProjectModalOpen, viewProjectDetail, isEditTaskModalOpen, isEditFinanceModalOpen,
     isProjectModalOpen, isTaskModalOpen, isFinanceModalOpen,
     isOrgMemberModalOpen, isEditOrgMemberModalOpen,
     isCreateUserModalOpen, isEditUserModalOpen,
@@ -1251,6 +1263,7 @@ function HomePage() {
               onEditFinance={setEditFinanceModalOpen}
               onEditTask={setEditTaskModalOpen}
               onEditProject={setEditProjectModalOpen}
+              onViewProject={setViewProjectDetail}
               onDeleteProject={(id) => setDeleteProjectId(id)}
               tasks={tasks}
               usersData={usersData}
@@ -1613,6 +1626,33 @@ function HomePage() {
           />
         );
       })()}
+      {viewProjectDetail && (
+        <ProjectDetailPanel
+          project={viewProjectDetail}
+          tasks={tasks.filter((t) => t.projectId === viewProjectDetail.id)}
+          usersData={usersData}
+          partnerWorkersData={partnerWorkersData}
+          partnerCompaniesData={partnerCompaniesData}
+          onClose={() => setViewProjectDetail(null)}
+          onEdit={() => {
+            setEditProjectModalOpen(viewProjectDetail);
+          }}
+          onTaskClick={(task) => {
+            const matchedTask = tasks.find((t) => t.id === task.id);
+            if (matchedTask) {
+              setEditTaskModalOpen(matchedTask);
+            }
+          }}
+          onTaskStatusChange={async (taskId, status) => {
+            try {
+              const dbStatus = status === 'in-progress' ? 'in_progress' : status;
+              await updateTaskMutation.mutateAsync({ id: Number(taskId), data: { status: dbStatus } });
+            } catch (error) {
+              console.error('Failed to update task status:', error);
+            }
+          }}
+        />
+      )}
       {isEditProjectModalOpen && (
         <UnifiedProjectModal
           project={isEditProjectModalOpen}
