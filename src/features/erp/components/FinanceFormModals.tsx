@@ -84,6 +84,42 @@ function Input({
   );
 }
 
+function formatWithCommas(value: string): string {
+  const digits = value.replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('ko-KR');
+}
+
+function stripCommas(value: string): string {
+  return value.replace(/[^0-9]/g, '');
+}
+
+function CurrencyInput({
+  value,
+  onChange,
+  placeholder = '0',
+  className,
+}: {
+  value: string;
+  onChange: (rawValue: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={formatWithCommas(value)}
+      onChange={(e) => onChange(stripCommas(e.target.value))}
+      placeholder={placeholder}
+      className={cn(
+        "w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900",
+        className
+      )}
+    />
+  );
+}
+
 function Select({
   value,
   onChange,
@@ -497,8 +533,7 @@ export function CreateFinanceModal({
               <FormField label="금액" icon={Wallet}>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">₩</span>
-                  <Input
-                    type="number"
+                  <CurrencyInput
                     value={form.amount}
                     onChange={(v) => setForm((prev) => ({ ...prev, amount: v }))}
                     placeholder="0"
@@ -814,8 +849,7 @@ export function EditFinanceModal({
             <FormField label="금액" icon={Wallet}>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">₩</span>
-                <Input
-                  type="number"
+                <CurrencyInput
                   value={form.amount}
                   onChange={(v) => setForm((prev) => ({ ...prev, amount: v }))}
                   className="pl-7"

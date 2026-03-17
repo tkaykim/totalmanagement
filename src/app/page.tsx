@@ -2470,9 +2470,13 @@ function ModalProject({
                   className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs outline-none"
                 />
                 <input
-                  value={formState.amount}
-                  type="number"
-                  onChange={(e) => onFormChange((prev) => ({ ...prev, amount: e.target.value }))}
+                  value={formState.amount ? Number(formState.amount).toLocaleString('ko-KR') : ''}
+                  type="text"
+                  inputMode="numeric"
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    onFormChange((prev) => ({ ...prev, amount: raw }));
+                  }}
                   placeholder="금액"
                   className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-bold outline-none"
                 />

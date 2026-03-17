@@ -809,11 +809,13 @@ export function UnifiedProjectModal({
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 기존 첨부파일 로드 (view/edit 모드)
   useEffect(() => {
     if (project?.id) {
       fetch(`/api/projects/${project.id}/documents`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) return [];
+          return res.json();
+        })
         .then((docs: any[]) => {
           if (Array.isArray(docs)) {
             const mapped = docs.map((d: any) => ({

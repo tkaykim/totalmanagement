@@ -16,35 +16,43 @@ export async function GET(
       .eq('project_id', id)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('project_documents query error:', error);
+      return NextResponse.json([]);
+    }
 
     const list = documents || [];
-    const EXPIRES_IN = 3600; // 1 hour for preview/download
+    if (list.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    const EXPIRES_IN = 3600;
     const withUrls = await Promise.all(
       list.map(async (doc: { file_path: string; [key: string]: unknown }) => {
-        const { data } = await supabase.storage
-          .from('project-documents')
-          .createSignedUrl(doc.file_path, EXPIRES_IN);
-        const signedUrl =
-          (data as { signedUrl?: string })?.signedUrl ??
-          (data as { signedURL?: string })?.signedURL;
-        const { data: publicData } = supabase.storage
-          .from('project-documents')
-          .getPublicUrl(doc.file_path);
-        return {
-          ...doc,
-          public_url: signedUrl || publicData.publicUrl,
-        };
+        try {
+          const { data } = await supabase.storage
+            .from('project-documents')
+            .createSignedUrl(doc.file_path, EXPIRES_IN);
+          const signedUrl =
+            (data as { signedUrl?: string })?.signedUrl ??
+            (data as { signedURL?: string })?.signedURL;
+          const { data: publicData } = supabase.storage
+            .from('project-documents')
+            .getPublicUrl(doc.file_path);
+          return {
+            ...doc,
+            public_url: signedUrl || publicData.publicUrl,
+          };
+        } catch {
+          return { ...doc, public_url: '' };
+        }
       })
     );
 
     return NextResponse.json(withUrls);
   } catch (error: any) {
     console.error('Failed to fetch project documents:', error);
-    return NextResponse.json(
-      { error: error?.message || String(error) },
-      { status: 500 }
-    );
+    return NextResponse.json([]);
   }
 }
 
