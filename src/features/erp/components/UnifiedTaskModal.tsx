@@ -663,7 +663,7 @@ export function UnifiedTaskModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
         <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-800 shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="px-6 py-4 bg-indigo-50 dark:bg-indigo-900/20">
@@ -997,7 +997,7 @@ export function UnifiedTaskModal({
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
           <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 shadow-2xl p-6">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">할 일 삭제</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">
