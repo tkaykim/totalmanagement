@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { MessageCircle } from 'lucide-react';
 import type { Project, TaskItem } from '../types';
 import { ProjectDetailHeader } from './ProjectDetailHeader';
@@ -33,23 +33,32 @@ export function ProjectDetailPanel({
   onTaskClick,
   onTaskStatusChange,
 }: ProjectDetailPanelProps) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
+    let closedByPopState = false;
     history.pushState({ projectDetail: true }, '');
-    const handlePopState = () => onClose();
+    const handlePopState = () => {
+      closedByPopState = true;
+      onCloseRef.current();
+    };
     window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      if (history.state?.projectDetail) history.back();
+      if (!closedByPopState) {
+        history.back();
+      }
     };
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
