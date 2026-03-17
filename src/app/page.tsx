@@ -1637,6 +1637,14 @@ function HomePage() {
           onEdit={() => {
             setEditProjectModalOpen(viewProjectDetail);
           }}
+          onStatusChange={async (status) => {
+            try {
+              await updateProjectMutation.mutateAsync({ id: Number(viewProjectDetail.id), data: { status } });
+              setViewProjectDetail((prev) => prev ? { ...prev, status: status as typeof prev.status } : null);
+            } catch (error) {
+              console.error('Failed to update project status:', error);
+            }
+          }}
           onTaskClick={(task) => {
             const matchedTask = tasks.find((t) => t.id === task.id);
             if (matchedTask) {

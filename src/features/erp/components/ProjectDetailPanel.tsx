@@ -16,6 +16,7 @@ interface ProjectDetailPanelProps {
   partnerCompaniesData?: any[];
   onClose: () => void;
   onEdit: () => void;
+  onStatusChange?: (status: string) => void;
   onTaskClick?: (task: TaskItem) => void;
   onTaskStatusChange?: (taskId: string, status: TaskItem['status']) => void;
 }
@@ -28,6 +29,7 @@ export function ProjectDetailPanel({
   partnerCompaniesData,
   onClose,
   onEdit,
+  onStatusChange,
   onTaskClick,
   onTaskStatusChange,
 }: ProjectDetailPanelProps) {
@@ -37,6 +39,16 @@ export function ProjectDetailPanel({
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    history.pushState({ projectDetail: true }, '');
+    const handlePopState = () => onClose();
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (history.state?.projectDetail) history.back();
+    };
   }, [onClose]);
 
   useEffect(() => {
@@ -65,6 +77,7 @@ export function ProjectDetailPanel({
               partnerCompaniesData={partnerCompaniesData}
               onEdit={onEdit}
               onClose={onClose}
+              onStatusChange={onStatusChange}
             />
             <ProjectDetailInfo project={project} />
           </div>

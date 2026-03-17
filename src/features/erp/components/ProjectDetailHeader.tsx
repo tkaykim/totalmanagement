@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Pencil } from 'lucide-react';
+import { X, Pencil, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BU, Project } from '../types';
 
@@ -30,6 +30,7 @@ interface ProjectDetailHeaderProps {
   partnerCompaniesData?: any[];
   onEdit: () => void;
   onClose: () => void;
+  onStatusChange?: (status: string) => void;
 }
 
 function resolvePmName(pmId: string | null | undefined, usersData?: { users: any[] }): string {
@@ -71,6 +72,7 @@ export function ProjectDetailHeader({
   partnerCompaniesData,
   onEdit,
   onClose,
+  onStatusChange,
 }: ProjectDetailHeaderProps) {
   const pmName = resolvePmName(project.pm_id, usersData);
   const participantNames = resolveParticipantNames(
@@ -93,9 +95,28 @@ export function ProjectDetailHeader({
           </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm text-white/80">
-          <span className={cn('rounded-md px-2 py-0.5 text-[10px] sm:text-xs font-semibold', STATUS_COLORS[project.status] || 'bg-slate-100 text-slate-600')}>
-            {project.status}
-          </span>
+          {onStatusChange ? (
+            <div className="relative inline-flex items-center">
+              <select
+                value={project.status}
+                onChange={(e) => onStatusChange(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                className={cn(
+                  'appearance-none rounded-md px-2 py-0.5 pr-5 text-[10px] sm:text-xs font-semibold cursor-pointer border-0 outline-none',
+                  STATUS_COLORS[project.status] || 'bg-slate-100 text-slate-600',
+                )}
+              >
+                {Object.keys(STATUS_COLORS).map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-1 h-2.5 w-2.5 pointer-events-none opacity-60" />
+            </div>
+          ) : (
+            <span className={cn('rounded-md px-2 py-0.5 text-[10px] sm:text-xs font-semibold', STATUS_COLORS[project.status] || 'bg-slate-100 text-slate-600')}>
+              {project.status}
+            </span>
+          )}
           <span className="text-white/50">|</span>
           <span className="font-medium">
             PM: <span className="text-white">{pmName}</span>
