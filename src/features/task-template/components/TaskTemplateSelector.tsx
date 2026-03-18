@@ -317,7 +317,7 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
   /* ── UI ── */
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur" onClick={onClose}>
       <div
         className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-white dark:bg-slate-800 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}

@@ -15,7 +15,7 @@ export function ModalShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="modal-container active fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+    <div className="modal-container active fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
       <div className="w-full max-w-2xl max-h-[calc(100vh-2rem)] flex flex-col rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
         <div className="flex-shrink-0 flex items-center justify-between border-b border-slate-100 dark:border-slate-700 px-6 py-4">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
@@ -183,7 +183,7 @@ export function DeleteConfirmModal({
   onCancel: () => void;
 }) {
   return (
-    <div className="modal-container active fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+    <div className="modal-container active fixed inset-0 z-[210] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
       <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
         <div className="p-6">
           <h3 className="mb-2 text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>

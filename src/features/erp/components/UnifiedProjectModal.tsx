@@ -162,7 +162,7 @@ function ChannelAddDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur">
       <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 shadow-2xl p-6">
         <h3 className="mb-3 text-lg font-bold text-slate-800 dark:text-slate-200">채널 추가</h3>
         <input
@@ -1897,7 +1897,7 @@ export function UnifiedProjectModal({
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur pb-safe-area">
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur pb-safe-area">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl p-6">
             <h3 className="mb-2 text-lg font-bold text-slate-800 dark:text-slate-200">프로젝트 삭제</h3>
             <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
