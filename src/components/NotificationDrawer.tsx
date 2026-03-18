@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Bell, Check, CheckCheck, Trash2, Clock, AlertCircle, Info, CheckCircle, RefreshCw, Calendar, Briefcase } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, Clock, AlertCircle, Info, CheckCircle, RefreshCw, Calendar, Briefcase, X } from 'lucide-react';
 import { formatDistanceToNowKST } from '@/lib/timezone';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -232,7 +232,7 @@ export function NotificationDrawer() {
 
       <SheetContent
         side="right"
-        className="w-full sm:w-[420px] p-0 flex flex-col bg-white dark:bg-slate-900"
+        className="w-full sm:w-[420px] p-0 flex flex-col bg-white dark:bg-slate-900 pt-[env(safe-area-inset-top)] [&_.sheet-default-close]:hidden"
       >
         <SheetHeader className="px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800">
           <div className="flex items-center justify-between">
@@ -251,14 +251,21 @@ export function NotificationDrawer() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => fetchNotifications(true)}
                 disabled={refreshing}
-                className="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-700 transition"
+                className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/50 dark:hover:bg-slate-700 transition active:scale-95"
                 title="새로고침"
               >
                 <RefreshCw className={cn("h-4 w-4 text-slate-600 dark:text-slate-400", refreshing && "animate-spin")} />
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/50 dark:hover:bg-slate-700 transition active:scale-95"
+                title="닫기"
+              >
+                <X className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               </button>
             </div>
           </div>
