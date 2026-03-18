@@ -1659,6 +1659,18 @@ function HomePage() {
               console.error('Failed to update task status:', error);
             }
           }}
+          onAddTask={() => {
+            setTaskModalProjectId(viewProjectDetail.id);
+            setTaskModalOpen(true);
+          }}
+          onAddRevenue={() => {
+            setFinanceDefaultProjectId(viewProjectDetail.id);
+            setFinanceModalOpen('revenue');
+          }}
+          onAddExpense={() => {
+            setFinanceDefaultProjectId(viewProjectDetail.id);
+            setFinanceModalOpen('expense');
+          }}
         />
       )}
       {isEditProjectModalOpen && (

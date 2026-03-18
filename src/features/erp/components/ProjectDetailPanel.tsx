@@ -6,6 +6,7 @@ import type { Project, TaskItem } from '../types';
 import { ProjectDetailHeader } from './ProjectDetailHeader';
 import { ProjectDetailInfo } from './ProjectDetailInfo';
 import { ProjectDetailTasks } from './ProjectDetailTasks';
+import { ProjectDetailActions } from './ProjectDetailActions';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 
 interface ProjectDetailPanelProps {
@@ -19,6 +20,9 @@ interface ProjectDetailPanelProps {
   onStatusChange?: (status: string) => void;
   onTaskClick?: (task: TaskItem) => void;
   onTaskStatusChange?: (taskId: string, status: TaskItem['status']) => void;
+  onAddTask?: () => void;
+  onAddRevenue?: () => void;
+  onAddExpense?: () => void;
 }
 
 export function ProjectDetailPanel({
@@ -32,6 +36,9 @@ export function ProjectDetailPanel({
   onStatusChange,
   onTaskClick,
   onTaskStatusChange,
+  onAddTask,
+  onAddRevenue,
+  onAddExpense,
 }: ProjectDetailPanelProps) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -89,6 +96,13 @@ export function ProjectDetailPanel({
               onStatusChange={onStatusChange}
             />
             <ProjectDetailInfo project={project} />
+            {(onAddTask || onAddRevenue || onAddExpense) && (
+              <ProjectDetailActions
+                onAddTask={onAddTask || (() => {})}
+                onAddRevenue={onAddRevenue || (() => {})}
+                onAddExpense={onAddExpense || (() => {})}
+              />
+            )}
           </div>
           <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-4 pt-3">
             <ProjectDetailTasks

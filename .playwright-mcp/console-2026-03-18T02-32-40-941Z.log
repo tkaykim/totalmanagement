@@ -1,0 +1,26 @@
+[    1708ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://firebaseinstallations.googleapis.com/v1/projects/grgerp-f7172/installations:0
+[    1716ms] [ERROR] [Firebase Web] 토큰 발급 실패: FirebaseError: Installations: Create Installation request failed with error "400 INVALID_ARGUMENT: API key not valid. Please pass a valid API key." (installations/request-failed).
+    at getErrorFromResponse (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4046:26)
+    at async createInstallationRequest (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4134:15)
+    at async registerInstallation (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4487:45)
+    at async completeInstallationRegistration (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4814:9)
+    at async getToken (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4804:5)
+    at async getHeaders (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:5458:23)
+    at async requestGetToken (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:5378:21)
+    at async getNewToken (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:5562:19)
+    at async getWebPushToken (http://localhost:3000/_next/static/chunks/src_839fe5._.js:678:23)
+    at async registerWebPushToken (http://localhost:3000/_next/static/chunks/src_839fe5._.js:874:19)
+    at async initWebPush (http://localhost:3000/_next/static/chunks/src_839fe5._.js:807:13) @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_523921._.js:993
+[    3616ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://firebaseinstallations.googleapis.com/v1/projects/grgerp-f7172/installations:0
+[    3619ms] [ERROR] [Firebase Web] 토큰 발급 실패: FirebaseError: Installations: Create Installation request failed with error "400 INVALID_ARGUMENT: API key not valid. Please pass a valid API key." (installations/request-failed).
+    at getErrorFromResponse (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4046:26)
+    at async createInstallationRequest (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4134:15)
+    at async registerInstallation (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4487:45)
+    at async completeInstallationRegistration (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4814:9)
+    at async getToken (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:4804:5)
+    at async getHeaders (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:5458:23)
+    at async requestGetToken (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:5378:21)
+    at async getNewToken (http://localhost:3000/_next/static/chunks/node_modules_@firebase_92f556._.js:5562:19)
+    at async getWebPushToken (http://localhost:3000/_next/static/chunks/src_839fe5._.js:678:23)
+    at async registerWebPushToken (http://localhost:3000/_next/static/chunks/src_839fe5._.js:874:19)
+    at async retryWebPushRegistration (http://localhost:3000/_next/static/chunks/src_839fe5._.js:844:13) @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_523921._.js:993
