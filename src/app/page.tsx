@@ -1630,6 +1630,7 @@ function HomePage() {
         <ProjectDetailPanel
           project={viewProjectDetail}
           tasks={tasks.filter((t) => t.projectId === viewProjectDetail.id)}
+          financeData={allFinancial.filter((f) => f.projectId === viewProjectDetail.id)}
           usersData={usersData}
           partnerWorkersData={partnerWorkersData}
           partnerCompaniesData={partnerCompaniesData}
@@ -1670,6 +1671,12 @@ function HomePage() {
           onAddExpense={() => {
             setFinanceDefaultProjectId(viewProjectDetail.id);
             setFinanceModalOpen('expense');
+          }}
+          onFinanceClick={(entry) => {
+            const matchedFinance = allFinancial.find((f) => f.id === entry.id);
+            if (matchedFinance) {
+              setEditFinanceModalOpen(matchedFinance);
+            }
           }}
         />
       )}
