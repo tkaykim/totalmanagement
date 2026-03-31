@@ -73,12 +73,17 @@ export async function GET(request: NextRequest) {
       .in('id', projectIds);
 
     const projectMap = new Map(
-      projects?.map((p: any) => [p.id, {
-        id: p.id,
-        bu_code: p.bu_code,
-        pm_id: p.pm_id,
-        participants: p.participants || [],
-      }]) || []
+      projects?.map((p: any) => {
+        const participantIds = (p.participants || [])
+          .map((pt: any) => pt.user_id)
+          .filter((id: any): id is string => !!id);
+        return [p.id, {
+          id: p.id,
+          bu_code: p.bu_code,
+          pm_id: p.pm_id,
+          participants: participantIds,
+        }];
+      }) || []
     );
 
     // 권한에 따라 필터링
@@ -125,11 +130,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    const participantIds = (project.participants || [])
+      .map((p: any) => p.user_id)
+      .filter((id: any): id is string => !!id);
+
     const permProject: PermProject = {
       id: project.id,
       bu_code: project.bu_code,
       pm_id: project.pm_id,
-      participants: project.participants || [],
+      participants: participantIds,
     };
 
     // 재무 항목 생성 권한 체크

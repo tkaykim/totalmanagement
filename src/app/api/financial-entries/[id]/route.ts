@@ -52,7 +52,9 @@ async function getFinanceWithProject(supabase: any, entryId: string) {
       id: project.id,
       bu_code: project.bu_code,
       pm_id: project.pm_id,
-      participants: project.participants || [],
+      participants: (project.participants || [])
+        .map((p: any) => p.user_id)
+        .filter((id: any): id is string => !!id),
     } as PermProject,
   };
 }
