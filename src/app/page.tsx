@@ -541,6 +541,12 @@ function HomePage() {
   });
 
   const allFinancial = useMemo(() => financialData.map(dbFinancialToFrontend) as FinancialEntry[], [financialData]);
+
+  /** 탭에서 특정 사업부를 볼 때는 그 BU를 신규 프로젝트 기본값으로 (본사 프로필이어도 탭 선택이 우선) */
+  const projectModalDefaultBu = useMemo(
+    (): BU => (bu !== 'ALL' ? bu : ((user?.profile?.bu_code as BU) || 'GRIGO')),
+    [bu, user?.profile?.bu_code]
+  );
   const revenues = useMemo(() => allFinancial.filter((f) => f.type === 'revenue'), [allFinancial]);
   const expenses = useMemo(() => allFinancial.filter((f) => f.type === 'expense'), [allFinancial]);
 
@@ -1486,7 +1492,7 @@ function HomePage() {
         <UnifiedProjectModal
           onClose={() => setProjectModalOpen(false)}
           onSubmit={handleCreateProject}
-          defaultBu={(user?.profile?.bu_code as BU) || (bu === 'ALL' ? 'GRIGO' : bu)}
+          defaultBu={projectModalDefaultBu}
           usersData={usersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
@@ -1499,7 +1505,7 @@ function HomePage() {
             queryClient.invalidateQueries({ queryKey: ['artists'] });
           }}
           createChannelRequest={async (name) => {
-            const effectiveBu = (user?.profile?.bu_code as BU) || (bu === 'ALL' ? 'GRIGO' : bu);
+            const effectiveBu = projectModalDefaultBu;
             const channel = await createChannelMutation.mutateAsync({ bu_code: effectiveBu, name });
             return channel?.id ?? null;
           }}
@@ -1689,7 +1695,7 @@ function HomePage() {
             setEditProjectModalOpen(null);
             setDeleteProjectId(id);
           }}
-          defaultBu={(user?.profile?.bu_code as BU) || (bu === 'ALL' ? 'GRIGO' : bu)}
+          defaultBu={projectModalDefaultBu}
           usersData={usersData}
           partnerCompaniesData={partnerCompaniesData}
           partnerWorkersData={partnerWorkersData}
@@ -1757,7 +1763,7 @@ function HomePage() {
             queryClient.invalidateQueries({ queryKey: ['artists'] });
           }}
           createChannelRequest={async (name) => {
-            const effectiveBu = (user?.profile?.bu_code as BU) || (bu === 'ALL' ? 'GRIGO' : bu);
+            const effectiveBu = isEditProjectModalOpen.bu;
             const channel = await createChannelMutation.mutateAsync({ bu_code: effectiveBu, name });
             return channel?.id ?? null;
           }}

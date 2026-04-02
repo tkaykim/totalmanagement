@@ -12,6 +12,7 @@ import { TaskTemplateSelector, type PendingTask } from '@/features/task-template
 import { UnifiedTaskModal } from '@/features/erp/components/UnifiedTaskModal';
 import { UnifiedPartnerModal } from '@/features/partners/components/UnifiedPartnerModal';
 import { ProjectAttachmentDisplay } from '@/features/erp/components/ProjectAttachmentDisplay';
+import { ResizableDescriptionTextarea } from '@/features/erp/components/ResizableDescriptionTextarea';
 import type { Project as ErpProject, TaskPriority as ErpTaskPriority } from '@/features/erp/types';
 
 type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
@@ -1271,12 +1272,12 @@ export function UnifiedProjectModal({
               <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">설명</h4>
               {isEditable ? (
                 <div className="space-y-3">
-                  <textarea
+                  <ResizableDescriptionTextarea
                     value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(v) => setForm({ ...form, description: v })}
                     placeholder="프로젝트 설명을 입력하세요"
-                    rows={2}
-                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 resize-none"
+                    minHeightPx={72}
+                    maxHeightPx={440}
                   />
                   {/* 파일 첨부 영역 */}
                   <div>
