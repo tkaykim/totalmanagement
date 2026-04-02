@@ -91,11 +91,7 @@ function isEntryCreator(userId: string, entry: FinancialEntry | null | undefined
  */
 export function checkFinancePermission({
   currentUser,
-  entry,
-  project,
-  targetBu,
 }: FinancePermissionParams): FinancePermission {
-  // 사용자 정보 없음
   if (!currentUser) {
     return {
       canRead: false,
@@ -106,135 +102,7 @@ export function checkFinancePermission({
     };
   }
 
-  const { role, bu_code: userBu, id: userId } = currentUser;
-  const entryBu = entry?.bu_code || targetBu;
-
-  // 1. viewer는 완전 차단
-  if (role === 'viewer') {
-    return {
-      canRead: false,
-      canCreate: false,
-      canUpdate: false,
-      canDelete: false,
-      reason: '재무 정보 열람 권한이 없습니다.',
-    };
-  }
-
-  // 2. admin은 전체 접근
-  if (role === 'admin') {
-    return {
-      canRead: true,
-      canCreate: true,
-      canUpdate: true,
-      canDelete: true,
-    };
-  }
-
-  // 2.5 PM인 경우 해당 프로젝트 재무 접근 (계정 ROLE·BU 무관)
-  if (project && isProjectPm(userId, project)) {
-    if (!entry) {
-      return {
-        canRead: true,
-        canCreate: true,
-        canUpdate: true,
-        canDelete: true,
-      };
-    }
-    const isCreator = isEntryCreator(userId, entry);
-    return {
-      canRead: true,
-      canCreate: true,
-      canUpdate: isCreator,
-      canDelete: isCreator,
-      reason: !isCreator ? '본인이 등록한 항목만 수정/삭제할 수 있습니다.' : undefined,
-    };
-  }
-
-  // 3. BU 접근 권한 체크 (manager, member 공통)
-  if (entryBu && !canAccessBu(userBu, entryBu)) {
-    return {
-      canRead: false,
-      canCreate: false,
-      canUpdate: false,
-      canDelete: false,
-      reason: '해당 사업부의 재무 정보에 접근할 수 없습니다.',
-    };
-  }
-
-  // 4. leader는 본인 BU(또는 HEAD면 전체) 전체 접근 + PM/참여 프로젝트도 접근
-  if (role === 'leader') {
-    // 본인 BU이거나 PM/참여자인 프로젝트면 전체 권한
-    const isPm = isProjectPm(userId, project);
-    const isParticipant = isProjectParticipant(userId, project);
-    const hasBuAccess = entryBu ? canAccessBu(userBu, entryBu) : true;
-    
-    if (hasBuAccess || isPm || isParticipant) {
-      return {
-        canRead: true,
-        canCreate: true,
-        canUpdate: true,
-        canDelete: true,
-      };
-    }
-    
-    return {
-      canRead: false,
-      canCreate: false,
-      canUpdate: false,
-      canDelete: false,
-      reason: '해당 프로젝트의 재무 정보에 접근할 수 없습니다.',
-    };
-  }
-
-  // 5. manager는 본인 BU(또는 HEAD면 전체) 접근
-  if (role === 'manager') {
-    return {
-      canRead: true,
-      canCreate: true,
-      canUpdate: true,
-      canDelete: true,
-    };
-  }
-
-  // 6. member 권한 세분화
-  if (role === 'member') {
-    const isPm = isProjectPm(userId, project);
-    const isCreator = isEntryCreator(userId, entry);
-    const isParticipant = isProjectParticipant(userId, project);
-
-    // 새 항목 등록 (entry가 없는 경우)
-    if (!entry) {
-      return {
-        canRead: isPm || isParticipant,
-        canCreate: true, // member는 항상 등록 가능
-        canUpdate: false,
-        canDelete: false,
-      };
-    }
-
-    // PM인 경우: 전체 열람, 등록, 본인 등록분 수정/삭제
-    if (isPm) {
-      return {
-        canRead: true,
-        canCreate: true,
-        canUpdate: isCreator,
-        canDelete: isCreator,
-        reason: !isCreator ? '본인이 등록한 항목만 수정/삭제할 수 있습니다.' : undefined,
-      };
-    }
-
-    // PM이 아닌 경우: 본인 등록분만 열람/수정/삭제 가능
-    return {
-      canRead: isCreator || isParticipant,
-      canCreate: true,
-      canUpdate: isCreator,
-      canDelete: isCreator,
-      reason: !isCreator ? '본인이 등록한 항목만 열람/수정/삭제할 수 있습니다.' : undefined,
-    };
-  }
-
-  // 7. artist 역할 (별도 정책 필요시 여기서 처리)
-  if (role === 'artist') {
+  if (currentUser.role === 'viewer' || currentUser.role === 'artist') {
     return {
       canRead: false,
       canCreate: false,
@@ -244,13 +112,11 @@ export function checkFinancePermission({
     };
   }
 
-  // 기본값 (알 수 없는 역할)
   return {
-    canRead: false,
-    canCreate: false,
-    canUpdate: false,
-    canDelete: false,
-    reason: '권한을 확인할 수 없습니다.',
+    canRead: true,
+    canCreate: true,
+    canUpdate: true,
+    canDelete: true,
   };
 }
 
