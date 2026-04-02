@@ -27,11 +27,12 @@ export async function GET(request: NextRequest) {
       ? parseInt(searchParams.get('year')!) 
       : new Date().getFullYear();
 
-    // 사용자 목록 조회
+    // 사용자 목록 조회 (재직자만)
     let usersQuery = supabase
       .from('app_users')
       .select('id, name, bu_code, position, hire_date')
-      .neq('role', 'artist');
+      .neq('role', 'artist')
+      .eq('status', 'active');
 
     if (currentUser.role === 'leader') {
       usersQuery = usersQuery.eq('bu_code', currentUser.bu_code);

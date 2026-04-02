@@ -94,6 +94,7 @@ export function AdminLeaveGrant({ open, onOpenChange, onSuccess, preselectedUser
         .from('app_users')
         .select('id, name, bu_code, position')
         .neq('role', 'artist')
+        .eq('status', 'active')
         .order('name');
 
       if (data) {

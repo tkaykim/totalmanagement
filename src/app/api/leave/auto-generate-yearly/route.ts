@@ -30,11 +30,12 @@ async function handleAutoGenerateYearly(request: NextRequest) {
     const currentYear = new Date().getFullYear();
     const yearStart = new Date(currentYear, 0, 1); // 1월 1일
 
-    // 입사일이 있는 모든 사용자 조회
+    // 입사일이 있는 재직 사용자만 조회
     const { data: users, error: usersError } = await supabase
       .from('app_users')
       .select('id, hire_date')
-      .not('hire_date', 'is', null);
+      .not('hire_date', 'is', null)
+      .eq('status', 'active');
 
     if (usersError) {
       console.error('Failed to fetch users:', usersError);

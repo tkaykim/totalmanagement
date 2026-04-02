@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
       const { data: buUsers } = await supabase
         .from('app_users')
         .select('id')
-        .eq('bu_code', currentUser.bu_code);
+        .eq('bu_code', currentUser.bu_code)
+        .eq('status', 'active');
       
       if (buUsers && buUsers.length > 0) {
         query = query.in('requester_id', buUsers.map(u => u.id));

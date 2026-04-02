@@ -31,11 +31,12 @@ async function handleAutoGenerateMonthly(request: NextRequest) {
     today.setHours(0, 0, 0, 0); // 시간을 00:00:00으로 설정하여 날짜만 비교
     const currentYear = today.getFullYear();
 
-    // 입사일이 있는 모든 사용자 조회
+    // 입사일이 있는 재직 사용자만 조회
     const { data: users, error: usersError } = await supabase
       .from('app_users')
       .select('id, hire_date')
-      .not('hire_date', 'is', null);
+      .not('hire_date', 'is', null)
+      .eq('status', 'active');
 
     if (usersError) {
       console.error('Failed to fetch users:', usersError);
