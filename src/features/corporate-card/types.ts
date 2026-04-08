@@ -273,6 +273,10 @@ export interface GowidExpenseProjectLink {
   id: string;
   gowid_expense_id: number;
   project_id: number;
+  financial_entry_id: number | null;
+  expense_amount: number | null;
+  expense_store_name: string | null;
+  expense_date: string | null;
   project_name?: string;
   project_bu?: string;
   linked_by: string;

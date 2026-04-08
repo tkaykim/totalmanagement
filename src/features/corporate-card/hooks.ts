@@ -192,8 +192,17 @@ export function useExpenseProjectLink(expenseId: number | null) {
 export function useLinkProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ expenseId, projectId }: { expenseId: number; projectId: number }) =>
-      linkExpenseToProject(expenseId, projectId),
+    mutationFn: ({
+      expenseId,
+      ...data
+    }: {
+      expenseId: number;
+      project_id: number;
+      expense_amount: number;
+      expense_store_name: string;
+      expense_date: string;
+      card_alias?: string;
+    }) => linkExpenseToProject(expenseId, data),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: KEYS.projectLink(vars.expenseId) });
     },

@@ -195,6 +195,10 @@ export function ExpenseDetailModal({
                 <ExpenseProjectLinker
                   expenseId={expenseId}
                   canEdit={canEdit}
+                  expenseAmount={detail.krwAmount}
+                  expenseStoreName={detail.storeName}
+                  expenseDate={detail.expenseDate}
+                  cardAlias={detail.card?.alias}
                 />
 
                 <ExpenseParticipantManager

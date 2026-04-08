@@ -167,10 +167,19 @@ export async function fetchExpenseProjectLink(expenseId: number) {
   return res.data;
 }
 
-export async function linkExpenseToProject(expenseId: number, projectId: number) {
+export async function linkExpenseToProject(
+  expenseId: number,
+  data: {
+    project_id: number;
+    expense_amount: number;
+    expense_store_name: string;
+    expense_date: string;
+    card_alias?: string;
+  }
+) {
   return fetchApi<{ data: GowidExpenseProjectLink }>(
     `${API_BASE}/expenses/${expenseId}/project-link`,
-    { method: 'POST', body: JSON.stringify({ project_id: projectId }) }
+    { method: 'POST', body: JSON.stringify(data) }
   );
 }
 
