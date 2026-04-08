@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Search, X, SlidersHorizontal, Calendar, CreditCard, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useGowidMembers, useGowidPurposes } from '../hooks';
+import { useGowidMembers, useGowidPurposes, useExpenses } from '../hooks';
 import { useCardAliasMap } from '../hooks/useCardAliasMap';
 import { SearchableDropdown, type DropdownOption } from './SearchableDropdown';
 import {
@@ -43,6 +43,7 @@ export function ExpenseFilters({ criteria, onCriteriaChange }: ExpenseFiltersPro
   const { data: members } = useGowidMembers();
   const { data: purposes } = useGowidPurposes(true);
   const { cards: registeredCards } = useCardAliasMap();
+  const { data: discoveryExpenses } = useExpenses({ page: 0, size: 100 });
 
   const userOptions: DropdownOption[] = useMemo(() => {
     if (!members) return [];
@@ -56,23 +57,33 @@ export function ExpenseFilters({ criteria, onCriteriaChange }: ExpenseFiltersPro
   }, [members]);
 
   const cardOptions: DropdownOption[] = useMemo(() => {
-    if (!registeredCards || registeredCards.length === 0) return [];
-    return registeredCards.map((c) => {
-      const displayName = c.erp_alias || c.gowid_alias;
-      const sub = [
-        c.erp_alias ? c.gowid_alias : null,
-        c.short_card_number ? `끝자리 ${c.short_card_number}` : null,
-        c.card_user_name || null,
-      ]
-        .filter(Boolean)
-        .join(' · ');
-      return {
-        value: c.gowid_alias,
-        label: displayName,
-        sub: sub || undefined,
-      };
-    });
-  }, [registeredCards]);
+    if (!discoveryExpenses?.content) return [];
+
+    const erpAliasMap = new Map<string, string>();
+    for (const c of registeredCards ?? []) {
+      if (c.erp_alias) erpAliasMap.set(c.gowid_alias, c.erp_alias);
+    }
+
+    const seen = new Set<string>();
+    const options: DropdownOption[] = [];
+    for (const item of discoveryExpenses.content) {
+      if (!item.cardAlias || seen.has(item.cardAlias)) continue;
+      seen.add(item.cardAlias);
+      const erpAlias = erpAliasMap.get(item.cardAlias);
+      options.push({
+        value: item.cardAlias,
+        label: erpAlias || item.cardAlias,
+        sub: [
+          erpAlias ? item.cardAlias : null,
+          item.shortCardNumber || null,
+          item.cardUserName || null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || undefined,
+      });
+    }
+    return options;
+  }, [discoveryExpenses, registeredCards]);
 
   const purposeOptions: DropdownOption[] = useMemo(() => {
     if (!purposes) return [];
