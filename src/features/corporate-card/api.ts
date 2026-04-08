@@ -53,6 +53,7 @@ export async function fetchExpenses(criteria: ExpenseSearchCriteria & { page?: n
   params.set('page', String(criteria.page ?? 0));
   params.set('size', String(criteria.size ?? 20));
   if (criteria.startDate) params.set('startDate', criteria.startDate);
+  if (criteria.endDate) params.set('endDate', criteria.endDate);
   if (criteria.approvalState) params.set('approvalState', criteria.approvalState);
   if (criteria.memo) params.set('memo', criteria.memo);
   if (criteria.purposeName) params.set('purposeName', criteria.purposeName);

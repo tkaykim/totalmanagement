@@ -261,6 +261,7 @@ export interface ExpenseSearchCriteria {
   purposeName?: string;
   userName?: string;
   startDate?: string;
+  endDate?: string;
   approvalState?: GowidApprovalStatus;
   cardAlias?: string;
 }

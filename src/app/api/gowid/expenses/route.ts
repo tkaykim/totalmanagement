@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     if (sp.get('page')) params.set('pageable.page', sp.get('page')!);
     if (sp.get('size')) params.set('pageable.size', sp.get('size')!);
     if (sp.get('startDate')) params.set('criteria.startDate', sp.get('startDate')!);
+    if (sp.get('endDate')) params.set('criteria.endDate', sp.get('endDate')!);
     if (sp.get('approvalState')) params.set('criteria.approvalState', sp.get('approvalState')!);
     if (sp.get('memo')) params.set('criteria.memo', sp.get('memo')!);
     if (sp.get('purposeName')) params.set('criteria.purposeName', sp.get('purposeName')!);
