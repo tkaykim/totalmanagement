@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { Search, Filter, X, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGowidMembers, useGowidPurposes } from '../hooks';
+import { useCardAliasMap } from '../hooks/useCardAliasMap';
 import { SearchableDropdown, type DropdownOption } from './SearchableDropdown';
 import { APPROVAL_STATUS_LABELS, type GowidApprovalStatus, type ExpenseSearchCriteria } from '../types';
 
@@ -27,17 +28,24 @@ export function ExpenseFilters({ criteria, onCriteriaChange }: ExpenseFiltersPro
 
   const { data: members } = useGowidMembers();
   const { data: purposes } = useGowidPurposes(true);
+  const { cards: registeredCards } = useCardAliasMap();
 
   const cardOptions: DropdownOption[] = useMemo(() => {
     if (!members) return [];
     return members
       .filter((m) => m.status === 'NORMAL')
-      .map((m) => ({
-        value: m.userName,
-        label: m.userName,
-        sub: m.department?.name || undefined,
-      }));
-  }, [members]);
+      .map((m) => {
+        const matched = registeredCards?.find((c) => c.card_user_name === m.userName);
+        const erpAlias = matched?.erp_alias;
+        return {
+          value: m.userName,
+          label: erpAlias ? `${erpAlias}` : m.userName,
+          sub: erpAlias
+            ? `${m.userName} · ${m.department?.name || ''}`
+            : m.department?.name || undefined,
+        };
+      });
+  }, [members, registeredCards]);
 
   const purposeOptions: DropdownOption[] = useMemo(() => {
     if (!purposes) return [];

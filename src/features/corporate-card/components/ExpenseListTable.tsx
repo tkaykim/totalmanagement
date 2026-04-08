@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { format } from 'date-fns';
 import { MessageSquare, Paperclip, Users, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { ApprovalStatusBadge } from './ApprovalStatusBadge';
-import type { GowidExpenseListItem, GowidExpensePageable } from '../types';
+import { useCardAliasMap } from '../hooks/useCardAliasMap';
+import type { GowidExpensePageable } from '../types';
 
 interface ExpenseListTableProps {
   data: GowidExpensePageable | undefined;
@@ -45,6 +43,7 @@ export function ExpenseListTable({
   selectedIds,
   onSelectionChange,
 }: ExpenseListTableProps) {
+  const { resolveAlias } = useCardAliasMap();
   const content = data?.content ?? [];
   const totalPages = data?.totalPages ?? 0;
 
@@ -130,7 +129,10 @@ export function ExpenseListTable({
                   {formatAmount(item.krwAmount, item.currency)}
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">
-                  <div className="text-xs">{item.cardAlias || '-'}</div>
+                  <div className="text-xs font-medium">{resolveAlias(item.cardAlias) || '-'}</div>
+                  {resolveAlias(item.cardAlias) !== item.cardAlias && (
+                    <div className="text-[10px] text-slate-400">{item.cardAlias}</div>
+                  )}
                   <div className="text-[10px] text-slate-400">{item.shortCardNumber}</div>
                 </td>
                 <td className="px-3 py-3 max-w-[120px] truncate text-slate-600 dark:text-slate-400">

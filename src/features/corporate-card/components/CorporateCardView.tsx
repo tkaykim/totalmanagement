@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { CreditCard, FileWarning, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useExpenses, useNotSubmittedExpenses } from '../hooks';
+import { useCardAliasMap } from '../hooks/useCardAliasMap';
 import { ExpenseFilters } from './ExpenseFilters';
 import { ExpenseListTable } from './ExpenseListTable';
 import { ExpenseDetailModal } from './ExpenseDetailModal';
 import { BulkActionBar } from './BulkActionBar';
 import { GowidUserMappingManager } from './GowidUserMappingManager';
+import { CardAliasManager } from './CardAliasManager';
 import type { ExpenseSearchCriteria } from '../types';
 
 type Tab = 'expenses' | 'not-submitted' | 'settings';
@@ -25,6 +27,7 @@ export function CorporateCardView({ userRole }: CorporateCardViewProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [notSubmittedPage, setNotSubmittedPage] = useState(0);
 
+  const { resolveAlias } = useCardAliasMap();
   const isAdmin = userRole === 'admin';
   const isLeader = userRole === 'leader';
   const canEdit = isAdmin || isLeader || userRole === 'manager' || userRole === 'member';
@@ -137,7 +140,7 @@ export function CorporateCardView({ userRole }: CorporateCardViewProps) {
                         ₩{item.krwAmount.toLocaleString('ko-KR')}
                       </td>
                       <td className="px-4 py-3 text-slate-500 text-xs">
-                        {item.cardAlias} ({item.shortCardNumber})
+                        {resolveAlias(item.cardAlias)} ({item.shortCardNumber})
                       </td>
                     </tr>
                   ))}
@@ -176,7 +179,22 @@ export function CorporateCardView({ userRole }: CorporateCardViewProps) {
 
       {/* 설정 탭 (admin만) */}
       {tab === 'settings' && isAdmin && (
-        <GowidUserMappingManager />
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-base font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              카드 별칭 관리
+            </h3>
+            <CardAliasManager />
+          </div>
+
+          <div>
+            <h3 className="text-base font-bold text-slate-800 dark:text-white mb-3">
+              사용자 매핑
+            </h3>
+            <GowidUserMappingManager />
+          </div>
+        </div>
       )}
 
       {/* 상세 모달 */}

@@ -327,6 +327,36 @@ export interface GowidUserMapping {
 }
 
 // ============================================
+// 카드 별칭 관리
+// ============================================
+
+export interface GowidCard {
+  id: string;
+  gowid_alias: string;
+  short_card_number: string | null;
+  card_number: string | null;
+  card_user_name: string | null;
+  card_name: string | null;
+  card_type: string | null;
+  erp_alias: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GowidCardUpsertRequest {
+  gowid_alias: string;
+  short_card_number?: string;
+  card_number?: string;
+  card_user_name?: string;
+  card_name?: string;
+  card_type?: string;
+  erp_alias?: string;
+  notes?: string;
+}
+
+// ============================================
 // 권한 컨텍스트
 // ============================================
 

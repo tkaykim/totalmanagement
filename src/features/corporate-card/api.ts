@@ -13,6 +13,8 @@ import type {
   CommentRequest,
   GowidUserMapping,
   GowidExpenseProjectLink,
+  GowidCard,
+  GowidCardUpsertRequest,
 } from './types';
 
 const API_BASE = '/api/gowid';
@@ -175,5 +177,38 @@ export async function linkExpenseToProject(expenseId: number, projectId: number)
 export async function unlinkExpenseFromProject(expenseId: number) {
   return fetchApi(`${API_BASE}/expenses/${expenseId}/project-link`, {
     method: 'DELETE',
+  });
+}
+
+// ── 카드 별칭 관리 ──
+
+export async function fetchGowidCards() {
+  const res = await fetchApi<{ data: GowidCard[] }>(`${API_BASE}/cards`);
+  return res.data;
+}
+
+export async function upsertGowidCard(data: GowidCardUpsertRequest) {
+  return fetchApi<{ data: GowidCard }>(`${API_BASE}/cards`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateGowidCard(data: {
+  id: string;
+  erp_alias?: string;
+  notes?: string;
+  card_user_name?: string;
+}) {
+  return fetchApi<{ data: GowidCard }>(`${API_BASE}/cards`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteGowidCard(id: string) {
+  return fetchApi(`${API_BASE}/cards`, {
+    method: 'DELETE',
+    body: JSON.stringify({ id }),
   });
 }

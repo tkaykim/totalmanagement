@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, MapPin, CreditCard, Calendar, Receipt, ExternalLink } from 'lucide-react';
 import { useExpenseDetail, useUpdateMemo, useUpdateApproval } from '../hooks';
+import { useCardAliasMap } from '../hooks/useCardAliasMap';
 import { ApprovalStatusBadge } from './ApprovalStatusBadge';
 import { PurposeSelector } from './PurposeSelector';
 import { ExpenseCommentSection } from './ExpenseCommentSection';
@@ -36,6 +37,7 @@ export function ExpenseDetailModal({
   canComment,
 }: ExpenseDetailModalProps) {
   const { data: detail, isLoading } = useExpenseDetail(expenseId);
+  const { resolveAlias } = useCardAliasMap();
   const updateMemo = useUpdateMemo();
   const updateApproval = useUpdateApproval();
 
@@ -93,7 +95,14 @@ export function ExpenseDetailModal({
                 <div className="rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 p-4 text-white">
                   <div className="flex items-center gap-2 mb-3">
                     <CreditCard className="h-5 w-5 text-blue-400" />
-                    <span className="text-sm font-medium">{detail.card?.alias || detail.card?.cardName || '-'}</span>
+                    <div>
+                      <span className="text-sm font-medium">
+                        {detail.card?.alias ? resolveAlias(detail.card.alias) : detail.card?.cardName || '-'}
+                      </span>
+                      {detail.card?.alias && resolveAlias(detail.card.alias) !== detail.card.alias && (
+                        <span className="ml-2 text-[10px] text-slate-400">({detail.card.alias})</span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-2xl font-bold">
                     ₩{detail.krwAmount.toLocaleString('ko-KR')}

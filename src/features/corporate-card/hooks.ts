@@ -20,6 +20,10 @@ import {
   fetchExpenseProjectLink,
   linkExpenseToProject,
   unlinkExpenseFromProject,
+  fetchGowidCards,
+  upsertGowidCard,
+  updateGowidCard,
+  deleteGowidCard,
 } from './api';
 import type { ExpenseSearchCriteria } from './types';
 
@@ -31,6 +35,7 @@ const KEYS = {
   notSubmitted: (page: number) => ['gowid', 'not-submitted', page] as const,
   mappings: ['gowid', 'mappings'] as const,
   projectLink: (expenseId: number) => ['gowid', 'project-link', expenseId] as const,
+  cards: ['gowid', 'cards'] as const,
 };
 
 export function useGowidMembers() {
@@ -201,6 +206,44 @@ export function useUnlinkProject() {
     mutationFn: (expenseId: number) => unlinkExpenseFromProject(expenseId),
     onSuccess: (_, expenseId) => {
       qc.invalidateQueries({ queryKey: KEYS.projectLink(expenseId) });
+    },
+  });
+}
+
+export function useGowidCards() {
+  return useQuery({
+    queryKey: KEYS.cards,
+    queryFn: fetchGowidCards,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpsertGowidCard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: upsertGowidCard,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.cards });
+    },
+  });
+}
+
+export function useUpdateGowidCard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: updateGowidCard,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.cards });
+    },
+  });
+}
+
+export function useDeleteGowidCard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteGowidCard,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.cards });
     },
   });
 }
