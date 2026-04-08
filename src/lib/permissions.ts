@@ -492,6 +492,12 @@ export function getVisibleMenus(user: AppUser): string[] {
     menus.push('vehicles');
   }
 
+  // ── 그룹 6.5: 재무 관리 ──
+  // 법인카드: admin, leader 항상 / manager, member는 매핑 존재 시 (프론트에서 추가 체크)
+  if (['admin', 'leader'].includes(user.role)) {
+    menus.push('corporateCard');
+  }
+
   // ── 그룹 7: 기타/관리자 ──
   // 버그 리포트: 모든 사용자
   menus.push('bugReports');

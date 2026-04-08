@@ -117,6 +117,7 @@ import { ManualsView } from '@/features/manuals';
 import { DocumentRoomView } from '@/features/document-room/components/DocumentRoomView';
 import { PushTestView } from '@/features/push-test';
 import { AiWorkInsightView } from '@/features/ai-work-insight';
+import { CorporateCardView } from '@/features/corporate-card/components/CorporateCardView';
 import {
   Sheet,
   SheetContent,
@@ -1186,7 +1187,9 @@ function HomePage() {
                                                   ? '리소스 현황'
                                                   : view === 'aiWorkInsight'
                                                     ? '업무파악, 지시 AI'
-                                                    : '조직 현황'
+                                                    : view === 'corporateCard'
+                                                      ? '법인카드 관리'
+                                                      : '조직 현황'
           }
           onMenuClick={() => setMobileMenuOpen(true)}
           periodType={periodType}
@@ -1483,6 +1486,12 @@ function HomePage() {
 
           {view === 'aiWorkInsight' && (
             <AiWorkInsightView />
+          )}
+
+          {view === 'corporateCard' && (
+            <CorporateCardView
+              userRole={user?.profile?.role || 'member'}
+            />
           )}
 
         </div>

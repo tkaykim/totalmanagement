@@ -20,6 +20,7 @@ import {
   Bell,
   BarChart3,
   Sparkles,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { View } from '@/features/erp/types';
@@ -239,6 +240,21 @@ export const SidebarContent = memo(function SidebarContent({
                 onClick={() => handleMenuClick('exclusiveArtists')}
               />
             )}
+          </div>
+        )}
+
+        {/* ── 재무 관리 ── */}
+        {visibleMenus.includes('corporateCard') && (
+          <div className="mt-2 pt-2 border-t border-slate-700">
+            <p className="px-2 sm:px-3 pb-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              재무 관리
+            </p>
+            <SidebarButton
+              label="법인카드 관리"
+              icon={<CreditCard className="h-4 w-4" />}
+              active={view === 'corporateCard'}
+              onClick={() => handleMenuClick('corporateCard')}
+            />
           </div>
         )}
 
