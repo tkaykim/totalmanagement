@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, X, UserPlus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, X, UserPlus, Save } from 'lucide-react';
 import { useGowidMembers, useUpdateParticipants } from '../hooks';
+import { SearchableMultiSelect, type MultiSelectOption } from './SearchableMultiSelect';
 import type { GowidUserVo, GowidExternalUser, GowidParticipant } from '../types';
 
 interface ExpenseParticipantManagerProps {
@@ -25,13 +26,23 @@ export function ExpenseParticipantManager({
   const [extName, setExtName] = useState('');
   const [extCompany, setExtCompany] = useState('');
 
-  const currentParticipantIds = participants.map((p) => {
-    if ('userId' in p) return (p as GowidParticipant).userId;
-    return 0;
-  }).filter(Boolean);
+  const currentParticipantIds = participants
+    .map((p) => ('userId' in p ? (p as GowidParticipant).userId : 0))
+    .filter(Boolean);
 
   const [selectedIds, setSelectedIds] = useState<number[]>(currentParticipantIds);
   const [extUsers, setExtUsers] = useState<GowidExternalUser[]>(externalUsers);
+
+  const memberOptions: MultiSelectOption[] = useMemo(() => {
+    if (!members) return [];
+    return members
+      .filter((m) => m.status === 'NORMAL')
+      .map((m) => ({
+        value: m.userId,
+        label: m.userName,
+        sub: m.department?.name || undefined,
+      }));
+  }, [members]);
 
   const handleSave = () => {
     updateParticipants.mutate({
@@ -53,12 +64,6 @@ export function ExpenseParticipantManager({
     setExtUsers(extUsers.filter((_, i) => i !== idx));
   };
 
-  const toggleMember = (userId: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  };
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -69,35 +74,22 @@ export function ExpenseParticipantManager({
           <button
             onClick={handleSave}
             disabled={updateParticipants.isPending}
-            className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+            className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50 flex items-center gap-1"
           >
+            <Save className="h-3 w-3" />
             저장
           </button>
         )}
       </div>
 
-      {canEdit && members && (
-        <div className="max-h-[150px] overflow-y-auto space-y-1 border border-slate-200 dark:border-slate-700 rounded-lg p-2">
-          {members
-            .filter((m) => m.status === 'NORMAL')
-            .map((m) => (
-              <label
-                key={m.userId}
-                className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer text-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(m.userId)}
-                  onChange={() => toggleMember(m.userId)}
-                  className="rounded"
-                />
-                <span className="text-slate-700 dark:text-slate-300">{m.userName}</span>
-                {m.department?.name && (
-                  <span className="text-[10px] text-slate-400">{m.department.name}</span>
-                )}
-              </label>
-            ))}
-        </div>
+      {canEdit && (
+        <SearchableMultiSelect
+          options={memberOptions}
+          selectedValues={selectedIds}
+          onChange={setSelectedIds}
+          placeholder="참석자 검색 및 선택..."
+          searchPlaceholder="이름, 부서 검색..."
+        />
       )}
 
       {!canEdit && participants.length === 0 && (

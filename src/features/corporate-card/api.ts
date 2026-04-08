@@ -12,6 +12,7 @@ import type {
   ExpenseApprovalRequest,
   CommentRequest,
   GowidUserMapping,
+  GowidExpenseProjectLink,
 } from './types';
 
 const API_BASE = '/api/gowid';
@@ -152,5 +153,27 @@ export async function deleteGowidMapping(id: string) {
   return fetchApi(`${API_BASE}/mapping`, {
     method: 'DELETE',
     body: JSON.stringify({ id }),
+  });
+}
+
+// ── 프로젝트 연결 ──
+
+export async function fetchExpenseProjectLink(expenseId: number) {
+  const res = await fetchApi<{ data: GowidExpenseProjectLink | null }>(
+    `${API_BASE}/expenses/${expenseId}/project-link`
+  );
+  return res.data;
+}
+
+export async function linkExpenseToProject(expenseId: number, projectId: number) {
+  return fetchApi<{ data: GowidExpenseProjectLink }>(
+    `${API_BASE}/expenses/${expenseId}/project-link`,
+    { method: 'POST', body: JSON.stringify({ project_id: projectId }) }
+  );
+}
+
+export async function unlinkExpenseFromProject(expenseId: number) {
+  return fetchApi(`${API_BASE}/expenses/${expenseId}/project-link`, {
+    method: 'DELETE',
   });
 }

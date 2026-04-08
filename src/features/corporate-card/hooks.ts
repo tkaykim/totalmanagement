@@ -17,6 +17,9 @@ import {
   fetchGowidMappings,
   createGowidMapping,
   deleteGowidMapping,
+  fetchExpenseProjectLink,
+  linkExpenseToProject,
+  unlinkExpenseFromProject,
 } from './api';
 import type { ExpenseSearchCriteria } from './types';
 
@@ -27,6 +30,7 @@ const KEYS = {
   expenseDetail: (id: number) => ['gowid', 'expense', id] as const,
   notSubmitted: (page: number) => ['gowid', 'not-submitted', page] as const,
   mappings: ['gowid', 'mappings'] as const,
+  projectLink: (expenseId: number) => ['gowid', 'project-link', expenseId] as const,
 };
 
 export function useGowidMembers() {
@@ -168,6 +172,35 @@ export function useDeleteMapping() {
     mutationFn: deleteGowidMapping,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEYS.mappings });
+    },
+  });
+}
+
+export function useExpenseProjectLink(expenseId: number | null) {
+  return useQuery({
+    queryKey: KEYS.projectLink(expenseId!),
+    queryFn: () => fetchExpenseProjectLink(expenseId!),
+    enabled: expenseId !== null,
+  });
+}
+
+export function useLinkProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ expenseId, projectId }: { expenseId: number; projectId: number }) =>
+      linkExpenseToProject(expenseId, projectId),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: KEYS.projectLink(vars.expenseId) });
+    },
+  });
+}
+
+export function useUnlinkProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (expenseId: number) => unlinkExpenseFromProject(expenseId),
+    onSuccess: (_, expenseId) => {
+      qc.invalidateQueries({ queryKey: KEYS.projectLink(expenseId) });
     },
   });
 }

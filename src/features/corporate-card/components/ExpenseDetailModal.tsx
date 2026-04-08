@@ -7,6 +7,7 @@ import { ApprovalStatusBadge } from './ApprovalStatusBadge';
 import { PurposeSelector } from './PurposeSelector';
 import { ExpenseCommentSection } from './ExpenseCommentSection';
 import { ExpenseParticipantManager } from './ExpenseParticipantManager';
+import { ExpenseProjectLinker } from './ExpenseProjectLinker';
 
 interface ExpenseDetailModalProps {
   expenseId: number;
@@ -181,6 +182,11 @@ export function ExpenseDetailModal({
                     <p className="text-sm text-slate-700 dark:text-slate-300">{detail.memo || '-'}</p>
                   )}
                 </div>
+
+                <ExpenseProjectLinker
+                  expenseId={expenseId}
+                  canEdit={canEdit}
+                />
 
                 <ExpenseParticipantManager
                   expenseId={expenseId}

@@ -262,6 +262,22 @@ export interface ExpenseSearchCriteria {
   userName?: string;
   startDate?: string;
   approvalState?: GowidApprovalStatus;
+  cardAlias?: string;
+}
+
+// ============================================
+// 프로젝트 연결
+// ============================================
+
+export interface GowidExpenseProjectLink {
+  id: string;
+  gowid_expense_id: number;
+  project_id: number;
+  project_name?: string;
+  project_bu?: string;
+  linked_by: string;
+  linked_by_name?: string;
+  created_at: string;
 }
 
 // ============================================
