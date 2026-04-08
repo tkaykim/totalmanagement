@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { Search, X, SlidersHorizontal, Calendar, CreditCard } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Calendar, CreditCard, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGowidMembers, useGowidPurposes } from '../hooks';
 import { useCardAliasMap } from '../hooks/useCardAliasMap';
@@ -44,22 +44,35 @@ export function ExpenseFilters({ criteria, onCriteriaChange }: ExpenseFiltersPro
   const { data: purposes } = useGowidPurposes(true);
   const { cards: registeredCards } = useCardAliasMap();
 
-  const cardOptions: DropdownOption[] = useMemo(() => {
+  const userOptions: DropdownOption[] = useMemo(() => {
     if (!members) return [];
     return members
       .filter((m) => m.status === 'NORMAL')
-      .map((m) => {
-        const matched = registeredCards?.find((c) => c.card_user_name === m.userName);
-        const erpAlias = matched?.erp_alias;
-        return {
-          value: m.userName,
-          label: erpAlias || m.userName,
-          sub: erpAlias
-            ? `${m.userName} · ${m.department?.name || ''}`
-            : m.department?.name || undefined,
-        };
-      });
-  }, [members, registeredCards]);
+      .map((m) => ({
+        value: m.userName,
+        label: m.userName,
+        sub: m.department?.name || undefined,
+      }));
+  }, [members]);
+
+  const cardOptions: DropdownOption[] = useMemo(() => {
+    if (!registeredCards || registeredCards.length === 0) return [];
+    return registeredCards.map((c) => {
+      const displayName = c.erp_alias || c.gowid_alias;
+      const sub = [
+        c.erp_alias ? c.gowid_alias : null,
+        c.short_card_number ? `끝자리 ${c.short_card_number}` : null,
+        c.card_user_name || null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      return {
+        value: c.gowid_alias,
+        label: displayName,
+        sub: sub || undefined,
+      };
+    });
+  }, [registeredCards]);
 
   const purposeOptions: DropdownOption[] = useMemo(() => {
     if (!purposes) return [];
@@ -95,7 +108,6 @@ export function ExpenseFilters({ criteria, onCriteriaChange }: ExpenseFiltersPro
 
   return (
     <div className="space-y-3">
-      {/* 1차 필터: 기간, 카드, 상태, 검색 */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:p-4 space-y-3">
         {/* 기간 설정 */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -166,24 +178,41 @@ export function ExpenseFilters({ criteria, onCriteriaChange }: ExpenseFiltersPro
           </div>
         </div>
 
-        {/* 카드 + 상태 + 검색 */}
+        {/* 사용자 + 카드 */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 min-w-[40px]">
+            <User className="h-3.5 w-3.5" />
+            사용자
+          </div>
+          <SearchableDropdown
+            options={userOptions}
+            value={criteria.userName || ''}
+            onChange={(val) => onCriteriaChange({ ...criteria, userName: val || undefined })}
+            placeholder="전체 사용자"
+            emptyLabel="전체 사용자"
+            searchPlaceholder="사용자 검색..."
+            className="min-w-[150px]"
+          />
+
+          <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 min-w-[40px]">
             <CreditCard className="h-3.5 w-3.5" />
             카드
           </div>
           <SearchableDropdown
             options={cardOptions}
-            value={criteria.userName || ''}
-            onChange={(val) => onCriteriaChange({ ...criteria, userName: val || undefined })}
+            value={criteria.cardAlias || ''}
+            onChange={(val) => onCriteriaChange({ ...criteria, cardAlias: val || undefined })}
             placeholder="전체 카드"
             emptyLabel="전체 카드"
-            searchPlaceholder="카드/사용자 검색..."
+            searchPlaceholder="카드 별칭·번호 검색..."
             className="min-w-[160px]"
           />
+        </div>
 
-          <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
-
+        {/* 상태 */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1 flex-wrap">
             {STATUS_OPTIONS.map((opt) => {
               const isActive = (criteria.approvalState || '') === opt.value;

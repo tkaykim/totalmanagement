@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CreditCard, FileWarning, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useExpenses, useNotSubmittedExpenses } from '../hooks';
@@ -11,7 +11,7 @@ import { ExpenseDetailModal } from './ExpenseDetailModal';
 import { BulkActionBar } from './BulkActionBar';
 import { GowidUserMappingManager } from './GowidUserMappingManager';
 import { CardAliasManager } from './CardAliasManager';
-import type { ExpenseSearchCriteria } from '../types';
+import type { ExpenseSearchCriteria, GowidExpensePageable } from '../types';
 
 type Tab = 'expenses' | 'not-submitted' | 'settings';
 
@@ -34,11 +34,25 @@ export function CorporateCardView({ userRole }: CorporateCardViewProps) {
   const canApprove = isAdmin;
   const canComment = canEdit;
 
-  const { data: expensesData, isLoading: expensesLoading } = useExpenses({
+  const { data: rawExpensesData, isLoading: expensesLoading } = useExpenses({
     ...criteria,
     page,
-    size: 20,
+    size: criteria.cardAlias ? 100 : 20,
   });
+
+  const expensesData: GowidExpensePageable | undefined = useMemo(() => {
+    if (!rawExpensesData || !criteria.cardAlias) return rawExpensesData;
+    const filtered = rawExpensesData.content.filter(
+      (item) => item.cardAlias === criteria.cardAlias
+    );
+    return {
+      ...rawExpensesData,
+      content: filtered,
+      totalElements: filtered.length,
+      totalPages: 1,
+      last: true,
+    };
+  }, [rawExpensesData, criteria.cardAlias]);
 
   const { data: notSubmittedData, isLoading: notSubmittedLoading } = useNotSubmittedExpenses(
     notSubmittedPage,
