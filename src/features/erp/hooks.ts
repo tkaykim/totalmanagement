@@ -113,16 +113,20 @@ export function useDeleteTask() {
   });
 }
 
-export function useFinancialEntries(params?: {
-  bu?: BU;
-  projectId?: number;
-  kind?: FinancialKind;
-  startDate?: string;
-  endDate?: string;
-}) {
+export function useFinancialEntries(
+  params?: {
+    bu?: BU;
+    projectId?: number;
+    kind?: FinancialKind;
+    startDate?: string;
+    endDate?: string;
+  },
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ['financial-entries', params],
     queryFn: () => api.fetchFinancialEntries(params),
+    enabled: options?.enabled ?? true,
   });
 }
 

@@ -543,6 +543,25 @@ function HomePage() {
 
   const allFinancial = useMemo(() => financialData.map(dbFinancialToFrontend) as FinancialEntry[], [financialData]);
 
+  // 프로젝트 상세 패널/편집 모달용: 상단 기간 필터와 무관하게 해당 project_id의 전체 재무를 별도 조회
+  const { data: detailProjectFinancialData = [] } = useFinancialEntries(
+    { projectId: viewProjectDetail ? Number(viewProjectDetail.id) : undefined },
+    { enabled: !!viewProjectDetail },
+  );
+  const detailProjectFinancial = useMemo(
+    () => detailProjectFinancialData.map(dbFinancialToFrontend) as FinancialEntry[],
+    [detailProjectFinancialData],
+  );
+
+  const { data: editProjectFinancialData = [] } = useFinancialEntries(
+    { projectId: isEditProjectModalOpen ? Number(isEditProjectModalOpen.id) : undefined },
+    { enabled: !!isEditProjectModalOpen },
+  );
+  const editProjectFinancial = useMemo(
+    () => editProjectFinancialData.map(dbFinancialToFrontend) as FinancialEntry[],
+    [editProjectFinancialData],
+  );
+
   /** 탭에서 특정 사업부를 볼 때는 그 BU를 신규 프로젝트 기본값으로 (본사 프로필이어도 탭 선택이 우선) */
   const projectModalDefaultBu = useMemo(
     (): BU => (bu !== 'ALL' ? bu : ((user?.profile?.bu_code as BU) || 'GRIGO')),
@@ -1645,7 +1664,7 @@ function HomePage() {
         <ProjectDetailPanel
           project={viewProjectDetail}
           tasks={tasks.filter((t) => t.projectId === viewProjectDetail.id)}
-          financeData={allFinancial.filter((f) => f.projectId === viewProjectDetail.id)}
+          financeData={detailProjectFinancial}
           usersData={usersData}
           partnerWorkersData={partnerWorkersData}
           partnerCompaniesData={partnerCompaniesData}
@@ -1688,7 +1707,7 @@ function HomePage() {
             setFinanceModalOpen('expense');
           }}
           onFinanceClick={(entry) => {
-            const matchedFinance = allFinancial.find((f) => f.id === entry.id);
+            const matchedFinance = detailProjectFinancial.find((f) => f.id === entry.id);
             if (matchedFinance) {
               setEditFinanceModalOpen(matchedFinance);
             }
@@ -1710,17 +1729,15 @@ function HomePage() {
           partnerWorkersData={partnerWorkersData}
           artistsData={artistsData}
           channelsData={channelsData}
-          financeData={allFinancial
-            .filter((f) => f.projectId === isEditProjectModalOpen.id)
-            .map((f) => ({
-              id: f.id,
-              kind: f.type,
-              category: f.category,
-              name: f.name,
-              amount: f.amount,
-              status: f.status,
-              occurred_at: f.date,
-            }))}
+          financeData={editProjectFinancial.map((f) => ({
+            id: f.id,
+            kind: f.type,
+            category: f.category,
+            name: f.name,
+            amount: f.amount,
+            status: f.status,
+            occurred_at: f.date,
+          }))}
           tasksData={tasks
             .filter((t) => t.projectId === isEditProjectModalOpen.id)
             .map((t) => ({
@@ -1740,7 +1757,7 @@ function HomePage() {
             setFinanceModalOpen('expense');
           }}
           onViewFinanceDetail={(entry) => {
-            const matchedFinance = allFinancial.find((f) => f.id === entry.id);
+            const matchedFinance = editProjectFinancial.find((f) => f.id === entry.id);
             if (matchedFinance) {
               setEditFinanceModalOpen(matchedFinance);
             }
