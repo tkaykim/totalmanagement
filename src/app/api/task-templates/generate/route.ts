@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import { canAccessTaskTemplate, canCreateTask, type AppUser, type Project as PermProject } from '@/lib/permissions';
-import { createActivityLog } from '@/lib/activity-logger';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -75,40 +74,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied to create tasks in this project' }, { status: 403 });
     }
 
-    const createdTasks = [];
+    const taskRows = taskList.map((taskDef) => ({
+      project_id: project_id,
+      bu_code: project.bu_code,
+      title: taskDef.title,
+      due_date: taskDef.due_date,
+      status: 'todo',
+      priority: taskDef.priority || 'medium',
+      manual_id: taskDef.manual_id || null,
+      created_by: currentUser.id,
+    }));
 
-    for (const taskDef of taskList) {
-      const { data: task, error: taskError } = await supabase
-        .from('project_tasks')
-        .insert({
-          project_id: project_id,
-          bu_code: project.bu_code,
-          title: taskDef.title,
-          due_date: taskDef.due_date,
-          status: 'todo',
-          priority: taskDef.priority || 'medium',
-          manual_id: taskDef.manual_id || null,
-          created_by: currentUser.id,
-        })
-        .select()
-        .single();
+    const { data: createdTasks, error: insertError } = await supabase
+      .from('project_tasks')
+      .insert(taskRows)
+      .select();
 
-      if (taskError) throw taskError;
-      createdTasks.push(task);
+    if (insertError) throw insertError;
+    if (!createdTasks || createdTasks.length === 0) {
+      return NextResponse.json({ tasks: [], count: 0 });
+    }
 
-      await createActivityLog({
-        userId: currentUser.id,
-        actionType: 'task_created',
-        entityType: 'task',
-        entityId: String(task.id),
-        entityTitle: task.title,
-        metadata: {
-          project_id: project_id,
-          template_id: template_id,
-          priority: taskDef.priority || 'medium',
-          assignee_role: taskDef.assignee_role || null,
-        },
-      });
+    const occurredAt = new Date().toISOString();
+    const activityRows = createdTasks.map((task, idx) => ({
+      user_id: currentUser.id,
+      action_type: 'task_created' as const,
+      entity_type: 'task' as const,
+      entity_id: String(task.id),
+      entity_title: task.title,
+      metadata: {
+        project_id: project_id,
+        template_id: template_id,
+        priority: taskList[idx].priority || 'medium',
+        assignee_role: taskList[idx].assignee_role || null,
+      },
+      occurred_at: occurredAt,
+    }));
+
+    const { error: logError } = await supabase
+      .from('activity_logs')
+      .insert(activityRows);
+
+    if (logError) {
+      console.error('Failed to create activity logs (batch):', logError);
     }
 
     return NextResponse.json({ tasks: createdTasks, count: createdTasks.length });
