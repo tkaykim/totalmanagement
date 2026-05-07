@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createPureClient } from '@/lib/supabase/server';
+import { getLeaveTypeFromRequestType } from '@/features/leave/types';
 
 export async function GET(
   request: NextRequest,
@@ -79,26 +80,40 @@ export async function DELETE(
       }
     }
 
+    // 권한 체크 후 service role 클라이언트로 우회 처리
+    // (leave_requests에 DELETE 정책이 없고, leave_balances는 HEAD admin만 변경 가능하므로
+    //  RLS를 그대로 두면 update/delete가 조용히 실패함)
+    const adminClient = await createPureClient();
+
     // 승인된 신청을 삭제하는 경우 잔여일수 복구
     if (leaveRequest.status === 'approved') {
-      const { getLeaveTypeFromRequestType } = await import('@/features/leave/types');
       const balanceType = getLeaveTypeFromRequestType(leaveRequest.leave_type);
       const requestYear = new Date(leaveRequest.start_date).getFullYear();
 
-      const { data: balance } = await supabase
+      const { data: balance, error: balanceFetchError } = await adminClient
         .from('leave_balances')
         .select('id, used_days')
         .eq('user_id', leaveRequest.requester_id)
         .eq('leave_type', balanceType)
         .eq('year', requestYear)
-        .single();
+        .maybeSingle();
+
+      if (balanceFetchError) {
+        console.error('Leave balance fetch error:', balanceFetchError);
+        return NextResponse.json({ error: '잔여일수 조회에 실패했습니다.' }, { status: 500 });
+      }
 
       if (balance) {
         const restoredUsedDays = Math.max(0, Number(balance.used_days) - Number(leaveRequest.days_used));
-        await supabase
+        const { error: balanceUpdateError } = await adminClient
           .from('leave_balances')
           .update({ used_days: restoredUsedDays })
           .eq('id', balance.id);
+
+        if (balanceUpdateError) {
+          console.error('Leave balance restore error:', balanceUpdateError);
+          return NextResponse.json({ error: '잔여일수 복구에 실패했습니다.' }, { status: 500 });
+        }
       }
 
       // 출퇴근 기록에서 휴가 상태 복구
@@ -119,24 +134,32 @@ export async function DELETE(
 
         if (workDates.length > 0) {
           // 휴가로 인해 생성된 출퇴근 기록 삭제 (vacation 상태인 것만)
-          await supabase
+          const { error: attendanceDeleteError } = await adminClient
             .from('attendance_logs')
             .delete()
             .eq('user_id', leaveRequest.requester_id)
             .eq('status', 'vacation')
             .in('work_date', workDates);
+
+          if (attendanceDeleteError) {
+            console.error('Attendance log cleanup error:', attendanceDeleteError);
+          }
         }
       }
     }
 
-    const { error: deleteError } = await supabase
+    const { error: deleteError, count: deletedCount } = await adminClient
       .from('leave_requests')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', id);
 
     if (deleteError) {
       console.error('Leave request delete error:', deleteError);
       return NextResponse.json({ error: '휴가 신청 취소에 실패했습니다.' }, { status: 500 });
+    }
+
+    if (!deletedCount) {
+      return NextResponse.json({ error: '휴가 신청 삭제 대상이 없습니다.' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createPureClient } from '@/lib/supabase/server';
 import { getLeaveTypeFromRequestType } from '@/features/leave/types';
 import { notifyLeaveRequestApproved } from '@/lib/notification-sender';
 
@@ -53,8 +53,12 @@ export async function POST(
       }
     }
 
+    // 권한 체크 후 service role 클라이언트로 우회 처리
+    // (leave_balances는 HEAD admin만 RLS 통과, attendance_logs DELETE/INSERT도 admin/leader 차단)
+    const adminClient = await createPureClient();
+
     // 휴가 신청 승인
-    const { data: updatedRequest, error: updateError } = await supabase
+    const { data: updatedRequest, error: updateError } = await adminClient
       .from('leave_requests')
       .update({
         status: 'approved',
@@ -74,21 +78,26 @@ export async function POST(
     const balanceType = getLeaveTypeFromRequestType(leaveRequest.leave_type);
     const currentYear = new Date(leaveRequest.start_date).getFullYear();
 
-    const { data: balance } = await supabase
+    const { data: balance } = await adminClient
       .from('leave_balances')
       .select('*')
       .eq('user_id', leaveRequest.requester_id)
       .eq('leave_type', balanceType)
       .eq('year', currentYear)
-      .single();
+      .maybeSingle();
 
     if (balance) {
-      await supabase
+      const { error: balanceUpdateError } = await adminClient
         .from('leave_balances')
         .update({
           used_days: Number(balance.used_days) + Number(leaveRequest.days_used),
         })
         .eq('id', balance.id);
+
+      if (balanceUpdateError) {
+        console.error('Leave balance deduct error:', balanceUpdateError);
+        return NextResponse.json({ error: '잔여일수 차감에 실패했습니다.' }, { status: 500 });
+      }
     }
 
     // 출퇴근 기록에 휴가 상태 반영 (배치 처리로 최적화)
@@ -113,7 +122,7 @@ export async function POST(
 
       if (workDates.length > 0) {
         // 기존 출퇴근 기록 일괄 조회
-        const { data: existingLogs } = await supabase
+        const { data: existingLogs } = await adminClient
           .from('attendance_logs')
           .select('id, work_date')
           .eq('user_id', leaveRequest.requester_id)
@@ -124,7 +133,7 @@ export async function POST(
 
         // 기존 기록 일괄 업데이트
         if (existingLogIds.length > 0) {
-          await supabase
+          await adminClient
             .from('attendance_logs')
             .update({
               status: 'vacation',
@@ -146,7 +155,7 @@ export async function POST(
           }));
 
         if (newLogs.length > 0) {
-          await supabase.from('attendance_logs').insert(newLogs);
+          await adminClient.from('attendance_logs').insert(newLogs);
         }
       }
     }
