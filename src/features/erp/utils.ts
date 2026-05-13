@@ -94,7 +94,11 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
 } {
   return {
     id: String(f.id),
-    projectId: String(f.project_id),
+    // reactstudio가 프로젝트 미연결 receivable을 NULL로 INSERT할 수 있어 NULL을
+    // 빈 문자열로 변환한다. 빈 문자열은 어떤 project.id(string)와도 매칭되지 않아
+    // 자연스럽게 어떤 프로젝트에도 묶이지 않으며, 기존 String(null)='null' 문자열이
+    // UI/매칭에 새는 잠복 위험(2026-04-22 테스트 잔류 row 4건에서 관찰)을 차단.
+    projectId: f.project_id == null ? '' : String(f.project_id),
     bu: f.bu_code,
     type: f.kind,
     category: f.category,

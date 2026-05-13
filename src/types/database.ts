@@ -144,7 +144,10 @@ export interface ProjectTask {
 
 export interface FinancialEntry {
   id: number;
-  project_id: number;
+  // 실 DB는 nullable (reactstudio가 프로젝트 미연결 receivable을 NULL로 INSERT).
+  // ERP의 모든 집계 쿼리는 .in('project_id', projectIds) 또는 .eq('project_id', ...)로
+  // 묶여 있어 NULL row가 자연스럽게 제외되므로 런타임 영향 없음.
+  project_id: number | null;
   bu_code: BU;
   kind: FinancialKind;
   category: string;
@@ -379,6 +382,34 @@ export interface TaskTemplateTask {
   assignee_role?: string;
   priority?: TaskPriority;
   condition_key?: string; // boolean 옵션 키 - 해당 옵션이 true일 때만 포함
+}
+
+export type ProjectPnlReportStatus = 'draft' | 'finalized';
+
+export interface ProjectPnlReport {
+  id: number;
+  project_id: number;
+  bu_code: BU;
+  target_revenue: number;
+  target_expense: number;
+  actual_revenue: number;
+  actual_expense: number;
+  highlights?: string | null;
+  improvements?: string | null;
+  additional_notes?: string | null;
+  status: ProjectPnlReportStatus;
+  finalized_at?: string | null;
+  author_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** project_pnl_reports_with_profit 뷰 응답 (서버에서 계산되는 파생값 포함) */
+export interface ProjectPnlReportWithProfit extends ProjectPnlReport {
+  actual_net_profit: number;
+  target_net_profit: number;
+  revenue_achievement_rate: number | null;
+  expense_variance_rate: number | null;
 }
 
 export interface Creator {

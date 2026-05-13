@@ -2021,6 +2021,7 @@ export function UnifiedProjectModal({
         <TaskTemplateSelector
           mode="local"
           projectEndDate={form.endDate}
+          defaultBu={form.bu as BU}
           onLocalAdd={(newTasks) => {
             setPendingTasks((prev) => [...prev, ...newTasks]);
           }}

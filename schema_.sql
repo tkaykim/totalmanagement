@@ -186,7 +186,20 @@ CREATE TABLE public.equipment (
 );
 CREATE TABLE public.financial_entries (
   id bigint NOT NULL DEFAULT nextval('financial_entries_id_seq'::regclass),
-  project_id bigint NOT NULL,
+  -- NOTE: project_id is NULLABLE in the live DB. reactstudio inserts receivables
+  -- with a NULL project_id when a receivable is not yet bound to a concrete project.
+  -- ERP aggregations filter via .in('project_id', projectIds) so NULL rows are excluded naturally.
+  -- Reactstudio-extended columns that exist in the live DB but are not declared here:
+  --   contract_id bigint REFERENCES public.contracts(id),
+  --   client_name text,
+  --   due_date date,
+  --   paid_at timestamptz,
+  --   payee_app_user_id uuid REFERENCES public.app_users(id),
+  --   approved_by uuid REFERENCES public.app_users(id),
+  --   approved_at timestamptz,
+  --   payment_ref text
+  -- These are documented in reactstudio/supabase/schema_.sql. ERP API does not select/insert them.
+  project_id bigint,
   bu_code USER-DEFINED NOT NULL,
   kind USER-DEFINED NOT NULL,
   category text NOT NULL,

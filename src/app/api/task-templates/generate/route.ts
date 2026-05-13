@@ -23,6 +23,8 @@ interface GenerateTaskItem {
   due_date: string;
   priority: string;
   assignee_role?: string;
+  assignee_id?: string;
+  assignee?: string;
   manual_id?: number | null;
 }
 
@@ -89,6 +91,8 @@ export async function POST(request: NextRequest) {
           priority: taskDef.priority || 'medium',
           manual_id: taskDef.manual_id || null,
           created_by: currentUser.id,
+          assignee_id: taskDef.assignee_id || null,
+          assignee: taskDef.assignee || null,
         })
         .select()
         .single();
