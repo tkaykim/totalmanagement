@@ -34,6 +34,11 @@ export function FinanceRow({ entry, tone, onClick }: FinanceRowProps) {
         <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 truncate">
           {entry.date} • {entry.category}
         </p>
+        {entry.creator_name && (
+          <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 truncate">
+            등록자: {entry.creator_name}
+          </p>
+        )}
         <span
           className={cn(
             'mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-semibold whitespace-nowrap',

@@ -37,7 +37,7 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .select()
+      .select('*, creator:app_users!financial_entries_created_by_fkey(name)')
       .single();
 
     if (error) throw error;

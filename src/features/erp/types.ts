@@ -34,6 +34,8 @@ export type FinancialEntry = {
   partner_worker_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
   actual_amount?: number | null;
+  /** 등록자 이름 (API 조인) */
+  creator_name?: string | null;
 };
 
 export type Member = {

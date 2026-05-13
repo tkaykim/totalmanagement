@@ -68,6 +68,11 @@ function FinanceItem({
             {entry.category}
           </p>
         )}
+        {entry.creator_name && (
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+            등록자: {entry.creator_name}
+          </p>
+        )}
       </div>
       <span className={cn('text-[10px] font-medium rounded px-1.5 py-0.5', badge.className)}>
         {badge.label}

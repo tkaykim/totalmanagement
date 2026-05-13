@@ -1737,6 +1737,7 @@ function HomePage() {
             amount: f.amount,
             status: f.status,
             occurred_at: f.date,
+            creator_name: f.creator_name,
           }))}
           tasksData={tasks
             .filter((t) => t.projectId === isEditProjectModalOpen.id)

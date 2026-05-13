@@ -91,6 +91,7 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
   partner_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
   actual_amount?: number | null;
+  creator_name?: string | null;
 } {
   return {
     id: String(f.id),
@@ -105,6 +106,7 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
     partner_id: f.partner_id,
     payment_method: f.payment_method,
     actual_amount: f.actual_amount,
+    creator_name: (f as any).creator?.name ?? null,
   };
 }
 

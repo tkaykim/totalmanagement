@@ -27,6 +27,7 @@ type FinanceEntry = {
   amount: number;
   status: string;
   occurred_at: string;
+  creator_name?: string | null;
 };
 
 type TaskStatus = 'todo' | 'in-progress' | 'on-hold' | 'done';
@@ -1789,6 +1790,9 @@ export function UnifiedProjectModal({
                           <div>
                             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{entry.name}</p>
                             <p className="text-xs text-slate-400">{entry.category} · {entry.occurred_at}</p>
+                            {entry.creator_name && (
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500">등록자: {entry.creator_name}</p>
+                            )}
                           </div>
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap",

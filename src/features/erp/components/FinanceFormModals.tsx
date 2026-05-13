@@ -801,6 +801,11 @@ export function EditFinanceModal({
               onChange={(val) => setForm((prev) => ({ ...prev, projectId: val }))}
             />
           </div>
+          {entry.creator_name && (
+            <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
+              등록자: {entry.creator_name}
+            </p>
+          )}
         </div>
 
         {/* Body */}

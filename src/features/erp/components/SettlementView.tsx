@@ -269,6 +269,7 @@ export function SettlementView({
                   )}>금액</th>
                   <th className="px-2 sm:px-4 py-3 font-bold uppercase tracking-tight whitespace-nowrap">지급처</th>
                   <th className="px-2 sm:px-4 py-3 font-bold uppercase tracking-tight whitespace-nowrap">결제일</th>
+                  <th className="px-2 sm:px-4 py-3 font-bold uppercase tracking-tight whitespace-nowrap">등록자</th>
                   <th className="px-2 sm:px-4 py-3 font-bold uppercase tracking-tight whitespace-nowrap">상태</th>
                 </tr>
               </thead>
@@ -276,7 +277,7 @@ export function SettlementView({
                 {financeViewType === 'revenue' ? (
                   filteredRevRows.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-2 sm:px-4 py-6 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
+                      <td colSpan={8} className="px-2 sm:px-4 py-6 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
                         {searchLower ? '검색 결과가 없습니다.' : '등록된 매출이 없습니다.'}
                       </td>
                     </tr>
@@ -294,6 +295,7 @@ export function SettlementView({
                           <td className="px-2 sm:px-4 py-3 font-black text-blue-600 italic whitespace-nowrap">{formatCurrency(r.amount)}</td>
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{getPartnerName(r)}</td>
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap text-[9px] sm:text-[11px]">{r.date}</td>
+                          <td className="px-2 sm:px-4 py-3 font-medium text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-[100px]">{r.creator_name || '-'}</td>
                           <td className="px-2 sm:px-4 py-3">
                             <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(r.status))}>
                               {getStatusLabel(r.status)}
@@ -306,14 +308,14 @@ export function SettlementView({
                           {searchLower ? '필터 합계' : '합계'}
                         </td>
                         <td className="px-2 sm:px-4 py-3 font-black text-blue-600 dark:text-blue-400 italic whitespace-nowrap">{formatCurrency(filteredTotalRevenue)}</td>
-                        <td colSpan={3} className="px-2 sm:px-4 py-3"></td>
+                        <td colSpan={4} className="px-2 sm:px-4 py-3"></td>
                       </tr>
                     </>
                   )
                 ) : (
                   filteredExpRows.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-2 sm:px-4 py-6 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
+                      <td colSpan={8} className="px-2 sm:px-4 py-6 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
                         {searchLower ? '검색 결과가 없습니다.' : '등록된 지출이 없습니다.'}
                       </td>
                     </tr>
@@ -331,6 +333,7 @@ export function SettlementView({
                           <td className="px-2 sm:px-4 py-3 font-black text-red-500 italic whitespace-nowrap">{formatCurrency(e.amount)}</td>
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{getPartnerName(e)}</td>
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap text-[9px] sm:text-[11px]">{e.date}</td>
+                          <td className="px-2 sm:px-4 py-3 font-medium text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-[100px]">{e.creator_name || '-'}</td>
                           <td className="px-2 sm:px-4 py-3">
                             <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(e.status))}>
                               {getStatusLabel(e.status)}
@@ -343,7 +346,7 @@ export function SettlementView({
                           {searchLower ? '필터 합계' : '합계'}
                         </td>
                         <td className="px-2 sm:px-4 py-3 font-black text-red-500 dark:text-red-400 italic whitespace-nowrap">{formatCurrency(filteredTotalExpense)}</td>
-                        <td colSpan={3} className="px-2 sm:px-4 py-3"></td>
+                        <td colSpan={4} className="px-2 sm:px-4 py-3"></td>
                       </tr>
                     </>
                   )

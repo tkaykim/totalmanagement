@@ -33,7 +33,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let query = supabase.from('financial_entries').select('*').order('occurred_at', { ascending: false });
+    const creatorJoin = 'creator:app_users!financial_entries_created_by_fkey(name)';
+    let query = supabase
+      .from('financial_entries')
+      .select(`*, ${creatorJoin}`)
+      .order('occurred_at', { ascending: false });
 
     if (bu) {
       query = query.eq('bu_code', bu);
