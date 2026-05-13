@@ -22,6 +22,8 @@ interface GenerateTaskItem {
   due_date: string;
   priority: string;
   assignee_role?: string;
+  assignee_id?: string;
+  assignee?: string;
   manual_id?: number | null;
 }
 
@@ -83,6 +85,9 @@ export async function POST(request: NextRequest) {
       priority: taskDef.priority || 'medium',
       manual_id: taskDef.manual_id || null,
       created_by: currentUser.id,
+      // 등록자/담당자 표기 (로컬 wip에서 도입): 배치 INSERT와 통합.
+      assignee_id: taskDef.assignee_id || null,
+      assignee: taskDef.assignee || null,
     }));
 
     const { data: createdTasks, error: insertError } = await supabase

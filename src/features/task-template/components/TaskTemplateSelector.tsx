@@ -2,11 +2,12 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useTaskTemplates, useGenerateTasksFromTemplate } from '../hooks';
+import { useUsers } from '@/features/erp/hooks';
 import { format, subDays } from 'date-fns';
 import type { BU, TaskTemplate, TaskPriority, TaskTemplateTask } from '@/types/database';
 import {
   X, FileText, Calendar, Search, ChevronLeft, ChevronRight,
-  Clock, Check, Trash2, AlertTriangle, ListChecks, Settings2, Eye,
+  Clock, Check, Trash2, AlertTriangle, ListChecks, Settings2, Eye, UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,8 @@ export interface PendingTask {
 
 interface TaskTemplateSelectorBaseProps {
   projectEndDate?: string;
+  /** 현재 프로젝트의 BU. 해당 BU 템플릿을 추천 우선 노출. */
+  defaultBu?: BU;
   onClose: () => void;
 }
 
@@ -114,12 +117,18 @@ function buildPreviewTasks(
 export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
   const { projectEndDate, onClose, mode = 'generate' } = props;
 
+  /** 추천 BU: defaultBu 우선, generate 모드면 projectBu fallback */
+  const recommendedBu: BU | undefined =
+    props.defaultBu ?? (props.mode !== 'local' ? (props as GenerateModeProps).projectBu : undefined);
+
   // Step state
   const [step, setStep] = useState<Step>('select');
 
   // Step 1: 선택
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<TaskTemplate | null>(null);
+  /** 추천 BU 외 템플릿까지 보기 토글 (검색이 비어있을 때만 의미 있음) */
+  const [showAllBu, setShowAllBu] = useState(false);
 
   // Step 2: 옵션
   const [baseDate, setBaseDate] = useState(projectEndDate || format(new Date(), 'yyyy-MM-dd'));
@@ -128,21 +137,53 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
   // Step 3: 미리보기 (개별 제거)
   const [removedIndices, setRemovedIndices] = useState<Set<number>>(new Set());
 
+  // 역할별 담당자 매핑: { 'manager': { id, name }, 'staff': null, ... }
+  const [roleAssignees, setRoleAssignees] = useState<Record<string, { id: string; name: string } | null>>({});
+
   const { data: templates, isLoading } = useTaskTemplates();
+  const { data: usersData } = useUsers();
   const generateMutation = useGenerateTasksFromTemplate();
 
-  /* ── 검색 필터 ── */
+  const activeUsers = useMemo(() => usersData?.users ?? [], [usersData]);
+
+  /* ── 검색·BU 필터 + 추천 정렬 ── */
   const filteredTemplates = useMemo(() => {
     if (!templates) return [];
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return templates;
-    return templates.filter((t) =>
-      t.name.toLowerCase().includes(query) ||
-      (t.description ?? '').toLowerCase().includes(query) ||
-      t.template_type.toLowerCase().includes(query) ||
-      BU_TITLES[t.bu_code].toLowerCase().includes(query)
-    );
-  }, [templates, searchQuery]);
+    let pool = templates;
+    if (query) {
+      pool = pool.filter((t) =>
+        t.name.toLowerCase().includes(query) ||
+        (t.description ?? '').toLowerCase().includes(query) ||
+        t.template_type.toLowerCase().includes(query) ||
+        BU_TITLES[t.bu_code].toLowerCase().includes(query)
+      );
+    } else if (recommendedBu && !showAllBu) {
+      const matched = pool.filter((t) => t.bu_code === recommendedBu);
+      if (matched.length > 0) pool = matched;
+    }
+    if (recommendedBu) {
+      return [...pool].sort((a, b) => {
+        const aMatch = a.bu_code === recommendedBu ? 0 : 1;
+        const bMatch = b.bu_code === recommendedBu ? 0 : 1;
+        if (aMatch !== bMatch) return aMatch - bMatch;
+        return a.name.localeCompare(b.name, 'ko');
+      });
+    }
+    return pool;
+  }, [templates, searchQuery, recommendedBu, showAllBu]);
+
+  /** 추천 BU 매칭 템플릿 개수 (배너용) */
+  const recommendedCount = useMemo(() => {
+    if (!templates || !recommendedBu) return 0;
+    return templates.filter((t) => t.bu_code === recommendedBu).length;
+  }, [templates, recommendedBu]);
+
+  /** 다른 BU 템플릿 개수 (토글 라벨용) */
+  const otherCount = useMemo(() => {
+    if (!templates || !recommendedBu) return 0;
+    return templates.filter((t) => t.bu_code !== recommendedBu).length;
+  }, [templates, recommendedBu]);
 
   /* ── 옵션 기반 조건부 미리보기 태스크 ── */
   const filteredPreviewTasks = useMemo(() => {
@@ -161,9 +202,18 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
     [filteredPreviewTasks, removedIndices],
   );
 
-  /* ── 옵션 스키마에 항목이 있는지 ── */
+  /* ── 템플릿에서 쓰인 고유 역할 목록 ── */
+  const uniqueRoles = useMemo(() => {
+    if (!selectedTemplate) return [];
+    const roles = selectedTemplate.tasks
+      .map((t) => t.assignee_role)
+      .filter((r): r is string => !!r);
+    return [...new Set(roles)];
+  }, [selectedTemplate]);
+
+  /* ── 옵션 스키마에 항목이 있는지 (역할도 포함) ── */
   const hasOptions = selectedTemplate
-    ? Object.keys(selectedTemplate.options_schema.properties ?? {}).length > 0
+    ? Object.keys(selectedTemplate.options_schema.properties ?? {}).length > 0 || uniqueRoles.length > 0
     : false;
 
   /* ── Handlers ── */
@@ -172,7 +222,9 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
     setSelectedTemplate(template);
     setOptions({});
     setRemovedIndices(new Set());
-    const hasOpts = Object.keys(template.options_schema.properties ?? {}).length > 0;
+    setRoleAssignees({});
+    const roles = [...new Set(template.tasks.map((t) => t.assignee_role).filter((r): r is string => !!r))];
+    const hasOpts = Object.keys(template.options_schema.properties ?? {}).length > 0 || roles.length > 0;
     setStep(hasOpts ? 'options' : 'preview');
   }, []);
 
@@ -218,13 +270,18 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
     }
 
     try {
-      const tasksToCreate = finalTasks.map((task) => ({
-        title: task.title,
-        due_date: task.dueDate,
-        priority: (task.priority || 'medium') as string,
-        assignee_role: task.assignee_role,
-        manual_id: task.manual_id,
-      }));
+      const tasksToCreate = finalTasks.map((task) => {
+        const mapped = task.assignee_role ? roleAssignees[task.assignee_role] : null;
+        return {
+          title: task.title,
+          due_date: task.dueDate,
+          priority: (task.priority || 'medium') as string,
+          assignee_role: task.assignee_role,
+          assignee_id: mapped?.id,
+          assignee: mapped?.name,
+          manual_id: task.manual_id,
+        };
+      });
       await generateMutation.mutateAsync({
         template_id: selectedTemplate.id,
         project_id: props.projectId,
@@ -351,7 +408,7 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
         {/* ── Step 1: 검색 + 선택 ── */}
         {step === 'select' && (
           <div className="flex-1 overflow-y-auto">
-            <div className="sticky top-0 z-10 bg-white dark:bg-slate-800 p-4 border-b border-slate-100 dark:border-slate-700/50">
+            <div className="sticky top-0 z-10 bg-white dark:bg-slate-800 p-4 border-b border-slate-100 dark:border-slate-700/50 space-y-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <Input
@@ -363,6 +420,26 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
                   autoFocus
                 />
               </div>
+              {recommendedBu && recommendedCount > 0 && !searchQuery && (
+                <div className="flex items-center justify-between gap-2 px-1 text-xs">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-blue-700 dark:text-blue-300 font-semibold">
+                      추천
+                    </span>
+                    <span>
+                      {BU_TITLES[recommendedBu]} 표준 템플릿 {recommendedCount}건
+                    </span>
+                  </div>
+                  {otherCount > 0 && (
+                    <button
+                      onClick={() => setShowAllBu((prev) => !prev)}
+                      className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {showAllBu ? '추천 템플릿만 보기' : `다른 사업부 ${otherCount}건 보기`}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <div className="p-4 space-y-2">
               {isLoading ? (
@@ -373,7 +450,12 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
                 </div>
               ) : (
                 filteredTemplates.map((template) => (
-                  <TemplateCard key={template.id} template={template} onSelect={handleSelectTemplate} />
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    onSelect={handleSelectTemplate}
+                    isRecommended={recommendedBu === template.bu_code}
+                  />
                 ))
               )}
             </div>
@@ -445,6 +527,56 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
                     </>
                   );
                 })()}
+              </div>
+            )}
+
+            {/* 역할별 담당자 지정 */}
+            {uniqueRoles.length > 0 && (
+              <div className="space-y-3 p-4 border border-amber-200 dark:border-amber-700 rounded-xl bg-amber-50/50 dark:bg-amber-900/10">
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <UserCheck className="h-3.5 w-3.5 text-amber-500" />
+                  역할별 담당자 지정 <span className="text-rose-500">*</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 -mt-1">
+                  각 역할에 실제 담당자를 지정하세요. 미지정 시 할일이 담당자 없이 생성됩니다.
+                </p>
+                <div className="space-y-2">
+                  {uniqueRoles.map((role) => {
+                    const selected = roleAssignees[role];
+                    return (
+                      <div key={role} className="flex items-center gap-3">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 w-20 shrink-0">
+                          {role}
+                        </span>
+                        <Select
+                          value={selected?.id ?? '__unset__'}
+                          onValueChange={(val) => {
+                            if (val === '__unset__') {
+                              setRoleAssignees((prev) => ({ ...prev, [role]: null }));
+                            } else {
+                              const user = activeUsers.find((u: any) => u.id === val);
+                              if (user) setRoleAssignees((prev) => ({ ...prev, [role]: { id: user.id, name: user.name } }));
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="담당자 선택..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__unset__">
+                              <span className="text-slate-400">미지정</span>
+                            </SelectItem>
+                            {activeUsers.map((user: any) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.name}{user.position ? ` · ${user.position}` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -541,7 +673,9 @@ export function TaskTemplateSelector(props: TaskTemplateSelectorProps) {
                           </span>
                           <span className="text-[10px] text-slate-400">{task.dueDate}</span>
                           {task.assignee_role && (
-                            <span className="text-[10px] text-slate-400">@{task.assignee_role}</span>
+                            <span className={`text-[10px] ${roleAssignees[task.assignee_role] ? 'text-blue-500 font-medium' : 'text-slate-400'}`}>
+                              @{roleAssignees[task.assignee_role]?.name ?? task.assignee_role}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -668,7 +802,15 @@ function StepIndicator({ currentStep, hasOptions }: { currentStep: Step; hasOpti
   );
 }
 
-function TemplateCard({ template, onSelect }: { template: TaskTemplate; onSelect: (t: TaskTemplate) => void }) {
+function TemplateCard({
+  template,
+  onSelect,
+  isRecommended = false,
+}: {
+  template: TaskTemplate;
+  onSelect: (t: TaskTemplate) => void;
+  isRecommended?: boolean;
+}) {
   const taskCount = (template.tasks || []).length;
   const highCount = (template.tasks || []).filter((t) => t.priority === 'high').length;
   const conditionalCount = (template.tasks || []).filter((t) => t.condition_key).length;
@@ -680,8 +822,10 @@ function TemplateCard({ template, onSelect }: { template: TaskTemplate; onSelect
       className={cn(
         'w-full text-left rounded-xl border p-4 transition-all',
         'hover:border-blue-400 hover:shadow-md hover:bg-blue-50/50 dark:hover:bg-blue-900/10 dark:hover:border-blue-600',
-        'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50',
         'active:scale-[0.99]',
+        isRecommended
+          ? 'border-blue-300 dark:border-blue-700 bg-blue-50/40 dark:bg-blue-900/10 ring-1 ring-blue-200 dark:ring-blue-800'
+          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50',
       )}
     >
       <div className="flex items-start gap-3">
@@ -693,6 +837,11 @@ function TemplateCard({ template, onSelect }: { template: TaskTemplate; onSelect
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
               {template.name}
             </h3>
+            {isRecommended && (
+              <span className="flex-shrink-0 inline-block rounded-md bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase tracking-wide">
+                추천
+              </span>
+            )}
             <span className="flex-shrink-0 inline-block rounded-md bg-blue-50 dark:bg-blue-900/50 px-1.5 py-0.5 text-[9px] font-semibold text-blue-600 dark:text-blue-300">
               {BU_TITLES[template.bu_code]}
             </span>

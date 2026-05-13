@@ -82,6 +82,7 @@ import {
   frontendFinancialToDb,
 } from '@/features/erp/utils';
 import { UnifiedProjectModal } from '@/features/erp/components/UnifiedProjectModal';
+import { ProjectPnlReportModal } from '@/features/erp/components/ProjectPnlReportModal';
 import { ProjectDetailPanel } from '@/features/erp/components/ProjectDetailPanel';
 import { DashboardView } from '@/features/erp/components/DashboardView';
 import { AdminResourceView } from '@/features/erp/components/AdminResourceView';
@@ -376,6 +377,27 @@ function HomePage() {
   const [isEditExternalWorkerModalOpen, setEditExternalWorkerModalOpen] = useState<any | null>(null);
   const [deleteExternalWorkerId, setDeleteExternalWorkerId] = useState<number | null>(null);
   const [templateSelectorProjectId, setTemplateSelectorProjectId] = useState<number | null>(null);
+  const [pnlReportTarget, setPnlReportTarget] = useState<{ projectId: number; projectName: string; endDate?: string } | null>(null);
+
+  /** [SOP] 표준 P&L 회고 태스크인지 판별. 사용자 임의 task는 영향 없음 */
+  const isStandardPnlTask = useCallback((title: string): boolean => {
+    return /\[SOP\][^]*P&L/i.test(title);
+  }, []);
+
+  // [SOP] 표준 P&L 회고 태스크 클릭 시 일반 task 모달 대신 표준 P&L 보고서 모달로 자동 전환.
+  // 일반 사용자 임의 task는 영향이 없으며, [SOP] 마크가 있는 P&L 태스크에만 적용됨.
+  useEffect(() => {
+    if (!isEditTaskModalOpen) return;
+    if (!isStandardPnlTask(isEditTaskModalOpen.title)) return;
+    const targetProject = projects.find((p) => p.id === isEditTaskModalOpen.projectId);
+    if (!targetProject) return;
+    setPnlReportTarget({
+      projectId: Number(targetProject.id),
+      projectName: targetProject.name,
+      endDate: targetProject.endDate,
+    });
+    setEditTaskModalOpen(null);
+  }, [isEditTaskModalOpen, projects, isStandardPnlTask]);
 
   // Android 하드웨어 뒤로가기 버튼 처리
   useEffect(() => {
@@ -399,6 +421,7 @@ function HomePage() {
       if (deleteExternalWorkerId) { setDeleteExternalWorkerId(null); return true; }
       if (modalProjectId) { setModalProjectId(null); return true; }
       if (templateSelectorProjectId) { setTemplateSelectorProjectId(null); return true; }
+      if (pnlReportTarget) { setPnlReportTarget(null); return true; }
       if (mobileMenuOpen) { setMobileMenuOpen(false); return true; }
 
       // 2. 대시보드가 아닌 뷰에 있으면 대시보드로 이동
@@ -1802,6 +1825,18 @@ function HomePage() {
           message="정말로 이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
           onConfirm={() => handleDeleteProject(deleteProjectId)}
           onCancel={() => setDeleteProjectId(null)}
+        />
+      )}
+      {pnlReportTarget && (
+        <ProjectPnlReportModal
+          projectId={pnlReportTarget.projectId}
+          projectName={pnlReportTarget.projectName}
+          projectEndDate={pnlReportTarget.endDate}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
+          }}
+          onClose={() => setPnlReportTarget(null)}
         />
       )}
       {isOrgMemberModalOpen && (

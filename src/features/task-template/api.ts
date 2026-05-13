@@ -84,6 +84,8 @@ export interface GenerateTaskItem {
   due_date: string;
   priority: string;
   assignee_role?: string;
+  assignee_id?: string;
+  assignee?: string;
   manual_id?: number | null;
 }
 
