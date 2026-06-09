@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       .from('app_users')
       .select('id, name, email, role, bu_code, position')
       .neq('role', 'artist')
+      .eq('status', 'active') // 퇴사자(retired) 제외 - 전체 근무현황 (버그리포트 #38)
       .order('bu_code')
       .order('name');
 
