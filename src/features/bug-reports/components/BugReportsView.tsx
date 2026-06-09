@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const BUG_REPORT_STATUSES: BugReportStatus[] = ['pending', 'on_hold', 'resolved'];
+const BUG_REPORT_STATUSES: BugReportStatus[] = ['pending', 'on_hold', 'resolved', 'no_action'];
 
 const STATUS_CONFIG: Record<
   BugReportStatus,
@@ -46,6 +46,13 @@ const STATUS_CONFIG: Record<
     bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
     borderColor: 'border-emerald-200 dark:border-emerald-800',
     headerBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+  },
+  no_action: {
+    label: '처리 불필요',
+    color: 'text-zinc-500 dark:text-zinc-400',
+    bgColor: 'bg-zinc-50 dark:bg-zinc-900/20',
+    borderColor: 'border-zinc-200 dark:border-zinc-700',
+    headerBg: 'bg-zinc-100 dark:bg-zinc-800/40',
   },
 };
 
@@ -194,6 +201,7 @@ function KanbanColumn({
             {STATUS_CONFIG[status].label === '접수됨' && '접수 대기 중인 리포트가 없습니다'}
             {STATUS_CONFIG[status].label === '보류' && '보류 중인 리포트가 없습니다'}
             {STATUS_CONFIG[status].label === '처리완료' && '처리 완료된 리포트가 없습니다'}
+            {STATUS_CONFIG[status].label === '처리 불필요' && '처리 불필요로 분류된 리포트가 없습니다'}
           </div>
         ) : (
           reports.map((report) => (
@@ -218,6 +226,7 @@ export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
     pending: '접수 대기 중인 리포트가 없습니다',
     on_hold: '보류 중인 리포트가 없습니다',
     resolved: '처리 완료된 리포트가 없습니다',
+    no_action: '처리 불필요로 분류된 리포트가 없습니다',
   };
 
   const reportsByStatus = useMemo(
@@ -225,6 +234,7 @@ export function BugReportsView({ isAdmin = false }: BugReportsViewProps) {
       pending: bugReports.filter((r) => r.status === 'pending'),
       on_hold: bugReports.filter((r) => r.status === 'on_hold'),
       resolved: bugReports.filter((r) => r.status === 'resolved'),
+      no_action: bugReports.filter((r) => r.status === 'no_action'),
     }),
     [bugReports]
   );

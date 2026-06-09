@@ -38,7 +38,7 @@ const BU_DISPLAY_NAMES: Record<string, string> = {
 
 const schema = z.object({
   target_user_id: z.string().min(1, '대상자를 선택해주세요'),
-  leave_type: z.enum(['annual', 'half_am', 'half_pm', 'compensatory', 'special']),
+  leave_type: z.enum(['annual', 'half_am', 'half_pm', 'compensatory', 'comp_half_am', 'comp_half_pm', 'special']),
   start_date: z.string().min(1, '시작일을 입력해주세요'),
   end_date: z.string().min(1, '종료일을 입력해주세요'),
   reason: z.string().min(1, '사유를 입력해주세요'),
@@ -85,7 +85,7 @@ export function AdminLeaveUse({ open, onOpenChange, onSuccess, preselectedUser }
 
   const leaveType = watch('leave_type');
   const startDate = watch('start_date');
-  const isHalfDay = leaveType === 'half_am' || leaveType === 'half_pm';
+  const isHalfDay = leaveType === 'half_am' || leaveType === 'half_pm' || leaveType === 'comp_half_am' || leaveType === 'comp_half_pm';
 
   // 반차 선택 시 종료일 = 시작일 자동 설정
   useEffect(() => {

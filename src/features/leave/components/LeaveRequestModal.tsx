@@ -36,7 +36,7 @@ import type { LeaveRequestFormData, LeaveRequestType, LeaveBalanceSummary } from
 import { LEAVE_REQUEST_TYPE_LABELS, getLeaveTypeFromRequestType, getDaysUsed } from '../types';
 
 const schema = z.object({
-  leave_type: z.enum(['annual', 'half_am', 'half_pm', 'compensatory', 'special']),
+  leave_type: z.enum(['annual', 'half_am', 'half_pm', 'compensatory', 'comp_half_am', 'comp_half_pm', 'special']),
   start_date: z.string().min(1, '시작일을 선택해주세요'),
   end_date: z.string().min(1, '종료일을 선택해주세요'),
   reason: z.string().min(1, '사유를 입력해주세요'),
@@ -78,7 +78,7 @@ export function LeaveRequestModal({
   const startDate = watch('start_date');
   const endDate = watch('end_date');
 
-  const isHalfDay = leaveType === 'half_am' || leaveType === 'half_pm';
+  const isHalfDay = leaveType === 'half_am' || leaveType === 'half_pm' || leaveType === 'comp_half_am' || leaveType === 'comp_half_pm';
   const daysUsed = startDate && endDate ? getDaysUsed(leaveType, startDate, endDate) : 0;
 
   const balanceType = getLeaveTypeFromRequestType(leaveType);
@@ -105,7 +105,7 @@ export function LeaveRequestModal({
 
   const handleLeaveTypeChange = (value: LeaveRequestType) => {
     setValue('leave_type', value);
-    if (value === 'half_am' || value === 'half_pm') {
+    if (value === 'half_am' || value === 'half_pm' || value === 'comp_half_am' || value === 'comp_half_pm') {
       if (startDate) {
         setValue('end_date', startDate);
       }

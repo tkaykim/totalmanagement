@@ -125,11 +125,11 @@ export function calculateWorkingDays(startDate: Date, endDate: Date): number {
  * 휴가 유형에 따른 사용 일수를 계산합니다.
  */
 export function calculateDaysUsed(
-  leaveType: 'annual' | 'half_am' | 'half_pm' | 'compensatory' | 'special',
+  leaveType: 'annual' | 'half_am' | 'half_pm' | 'compensatory' | 'comp_half_am' | 'comp_half_pm' | 'special',
   startDate: Date,
   endDate: Date
 ): number {
-  if (leaveType === 'half_am' || leaveType === 'half_pm') {
+  if (leaveType === 'half_am' || leaveType === 'half_pm' || leaveType === 'comp_half_am' || leaveType === 'comp_half_pm') {
     return 0.5;
   }
   

@@ -29,7 +29,7 @@ export type WorkRequestType = 'external_work' | 'remote_work' | 'overtime' | 'at
 
 // Leave Management Types
 export type LeaveType = 'annual' | 'compensatory' | 'special';
-export type LeaveRequestType = 'annual' | 'half_am' | 'half_pm' | 'compensatory' | 'special';
+export type LeaveRequestType = 'annual' | 'half_am' | 'half_pm' | 'compensatory' | 'comp_half_am' | 'comp_half_pm' | 'special';
 export type LeaveGrantType = 'auto_monthly' | 'auto_yearly' | 'manual' | 'compensatory_approved';
 
 export interface ProjectAsset {

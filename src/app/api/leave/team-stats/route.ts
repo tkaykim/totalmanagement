@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       }
       if (r.leave_type === 'annual' || r.leave_type === 'half_am' || r.leave_type === 'half_pm') {
         cur.annual += days;
-      } else if (r.leave_type === 'compensatory') {
+      } else if (r.leave_type === 'compensatory' || r.leave_type === 'comp_half_am' || r.leave_type === 'comp_half_pm') {
         cur.compensatory += days;
       } else if (r.leave_type === 'special') {
         cur.special += days;

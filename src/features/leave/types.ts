@@ -2,7 +2,7 @@ import type { ApprovalStatus, BU } from '@/types/database';
 
 // Leave Types
 export type LeaveType = 'annual' | 'compensatory' | 'special';
-export type LeaveRequestType = 'annual' | 'half_am' | 'half_pm' | 'compensatory' | 'special';
+export type LeaveRequestType = 'annual' | 'half_am' | 'half_pm' | 'compensatory' | 'comp_half_am' | 'comp_half_pm' | 'special';
 export type LeaveGrantType = 'auto_monthly' | 'auto_yearly' | 'manual' | 'compensatory_approved';
 
 export { ApprovalStatus };
@@ -161,6 +161,8 @@ export const LEAVE_REQUEST_TYPE_LABELS: Record<LeaveRequestType, string> = {
   half_am: '오전반차',
   half_pm: '오후반차',
   compensatory: '대체휴무',
+  comp_half_am: '대체휴무(오전)',
+  comp_half_pm: '대체휴무(오후)',
   special: '특별휴가',
 };
 
@@ -181,14 +183,17 @@ export function getLeaveTypeFromRequestType(requestType: LeaveRequestType): Leav
   if (requestType === 'half_am' || requestType === 'half_pm' || requestType === 'annual') {
     return 'annual';
   }
+  if (requestType === 'comp_half_am' || requestType === 'comp_half_pm') {
+    return 'compensatory';
+  }
   return requestType as LeaveType;
 }
 
 export function getDaysUsed(leaveType: LeaveRequestType, startDate: string, endDate: string): number {
-  if (leaveType === 'half_am' || leaveType === 'half_pm') {
+  if (leaveType === 'half_am' || leaveType === 'half_pm' || leaveType === 'comp_half_am' || leaveType === 'comp_half_pm') {
     return 0.5;
   }
-  
+
   const start = new Date(startDate);
   const end = new Date(endDate);
   let days = 0;

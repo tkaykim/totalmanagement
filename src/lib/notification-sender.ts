@@ -439,6 +439,8 @@ export async function notifyLeaveRequestApproved(
     half_am: '오전반차',
     half_pm: '오후반차',
     compensatory: '대체휴무',
+    comp_half_am: '대체휴무(오전)',
+    comp_half_pm: '대체휴무(오후)',
     special: '특별휴가',
   }[leaveType] || leaveType;
 
@@ -468,6 +470,8 @@ export async function notifyLeaveRequestRejected(
     half_am: '오전반차',
     half_pm: '오후반차',
     compensatory: '대체휴무',
+    comp_half_am: '대체휴무(오전)',
+    comp_half_pm: '대체휴무(오후)',
     special: '특별휴가',
   }[leaveType] || leaveType;
 
@@ -687,6 +691,8 @@ export async function notifyLeaveRequestCreated(
     half_am: '오전반차',
     half_pm: '오후반차',
     compensatory: '대체휴무',
+    comp_half_am: '대체휴무(오전)',
+    comp_half_pm: '대체휴무(오후)',
     special: '특별휴가',
   };
   const label = typeLabel[leaveType] || leaveType;
