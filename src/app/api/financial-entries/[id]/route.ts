@@ -30,6 +30,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // 서버사이드 validation: due_date를 명시적으로 null로 설정하는 것 차단
+    if ('due_date' in body && !body.due_date) {
+      return NextResponse.json({ error: '납기일(due_date)은 필수 입력 항목입니다.' }, { status: 400 });
+    }
+
     const { data, error } = await supabase
       .from('financial_entries')
       .update({

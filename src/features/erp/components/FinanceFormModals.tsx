@@ -1031,6 +1031,7 @@ export function EditFinanceModal({
                     name: form.name,
                     amount: form.amount,
                     date: form.date,
+                    dueDate: form.dueDate,
                     status: form.status,
                     partnerId: form.partnerId,
                     paymentMethod: form.paymentMethod,
