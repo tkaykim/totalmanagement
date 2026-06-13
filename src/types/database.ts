@@ -154,6 +154,7 @@ export interface FinancialEntry {
   name: string;
   amount: number;
   occurred_at: string;
+  due_date?: string | null; // 납기일 (nullable, 신규 저장 시 필수)
   status: FinancialStatus;
   memo?: string;
   partner_id?: number | null;

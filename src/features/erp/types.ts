@@ -28,6 +28,7 @@ export type FinancialEntry = {
   name: string;
   amount: number;
   date: string;
+  due_date?: string | null;
   status: FinancialEntryStatus;
   partner_id?: number | null;
   partner_company_id?: number | null;

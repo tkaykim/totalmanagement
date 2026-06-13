@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
         name: body.name,
         amount: body.amount,
         occurred_at: body.occurred_at,
+        due_date: body.due_date || null,
         status: body.status || 'planned',
         memo: body.memo,
         partner_id: body.partner_id || null,

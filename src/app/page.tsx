@@ -955,6 +955,7 @@ function HomePage() {
     name: string;
     amount: string;
     date: string;
+    dueDate: string;
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
@@ -964,6 +965,7 @@ function HomePage() {
     if (!payload.cat) missingFields.push('구분');
     if (!payload.name) missingFields.push('항목명');
     if (!payload.amount) missingFields.push('금액');
+    if (!payload.dueDate) missingFields.push('납기일');
 
     if (missingFields.length > 0) {
       return `다음 항목을 입력해주세요: ${missingFields.join(', ')}`;
@@ -983,6 +985,7 @@ function HomePage() {
         name: payload.name,
         amount: amount,
         date: payload.date,
+        due_date: payload.dueDate,
         status: payload.status,
         partner_id: payload.partnerId ? Number(payload.partnerId) : null,
         payment_method: payload.paymentMethod || null,
@@ -1006,6 +1009,7 @@ function HomePage() {
     name: string;
     amount: string;
     date: string;
+    dueDate: string;
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
@@ -1024,6 +1028,7 @@ function HomePage() {
         name: payload.name,
         amount: amount,
         occurred_at: payload.date || today,
+        due_date: payload.dueDate || null,
         status: payload.status,
         partner_id: payload.partnerId ? Number(payload.partnerId) : null,
         payment_method: payload.paymentMethod || null,

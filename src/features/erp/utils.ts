@@ -254,6 +254,7 @@ export function frontendFinancialToDb(f: {
   name: string;
   amount: number;
   date: string;
+  due_date?: string | null;
   status?: 'planned' | 'paid' | 'canceled';
   partner_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
@@ -266,6 +267,7 @@ export function frontendFinancialToDb(f: {
   name: string;
   amount: number;
   occurred_at: string;
+  due_date?: string | null;
   status: 'planned' | 'paid' | 'canceled';
   partner_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
@@ -280,6 +282,7 @@ export function frontendFinancialToDb(f: {
     name: f.name,
     amount: f.amount,
     occurred_at: f.date || today,
+    due_date: f.due_date || null,
     status: f.status || 'planned',
     partner_id: f.partner_id || null,
     payment_method: f.payment_method || null,

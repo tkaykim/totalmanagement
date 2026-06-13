@@ -382,6 +382,7 @@ export function CreateFinanceModal({
     name: string;
     amount: string;
     date: string;
+    dueDate: string;
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
@@ -395,7 +396,7 @@ export function CreateFinanceModal({
     ? projects.find((p) => p.id === defaultProjectId)
     : null;
   const hasPreselectedProject = !!defaultProjectId;
-  
+
   const [form, setForm] = useState({
     projectId: defaultProject?.id ?? '',
     bu: defaultProject?.bu ?? 'GRIGO',
@@ -403,6 +404,7 @@ export function CreateFinanceModal({
     name: '',
     amount: '',
     date: '',
+    dueDate: '',
     status: 'planned' as FinancialEntryStatus,
     partnerEntityFilter: '' as EntityType,
     partnerId: '',
@@ -549,6 +551,15 @@ export function CreateFinanceModal({
                 />
               </FormField>
             </div>
+
+          {/* 납기일 */}
+          <FormField label="납기일 *" icon={Calendar}>
+            <Input
+              type="date"
+              value={form.dueDate}
+              onChange={(v) => setForm((prev) => ({ ...prev, dueDate: v }))}
+            />
+          </FormField>
 
           {/* 상태 선택 */}
           <FormField label="상태">
@@ -706,6 +717,7 @@ export function EditFinanceModal({
     name: string;
     amount: string;
     date: string;
+    dueDate: string;
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
@@ -726,6 +738,7 @@ export function EditFinanceModal({
     name: entry.name,
     amount: String(entry.amount),
     date: entry.date,
+    dueDate: entry.due_date || '',
     status: entry.status,
     partnerEntityFilter: (partnerEntity?.entity_type || '') as EntityType,
     partnerId: partnerId,
@@ -864,6 +877,15 @@ export function EditFinanceModal({
               />
             </FormField>
           </div>
+
+          {/* 납기일 */}
+          <FormField label="납기일 *" icon={Calendar}>
+            <Input
+              type="date"
+              value={form.dueDate}
+              onChange={(v) => setForm((prev) => ({ ...prev, dueDate: v }))}
+            />
+          </FormField>
 
           {/* 상태 선택 */}
           <FormField label="상태">

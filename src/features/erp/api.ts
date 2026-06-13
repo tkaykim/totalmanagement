@@ -180,6 +180,7 @@ export async function createFinancialEntry(data: {
   name: string;
   amount: number;
   occurred_at: string;
+  due_date?: string | null;
   status?: string;
   memo?: string;
   created_by?: string;
