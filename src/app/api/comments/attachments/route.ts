@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 const BUCKET_NAME = 'comment-attachments';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -17,6 +18,9 @@ const ALLOWED_TYPES = [
 
 // 첨부파일 업로드
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 
@@ -124,6 +128,9 @@ export async function POST(request: NextRequest) {
 
 // 첨부파일 삭제
 export async function DELETE(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const pureClient = await createPureClient();

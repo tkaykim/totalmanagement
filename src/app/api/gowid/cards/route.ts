@@ -18,6 +18,7 @@ export async function GET() {
     return NextResponse.json({ data: data ?? [] });
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Gowid cards GET error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data });
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Gowid cards POST error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -98,6 +100,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ data });
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Gowid cards PUT error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -126,6 +129,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Gowid cards DELETE error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

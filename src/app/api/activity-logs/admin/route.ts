@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import { kstToUTCISOString } from '@/lib/timezone.server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 /**
  * 관리자 전용: 특정 사용자의 활동 로그 조회
@@ -8,6 +9,9 @@ import { kstToUTCISOString } from '@/lib/timezone.server';
  * - userId 파라미터 필수
  */
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const { data: { user } } = await authSupabase.auth.getUser();

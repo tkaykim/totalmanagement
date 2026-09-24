@@ -1,5 +1,6 @@
-import { createClient, createPureClient } from '@/lib/supabase/server';
+import { createPureClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 const GOWID_BASE_URL = 'https://openapi.gowid.com';
 
@@ -32,6 +33,8 @@ export async function gowidFetch<T>(
 }
 
 export interface AuthContext {
+  /** 재직 직원 여부(spec R1). false면 `requireAuth`가 'Forbidden'을 던진다. */
+  active: boolean;
   userId: string;
   role: string;
   buCode: string | null;
@@ -39,20 +42,23 @@ export interface AuthContext {
   buGowidUserIds: number[];
 }
 
+/**
+ * 세션 → `app_users` → 재직 확인(공통 가드 `requireActiveStaff`, spec R1·R2).
+ * - 세션 없음·`app_users` 행 없음 → null (`requireAuth`가 'Unauthorized' → 401)
+ * - 재직 직원 아님 → `active: false` (`requireAuth`가 'Forbidden' → 403). 매핑 조회는 하지 않는다.
+ */
 export async function getAuthContext(): Promise<AuthContext | null> {
-  const authSupabase = await createClient();
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) return null;
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) {
+    if (guard.status === 403) {
+      return { active: false, userId: '', role: '', buCode: null, mappedGowidUserIds: [], buGowidUserIds: [] };
+    }
+    if (guard.status === 401) return null;
+    throw new Error('Failed to load user');
+  }
+  const { user, appUser } = guard;
 
   const supabase = await createPureClient();
-
-  const { data: appUser } = await supabase
-    .from('app_users')
-    .select('role, bu_code')
-    .eq('id', user.id)
-    .single();
-
-  if (!appUser) return null;
 
   const { data: selfMapping } = await supabase
     .from('gowid_user_mapping')
@@ -80,6 +86,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
   }
 
   return {
+    active: true,
     userId: user.id,
     role: appUser.role,
     buCode: appUser.bu_code,
@@ -90,6 +97,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 
 export function requireAuth(ctx: AuthContext | null): AuthContext {
   if (!ctx) throw new Error('Unauthorized');
+  if (!ctx.active) throw new Error('Forbidden');
   return ctx;
 }
 

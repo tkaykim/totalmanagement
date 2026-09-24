@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import type { AppUser } from '@/lib/permissions';
+import { canAccessExternalFeature } from '@/lib/permissions';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -18,6 +19,11 @@ async function getCurrentUser(): Promise<AppUser | null> {
 }
 
 export async function GET(request: NextRequest) {
+  // R27: 아티스트·파트너용 기능은 누구에게나 막는다(코드·테이블은 남긴다).
+  if (!canAccessExternalFeature()) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
@@ -54,6 +60,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // R27: 아티스트·파트너용 기능은 누구에게나 막는다(코드·테이블은 남긴다).
+  if (!canAccessExternalFeature()) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const supabase = await createPureClient();
     const body = await request.json();

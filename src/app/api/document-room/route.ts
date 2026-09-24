@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 const BUCKET_NAME = 'document-room';
 const SIGNED_URL_EXPIRES_IN = 3600;
@@ -23,6 +24,9 @@ export interface DocumentRoomFileRow {
 
 /** GET: 목록 조회 (카테고리 필터 optional) */
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const { data: { user } } = await authSupabase.auth.getUser();
@@ -70,6 +74,9 @@ export async function GET(request: NextRequest) {
 
 /** POST: 파일 업로드 (formData: file, category) */
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const { data: { user } } = await authSupabase.auth.getUser();
