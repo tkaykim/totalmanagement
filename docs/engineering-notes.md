@@ -3,25 +3,25 @@
 ## 운영 DB와 코드가 서로 다른 시점에 있다
 
 - **증상**
-  - 운영 DB에는 사업부 `DEETZ`, `financial_entries.entry_scope`·`counterparty_bu_code`, `projects.brand_bu_code`·`delivery_bu_code`·`artist_management_bu_code`가 있다.
-  - 그런데 코드 어디에도 이 칸을 쓰는 곳이 없다.
-  - 운영 배포본은 `main`의 `d504793`(2026-06-09)이다.
+  - 운영 배포본(`main` `d504793`, 2026-06-09)은 사업부 `DEETZ`, `entry_scope`·`counterparty_bu_code`, 사업부 역할 칸 3개를 모른다. 운영 DB에는 이 칸이 모두 있다.
+  - 반대로 레포의 봉인 SQL(`updated_by`, 변경 기록 테이블, 트리거, 새 RLS)은 운영 DB에 아직 없다.
 - **원인**
-  - 2026-08-10에 운영 DB에 마이그레이션을 직접 적용했다.
-  - 그 화면 코드는 로컬 브랜치 `wip/deetz-crossbu-accounting-ui-20260924`(push 안 됨, 검증 안 됨)에만 있다.
+  - 2026-08-10에 운영 DB에 마이그레이션을 직접 적용했고, 그 화면 코드는 한동안 브랜치에만 있었다.
+  - 봉인은 코드 배포(승인 ①)와 DB 적용(승인 ②)을 나눠 반영하도록 설계되어 있다.
 - **대응**
-  - 스키마를 판단할 때는 레포 SQL이 아니라 운영 DB를 직접 조회한다.
-  - 레포 `supabase/migrations/`는 31개뿐이고 운영 적용 이력은 약 130개다. 레포 파일로 운영 스키마를 재구성하면 틀린다.
-  - `src/types/database.ts`도 운영 스키마보다 뒤처져 있다.
+  - 스키마를 판단할 때는 운영 DB를 직접 조회한다. `supabase/baseline/20260924_prod_snapshot.sql`은 2026-09-24 시점 사본이고, `supabase/migrations/`의 옛 31개 파일로는 운영 스키마를 재구성할 수 없다.
+  - 봉인 SQL이 만든 칸·테이블에 의존하는 서버 코드는 반드시 `isAuditV2Enabled()` 뒤에 둔다. 스위치 없이 `updated_by`를 쓰면 봉인 전 DB에서 PostgREST가 "칸 없음" 오류를 내고 저장이 실패한다.
+  - 확인 방법: `ERP_AUDIT_V2`를 끈 채 매출·지출 수정 API를 봉인 전 DB에 불러 200이 나오는지 본다.
 
 ## 프로젝트 삭제는 딸린 매출·지출을 같이 지운다
 
-- **증상**: 프로젝트를 지우면 그 프로젝트의 매출·지출 행이 흔적 없이 사라진다. 할일, 프로젝트 문서, 법인카드 연결, 손익 보고도 함께 사라진다.
+- **증상**: 봉인 SQL이 적용되지 않은 DB에서 프로젝트를 지우면 그 프로젝트의 매출·지출 행이 흔적 없이 사라진다. 할일, 프로젝트 문서, 법인카드 연결, 손익 보고도 함께 사라진다.
 - **원인**: 외래키가 `ON DELETE CASCADE`다. 대상은 `financial_entries`, `project_tasks`, `project_documents`, `gowid_expense_project_link`, `project_pnl_reports`다.
 - **대응**
+  - ERP 서버의 프로젝트 삭제는 매출·지출이 한 건이라도 있으면 삭제 호출 전에 409를 준다. 하지만 reactstudio.kr이나 SQL로 지우는 경로는 봉인 전까지 막히지 않는다.
+  - 봉인 SQL의 `projects_guard_delete`는 BEFORE DELETE 트리거라 외래키 연쇄 삭제보다 먼저 돈다. 그래서 연쇄 삭제가 시작되기 전에 전체 삭제가 거부된다. 외래키를 AFTER 트리거나 앱 코드로 흉내 내면 이 순서가 깨진다.
   - 실수로 만든 빈 프로젝트가 아니면 삭제하지 말고 '보류'로 바꾼다.
-  - `paid`·`canceled` 매출·지출은 삭제 금지(대표 확정)다. 프로젝트 삭제가 이 행들을 함께 지운다는 점을 삭제 기능 작업 때 반드시 고려한다.
-  - 확인 방법: 테스트 프로젝트에 `paid` 행을 하나 붙이고 삭제를 호출한 뒤, 그 행이 남는지 조회한다.
+  - 확인 방법: 테스트 프로젝트에 금액 0 `paid` 행을 하나 붙이고 삭제를 호출한 뒤, 409와 함께 그 행이 남는지 조회한다.
 
 ## 사람 행은 지우지 않는다
 
@@ -29,29 +29,54 @@
 - **원인**: `ON DELETE CASCADE`가 걸려 있다.
 - **대응**: 퇴사는 `status='retired'`로만 처리한다.
 
-## 화면은 막아도 데이터는 열려 있다
+## 서버는 막아도 DB 직접 조회는 봉인 전까지 열려 있다
 
-- **증상**: 퇴사자나 사업부 없는 가입자는 메인 화면에서 쫓겨난다. 그래도 같은 세션으로 `/api/financial-entries`를 부르거나 PostgREST로 `financial_entries`를 직접 조회하면 데이터가 나온다.
-- **원인**: 퇴사·사업부 확인은 `app/page.tsx`의 클라이언트 코드에만 있다. RLS 정책은 `authenticated`면 전부 허용한다.
+- **증상**: 퇴사자·승인 대기 계정은 서버 API에서 403을 받는다. 그래도 같은 세션으로 PostgREST에서 `financial_entries`를 직접 조회하면 봉인 전 DB에서는 데이터가 나온다.
+- **원인**: 운영 DB의 핵심 테이블 RLS가 `authenticated` 전권이다. 서버 가드는 서비스 권한 키 경로만 막는다.
 - **대응**
-  - 권한 작업을 할 때는 화면 조건이 아니라 서버 라우트와 RLS 둘 다에서 막힌 것을 확인한다.
-  - 확인 방법: 퇴사 처리한 테스트 계정으로 API를 직접 호출해 401·403이 나오는지 본다.
+  - 권한 작업을 할 때는 서버 라우트와 RLS 둘 다에서 막힌 것을 확인한다. RLS 규칙은 `tests/db`로, 서버 규칙은 `tests/unit`·`tests/api`로 검사한다.
+  - 확인 방법: 퇴사 처리한 테스트 계정으로 API를 직접 호출해 403이 나오는지, 봉인 DB에서 같은 세션의 PostgREST 조회가 0행인지 본다.
+  - 봉인 뒤에도 `portfolio_items`·`clients`·`partners`·`contracts` 등 봉인 5개 밖 테이블은 `authenticated` 전권으로 남는다.
+
+## 재직 판정이 두 가지다
+
+- **증상**: 같은 사용자 객체로 `canViewFinanceEntry`는 거부하는데 `canEditProject`는 허용할 수 있다.
+- **원인**: `permissions.ts`의 새 판정 함수(재무·변경 기록·사람 판정, `canView*`)는 `status==='active'`를 요구하고 `status`가 없으면 거부한다. 기존 이름의 프로젝트·할일·메뉴 판정은 `status`를 넘기지 않는 기존 화면 호출부 때문에 `status`가 **명시적으로** `active`가 아닐 때만 거부한다.
+- **대응**
+  - 서버에서는 `requireActiveStaff()`가 돌려준 `appUser`(항상 `status` 포함)를 판정 함수에 넘긴다. 직접 만든 `{ id, role, bu_code }` 객체를 넘기면 새 함수는 모두 거부한다.
+  - 화면 어댑터(`src/lib/financePermissions.ts`)는 `status`가 없는 화면 사용자를 재직으로 보고 판정한다. 화면 판정은 보안 경계가 아니다.
+
+## 변경 기록의 변경자는 `updated_by` 한 칸으로 전달된다
+
+- **증상**: ERP 화면에서 고친 매출·지출인데 변경 기록에 변경자 없이 "외부"로 남는다.
+- **원인**
+  - 서버는 서비스 권한 키로 쓰므로 트리거가 로그인 사용자를 모른다. 서버가 `updated_by`에 사용자를 넣어야 트리거가 `erp`로 기록한다.
+  - 트리거는 기록한 뒤 `updated_by`를 비운다. `NEW.updated_by`가 비었거나 `OLD.updated_by`와 같으면 `external`로 본다.
+  - `ERP_AUDIT_V2`가 꺼져 있으면 서버가 `updated_by`를 쓰지 않는다.
+- **대응**
+  - 서버의 모든 매출·지출·직원 쓰기(법인카드 연결 이동·해제, 가입 승인·거절 포함)에 `isAuditV2Enabled()`일 때 `updated_by`를 넣는다. 한 경로라도 빠지면 그 경로의 변경은 "외부"로 남는다.
+  - 봉인 SQL 적용부터 `ERP_AUDIT_V2=1` 재배포까지의 변경은 모두 "외부"로 남는다. 적용 직후 바로 켠다.
+
+## 운영 적용 스크립트는 원본 SQL의 복사본이다
+
+- **증상**: 봉인 마이그레이션만 고쳤는데 `npm test`의 DB 테스트가 실패한다.
+- **원인**: `supabase/apply/20260925_seal_apply.sql`은 봉인 마이그레이션과 데이터 보정 SQL을 글자 그대로 품고 있고, 테스트가 두 본문이 같은지 비교한다. Windows 체크아웃은 줄바꿈이 CRLF로 바뀔 수 있어 테스트가 비교 전에 LF로 맞춘다.
+- **대응**: 원본 SQL을 고치면 적용 스크립트 안의 해당 본문도 같은 커밋에서 고친다. 되돌리기 스크립트도 함께 확인한다.
+
+## PGlite DB 테스트는 Supabase 흉내 객체에 기댄다
+
+- **증상**: 기준선이나 봉인 SQL을 PGlite에 올릴 때 `auth.uid()`·역할 `authenticated` 없음 오류가 난다.
+- **원인**: PGlite는 순수 Postgres라 Supabase가 만드는 `auth` 스키마 함수와 역할이 없다.
+- **대응**: `scripts/schema/pglite-stubs.sql`이 `auth.users`, `auth.uid()`·`auth.jwt()`·`auth.role()`, 역할 `anon`·`authenticated`·`service_role`과 grant를 만든다. SQL이 새 Supabase 전용 객체를 쓰면 이 파일에 흉내를 추가한다. 흉내가 운영과 다르게 동작하면 테스트가 통과해도 운영에서 틀릴 수 있다.
 
 ## Gowid 라우트는 인증 검사가 파일 밖에 있다
 
-- `gowid/*` 라우트 파일에는 `auth.getUser`가 보이지 않는다.
-- 로그인 확인은 `gowid/_lib/gowid-client.ts`의 `getAuthContext` → `requireAuth`에서 한다.
-- `requireAuth`는 로그인이 안 되어 있으면 예외를 던지고, 라우트의 catch가 401로 바꾼다.
-- 그래서 "인증 없는 라우트"를 grep으로 찾을 때 gowid는 빼고 센다.
-- 리더용 필터 코드는 조건이 항상 참이라, 리더는 사실상 전체 카드 내역을 본다.
-
-## 할일 수정에서 사업부가 옛 프로젝트 기준으로 들어간다
-
-- **증상**: 할일을 다른 사업부 프로젝트로 옮겨도 할일의 `bu_code`가 원래 프로젝트 값으로 남는다.
-- **원인**: `PATCH /api/tasks/[id]`는 수정 전 할일이 속한 프로젝트를 읽는다. 요청에 `project_id`나 `bu_code`가 있으면 그 옛 프로젝트의 `bu_code`로 덮어쓴다.
-- **대응**
-  - 프로젝트 이동을 고칠 때는 새 `project_id`의 프로젝트를 읽어 `bu_code`를 맞춘다.
-  - 확인 방법: 이동 후 `project_tasks.bu_code`가 새 프로젝트의 `bu_code`와 같은지 조회한다.
+- 대부분의 `gowid/*` 라우트 파일에는 `requireActiveStaff`가 보이지 않는다.
+- 확인은 `gowid/_lib/gowid-client.ts`의 `getAuthContext` → `requireAuth`에서 한다. `getAuthContext`가 공통 재직 가드를 부른다.
+  - 세션·`app_users` 행이 없으면 `requireAuth`가 `Unauthorized`를 던지고, 라우트의 catch가 401로 바꾼다.
+  - 재직 직원이 아니면 `Forbidden`을 던지고 catch가 403으로 바꾼다. 새 gowid 라우트의 catch가 이 두 메시지를 모두 처리하지 않으면 500이 나간다.
+- 그래서 "가드 없는 라우트"를 grep으로 찾을 때 gowid는 따로 본다.
+- 리더용 필터 코드는 조건이 항상 참이라, 리더는 사실상 전체 카드 내역을 본다(리더 전사 보기 규칙과 결과는 같다).
 
 ## UTC와 KST
 
@@ -83,6 +108,7 @@
 
 - Supabase/PostgREST는 `range` 없이 `select`하면 1,000행에서 조용히 자른다.
 - 2026-09-24 기준 재무 665행, 프로젝트 812행, 알림 14,216행이다. 이미 1,000행을 넘었거나 곧 넘는다. 집계 쿼리는 페이지를 돌거나 DB 쪽 집계를 쓴다.
+- 매출·지출 라우트는 `financial-entries/_lib/finance-access.ts`의 `fetchAllRows`로 `range`를 돌며 끝까지 읽는다. 일반 직원의 보기 범위는 전 프로젝트를 페이지로 읽어 판정한 id 집합으로 거른다.
 - `.in('id', [...])`에 id를 수백 개 넣으면 URL 길이를 넘어 실패한다. 조인이나 RPC로 바꾼다.
 
 ## 커밋된 오래된 설정 도구
