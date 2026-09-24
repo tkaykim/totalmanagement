@@ -5,7 +5,9 @@ import { isAuditV2Enabled } from '@/lib/feature-flags';
 import {
   canCreateFinance,
   canEditFinance,
+  canMoveFinanceBu,
   canTransitionFinance,
+  canViewProject,
   type BuCode,
   type FinancialEntry,
   type Project,
@@ -22,6 +24,9 @@ import { getAuthContext, requireAuth, canAccessCorporateCard, unauthorizedRespon
  * - 해제: 지출 행은 `canceled`로 바꾸고, 연결표 행만 삭제한다(연결표는 돈 기록이 아니다).
  * - 해제 후 재연결: 새 지출 행 + 새 연결표 행. 취소된 옛 행은 그대로 남는다.
  * - 이동·해제 권한: R12의 `paid`→`canceled` 권한자(등록자·행 사업부 리더·관리자) = `canTransitionFinance`
+ *   - 이동은 추가로 옮길 프로젝트를 볼 수 있어야 하고(`canViewProject`), 사업부가 바뀌면 R13(`canMoveFinanceBu`:
+ *     관리자·원래 사업부 리더)도 통과해야 한다. 같은 사업부 이동은 R16 + 보기 권한만 본다.
+ * - 지출 행 없이 남은 연결표 행의 해제는 법인카드 권한만 본다(연결표는 돈 기록이 아니다, 기존 동작 유지).
  * - `updated_by`는 `ERP_AUDIT_V2` 스위치가 켜졌을 때만 쓴다(R32).
  * - 이 라우트는 `financial_entries`에 delete를 부르지 않는다(DB 봉인이 `paid`·`canceled` 삭제를 거부한다).
  *
@@ -241,7 +246,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         if (updateError) throw updateError;
       } else {
         // 이동: 지출 행을 지우지 않고 프로젝트·사업부만 바꾼다
+        // R16(→canceled 권한) + 옮길 프로젝트를 볼 수 있어야 함 + 사업부가 바뀌면 R13(관리자·원래 사업부 리더)
         if (!canMoveOrUnlink(appUser, existingEntry)) return forbiddenResponse();
+        if (!canViewProject(appUser, toProject(project))) return forbiddenResponse();
+        if (
+          project.bu_code !== existingEntry.bu_code &&
+          !canMoveFinanceBu(appUser, toEntry(existingEntry), project.bu_code)
+        ) {
+          return forbiddenResponse();
+        }
         const { error: moveError } = await supabase
           .from('financial_entries')
           .update({

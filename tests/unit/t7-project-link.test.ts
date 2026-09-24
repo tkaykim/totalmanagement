@@ -176,6 +176,8 @@ function seed() {
     { id: 1, name: "[E2E] REACT A", bu_code: "REACT", pm_id: null, participants: [MEMBER_A.id, MEMBER_B.id], created_by: null },
     { id: 2, name: "[E2E] REACT B", bu_code: "REACT", pm_id: null, participants: [{ user_id: MEMBER_A.id }], created_by: null },
     { id: 3, name: "[E2E] GRIGO", bu_code: "GRIGO", pm_id: null, participants: [], created_by: null },
+    { id: 4, name: "[E2E] GRIGO 참여", bu_code: "GRIGO", pm_id: null, participants: [MEMBER_A.id], created_by: null },
+    { id: 5, name: "[E2E] REACT 비공개", bu_code: "REACT", pm_id: null, participants: [], created_by: null },
   ];
   db.app_users = [{ id: MEMBER_A.id, name: "직원A" }];
   db.financial_entries = [];
@@ -361,6 +363,38 @@ describe("T7 권한", () => {
     expect((await POST(postReq(linkBody(2)), params())).status).toBe(200);
     expect((await DELETE(delReq(), params())).status).toBe(200);
     expect(entries()[0]).toMatchObject({ project_id: 2, status: "canceled" });
+  });
+
+  it("등록자 member가 다른 사업부 프로젝트로 이동(R13) → 403, 행은 그대로", async () => {
+    await POST(postReq(linkBody(1)), params());
+    // 프로젝트 4는 member A가 참여자라 볼 수 있지만 사업부가 다르다
+    expect((await POST(postReq(linkBody(4)), params())).status).toBe(403);
+    expect(entries()[0]).toMatchObject({ project_id: 1, bu_code: "REACT", status: "paid" });
+    expect(links()[0]).toMatchObject({ project_id: 1 });
+  });
+
+  it("원래 사업부 리더의 다른 사업부 이동 → 허용", async () => {
+    await POST(postReq(linkBody(1)), params());
+    currentUser = LEADER_REACT;
+    expect((await POST(postReq(linkBody(3)), params())).status).toBe(200);
+    expect(entries()).toHaveLength(1);
+    expect(entries()[0]).toMatchObject({ project_id: 3, bu_code: "GRIGO", status: "paid" });
+    expect(links()[0]).toMatchObject({ project_id: 3 });
+  });
+
+  it("관리자의 다른 사업부 이동 → 허용", async () => {
+    await POST(postReq(linkBody(1)), params());
+    currentUser = ADMIN;
+    expect((await POST(postReq(linkBody(4)), params())).status).toBe(200);
+    expect(entries()[0]).toMatchObject({ project_id: 4, bu_code: "GRIGO" });
+  });
+
+  it("볼 수 없는 프로젝트로 이동(같은 사업부) → 403", async () => {
+    await POST(postReq(linkBody(1)), params());
+    expect((await POST(postReq(linkBody(5)), params())).status).toBe(403);
+    expect(entries()[0]).toMatchObject({ project_id: 1, bu_code: "REACT" });
+    expect(links()[0]).toMatchObject({ project_id: 1 });
+    expect(financeCalls("update")).toHaveLength(0);
   });
 
   it("없는 프로젝트 → 404, project_id 없음 → 400", async () => {
