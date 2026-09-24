@@ -139,6 +139,7 @@ import {
   BU_CHIP_STYLES,
   formatCurrency,
 } from '@/features/erp/types';
+import { BU_CODES } from '@/lib/business-units';
 
 const isDateInRange = (date: string, start?: string, end?: string) => {
   if (!start || !end) return true;
@@ -604,7 +605,7 @@ function HomePage() {
 
   const buCards = useMemo(
     () =>
-      (Object.keys(BU_TITLES) as BU[]).map((key) => {
+      BU_CODES.map((key) => {
         const buProjects = projects.filter((p) => p.bu === key);
         const buRev = filteredRevenues
           .filter((r) => buProjects.some((p) => p.id === r.projectId))
@@ -678,7 +679,7 @@ function HomePage() {
 
   const revenueShare = useMemo(() => {
     const total = filteredRevenues.reduce((sum, r) => sum + r.amount, 0);
-    return (Object.keys(BU_TITLES) as BU[]).map((key) => {
+    return BU_CODES.map((key) => {
       const buProjectIds = projects.filter((p) => p.bu === key).map((p) => p.id);
       const amount = filteredRevenues
         .filter((r) => buProjectIds.includes(r.projectId))

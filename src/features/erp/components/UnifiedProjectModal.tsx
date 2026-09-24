@@ -14,8 +14,9 @@ import { UnifiedPartnerModal } from '@/features/partners/components/UnifiedPartn
 import { ProjectAttachmentDisplay } from '@/features/erp/components/ProjectAttachmentDisplay';
 import { ResizableDescriptionTextarea } from '@/features/erp/components/ResizableDescriptionTextarea';
 import type { Project as ErpProject, TaskPriority as ErpTaskPriority } from '@/features/erp/types';
+import { BU_NAMES as BU_TITLES, BU_SELECT_OPTIONS, type BuCode } from '@/lib/business-units';
 
-type BU = 'GRIGO' | 'DEETZ' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+type BU = BuCode;
 type ModalMode = 'create' | 'view' | 'edit';
 type FinancePermission = 'none' | 'view' | 'edit';
 
@@ -67,16 +68,6 @@ type Project = {
   artist_id?: number | null;
   channel_id?: number | null;
   participants?: Participant[];
-};
-
-const BU_TITLES: Record<BU, string> = {
-  GRIGO: '그리고 엔터',
-  DEETZ: 'deetz 에이전시',
-  REACT: '리액트 스튜디오',
-  FLOW: '플로우메이커',
-  AST: '아스트 컴퍼니',
-  MODOO: '모두굿즈',
-  HEAD: '본사',
 };
 
 const STATUS_OPTIONS = [
@@ -1165,7 +1156,7 @@ export function UnifiedProjectModal({
                     }}
                     className="text-xs font-semibold rounded-full px-3 py-1 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 border-0 outline-none cursor-pointer"
                   >
-                    {Object.entries(BU_TITLES).map(([key, label]) => (
+                    {BU_SELECT_OPTIONS.map(({ value: key, label }) => (
                       <option key={key} value={key}>{label}</option>
                     ))}
                   </select>
@@ -1339,7 +1330,7 @@ export function UnifiedProjectModal({
                     disabled={!isEditable}
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-800 dark:text-slate-200 disabled:opacity-70"
                   >
-                    {Object.entries(BU_TITLES).map(([key, label]) => (
+                    {BU_SELECT_OPTIONS.map(({ value: key, label }) => (
                       <option key={key} value={key}>{label}</option>
                     ))}
                   </select>
@@ -1352,7 +1343,7 @@ export function UnifiedProjectModal({
                     disabled={!isEditable}
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-800 dark:text-slate-200 disabled:opacity-70"
                   >
-                    {Object.entries(BU_TITLES).map(([key, label]) => (
+                    {BU_SELECT_OPTIONS.map(({ value: key, label }) => (
                       <option key={key} value={key}>{label}</option>
                     ))}
                   </select>
@@ -1366,7 +1357,7 @@ export function UnifiedProjectModal({
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-800 dark:text-slate-200 disabled:opacity-70"
                   >
                     <option value="">해당 없음</option>
-                    {Object.entries(BU_TITLES).map(([key, label]) => (
+                    {BU_SELECT_OPTIONS.map(({ value: key, label }) => (
                       <option key={key} value={key}>{label}</option>
                     ))}
                   </select>

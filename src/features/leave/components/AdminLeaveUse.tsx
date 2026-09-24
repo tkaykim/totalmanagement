@@ -26,16 +26,7 @@ import { createClient } from '@/lib/supabase/client';
 import { adminCreateLeaveRequest } from '../api';
 import { LEAVE_REQUEST_TYPE_LABELS } from '../types';
 import type { LeaveRequestType } from '../types';
-
-const BU_DISPLAY_NAMES: Record<string, string> = {
-  HEAD: '본사',
-  GRIGO: '그리고엔터',
-  DEETZ: 'deetz 에이전시',
-  FLOW: '플로우메이커',
-  REACT: '리액트스튜디오',
-  MODOO: '모두굿즈',
-  AST: '아스트컴퍼니',
-};
+import { getBuName } from '@/lib/business-units';
 
 const schema = z.object({
   target_user_id: z.string().min(1, '대상자를 선택해주세요'),
@@ -178,7 +169,7 @@ export function AdminLeaveUse({ open, onOpenChange, onSuccess, preselectedUser }
                     {user.name}
                     {user.bu_code && (
                       <span className="text-slate-500 ml-2">
-                        ({BU_DISPLAY_NAMES[user.bu_code] || user.bu_code})
+                        ({getBuName(user.bu_code)})
                       </span>
                     )}
                   </SelectItem>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { ModalShell, InputField, SelectField, ModalActions } from './modal-components';
 import { BU, BU_TITLES } from '../types';
+import { BU_CODES } from '@/lib/business-units';
 
 export function CreateOrgMemberModal({
   onClose,
@@ -67,7 +68,7 @@ export function CreateOrgMemberModal({
           onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val }))}
           options={[
             { value: '', label: '선택 안함' },
-            ...(Object.keys(BU_TITLES) as BU[]).map((k) => ({
+            ...BU_CODES.map((k) => ({
               value: k,
               label: BU_TITLES[k],
             })),
@@ -205,7 +206,7 @@ export function EditOrgMemberModal({
           onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val }))}
           options={[
             { value: '', label: '선택 안함' },
-            ...(Object.keys(BU_TITLES) as BU[]).map((k) => ({
+            ...BU_CODES.map((k) => ({
               value: k,
               label: BU_TITLES[k],
             })),
@@ -338,7 +339,7 @@ export function CreateExternalWorkerModal({
           label="소속사업부"
           value={form.bu_code}
           onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val as BU }))}
-          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
+          options={BU_CODES.map((k) => ({
             value: k,
             label: BU_TITLES[k],
           }))}
@@ -532,7 +533,7 @@ export function EditExternalWorkerModal({
           label="소속사업부"
           value={form.bu_code}
           onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val as BU }))}
-          options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({
+          options={BU_CODES.map((k) => ({
             value: k,
             label: BU_TITLES[k],
           }))}

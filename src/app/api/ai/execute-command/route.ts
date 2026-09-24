@@ -3,12 +3,9 @@ import { createClient, createPureClient } from '@/lib/supabase/server';
 import { generateContent, isAllowedEmail } from '@/lib/ai/gemini';
 import { createActivityLog, createTaskAssignedLog } from '@/lib/activity-logger';
 import { notifyProjectPMAssigned, notifyTaskAssigned } from '@/lib/notification-sender';
+import { BU_CODES, type BuCode } from '@/lib/business-units';
 
 export const dynamic = 'force-dynamic';
-
-const BU_CODES = ['GRIGO', 'DEETZ', 'FLOW', 'REACT', 'MODOO', 'AST', 'HEAD'] as const;
-
-type BuCode = (typeof BU_CODES)[number];
 
 function parseJsonFromGemini(raw: string): Record<string, unknown> | null {
   const trimmed = raw.trim();

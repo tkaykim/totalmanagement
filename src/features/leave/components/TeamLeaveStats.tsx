@@ -15,16 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Users, Calendar, Pencil } from 'lucide-react';
 import type { TeamLeaveStats as TeamLeaveStatsType } from '../api';
 import { UserHireDateModal } from './UserHireDateModal';
-
-const BU_DISPLAY_NAMES: Record<string, string> = {
-  HEAD: '본사',
-  GRIGO: '그리고엔터',
-  DEETZ: 'deetz 에이전시',
-  FLOW: '플로우메이커',
-  REACT: '리액트스튜디오',
-  MODOO: '모두굿즈',
-  AST: '아스트컴퍼니',
-};
+import { getBuName } from '@/lib/business-units';
 
 interface TeamLeaveStatsProps {
   stats: TeamLeaveStatsType[];
@@ -84,7 +75,7 @@ export function TeamLeaveStats({ stats, isLoading, onRefresh, showHireDateEdit =
                 <div className="flex items-center gap-2 mt-1">
                   {stat.bu_code && (
                     <Badge variant="outline" className="text-[10px]">
-                      {BU_DISPLAY_NAMES[stat.bu_code] || stat.bu_code}
+                      {getBuName(stat.bu_code)}
                     </Badge>
                   )}
                   <span className="text-xs text-slate-500">
@@ -188,7 +179,7 @@ export function TeamLeaveStats({ stats, isLoading, onRefresh, showHireDateEdit =
                 </TableCell>
                 <TableCell>
                   {stat.bu_code ? (
-                    <Badge variant="outline">{BU_DISPLAY_NAMES[stat.bu_code] || stat.bu_code}</Badge>
+                    <Badge variant="outline">{getBuName(stat.bu_code)}</Badge>
                   ) : (
                     '-'
                   )}

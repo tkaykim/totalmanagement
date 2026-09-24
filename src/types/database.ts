@@ -1,4 +1,4 @@
-export type BU = 'GRIGO' | 'DEETZ' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+export type BU = import('@/lib/business-units').BuCode;
 export type ProjectStatus = '준비중' | '진행중' | '운영중' | '기획중' | '보류' | '완료';
 export type TaskStatus = 'todo' | 'in_progress' | 'on_hold' | 'done';
 export type FinancialKind = 'revenue' | 'expense';

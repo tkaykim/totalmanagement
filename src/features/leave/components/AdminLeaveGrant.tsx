@@ -26,16 +26,7 @@ import { createClient } from '@/lib/supabase/client';
 import { createLeaveGrant } from '../api';
 import type { LeaveGrantFormData, LeaveType } from '../types';
 import { LEAVE_TYPE_LABELS } from '../types';
-
-const BU_DISPLAY_NAMES: Record<string, string> = {
-  HEAD: '본사',
-  GRIGO: '그리고엔터',
-  DEETZ: 'deetz 에이전시',
-  FLOW: '플로우메이커',
-  REACT: '리액트스튜디오',
-  MODOO: '모두굿즈',
-  AST: '아스트컴퍼니',
-};
+import { getBuName } from '@/lib/business-units';
 
 const schema = z.object({
   user_id: z.string().min(1, '대상자를 선택해주세요'),
@@ -157,7 +148,7 @@ export function AdminLeaveGrant({ open, onOpenChange, onSuccess, preselectedUser
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.name}
-                    {user.bu_code && <span className="text-slate-500 ml-2">({BU_DISPLAY_NAMES[user.bu_code] || user.bu_code})</span>}
+                    {user.bu_code && <span className="text-slate-500 ml-2">({getBuName(user.bu_code)})</span>}
                   </SelectItem>
                 ))}
               </SelectContent>

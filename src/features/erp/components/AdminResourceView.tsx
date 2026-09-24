@@ -21,6 +21,7 @@ import {
     Project,
     TaskItem,
 } from '../types';
+import { BU_CODES, BU_META } from '@/lib/business-units';
 
 // ─── Helpers ───
 
@@ -41,25 +42,13 @@ function getToday(): string {
     return d.toISOString().slice(0, 10);
 }
 
-const BU_BAR_COLORS: Record<BU, string> = {
-    GRIGO: 'bg-blue-500',
-    DEETZ: 'bg-teal-500',
-    REACT: 'bg-purple-500',
-    FLOW: 'bg-indigo-500',
-    AST: 'bg-pink-500',
-    MODOO: 'bg-amber-500',
-    HEAD: 'bg-slate-500',
-};
+const BU_BAR_COLORS: Record<BU, string> = Object.fromEntries(
+    BU_CODES.map((code) => [code, BU_META[code].color.bar]),
+) as Record<BU, string>;
 
-const BU_BAR_BG: Record<BU, string> = {
-    GRIGO: 'bg-blue-500/10 border-blue-500/20',
-    DEETZ: 'bg-teal-500/10 border-teal-500/20',
-    REACT: 'bg-purple-500/10 border-purple-500/20',
-    FLOW: 'bg-indigo-500/10 border-indigo-500/20',
-    AST: 'bg-pink-500/10 border-pink-500/20',
-    MODOO: 'bg-amber-500/10 border-amber-500/20',
-    HEAD: 'bg-slate-500/10 border-slate-500/20',
-};
+const BU_BAR_BG: Record<BU, string> = Object.fromEntries(
+    BU_CODES.map((code) => [code, BU_META[code].color.barBg]),
+) as Record<BU, string>;
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
     '준비중': { label: '준비중', bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-700 dark:text-purple-300' },
@@ -149,7 +138,7 @@ export function AdminResourceView({
                     >
                         전체
                     </button>
-                    {(Object.keys(BU_TITLES) as BU[]).map((key) => (
+                    {BU_CODES.map((key) => (
                         <button
                             key={key}
                             onClick={() => setBuFilter(key)}

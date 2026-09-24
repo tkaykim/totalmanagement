@@ -5,6 +5,7 @@ import { X, TrendingUp, TrendingDown, Building2, User, Calculator, Calendar, Tag
 import { cn } from '@/lib/utils';
 import type { FinancialEntry, Project, BU, FinancialEntryStatus } from '@/features/erp/types';
 import { CommentSection } from '@/features/comments/components/CommentSection';
+import { BU_CODES, BU_NAMES as BU_TITLES } from '@/lib/business-units';
 
 // 지급처 유형별 아이콘 및 라벨 설정
 const ENTITY_TYPE_CONFIG = {
@@ -15,16 +16,6 @@ const ENTITY_TYPE_CONFIG = {
 } as const;
 
 type EntityType = keyof typeof ENTITY_TYPE_CONFIG | '';
-
-const BU_TITLES: Record<BU, string> = {
-  GRIGO: '그리고 엔터',
-  DEETZ: 'deetz 에이전시',
-  REACT: '리액트 스튜디오',
-  FLOW: '플로우메이커',
-  AST: '아스트 컴퍼니',
-  MODOO: '모두굿즈',
-  HEAD: '본사',
-};
 
 const STATUS_CONFIG = {
   planned: { label: '지급예정', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' },
@@ -474,7 +465,7 @@ export function CreateFinanceModal({
             <div className="flex items-center gap-2">
               <HeaderChipDropdown
                 value={form.bu}
-                options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
+                options={BU_CODES.map((k) => ({ value: k, label: BU_TITLES[k] }))}
                 onChange={(val) => {
                   const nextBu = val as BU;
                   const firstProject = projects.find((p) => p.bu === nextBu)?.id ?? '';
@@ -503,7 +494,7 @@ export function CreateFinanceModal({
                     const nextBu = val as BU;
                     setForm((prev) => ({ ...prev, bu: nextBu, projectId: '' }));
                   }}
-                  options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
+                  options={BU_CODES.map((k) => ({ value: k, label: BU_TITLES[k] }))}
                 />
               </FormField>
               <FormField label="프로젝트">
@@ -557,7 +548,7 @@ export function CreateFinanceModal({
                 value={form.counterpartyBu}
                 onChange={(value) => setForm((prev) => ({ ...prev, counterpartyBu: value as BU | '' }))}
                 placeholder={form.entryScope === 'internal_allocation' ? '상대 BU 선택' : '외부 거래는 미사용'}
-                options={(Object.keys(BU_TITLES) as BU[])
+                options={BU_CODES
                   .filter((code) => code !== form.bu)
                   .map((code) => ({ value: code, label: BU_TITLES[code] }))}
               />
@@ -859,7 +850,7 @@ export function EditFinanceModal({
           <div className="flex items-center gap-2">
             <HeaderChipDropdown
               value={form.bu}
-              options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
+              options={BU_CODES.map((k) => ({ value: k, label: BU_TITLES[k] }))}
               onChange={(val) => {
                 const nextBu = val as BU;
                 const firstProject = projects.find((p) => p.bu === nextBu)?.id ?? '';
@@ -936,7 +927,7 @@ export function EditFinanceModal({
                 value={form.counterpartyBu}
                 onChange={(value) => setForm((prev) => ({ ...prev, counterpartyBu: value as BU | '' }))}
                 placeholder={form.entryScope === 'internal_allocation' ? '상대 BU 선택' : '외부 거래는 미사용'}
-                options={(Object.keys(BU_TITLES) as BU[])
+                options={BU_CODES
                   .filter((code) => code !== form.bu)
                   .map((code) => ({ value: code, label: BU_TITLES[code] }))}
               />

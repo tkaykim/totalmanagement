@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Send, Filter, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PushResultPanel } from './PushResultPanel';
+import { BU_CODES, BU_META } from '@/lib/business-units';
 
 const ROLES = [
   { value: 'admin', label: '관리자' },
@@ -14,15 +15,7 @@ const ROLES = [
   { value: 'artist', label: '아티스트' },
 ];
 
-const BU_CODES = [
-  { value: 'HEAD', label: '본사 (HEAD)' },
-  { value: 'GRIGO', label: '그리고 엔터 (GRIGO)' },
-  { value: 'DEETZ', label: 'deetz 에이전시 (DEETZ)' },
-  { value: 'REACT', label: '리액트 스튜디오 (REACT)' },
-  { value: 'FLOW', label: '플로우메이커 (FLOW)' },
-  { value: 'AST', label: '아스트 컴퍼니 (AST)' },
-  { value: 'MODOO', label: '모두굿즈 (MODOO)' },
-];
+const BU_ITEMS = BU_CODES.map((code) => ({ value: code, label: `${BU_META[code].name} (${code})` }));
 
 export function PushConditionalTab() {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -139,7 +132,7 @@ export function PushConditionalTab() {
             사업부 필터 (선택한 사업부 소속 사용자에게 전송)
           </label>
           <div className="flex flex-wrap gap-2">
-            {BU_CODES.map((bu) => {
+            {BU_ITEMS.map((bu) => {
               const isSelected = selectedBuCodes.includes(bu.value);
               return (
                 <button
@@ -178,7 +171,7 @@ export function PushConditionalTab() {
                 <p>역할: {selectedRoles.map(r => ROLES.find(role => role.value === r)?.label).join(', ')}</p>
               )}
               {selectedBuCodes.length > 0 && (
-                <p>사업부: {selectedBuCodes.map(b => BU_CODES.find(bu => bu.value === b)?.label).join(', ')}</p>
+                <p>사업부: {selectedBuCodes.map(b => BU_ITEMS.find(bu => bu.value === b)?.label).join(', ')}</p>
               )}
               {selectedRoles.length > 0 && selectedBuCodes.length > 0 && (
                 <p className="text-[10px] text-purple-500 dark:text-purple-400 mt-1">

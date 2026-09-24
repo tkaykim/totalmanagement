@@ -6,8 +6,9 @@ import { ModalShell, InputField, SelectField, ModalActions } from './modal-compo
 import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
 import { toast } from '@/hooks/use-toast';
 import type { AppUser, Project as ProjectType } from '@/types/database';
+import { BU_CODES, BU_NAMES as BU_TITLES, type BuCode } from '@/lib/business-units';
 
-type BU = 'GRIGO' | 'DEETZ' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+type BU = BuCode;
 type FinancePermission = 'none' | 'view' | 'edit';
 
 type FinanceEntry = {
@@ -18,16 +19,6 @@ type FinanceEntry = {
   amount: number;
   status: string;
   occurred_at: string;
-};
-
-const BU_TITLES: Record<BU, string> = {
-  GRIGO: '그리고 엔터',
-  DEETZ: 'deetz 에이전시',
-  REACT: '리액트 스튜디오',
-  FLOW: '플로우메이커',
-  AST: '아스트 컴퍼니',
-  MODOO: '모두굿즈',
-  HEAD: '본사',
 };
 
 type Project = {
@@ -338,7 +329,7 @@ export function ProjectModal({
             label="사업부"
             value={form.bu}
             onChange={(val) => setForm((prev) => ({ ...prev, bu: val as BU }))}
-            options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
+            options={BU_CODES.map((k) => ({ value: k, label: BU_TITLES[k] }))}
           />
 
           {/* 2. 제목 (프로젝트명) */}

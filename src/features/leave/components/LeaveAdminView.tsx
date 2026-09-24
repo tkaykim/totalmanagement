@@ -34,17 +34,9 @@ import {
 } from '../api';
 import type { PendingApprovalItem, TeamLeaveStats as TeamLeaveStatsType } from '../api';
 import type { LeaveRequestWithUser } from '../types';
+import { BU_SELECT_OPTIONS } from '@/lib/business-units';
 
-const BU_OPTIONS = [
-  { value: 'all', label: '전체' },
-  { value: 'HEAD', label: '본사' },
-  { value: 'GRIGO', label: '그리고엔터' },
-  { value: 'DEETZ', label: 'deetz 에이전시' },
-  { value: 'FLOW', label: '플로우메이커' },
-  { value: 'REACT', label: '리액트스튜디오' },
-  { value: 'MODOO', label: '모두굿즈' },
-  { value: 'AST', label: '아스트컴퍼니' },
-];
+const BU_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [{ value: 'all', label: '전체' }, ...BU_SELECT_OPTIONS];
 
 export function LeaveAdminView() {
   const [loading, setLoading] = useState(true);

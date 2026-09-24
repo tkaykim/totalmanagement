@@ -11,6 +11,7 @@ import {
   TaskItem,
 } from '../types';
 import { Input } from '@/components/ui/input';
+import { BU_CODES } from '@/lib/business-units';
 
 export interface DashboardViewProps {
   tasks: TaskItem[];
@@ -157,7 +158,7 @@ export function DashboardView({
           >
             전체
           </button>
-          {(Object.keys(BU_TITLES) as BU[]).map((key) => (
+          {BU_CODES.map((key) => (
             <button
               key={key}
               onClick={() => setSelectedBu(key)}
