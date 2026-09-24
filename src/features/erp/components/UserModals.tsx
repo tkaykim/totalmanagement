@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ModalShell, InputField, SelectField, ModalActions } from './modal-components';
 import { BU, BU_TITLES } from '../types';
 import { BU_CODES } from '@/lib/business-units';
+import { ChangeLogList } from './ChangeLogList';
 
 export function EditUserModal({
   user,
@@ -108,6 +109,7 @@ export function EditUserModal({
           <p className="text-xs font-semibold text-red-600">{error}</p>
         </div>
       )}
+      {isAdmin && <ChangeLogList kind="user" id={user?.id} />}
       <ModalActions
         onPrimary={async () => {
           const missingFields: string[] = [];
