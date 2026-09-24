@@ -6,6 +6,7 @@ import {
   canDeleteTaskTemplate, 
   type AppUser 
 } from '@/lib/permissions';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -26,6 +27,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createPureClient();
     const { id } = await params;
@@ -57,6 +61,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createPureClient();
     const { id } = await params;
@@ -109,6 +116,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createPureClient();
     const { id } = await params;

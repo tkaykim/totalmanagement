@@ -6,6 +6,7 @@ import {
   canCreateTaskTemplate, 
   type AppUser 
 } from '@/lib/permissions';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 async function getCurrentUser(): Promise<AppUser | null> {
   const authSupabase = await createClient();
@@ -23,6 +24,9 @@ async function getCurrentUser(): Promise<AppUser | null> {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
@@ -55,6 +59,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createPureClient();
     const body = await request.json();

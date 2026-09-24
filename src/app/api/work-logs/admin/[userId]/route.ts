@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import { getTodayKST } from '@/lib/timezone.server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 /**
  * 관리자 전용: 특정 사용자의 업무일지 조회
@@ -10,6 +11,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const { data: { user } } = await authSupabase.auth.getUser();

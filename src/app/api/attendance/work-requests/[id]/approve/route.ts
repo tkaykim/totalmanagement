@@ -4,11 +4,15 @@ import { canApproveRequest } from '@/features/attendance/lib/permissions';
 import { toKSTISOString } from '@/lib/timezone.server';
 import { notifyWorkRequestApproved } from '@/lib/notification-sender';
 import type { AppUser } from '@/types/database';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const { id } = await params;

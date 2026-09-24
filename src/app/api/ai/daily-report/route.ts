@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient, createPureClient } from '@/lib/supabase/server';
 import { generateContent, isAllowedEmail } from '@/lib/ai/gemini';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const {

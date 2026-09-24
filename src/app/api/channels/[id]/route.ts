@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createPureClient } from '@/lib/supabase/server';
 import type { ChannelStatus, AdStatus } from '@/types/database';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createPureClient();
     const authSupabase = await createClient();
@@ -95,6 +99,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createPureClient();
     const { id } = await params;
