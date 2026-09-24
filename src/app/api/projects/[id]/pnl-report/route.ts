@@ -1,58 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPureClient, createClient } from '@/lib/supabase/server';
-import type { AppUser } from '@/lib/permissions';
+import { createPureClient } from '@/lib/supabase/server';
+import { isGuardFailure, requireActiveStaff } from '@/lib/auth-guard';
+import { canEditProject, canViewProject, type AppUser, type Project } from '@/lib/permissions';
+import {
+  fetchAllRows,
+  isEntryVisible,
+  loadPermProject,
+  seesAllFinance,
+  type ServiceDb,
+} from '@/app/api/financial-entries/_lib/finance-access';
 
-async function getCurrentUser(): Promise<AppUser | null> {
-  const authSupabase = await createClient();
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) return null;
-
-  const supabase = await createPureClient();
-  const { data: appUser } = await supabase
-    .from('app_users')
-    .select('id, role, bu_code, name, position')
-    .eq('id', user.id)
-    .single();
-
-  return appUser as AppUser | null;
-}
-
-/** financial_entries에서 매출/지출 합계를 집계 (paid + planned 모두 포함) */
-async function aggregateActualFinance(projectId: number): Promise<{
+type Aggregated = {
+  /** 외부 거래(entry_scope='external') 매출 합 — 회사 손익 */
   actual_revenue: number;
+  /** 외부 거래 지출 합 */
   actual_expense: number;
+  /** 내부배부(entry_scope='internal_allocation') 매출 합 — 외부 손익과 따로 보여 준다(R26) */
   internal_revenue: number;
+  /** 내부배부 지출 합 */
   internal_expense: number;
-}> {
-  const supabase = await createPureClient();
-  const { data, error } = await supabase
-    .from('financial_entries')
-    .select('kind, amount, status, entry_scope')
-    .eq('project_id', projectId)
-    .neq('status', 'canceled');
+};
 
-  if (error) throw error;
+/**
+ * 프로젝트 매출·지출 합계 (paid + planned, canceled 제외).
+ * - 보기 범위(R9): 이 함수는 프로젝트를 볼 수 있는 사용자에게만 불린다. 그 경우 프로젝트의 모든 행이 보인다.
+ *   (일반 직원 판정은 `isEntryVisible`로 한 번 더 거른다.)
+ * - 외부 손익과 내부배부 합계를 나눈다(R26).
+ * - 1,000행 절단 없이 `range`로 끝까지 읽는다.
+ */
+async function aggregateActualFinance(
+  supabase: ServiceDb,
+  user: AppUser,
+  projectId: number
+): Promise<Aggregated> {
+  const rows = await fetchAllRows<Record<string, unknown>>((from, to) =>
+    supabase
+      .from('financial_entries')
+      .select('id, project_id, bu_code, created_by, kind, amount, status, entry_scope')
+      .eq('project_id', projectId)
+      .neq('status', 'canceled')
+      .order('id', { ascending: true })
+      .range(from, to)
+  );
 
-  let actual_revenue = 0;
-  let actual_expense = 0;
-  let internal_revenue = 0;
-  let internal_expense = 0;
-  for (const entry of (data ?? []) as {
-    kind: string;
-    amount: number | null;
-    entry_scope: 'external' | 'internal_allocation' | null;
-  }[]) {
-    const amount = Number(entry.amount ?? 0);
-    if (entry.entry_scope === 'internal_allocation') {
-      if (entry.kind === 'revenue') internal_revenue += amount;
-      else if (entry.kind === 'expense') internal_expense += amount;
-    } else if (entry.kind === 'revenue') {
-      actual_revenue += amount;
-    } else if (entry.kind === 'expense') {
-      actual_expense += amount;
+  const visibleProjectIds = seesAllFinance(user) ? null : new Set([String(projectId)]);
+
+  const result: Aggregated = { actual_revenue: 0, actual_expense: 0, internal_revenue: 0, internal_expense: 0 };
+  for (const row of rows) {
+    if (!isEntryVisible(user, row, visibleProjectIds)) continue;
+    const amount = Number(row.amount ?? 0);
+    if (row.entry_scope === 'internal_allocation') {
+      if (row.kind === 'revenue') result.internal_revenue += amount;
+      else if (row.kind === 'expense') result.internal_expense += amount;
+    } else if (row.kind === 'revenue') {
+      result.actual_revenue += amount;
+    } else if (row.kind === 'expense') {
+      result.actual_expense += amount;
     }
   }
-  return { actual_revenue, actual_expense, internal_revenue, internal_expense };
+  return result;
+}
+
+/** 볼 수 있는 프로젝트를 읽는다. 없거나 못 보면 null(404, 존재를 숨긴다). */
+async function loadViewableProject(supabase: ServiceDb, user: AppUser, projectId: number): Promise<Project | null> {
+  const project = await loadPermProject(supabase, projectId);
+  if (!project || !canViewProject(user, project)) return null;
+  return project;
 }
 
 /** GET: 프로젝트의 P&L 보고서 조회. 보고서가 없으면 null 반환하되, 자동 집계된 매출/지출은 함께 제공 */
@@ -60,6 +73,10 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { appUser } = guard;
+
   try {
     const supabase = await createPureClient();
     const { id } = await params;
@@ -68,13 +85,18 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid project id' }, { status: 400 });
     }
 
+    const project = await loadViewableProject(supabase, appUser, projectId);
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
     const [{ data: report, error: reportError }, aggregated] = await Promise.all([
       supabase
         .from('project_pnl_reports_with_profit')
         .select('*')
         .eq('project_id', projectId)
         .maybeSingle(),
-      aggregateActualFinance(projectId),
+      aggregateActualFinance(supabase, appUser, projectId),
     ]);
 
     if (reportError) throw reportError;
@@ -108,6 +130,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { appUser: currentUser } = guard;
+
   try {
     const supabase = await createPureClient();
     const { id } = await params;
@@ -116,22 +142,16 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid project id' }, { status: 400 });
     }
 
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // 프로젝트의 bu_code를 가져와 보고서에 함께 저장. 못 보면 404, 수정 권한 없으면 403(R10).
+    const project = await loadViewableProject(supabase, currentUser, projectId);
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    if (!canEditProject(currentUser, project)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = (await request.json()) as PnlReportPayload;
-
-    // 프로젝트의 bu_code를 가져와 보고서에 함께 저장
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .select('id, bu_code')
-      .eq('id', projectId)
-      .single();
-    if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
 
     const isFinalize = body.status === 'finalized';
 
@@ -174,6 +194,10 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { appUser: currentUser } = guard;
+
   try {
     const supabase = await createPureClient();
     const { id } = await params;
@@ -182,9 +206,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid project id' }, { status: 400 });
     }
 
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const project = await loadViewableProject(supabase, currentUser, projectId);
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    if (!canEditProject(currentUser, project)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { error } = await supabase
