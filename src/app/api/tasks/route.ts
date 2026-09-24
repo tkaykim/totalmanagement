@@ -1,136 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPureClient, createClient } from '@/lib/supabase/server';
-import type { BU } from '@/types/database';
-import { 
-  canAccessTask, 
-  canCreateTask, 
-  type AppUser, 
-  type Task as PermTask,
-  type Project as PermProject 
-} from '@/lib/permissions';
+import { createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
+import { canCreateTask, canViewProject, canViewTask, type Task as PermTask, type Project as PermProject } from '@/lib/permissions';
+import { isBuCode } from '@/lib/business-units';
 import { createActivityLog, createTaskAssignedLog } from '@/lib/activity-logger';
 import { notifyTaskAssigned } from '@/lib/notification-sender';
+import { fetchAllRows, loadPermProject, PERM_PROJECT_COLUMNS, toPermProject } from '@/app/api/projects/_lib/access';
 
-async function getCurrentUser(): Promise<AppUser | null> {
-  const authSupabase = await createClient();
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) return null;
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-  const supabase = await createPureClient();
-  const { data: appUser } = await supabase
-    .from('app_users')
-    .select('id, role, bu_code, name, position')
-    .eq('id', user.id)
-    .single();
+const TASK_SELECT = '*, creator:app_users!project_tasks_created_by_fkey(name)';
 
-  return appUser as AppUser | null;
-}
-
+/**
+ * GET /api/tasks
+ * - 보기 범위(R7·R8): 관리자·리더 전체, 일반 직원은 볼 수 있는 프로젝트의 할일 + 본인 배정 할일(`canViewTask`).
+ * - `bu`가 있으면 그 사업부 할일 + 본인 배정 할일(다른 사업부 포함)을 준다(기존 동작).
+ * - 1,000행 절단 없이 끝까지 읽는다.
+ */
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { appUser } = guard;
+
   try {
-    const supabase = await createPureClient();
+    const supabase: any = await createPureClient();
     const searchParams = request.nextUrl.searchParams;
-    const bu = searchParams.get('bu') as BU | null;
+    const buParam = searchParams.get('bu');
+    const bu = isBuCode(buParam) ? buParam : null;
     const projectId = searchParams.get('project_id');
 
-    // 현재 사용자 정보 가져오기
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const base = () => {
+      let q = supabase.from('project_tasks').select(TASK_SELECT).order('id', { ascending: true });
+      if (projectId) q = q.eq('project_id', projectId);
+      return q;
+    };
 
-    // BU 필터가 있어도 본인에게 할당된 할일은 항상 포함되도록 함
-    // 1. BU 필터가 있는 경우: 해당 BU의 할일 조회
-    // 2. 본인에게 할당된 할일 조회 (BU와 무관)
-    // 두 결과를 병합하여 중복 제거
-    
-    let tasks: any[] = [];
-    
-    const taskSelect = '*, creator:app_users!project_tasks_created_by_fkey(name)';
-
+    let tasks: any[];
     if (bu) {
-      // BU 필터가 있는 경우: 해당 BU 할일 + 본인 할당 할일을 병합
-      let buQuery = supabase.from('project_tasks').select(taskSelect);
-      buQuery = buQuery.eq('bu_code', bu);
-      if (projectId) {
-        buQuery = buQuery.eq('project_id', projectId);
-      }
-      
-      const { data: buTasks, error: buError } = await buQuery;
-      if (buError) throw buError;
-      
-      // 본인에게 할당된 할일 조회 (다른 BU 포함)
-      let assignedQuery = supabase.from('project_tasks').select(taskSelect);
-      assignedQuery = assignedQuery.eq('assignee_id', currentUser.id);
-      if (projectId) {
-        assignedQuery = assignedQuery.eq('project_id', projectId);
-      }
-      
-      const { data: assignedTasks, error: assignedError } = await assignedQuery;
-      if (assignedError) throw assignedError;
-      
-      // 병합 및 중복 제거
-      const taskMap = new Map<number, any>();
-      (buTasks || []).forEach((t: any) => taskMap.set(t.id, t));
-      (assignedTasks || []).forEach((t: any) => taskMap.set(t.id, t));
+      const [buTasks, assignedTasks] = await Promise.all([
+        fetchAllRows<any>(() => base().eq('bu_code', bu)),
+        fetchAllRows<any>(() => base().eq('assignee_id', appUser.id)),
+      ]);
+      const taskMap = new Map<string, any>();
+      buTasks.forEach((t) => taskMap.set(String(t.id), t));
+      assignedTasks.forEach((t) => taskMap.set(String(t.id), t));
       tasks = Array.from(taskMap.values());
-    } else if (projectId) {
-      // 프로젝트 ID만 있는 경우
-      const { data, error } = await supabase
-        .from('project_tasks')
-        .select(taskSelect)
-        .eq('project_id', projectId);
-      if (error) throw error;
-      tasks = data || [];
     } else {
-      // 필터 없는 경우: 전체 조회
-      const { data, error } = await supabase
-        .from('project_tasks')
-        .select(taskSelect);
-      if (error) throw error;
-      tasks = data || [];
-    }
-    
-    // 정렬
-    tasks.sort((a, b) => {
-      if (!a.due_date) return 1;
-      if (!b.due_date) return -1;
-      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-    });
-
-    // admin은 전체 접근
-    if (currentUser.role === 'admin') {
-      return NextResponse.json(tasks);
+      tasks = await fetchAllRows<any>(base);
     }
 
-    // 프로젝트 정보 가져오기 (권한 체크용)
-    const projectIds = [...new Set(tasks?.map((t: any) => t.project_id) || [])];
-    const { data: projects } = await supabase
-      .from('projects')
-      .select('id, bu_code, pm_id, participants')
-      .in('id', projectIds);
+    // 보기 판정용 프로젝트: id 수백 개를 `.in()`에 넣지 않고 끝까지 읽어 맵으로 쓴다(URL 길이 한도)
+    const projectMap = new Map<string, PermProject>();
+    if (tasks.length > 0) {
+      const projects = projectId
+        ? (await supabase.from('projects').select(PERM_PROJECT_COLUMNS).eq('id', projectId)).data ?? []
+        : await fetchAllRows<any>(() =>
+            supabase.from('projects').select(PERM_PROJECT_COLUMNS).order('id', { ascending: true })
+          );
+      for (const p of projects) projectMap.set(String(p.id), toPermProject(p));
+    }
 
-    const projectMap = new Map(
-      projects?.map((p: any) => {
-        // participants에서 user_id만 추출 (객체 배열인 경우)
-        const participantIds = (p.participants || [])
-          .map((participant: any) => participant.user_id)
-          .filter((id: any): id is string => !!id);
-        
-        return [p.id, {
-          id: p.id,
-          bu_code: p.bu_code,
-          pm_id: p.pm_id,
-          participants: participantIds,
-        }];
-      }) || []
-    );
-
-    // 권한에 따라 필터링
-    const filteredTasks = tasks?.filter((task: any) => {
-      const project = projectMap.get(task.project_id);
+    const visible = tasks.filter((task) => {
+      const project = projectMap.get(String(task.project_id));
       if (!project) return false;
-
       const permTask: PermTask = {
         id: task.id,
         project_id: task.project_id,
@@ -138,52 +70,46 @@ export async function GET(request: NextRequest) {
         assignee_id: task.assignee_id,
         created_by: task.created_by,
       };
+      return canViewTask(appUser, permTask, project);
+    });
 
-      return canAccessTask(currentUser, permTask, project as PermProject);
-    }) || [];
+    visible.sort((a, b) => {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    });
 
-    return NextResponse.json(filteredTasks);
+    return NextResponse.json(visible);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
 
+/**
+ * POST /api/tasks
+ * - 할일 사업부는 프로젝트 사업부다(본문 `bu_code` 무시, R5).
+ * - 리더는 자기 사업부 프로젝트에만 만든다(R10, `canCreateTask`).
+ */
 export async function POST(request: NextRequest) {
-  try {
-    const supabase = await createPureClient();
-    const body = await request.json();
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { appUser } = guard;
 
-    // 현재 사용자 정보 가져오기
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const supabase: any = await createPureClient();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || body.project_id == null) {
+      return NextResponse.json({ error: 'project_id is required' }, { status: 400 });
     }
 
-    // 프로젝트 정보 가져오기
-    const { data: project } = await supabase
-      .from('projects')
-      .select('id, name, bu_code, pm_id, participants')
-      .eq('id', body.project_id)
-      .single();
-
-    if (!project) {
+    const loaded = await loadPermProject(supabase, body.project_id, 'name');
+    // 볼 수 없는 프로젝트는 존재 여부를 알리지 않는다(spec 15절)
+    if (!loaded || !canViewProject(appUser, loaded.perm)) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+    const permProject = loaded.perm;
 
-    // participants에서 user_id만 추출 (객체 배열인 경우)
-    const participantIds = (project.participants || [])
-      .map((participant: any) => participant.user_id)
-      .filter((id: any): id is string => !!id);
-
-    const permProject: PermProject = {
-      id: project.id,
-      bu_code: project.bu_code,
-      pm_id: project.pm_id,
-      participants: participantIds,
-    };
-
-    // 할일 생성 권한 체크
-    if (!canCreateTask(currentUser, permProject)) {
+    if (!canCreateTask(appUser, permProject)) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
@@ -194,7 +120,7 @@ export async function POST(request: NextRequest) {
       .from('project_tasks')
       .insert({
         project_id: body.project_id,
-        bu_code: project.bu_code,
+        bu_code: permProject.bu_code,
         title: body.title,
         description: body.description,
         assignee_id: body.assignee_id,
@@ -204,44 +130,29 @@ export async function POST(request: NextRequest) {
         priority: body.priority || 'medium',
         tag: body.tag,
         manual_id: body.manual_id ?? null,
-        created_by: currentUser.id,
+        created_by: appUser.id,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // 활동 로그 기록 - 생성자
     await createActivityLog({
-      userId: currentUser.id,
+      userId: appUser.id,
       actionType: 'task_created',
       entityType: 'task',
       entityId: String(data.id),
       entityTitle: data.title,
-      metadata: { 
-        project_id: body.project_id, 
+      metadata: {
+        project_id: body.project_id,
         assignee_id: body.assignee_id,
         priority: body.priority || 'medium',
       },
     });
 
-    // 담당자가 생성자와 다르면 담당자에게도 활동 로그 기록 및 알림 전송 (누가 배정했는지 포함)
-    if (body.assignee_id && body.assignee_id !== currentUser.id) {
-      await createTaskAssignedLog(
-        body.assignee_id,
-        String(data.id),
-        data.title,
-        currentUser.id
-      );
-      
-      // 담당자에게 알림 전송 (누가 배정했는지 포함)
-      await notifyTaskAssigned(
-        body.assignee_id,
-        data.title,
-        project.name,
-        String(data.id),
-        currentUser.name
-      );
+    if (body.assignee_id && body.assignee_id !== appUser.id) {
+      await createTaskAssignedLog(body.assignee_id, String(data.id), data.title, appUser.id);
+      await notifyTaskAssigned(body.assignee_id, data.title, loaded.row.name, String(data.id), appUser.name);
     }
 
     return NextResponse.json(data);

@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
+import { canViewProject } from '@/lib/permissions';
+import { loadPermProject } from '@/app/api/projects/_lib/access';
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; documentId: string }> },
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
-    const supabase = await createPureClient();
+    const supabase: any = await createPureClient();
     const { id, documentId } = await params;
+
+    // 프로젝트 보기 범위(R8). 볼 수 없으면 존재 여부를 알리지 않는다.
+    const loaded = await loadPermProject(supabase, id);
+    if (!loaded || !canViewProject(guard.appUser, loaded.perm)) {
+      return NextResponse.json({ error: '문서를 찾을 수 없습니다' }, { status: 404 });
+    }
 
     // 문서 정보 조회
     const { data: document, error: fetchError } = await supabase
@@ -15,7 +27,7 @@ export async function DELETE(
       .select('file_path')
       .eq('id', documentId)
       .eq('project_id', id)
-      .single();
+      .maybeSingle();
 
     if (fetchError) throw fetchError;
     if (!document) {
@@ -53,8 +65,3 @@ export async function DELETE(
     );
   }
 }
-
-
-
-
-

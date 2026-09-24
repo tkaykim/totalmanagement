@@ -1,5 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
+import { canEditProject, canViewProject } from '@/lib/permissions';
+import { loadPermProject } from '@/app/api/projects/_lib/access';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** 참여자 변경은 프로젝트 수정이다: 재직 → 보기 범위(404) → 수정 권한(403, R10) */
+async function guardProjectEdit(id: string): Promise<{ error: NextResponse } | { supabase: any; participants: any[] }> {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return { error: guard };
+  const supabase: any = await createPureClient();
+  const loaded = await loadPermProject(supabase, id);
+  if (!loaded || !canViewProject(guard.appUser, loaded.perm)) {
+    return { error: NextResponse.json({ error: 'Project not found' }, { status: 404 }) };
+  }
+  if (!canEditProject(guard.appUser, loaded.perm)) {
+    return { error: NextResponse.json({ error: 'Permission denied' }, { status: 403 }) };
+  }
+  return { supabase, participants: (loaded.row.participants as any[]) || [] };
+}
 
 // 프로젝트 참여자 삭제 (user_id 또는 external_worker_id로 식별)
 export async function DELETE(
@@ -7,20 +27,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; participantId: string }> }
 ) {
   try {
-    const supabase = await createPureClient();
-    const { id, participantId } = await params;
+    const { id } = await params;
+    const ctx = await guardProjectEdit(id);
+    if ('error' in ctx) return ctx.error;
+    const { supabase } = ctx;
     const body = await request.json();
 
-    // 현재 프로젝트의 participants 가져오기
-    const { data: project, error: fetchError } = await supabase
-      .from('projects')
-      .select('participants')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const currentParticipants = (project?.participants as any[]) || [];
+    const currentParticipants = ctx.participants;
     
     // user_id 또는 external_worker_id로 참여자 찾아서 삭제
     const updatedParticipants = currentParticipants.filter((p: any) => {
@@ -56,20 +69,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; participantId: string }> }
 ) {
   try {
-    const supabase = await createPureClient();
     const { id } = await params;
+    const ctx = await guardProjectEdit(id);
+    if ('error' in ctx) return ctx.error;
+    const { supabase } = ctx;
     const body = await request.json();
 
-    // 현재 프로젝트의 participants 가져오기
-    const { data: project, error: fetchError } = await supabase
-      .from('projects')
-      .select('participants')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const currentParticipants = (project?.participants as any[]) || [];
+    const currentParticipants = ctx.participants;
     
     // user_id 또는 external_worker_id로 참여자 찾아서 수정
     const updatedParticipants = currentParticipants.map((p: any) => {
@@ -110,4 +116,3 @@ export async function PATCH(
     );
   }
 }
-

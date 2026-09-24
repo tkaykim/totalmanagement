@@ -1,25 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPureClient, createClient } from '@/lib/supabase/server';
+import { createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
+import { canEditProject, canViewProject } from '@/lib/permissions';
 import { notifyProjectParticipantAdded } from '@/lib/notification-sender';
+import { loadPermProject } from '@/app/api/projects/_lib/access';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // 프로젝트 참여자 조회
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
-    const supabase = await createPureClient();
+    const supabase: any = await createPureClient();
     const { id } = await params;
 
-    const { data: project, error } = await supabase
-      .from('projects')
-      .select('participants')
-      .eq('id', id)
-      .single();
+    // 프로젝트 보기 범위(R8). 볼 수 없으면 404.
+    const loaded = await loadPermProject(supabase, id);
+    if (!loaded || !canViewProject(guard.appUser, loaded.perm)) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
 
-    if (error) throw error;
-
-    return NextResponse.json(project?.participants || []);
+    return NextResponse.json(loaded.row.participants || []);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -30,10 +36,23 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { appUser } = guard;
+
   try {
-    const supabase = await createPureClient();
+    const supabase: any = await createPureClient();
     const { id } = await params;
     const body = await request.json();
+
+    // 참여자 변경은 프로젝트 수정이다: 보기 범위(404) → 수정 권한(403, R10)
+    const loaded = await loadPermProject(supabase, id);
+    if (!loaded || !canViewProject(appUser, loaded.perm)) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    if (!canEditProject(appUser, loaded.perm)) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
 
     // user_id 또는 external_worker_id 중 하나는 필수
     if (!body.user_id && !body.external_worker_id) {
@@ -43,16 +62,7 @@ export async function POST(
       );
     }
 
-    // 현재 프로젝트의 participants 가져오기
-    const { data: project, error: fetchError } = await supabase
-      .from('projects')
-      .select('participants')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const currentParticipants = (project?.participants as any[]) || [];
+    const currentParticipants = (loaded.row.participants as any[]) || [];
     
     // 중복 체크
     const isDuplicate = currentParticipants.some((p: any) => 
@@ -90,25 +100,16 @@ export async function POST(
     // 참여자에게 알림 전송 (내부 사용자인 경우에만)
     if (body.user_id) {
       try {
-        const authSupabase = await createClient();
-        const { data: { user: authUser } } = await authSupabase.auth.getUser();
-        
         // 본인이 아닌 경우에만 알림
-        if (authUser && body.user_id !== authUser.id) {
-          const pureSupabase = await createPureClient();
-          const [projectResult, userResult] = await Promise.all([
-            pureSupabase.from('projects').select('name').eq('id', id).single(),
-            pureSupabase.from('app_users').select('name').eq('id', authUser.id).single(),
-          ]);
-          
+        if (body.user_id !== appUser.id) {
+          const projectResult = await supabase.from('projects').select('name').eq('id', id).maybeSingle();
           const projectName = projectResult.data?.name || '프로젝트';
-          const adderName = userResult.data?.name;
-          
+
           await notifyProjectParticipantAdded(
             body.user_id,
             projectName,
             id,
-            adderName
+            appUser.name
           );
         }
       } catch (notifyError) {
