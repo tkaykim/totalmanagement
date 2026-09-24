@@ -78,6 +78,10 @@ export async function POST(request: NextRequest) {
       .insert({
         project_id: body.project_id,
         bu_code: body.bu_code,
+        entry_scope: body.entry_scope || 'external',
+        counterparty_bu_code: body.entry_scope === 'internal_allocation'
+          ? body.counterparty_bu_code
+          : null,
         kind: body.kind,
         category: body.category,
         name: body.name,

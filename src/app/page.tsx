@@ -798,6 +798,9 @@ function HomePage() {
   const handleCreateProject = async (payload: {
     name: string;
     bu: BU;
+    brand_bu: BU;
+    delivery_bu: BU;
+    artist_management_bu?: BU | null;
     cat: string;
     startDate: string;
     endDate: string;
@@ -866,6 +869,9 @@ function HomePage() {
     id?: string;
     name: string;
     bu: BU;
+    brand_bu: BU;
+    delivery_bu: BU;
+    artist_management_bu?: BU | null;
     cat: string;
     startDate: string;
     endDate: string;
@@ -882,6 +888,9 @@ function HomePage() {
     try {
       const dbData = frontendProjectToDb({
         bu: payload.bu,
+        brand_bu: payload.brand_bu,
+        delivery_bu: payload.delivery_bu,
+        artist_management_bu: payload.artist_management_bu,
         name: payload.name,
         cat: payload.cat,
         startDate: payload.startDate,
@@ -951,6 +960,9 @@ function HomePage() {
     type: 'revenue' | 'expense';
     projectId: string;
     bu: BU;
+    entryScope: 'external' | 'internal_allocation';
+    counterpartyBu?: BU | '';
+    memo?: string;
     cat: string;
     name: string;
     amount: string;
@@ -980,6 +992,9 @@ function HomePage() {
       const dbData = frontendFinancialToDb({
         projectId: payload.projectId,
         bu: payload.bu,
+        entry_scope: payload.entryScope,
+        counterparty_bu: payload.counterpartyBu || null,
+        memo: payload.memo || null,
         type: payload.type,
         category: payload.cat,
         name: payload.name,
@@ -1005,6 +1020,9 @@ function HomePage() {
     type: 'revenue' | 'expense';
     projectId: string;
     bu: BU;
+    entryScope: 'external' | 'internal_allocation';
+    counterpartyBu?: BU | '';
+    memo?: string;
     cat: string;
     name: string;
     amount: string;
@@ -1023,6 +1041,12 @@ function HomePage() {
         : null;
 
       const dbData = {
+        bu_code: payload.bu,
+        entry_scope: payload.entryScope,
+        counterparty_bu_code: payload.entryScope === 'internal_allocation'
+          ? payload.counterpartyBu || null
+          : null,
+        memo: payload.memo || null,
         kind: payload.type,
         category: payload.cat,
         name: payload.name,
@@ -1765,6 +1789,8 @@ function HomePage() {
             amount: f.amount,
             status: f.status,
             occurred_at: f.date,
+            entry_scope: f.entry_scope,
+            counterparty_bu: f.counterparty_bu,
           }))}
           tasksData={tasks
             .filter((t) => t.projectId === isEditProjectModalOpen.id)

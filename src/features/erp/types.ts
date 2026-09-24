@@ -1,9 +1,12 @@
-export type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+export type BU = 'GRIGO' | 'DEETZ' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 export type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'taskTemplates' | 'manuals' | 'documentRoom' | 'organization' | 'reactstudio' | 'attendance' | 'attendanceAdmin' | 'leave' | 'leaveAdmin' | 'partners' | 'meetingRooms' | 'equipment' | 'vehicles' | 'workLog' | 'workLogAdmin' | 'bugReports' | 'exclusiveArtists' | 'pushTest' | 'resourceOverview' | 'aiWorkInsight' | 'corporateCard';
 
 export type Project = {
   id: string;
   bu: BU;
+  brand_bu: BU;
+  delivery_bu: BU;
+  artist_management_bu?: BU | null;
   name: string;
   cat: string;
   description?: string | null;
@@ -23,6 +26,9 @@ export type FinancialEntry = {
   id: string;
   projectId: string;
   bu: BU;
+  entry_scope: 'external' | 'internal_allocation';
+  counterparty_bu?: BU | null;
+  memo?: string | null;
   type: 'revenue' | 'expense';
   category: string;
   name: string;
@@ -63,6 +69,7 @@ export type TaskItem = {
 
 export const BU_TITLES: Record<BU, string> = {
   GRIGO: '그리고 엔터',
+  DEETZ: 'deetz 에이전시',
   REACT: '리액트 스튜디오',
   FLOW: '플로우메이커',
   AST: '아스트 컴퍼니',
@@ -72,6 +79,7 @@ export const BU_TITLES: Record<BU, string> = {
 
 export const BU_LABELS: Record<BU, string> = {
   GRIGO: 'GRIGO',
+  DEETZ: 'DEETZ',
   REACT: 'REACT STUDIO',
   FLOW: 'FLOWMAKER',
   AST: 'AST',
@@ -81,6 +89,7 @@ export const BU_LABELS: Record<BU, string> = {
 
 export const BU_CHIP_STYLES: Record<BU, string> = {
   GRIGO: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  DEETZ: 'bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800',
   REACT: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800',
   FLOW: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
   AST: 'bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800',

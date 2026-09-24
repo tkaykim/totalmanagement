@@ -79,11 +79,15 @@ export function SettlementView({
   };
 
   const totalRevenue = useMemo(() => {
-    return rows.revRows.reduce((sum, r) => sum + r.amount, 0);
+    return rows.revRows
+      .filter((r) => r.entry_scope !== 'internal_allocation')
+      .reduce((sum, r) => sum + r.amount, 0);
   }, [rows.revRows]);
 
   const totalExpense = useMemo(() => {
-    return rows.expRows.reduce((sum, e) => sum + e.amount, 0);
+    return rows.expRows
+      .filter((e) => e.entry_scope !== 'internal_allocation')
+      .reduce((sum, e) => sum + e.amount, 0);
   }, [rows.expRows]);
 
   const totalProfit = useMemo(() => {
@@ -119,11 +123,15 @@ export function SettlementView({
   }, [rows.expRows, searchLower, projects, partnerCompaniesData, partnerWorkersData]);
 
   const filteredTotalRevenue = useMemo(
-    () => filteredRevRows.reduce((sum, r) => sum + r.amount, 0),
+    () => filteredRevRows
+      .filter((r) => r.entry_scope !== 'internal_allocation')
+      .reduce((sum, r) => sum + r.amount, 0),
     [filteredRevRows]
   );
   const filteredTotalExpense = useMemo(
-    () => filteredExpRows.reduce((sum, e) => sum + e.amount, 0),
+    () => filteredExpRows
+      .filter((e) => e.entry_scope !== 'internal_allocation')
+      .reduce((sum, e) => sum + e.amount, 0),
     [filteredExpRows]
   );
 
@@ -185,20 +193,20 @@ export function SettlementView({
         <>
           <div className={cn("grid grid-cols-1 gap-4", canViewNetProfit ? "md:grid-cols-3" : "md:grid-cols-2")}>
             <StatCard
-              title="총 매출"
+              title="외부 매출"
               value={totalRevenue}
               icon={<DollarSign className="h-5 w-5 text-blue-500" />}
               accent="text-blue-600"
             />
             <StatCard
-              title="총 지출"
+              title="외부 지출"
               value={totalExpense}
               icon={<Coins className="h-5 w-5 text-red-500" />}
               accent="text-red-600"
             />
             {canViewNetProfit && (
               <StatCard
-                title="순익"
+                title="외부 순익"
                 value={totalProfit}
                 icon={<ChartLine className={cn('h-5 w-5', totalProfit >= 0 ? 'text-emerald-500' : 'text-red-500')} />}
                 accent={totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}
@@ -295,15 +303,22 @@ export function SettlementView({
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{getPartnerName(r)}</td>
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap text-[9px] sm:text-[11px]">{r.date}</td>
                           <td className="px-2 sm:px-4 py-3">
-                            <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(r.status))}>
-                              {getStatusLabel(r.status)}
-                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(r.status))}>
+                                {getStatusLabel(r.status)}
+                              </span>
+                              {r.entry_scope === 'internal_allocation' && (
+                                <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[8px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 sm:text-[9px]">
+                                  내부배부
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
                       <tr className="bg-blue-50/20 dark:bg-blue-900/30 border-t-2 border-blue-200 dark:border-blue-700">
                         <td colSpan={3} className="px-2 sm:px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
-                          {searchLower ? '필터 합계' : '합계'}
+                          {searchLower ? '외부 거래 필터 합계' : '외부 거래 합계'}
                         </td>
                         <td className="px-2 sm:px-4 py-3 font-black text-blue-600 dark:text-blue-400 italic whitespace-nowrap">{formatCurrency(filteredTotalRevenue)}</td>
                         <td colSpan={3} className="px-2 sm:px-4 py-3"></td>
@@ -332,15 +347,22 @@ export function SettlementView({
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{getPartnerName(e)}</td>
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap text-[9px] sm:text-[11px]">{e.date}</td>
                           <td className="px-2 sm:px-4 py-3">
-                            <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(e.status))}>
-                              {getStatusLabel(e.status)}
-                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(e.status))}>
+                                {getStatusLabel(e.status)}
+                              </span>
+                              {e.entry_scope === 'internal_allocation' && (
+                                <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[8px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 sm:text-[9px]">
+                                  내부배부
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
                       <tr className="bg-red-50/20 dark:bg-red-900/30 border-t-2 border-red-200 dark:border-red-700">
                         <td colSpan={3} className="px-2 sm:px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
-                          {searchLower ? '필터 합계' : '합계'}
+                          {searchLower ? '외부 거래 필터 합계' : '외부 거래 합계'}
                         </td>
                         <td className="px-2 sm:px-4 py-3 font-black text-red-500 dark:text-red-400 italic whitespace-nowrap">{formatCurrency(filteredTotalExpense)}</td>
                         <td colSpan={3} className="px-2 sm:px-4 py-3"></td>

@@ -563,7 +563,7 @@ export function UnifiedPartnerModal({
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">공유할 사업부</label>
                     <div className="flex flex-wrap gap-3">
-                      {['GRIGO', 'FLOW', 'AST', 'MODOO', 'REACT'].map((bu) => (
+                      {['GRIGO', 'DEETZ', 'FLOW', 'AST', 'MODOO', 'REACT'].map((bu) => (
                         <label key={bu} className="flex items-center gap-1 text-sm">
                           <input
                             type="checkbox"

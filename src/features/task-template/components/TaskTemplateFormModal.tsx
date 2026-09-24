@@ -28,6 +28,7 @@ const TEMPLATE_TYPE_OPTIONS = [
 
 const BU_OPTIONS: { value: BU; label: string }[] = [
   { value: 'GRIGO', label: '그리고 엔터' },
+  { value: 'DEETZ', label: 'deetz 에이전시' },
   { value: 'REACT', label: '리액트 스튜디오' },
   { value: 'FLOW', label: '플로우메이커' },
   { value: 'AST', label: '아스트 컴퍼니' },

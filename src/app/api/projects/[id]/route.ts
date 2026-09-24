@@ -81,7 +81,8 @@ export async function PATCH(
 
     // 유효한 컬럼만 업데이트 (존재하지 않는 컬럼 제외)
     const validColumns = [
-      'bu_code', 'name', 'category', 'status', 'start_date', 'end_date',
+      'bu_code', 'brand_bu_code', 'delivery_bu_code', 'artist_management_bu_code',
+      'name', 'category', 'status', 'start_date', 'end_date',
       'description', 'channel_id', 'pm_id', 'partner_id', 'participants'
     ];
     

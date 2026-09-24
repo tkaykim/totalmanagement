@@ -27,6 +27,7 @@ interface ResourceManageModalProps {
 
 const BU_OPTIONS = [
   { code: 'GRIGO', name: '그리고' },
+  { code: 'DEETZ', name: 'deetz' },
   { code: 'FLOW', name: '플로우' },
   { code: 'REACT', name: '리액트' },
   { code: 'MODOO', name: '모두' },

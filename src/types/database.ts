@@ -1,8 +1,9 @@
-export type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+export type BU = 'GRIGO' | 'DEETZ' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 export type ProjectStatus = '준비중' | '진행중' | '운영중' | '기획중' | '보류' | '완료';
 export type TaskStatus = 'todo' | 'in_progress' | 'on_hold' | 'done';
 export type FinancialKind = 'revenue' | 'expense';
 export type FinancialStatus = 'planned' | 'paid' | 'canceled';
+export type FinancialEntryScope = 'external' | 'internal_allocation';
 export type PaymentMethod = 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment';
 export type ERPRole = 'admin' | 'leader' | 'manager' | 'member' | 'viewer' | 'artist';
 export type TaskPriority = 'high' | 'medium' | 'low';
@@ -92,6 +93,9 @@ export interface ProjectParticipant {
 export interface Project {
   id: number;
   bu_code: BU;
+  brand_bu_code: BU;
+  delivery_bu_code: BU;
+  artist_management_bu_code?: BU | null;
   name: string;
   category: string;
   description?: string | null; // 프로젝트 설명 (nullable)
@@ -149,6 +153,8 @@ export interface FinancialEntry {
   // 묶여 있어 NULL row가 자연스럽게 제외되므로 런타임 영향 없음.
   project_id: number | null;
   bu_code: BU;
+  entry_scope: FinancialEntryScope;
+  counterparty_bu_code?: BU | null;
   kind: FinancialKind;
   category: string;
   name: string;
@@ -577,4 +583,3 @@ export interface AttendanceLog {
   created_at: string;
   updated_at: string;
 }
-

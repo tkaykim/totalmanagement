@@ -18,6 +18,7 @@ type EntityType = keyof typeof ENTITY_TYPE_CONFIG | '';
 
 const BU_TITLES: Record<BU, string> = {
   GRIGO: '그리고 엔터',
+  DEETZ: 'deetz 에이전시',
   REACT: '리액트 스튜디오',
   FLOW: '플로우메이커',
   AST: '아스트 컴퍼니',
@@ -378,6 +379,9 @@ export function CreateFinanceModal({
     type: 'revenue' | 'expense';
     projectId: string;
     bu: BU;
+    entryScope: 'external' | 'internal_allocation';
+    counterpartyBu?: BU | '';
+    memo?: string;
     cat: string;
     name: string;
     amount: string;
@@ -400,6 +404,9 @@ export function CreateFinanceModal({
   const [form, setForm] = useState({
     projectId: defaultProject?.id ?? '',
     bu: defaultProject?.bu ?? 'GRIGO',
+    entryScope: 'external' as 'external' | 'internal_allocation',
+    counterpartyBu: '' as BU | '',
+    memo: '',
     cat: '',
     name: '',
     amount: '',
@@ -529,6 +536,43 @@ export function CreateFinanceModal({
               />
             </FormField>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="거래 범위">
+              <Select
+                value={form.entryScope}
+                onChange={(value) => setForm((prev) => ({
+                  ...prev,
+                  entryScope: value as 'external' | 'internal_allocation',
+                  counterpartyBu: value === 'internal_allocation' ? prev.counterpartyBu : '',
+                }))}
+                options={[
+                  { value: 'external', label: '외부 거래' },
+                  { value: 'internal_allocation', label: '내부 BU 배부' },
+                ]}
+              />
+            </FormField>
+            <FormField label="상대 BU">
+              <Select
+                value={form.counterpartyBu}
+                onChange={(value) => setForm((prev) => ({ ...prev, counterpartyBu: value as BU | '' }))}
+                placeholder={form.entryScope === 'internal_allocation' ? '상대 BU 선택' : '외부 거래는 미사용'}
+                options={(Object.keys(BU_TITLES) as BU[])
+                  .filter((code) => code !== form.bu)
+                  .map((code) => ({ value: code, label: BU_TITLES[code] }))}
+              />
+            </FormField>
+          </div>
+
+          <FormField label="메모" icon={FileText}>
+            <textarea
+              value={form.memo}
+              onChange={(e) => setForm((prev) => ({ ...prev, memo: e.target.value }))}
+              placeholder="거래 성격, 입금·지급 근거, Clobe 거래 ID 등을 기록하세요"
+              rows={3}
+              className="w-full resize-y rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
+            />
+          </FormField>
 
           {/* 금액 + 결제일 */}
             <div className="grid grid-cols-2 gap-3">
@@ -668,6 +712,15 @@ export function CreateFinanceModal({
             onClick={async () => {
               if (isSubmitting) return;
               setError('');
+              // 클라이언트 validation: 납기일 필수
+              if (!form.dueDate) {
+                setError('납기일은 필수 입력 항목입니다.');
+                return;
+              }
+              if (form.entryScope === 'internal_allocation' && !form.counterpartyBu) {
+                setError('내부 BU 배부는 상대 BU를 선택해야 합니다.');
+                return;
+              }
               setIsSubmitting(true);
               try {
                 const result = await onSubmit({ ...form, type: mode });
@@ -713,6 +766,9 @@ export function EditFinanceModal({
     type: 'revenue' | 'expense';
     projectId: string;
     bu: BU;
+    entryScope: 'external' | 'internal_allocation';
+    counterpartyBu?: BU | '';
+    memo?: string;
     cat: string;
     name: string;
     amount: string;
@@ -733,6 +789,9 @@ export function EditFinanceModal({
   const [form, setForm] = useState({
     projectId: entry.projectId,
     bu: entry.bu,
+    entryScope: entry.entry_scope || 'external',
+    counterpartyBu: entry.counterparty_bu || '',
+    memo: entry.memo || '',
     type: entry.type,
     cat: entry.category,
     name: entry.name,
@@ -856,6 +915,43 @@ export function EditFinanceModal({
               />
             </FormField>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="거래 범위">
+              <Select
+                value={form.entryScope}
+                onChange={(value) => setForm((prev) => ({
+                  ...prev,
+                  entryScope: value as 'external' | 'internal_allocation',
+                  counterpartyBu: value === 'internal_allocation' ? prev.counterpartyBu : '',
+                }))}
+                options={[
+                  { value: 'external', label: '외부 거래' },
+                  { value: 'internal_allocation', label: '내부 BU 배부' },
+                ]}
+              />
+            </FormField>
+            <FormField label="상대 BU">
+              <Select
+                value={form.counterpartyBu}
+                onChange={(value) => setForm((prev) => ({ ...prev, counterpartyBu: value as BU | '' }))}
+                placeholder={form.entryScope === 'internal_allocation' ? '상대 BU 선택' : '외부 거래는 미사용'}
+                options={(Object.keys(BU_TITLES) as BU[])
+                  .filter((code) => code !== form.bu)
+                  .map((code) => ({ value: code, label: BU_TITLES[code] }))}
+              />
+            </FormField>
+          </div>
+
+          <FormField label="메모" icon={FileText}>
+            <textarea
+              value={form.memo}
+              onChange={(e) => setForm((prev) => ({ ...prev, memo: e.target.value }))}
+              placeholder="거래 성격, 입금·지급 근거, Clobe 거래 ID 등을 기록하세요"
+              rows={3}
+              className="w-full resize-y rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
+            />
+          </FormField>
 
           {/* 금액 + 결제일 */}
           <div className="grid grid-cols-2 gap-3">
@@ -1020,6 +1116,16 @@ export function EditFinanceModal({
             <button
               onClick={async () => {
                 if (isSubmitting) return;
+                // 클라이언트 validation: 납기일 필수
+                if (!form.dueDate) {
+                  // EditFinanceModal에는 별도 error state가 없으므로 alert 사용
+                  alert('납기일은 필수 입력 항목입니다.');
+                  return;
+                }
+                if (form.entryScope === 'internal_allocation' && !form.counterpartyBu) {
+                  alert('내부 BU 배부는 상대 BU를 선택해야 합니다.');
+                  return;
+                }
                 setIsSubmitting(true);
                 try {
                   await onSubmit({
@@ -1027,6 +1133,9 @@ export function EditFinanceModal({
                     type: form.type,
                     projectId: form.projectId,
                     bu: form.bu,
+                    entryScope: form.entryScope,
+                    counterpartyBu: form.counterpartyBu as BU | '',
+                    memo: form.memo,
                     cat: form.cat,
                     name: form.name,
                     amount: form.amount,

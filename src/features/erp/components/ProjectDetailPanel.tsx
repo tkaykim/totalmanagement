@@ -57,6 +57,9 @@ export function ProjectDetailPanel({
     const projectData: DbProject | null = {
       id: parseInt(project.id) || 0,
       bu_code: project.bu,
+      brand_bu_code: project.brand_bu || project.bu,
+      delivery_bu_code: project.delivery_bu || project.bu,
+      artist_management_bu_code: project.artist_management_bu || null,
       name: project.name,
       category: project.cat,
       status: project.status as any,

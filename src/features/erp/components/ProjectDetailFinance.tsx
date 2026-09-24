@@ -34,6 +34,7 @@ function FinanceItem({
   onClick?: () => void;
 }) {
   const isRevenue = entry.type === 'revenue';
+  const isInternalAllocation = entry.entry_scope === 'internal_allocation';
   const badge = STATUS_BADGE[entry.status] ?? STATUS_BADGE.planned;
 
   return (
@@ -72,6 +73,11 @@ function FinanceItem({
       <span className={cn('text-[10px] font-medium rounded px-1.5 py-0.5', badge.className)}>
         {badge.label}
       </span>
+      {isInternalAllocation && (
+        <span className="text-[10px] font-medium rounded bg-violet-100 px-1.5 py-0.5 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+          내부배부
+        </span>
+      )}
       <span
         className={cn(
           'text-xs font-bold tabular-nums',
@@ -93,11 +99,20 @@ export function ProjectDetailFinance({
 }: ProjectDetailFinanceProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const revenues = financeData.filter((f) => f.type === 'revenue' && f.status !== 'canceled');
-  const expenses = financeData.filter((f) => f.type === 'expense' && f.status !== 'canceled');
+  const activeEntries = financeData.filter((f) => f.status !== 'canceled');
+  const externalEntries = activeEntries.filter((f) => f.entry_scope !== 'internal_allocation');
+  const internalEntries = activeEntries.filter((f) => f.entry_scope === 'internal_allocation');
+  const revenues = externalEntries.filter((f) => f.type === 'revenue');
+  const expenses = externalEntries.filter((f) => f.type === 'expense');
   const totalRevenue = revenues.reduce((sum, r) => sum + r.amount, 0);
   const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - totalExpense;
+  const internalRevenue = internalEntries
+    .filter((f) => f.type === 'revenue')
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const internalExpense = internalEntries
+    .filter((f) => f.type === 'expense')
+    .reduce((sum, entry) => sum + entry.amount, 0);
 
   if (financeData.length === 0) return null;
 
@@ -145,14 +160,22 @@ export function ProjectDetailFinance({
       </button>
 
       {isExpanded && (
-        <div className="border-t border-slate-100 dark:border-slate-700 divide-y divide-slate-50 dark:divide-slate-700/50">
-          {financeData.map((entry) => (
-            <FinanceItem
-              key={entry.id}
-              entry={entry}
-              onClick={() => onFinanceClick?.(entry)}
-            />
-          ))}
+        <div className="border-t border-slate-100 dark:border-slate-700">
+          {(internalRevenue > 0 || internalExpense > 0) && (
+            <div className="flex items-center justify-between bg-violet-50/60 px-3 py-2 text-[10px] text-violet-700 dark:bg-violet-900/10 dark:text-violet-300">
+              <span className="font-semibold">내부 BU 배부 · 외부 손익 제외</span>
+              <span className="tabular-nums">매출 {formatCurrency(internalRevenue)} · 지출 {formatCurrency(internalExpense)}</span>
+            </div>
+          )}
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
+            {financeData.map((entry) => (
+              <FinanceItem
+                key={entry.id}
+                entry={entry}
+                onClick={() => onFinanceClick?.(entry)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

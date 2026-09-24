@@ -53,3 +53,4 @@ GoogleService-Info.plist
 # Capacitor 빌드 아티팩트
 android/app/build/
 ios/App/Pods/
+.env*.local

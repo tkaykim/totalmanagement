@@ -43,6 +43,7 @@ function getToday(): string {
 
 const BU_BAR_COLORS: Record<BU, string> = {
     GRIGO: 'bg-blue-500',
+    DEETZ: 'bg-teal-500',
     REACT: 'bg-purple-500',
     FLOW: 'bg-indigo-500',
     AST: 'bg-pink-500',
@@ -52,6 +53,7 @@ const BU_BAR_COLORS: Record<BU, string> = {
 
 const BU_BAR_BG: Record<BU, string> = {
     GRIGO: 'bg-blue-500/10 border-blue-500/20',
+    DEETZ: 'bg-teal-500/10 border-teal-500/20',
     REACT: 'bg-purple-500/10 border-purple-500/20',
     FLOW: 'bg-indigo-500/10 border-indigo-500/20',
     AST: 'bg-pink-500/10 border-pink-500/20',
