@@ -74,7 +74,7 @@ export const BU_META: Record<BuCode, BuMeta> = {
     },
   },
   MODOO: {
-    name: '모두굿즈',
+    name: '모두의 유니폼',
     shortLabel: '모두',
     label: 'MODOO',
     color: {
