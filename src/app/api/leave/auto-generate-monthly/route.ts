@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
+import { rejectUnauthorizedCron } from '@/lib/cron-auth';
 import { differenceInMonths, differenceInYears, addMonths, isSameDay, format } from 'date-fns';
 
 /**
@@ -18,13 +19,9 @@ export async function GET(request: NextRequest) {
 
 async function handleAutoGenerateMonthly(request: NextRequest) {
   try {
-    // Vercel Cron에서 호출하는 경우 Authorization 헤더 확인 (선택적)
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // 크론 인증: Authorization: Bearer <CRON_SECRET>. 시크릿 미설정이면 거부.
+    const unauthorized = rejectUnauthorizedCron(request);
+    if (unauthorized) return unauthorized;
 
     const supabase = await createPureClient();
     const today = new Date();
