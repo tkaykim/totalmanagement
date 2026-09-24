@@ -102,6 +102,7 @@ import { CreateOrgMemberModal, EditOrgMemberModal, CreateExternalWorkerModal, Ed
 import { EditUserModal, CreateUserModal } from '@/features/erp/components/UserModals';
 import { TasksView } from '@/features/erp/components/TasksView';
 import { OrganizationView } from '@/features/erp/components/OrganizationView';
+import { AccountStatusNotice, isAccountNoticeStatus, type AccountNoticeStatus } from '@/components/AccountStatusNotice';
 import { CreateFinanceModal, EditFinanceModal } from '@/features/erp/components/FinanceFormModals';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { PartnersView } from '@/features/partners/components/PartnersView';
@@ -175,6 +176,8 @@ function HomePage() {
   const [customRange, setCustomRange] = useState<{ start?: string; end?: string }>({});
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // 승인 대기·거절 계정 안내 (spec R20)
+  const [accountNotice, setAccountNotice] = useState<{ status: AccountNoticeStatus; name: string | null } | null>(null);
 
   // 딥링크 진입 감지 (알림 클릭으로 특정 뷰로 직접 이동 시)
   const [isDeepLink, setIsDeepLink] = useState(() => {
@@ -485,6 +488,13 @@ function HomePage() {
         .select('*')
         .eq('id', user.id)
         .single();
+
+      // 승인 대기·거절 계정은 안내 화면만 본다 (spec R20)
+      if (isAccountNoticeStatus(appUser?.status)) {
+        setAccountNotice({ status: appUser.status, name: appUser.name ?? null });
+        setLoading(false);
+        return;
+      }
 
       // 퇴사 처리된 사용자는 로그인 불가
       if (appUser?.status === 'retired') {
@@ -1104,6 +1114,10 @@ function HomePage() {
       return '수정 중 오류가 발생했습니다.';
     }
   };
+
+  if (accountNotice) {
+    return <AccountStatusNotice status={accountNotice.status} name={accountNotice.name} />;
+  }
 
   if (loading) {
     return (
