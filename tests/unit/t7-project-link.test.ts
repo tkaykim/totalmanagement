@@ -105,7 +105,6 @@ vi.mock("@/lib/supabase/server", () => ({
 
 type Staff = { id: string; role: string; bu_code: string; status: string };
 let currentUser: Staff | null = null;
-let mappedGowidIds: number[] = [1];
 
 vi.mock("@/lib/auth-guard", () => ({
   isGuardFailure: (r: unknown) => r instanceof NextResponse,
@@ -116,23 +115,9 @@ vi.mock("@/lib/auth-guard", () => ({
   }),
 }));
 
-vi.mock("@/app/api/gowid/_lib/gowid-client", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/app/api/gowid/_lib/gowid-client")>();
-  return {
-    ...actual,
-    getAuthContext: vi.fn(async () =>
-      currentUser
-        ? {
-            userId: currentUser.id,
-            role: currentUser.role,
-            buCode: currentUser.bu_code,
-            mappedGowidUserIds: mappedGowidIds,
-            buGowidUserIds: [],
-          }
-        : null
-    ),
-  };
-});
+// getAuthContext는 목으로 바꾸지 않는다: 실제 경로(requireActiveStaff → gowid_user_mapping 조회)를 탄다.
+// 법인카드 매핑은 가짜 DB의 gowid_user_mapping 표로 준다.
+import { requireActiveStaff } from "@/lib/auth-guard";
 
 import { DELETE, GET, POST } from "@/app/api/gowid/expenses/[expenseId]/project-link/route";
 
@@ -182,12 +167,16 @@ function seed() {
   db.app_users = [{ id: MEMBER_A.id, name: "직원A" }];
   db.financial_entries = [];
   db.gowid_expense_project_link = [];
+  // 매핑 있는 member(법인카드 권한 통과). 관리자·리더는 매핑 없이도 통과한다.
+  db.gowid_user_mapping = [
+    { erp_user_id: MEMBER_A.id, gowid_user_id: 1 },
+    { erp_user_id: MEMBER_B.id, gowid_user_id: 2 },
+  ];
 }
 
 beforeEach(() => {
   seed();
   currentUser = MEMBER_A;
-  mappedGowidIds = [1];
   delete process.env.ERP_AUDIT_V2;
 });
 
@@ -305,8 +294,29 @@ describe("T7 권한", () => {
     expect(entries()).toHaveLength(0);
   });
 
+  it("재직 확인 뒤 getAuthContext에서 재직 아님으로 바뀌면 requireAuth의 Forbidden → 403(500 아님)", async () => {
+    const guard = vi.mocked(requireActiveStaff);
+    for (const call of [
+      () => POST(postReq(linkBody(1)), params()),
+      () => DELETE(delReq(), params()),
+      () => GET(getReq(), params()),
+    ]) {
+      // 라우트 가드 1회는 통과, getAuthContext 안의 두 번째 확인에서 403
+      guard.mockImplementationOnce(async () => ({
+        user: { id: MEMBER_A.id },
+        appUser: { ...MEMBER_A },
+      }) as never);
+      guard.mockImplementationOnce(async () => NextResponse.json({ error: "Forbidden" }, { status: 403 }));
+      const res = await call();
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "Forbidden" });
+    }
+    expect(entries()).toHaveLength(0);
+    expect(financeCalls("delete")).toHaveLength(0);
+  });
+
   it("매핑 없는 member → 403", async () => {
-    mappedGowidIds = [];
+    db.gowid_user_mapping = [];
     expect((await POST(postReq(linkBody(1)), params())).status).toBe(403);
     expect(entries()).toHaveLength(0);
   });

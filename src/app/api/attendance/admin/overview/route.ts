@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { canViewAllAttendance, isLeader, isAdmin, isHeadLeader } from '@/features/attendance/lib/permissions';
@@ -7,6 +8,9 @@ import { getTodayKST } from '@/lib/timezone.server';
 export type DisplayWorkStatus = 'OFF_WORK' | 'WORKING' | 'CHECKED_OUT' | 'AWAY' | 'OVERTIME' | 'VACATION';
 
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;

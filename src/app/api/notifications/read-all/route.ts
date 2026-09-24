@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -5,6 +6,9 @@ import { createClient } from '@/lib/supabase/server';
  * 모든 알림 읽음 처리 API
  */
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     

@@ -1,7 +1,11 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();

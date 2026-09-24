@@ -147,6 +147,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Project link GET error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -319,6 +320,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ data: linkData });
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Project link POST error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -378,6 +380,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Project link DELETE error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

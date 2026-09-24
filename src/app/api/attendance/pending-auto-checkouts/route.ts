@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -6,6 +7,9 @@ import { createClient } from '@/lib/supabase/server';
  * 로그인 직후 확인하여 모달로 표시하기 위함
  */
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     
