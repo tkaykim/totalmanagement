@@ -11,6 +11,7 @@
   - 운영 DB(`wqtoahrekijirxxpbfqg`)에는 약 130개 변경이 적용되어 있고 이 폴더에는 31개만 있다.
   - DEETZ 사업부, `entry_scope`, 사업부 역할 칸, RLS 일괄 조치(2026-09-21) 등은 이 폴더에 없다.
   - 루트 `schema_.sql`도 오래된 스냅샷이다.
+  - 2026-09-24 운영 스키마 사본은 `baseline/20260924_prod_snapshot.sql`에 있다. 참고용이며 운영에서 실행하지 않는다(`migrations/README.md`).
 - `react_*` 테이블. reactstudio 레포가 주인이다.
 
 ## 지켜야 할 것
