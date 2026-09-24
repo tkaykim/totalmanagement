@@ -226,18 +226,20 @@ describe("사용자 변경 기록·본인 변경 금지", () => {
 });
 
 describe("RLS 보기 범위", () => {
-  const projectIds = async (uid: string) => ids(await rows<{ id: number }>(base, asUser(uid), "select id from public.projects"));
+  // 완료 프로젝트는 비로그인 공개 범위라 로그인 사용자에게도 보인다(아래 별도 테스트). 가시성 규칙 검사는 미완료 프로젝트로 한다.
+  const projectIds = async (uid: string) =>
+    ids(await rows<{ id: number }>(base, asUser(uid), "select id from public.projects where status <> '완료'"));
   const taskIds = async (uid: string) => ids(await rows<{ id: number }>(base, asUser(uid), "select id from public.project_tasks"));
   const feIds = async (uid: string) => ids(await rows<{ id: number }>(base, asUser(uid), "select id from public.financial_entries"));
 
   it("admin 은 전체를 본다", async () => {
-    expect(await projectIds(U.admin)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(await projectIds(U.admin)).toEqual([2, 3, 4, 5, 6]);
     expect(await taskIds(U.admin)).toEqual([1, 2, 3, 4, 5]);
     expect(await feIds(U.admin)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   it("다른 사업부 leader 도 전체를 본다", async () => {
-    expect(await projectIds(U.leaderGrigo)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(await projectIds(U.leaderGrigo)).toEqual([2, 3, 4, 5, 6]);
     expect(await taskIds(U.leaderGrigo)).toEqual([1, 2, 3, 4, 5]);
     expect(await feIds(U.leaderGrigo)).toEqual([1, 2, 3, 4, 5, 6]);
   });
@@ -256,7 +258,7 @@ describe("RLS 보기 범위", () => {
 
   it("manager: PM·생성자·참여자 + 같은 사업부의 PM 있는 프로젝트", async () => {
     // managerReact: 1(PM), 4(REACT + PM 있음). 2·7은 REACT지만 PM 없음 → 안 보임
-    expect(await projectIds(U.managerReact)).toEqual([1, 4]);
+    expect(await projectIds(U.managerReact)).toEqual([4]); // 1은 완료라 미완료 목록에서 빠진다
     // 할일: 프로젝트 1의 t1(담당도 본인)
     expect(await taskIds(U.managerReact)).toEqual([1]);
     // 재무: 프로젝트 1의 f1, f2(본인 등록)
@@ -304,6 +306,14 @@ describe("RLS 보기 범위", () => {
     expect(await rows(base, ANON, "select id from public.gowid_expense_project_link")).toEqual([]);
     expect(await rows(base, ANON, "select id from public.portfolio_items")).toHaveLength(2);
     expect(await rows(base, ANON, "select id from public.clients")).toHaveLength(2);
+  });
+
+  it("로그인 사용자도 완료 프로젝트는 비로그인 공개 범위만큼 본다(reactstudio.kr /history)", async () => {
+    const anonDone = ids(await rows<{ id: number }>(base, ANON, "select id from public.projects"));
+    for (const uid of [U.pending, U.retired, U.memberReact]) {
+      const done = ids(await rows<{ id: number }>(base, asUser(uid), "select id from public.projects where status = '완료'"));
+      expect(done).toEqual(anonDone);
+    }
   });
 
   it("anon 은 app_users 에 INSERT 할 수 없다(가입은 서버 라우트로)", async () => {

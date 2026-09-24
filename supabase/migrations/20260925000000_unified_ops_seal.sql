@@ -357,7 +357,9 @@ CREATE POLICY "seal read app_users" ON public.app_users AS PERMISSIVE FOR SELECT
 DROP POLICY IF EXISTS "erp authenticated full access" ON public.projects;
 DROP POLICY IF EXISTS "seal read projects" ON public.projects;
 CREATE POLICY "seal read projects" ON public.projects AS PERMISSIVE FOR SELECT TO authenticated
-    USING (public.can_view_project(id));
+    USING (public.can_view_project(id) OR ((status)::text = '완료'::text));
+-- 완료 프로젝트는 비로그인 공개 정책("public read completed projects")과 같은 범위다.
+-- 로그인한 직원이 reactstudio.kr 공개 페이지(/history)를 볼 때도 목록이 비지 않게 한다.
 
 -- project_tasks
 DROP POLICY IF EXISTS "erp authenticated full access" ON public.project_tasks;
