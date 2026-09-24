@@ -51,7 +51,7 @@ const path = require('path');
       
       for (const selector of emailSelectors) {
         try {
-          await page.fill(selector, 'tommy0621@naver.com');
+          await page.fill(selector, process.env.ERP_TEST_EMAIL);
           console.log(`Filled email with selector: ${selector}`);
           break;
         } catch (e) {
@@ -68,7 +68,7 @@ const path = require('path');
       
       for (const selector of passwordSelectors) {
         try {
-          await page.fill(selector, '123123');
+          await page.fill(selector, process.env.ERP_TEST_PASSWORD);
           console.log(`Filled password with selector: ${selector}`);
           break;
         } catch (e) {

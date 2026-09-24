@@ -26,8 +26,8 @@ const { chromium } = require('playwright');
     await page.fill('input[type="password"]', '');
     
     // Fill in credentials
-    await page.fill('input[type="email"]', 'finance@grigoent.co.kr');
-    await page.fill('input[type="password"]', 'qwer1234!');
+    await page.fill('input[type="email"]', process.env.ERP_TEST_EMAIL);
+    await page.fill('input[type="password"]', process.env.ERP_TEST_PASSWORD);
     await page.screenshot({ path: '.playwright-mcp/attendance-step2-login-filled.png', fullPage: true });
     
     // Click submit button

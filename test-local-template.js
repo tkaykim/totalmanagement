@@ -29,8 +29,8 @@ const path = require('path');
 
     console.log('2. Filling login credentials...');
     await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 5000 });
-    await page.fill('input[type="email"], input[name="email"]', 'tommy0621@naver.com');
-    await page.fill('input[type="password"], input[name="password"]', '123123');
+    await page.fill('input[type="email"], input[name="email"]', process.env.ERP_TEST_EMAIL);
+    await page.fill('input[type="password"], input[name="password"]', process.env.ERP_TEST_PASSWORD);
     await page.screenshot({ path: path.join(screenshotDir, 'local-step2-login-form.png'), fullPage: true });
     console.log('Screenshot: local-step2-login-form.png');
     

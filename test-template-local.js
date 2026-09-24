@@ -28,8 +28,8 @@ const path = require('path');
     console.log('✓ Screenshot saved: step1-login-page.png');
 
     console.log('2. Filling login credentials...');
-    await page.fill('input[type="email"]', 'jys@grigo.co.kr');
-    await page.fill('input[type="password"]', 'whdtjr!!1');
+    await page.fill('input[type="email"]', process.env.ERP_TEST_EMAIL);
+    await page.fill('input[type="password"]', process.env.ERP_TEST_PASSWORD);
     await page.screenshot({ path: path.join(screenshotDir, 'step2-credentials-filled.png'), fullPage: true });
     console.log('✓ Screenshot saved: step2-credentials-filled.png');
     

@@ -31,8 +31,8 @@ const path = require('path');
 
     if (currentUrl.includes('login') || await page.locator('input[type="email"]').count() > 0) {
       console.log('2. Login page detected. Logging in...');
-      await page.fill('input[type="email"]', 'tommy0621@naver.com');
-      await page.fill('input[type="password"]', '123123');
+      await page.fill('input[type="email"]', process.env.ERP_TEST_EMAIL);
+      await page.fill('input[type="password"]', process.env.ERP_TEST_PASSWORD);
       await page.screenshot({ path: path.join(screenshotDir, 'manual-test-2-login-form.png') });
       
       await page.click('button[type="submit"]');

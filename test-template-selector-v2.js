@@ -37,8 +37,8 @@ const path = require('path');
     
     if (hasLoginForm) {
       console.log('✓ Login page detected, logging in...');
-      await page.fill('input[type="email"], input[type="text"][placeholder*="이메일"]', 'tommy0621@naver.com');
-      await page.fill('input[type="password"]', '123123');
+      await page.fill('input[type="email"], input[type="text"][placeholder*="이메일"]', process.env.ERP_TEST_EMAIL);
+      await page.fill('input[type="password"]', process.env.ERP_TEST_PASSWORD);
       await page.screenshot({ path: path.join(screenshotDir, 'v2-step2-login-filled.png'), fullPage: true });
       
       await page.click('button[type="submit"]');

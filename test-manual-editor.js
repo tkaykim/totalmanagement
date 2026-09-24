@@ -36,8 +36,8 @@ const path = require('path');
       const emailInput = page.locator('input[type="email"]').first();
       const passwordInput = page.locator('input[type="password"]').first();
       
-      await emailInput.fill('tommy0621@naver.com');
-      await passwordInput.fill('123123');
+      await emailInput.fill(process.env.ERP_TEST_EMAIL);
+      await passwordInput.fill(process.env.ERP_TEST_PASSWORD);
       await page.screenshot({ path: path.join(screenshotDir, 'manual-step2-login-filled.png'), fullPage: true });
       console.log('✓ Screenshot saved: manual-step2-login-filled.png');
       

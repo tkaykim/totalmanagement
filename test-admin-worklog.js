@@ -27,11 +27,11 @@ const path = require('path');
     if (await emailInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       console.log('Login page detected, filling credentials...');
       
-      // Try admin@grigoent.co.kr first
-      await emailInput.fill('admin@grigoent.co.kr');
+      // Try (테스트 계정) first
+      await emailInput.fill(process.env.ERP_TEST_ADMIN_EMAIL);
       
       const passwordInput = await page.locator('input[type="password"], input[name="password"]').first();
-      await passwordInput.fill('admin123!');
+      await passwordInput.fill(process.env.ERP_TEST_ADMIN_PASSWORD);
       await page.screenshot({ path: path.join(screenshotDir, 'worklog-step2-login-filled.png'), fullPage: true });
       
       const loginButton = await page.locator('button[type="submit"], button:has-text("로그인")').first();
@@ -42,9 +42,9 @@ const path = require('path');
       // Check if login was successful by looking for error message
       const errorMessage = await page.locator('text="Invalid login credentials"').isVisible({ timeout: 1000 }).catch(() => false);
       if (errorMessage) {
-        console.log('❌ Login failed with admin@grigoent.co.kr, trying finance@grigoent.co.kr...');
-        await emailInput.fill('finance@grigoent.co.kr');
-        await passwordInput.fill('khj4957!');
+        console.log('❌ Login failed with (테스트 계정), trying (테스트 계정)...');
+        await emailInput.fill(process.env.ERP_TEST_EMAIL);
+        await passwordInput.fill(process.env.ERP_TEST_PASSWORD);
         await loginButton.click();
         await page.waitForTimeout(3000);
         await page.screenshot({ path: path.join(screenshotDir, 'worklog-step3b-after-login-retry.png'), fullPage: true });

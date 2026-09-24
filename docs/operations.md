@@ -33,6 +33,9 @@ npm run dev                # http://localhost:3000
 | `npm run cap:android` / `cap:ios` | Android Studio / Xcode 열기 |
 
 루트의 `test-*.js`는 Playwright로 로컬 화면을 눌러 보는 일회성 스크립트다. 자동 테스트가 아니다.
+로그인 정보는 환경변수로만 받는다: `ERP_TEST_EMAIL`·`ERP_TEST_PASSWORD`(일반 테스트 계정), `ERP_TEST_ADMIN_EMAIL`·`ERP_TEST_ADMIN_PASSWORD`(`test-admin-worklog.js`의 관리자 계정).
+값은 커밋되지 않는 `.env*` 파일이나 셸에서 넣는다. 예: `ERP_TEST_EMAIL=... ERP_TEST_PASSWORD=... node test-manual-editor.js`.
+값이 비어 있으면 로그인 입력에서 Playwright가 오류를 낸다.
 
 ## 환경변수
 

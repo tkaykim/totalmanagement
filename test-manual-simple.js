@@ -24,7 +24,7 @@ const path = require('path');
     await page.goto('http://localhost:3000');
     
     console.log('Waiting 60 seconds - please manually interact with the page...');
-    console.log('1. Log in if needed (tommy0621@naver.com / 123123)');
+    console.log('1. Log in if needed ((테스트 계정) / 123123)');
     console.log('2. Click on 매뉴얼 menu');
     console.log('3. Browse manuals');
     console.log('4. Check the TipTap editor');
