@@ -6,7 +6,9 @@ import path from "node:path";
 import { PGlite, type Transaction } from "@electric-sql/pglite";
 
 const root = path.resolve(__dirname, "../../..");
-export const readRepo = (rel: string) => fs.readFileSync(path.join(root, rel), "utf8");
+// Windows 체크아웃(core.autocrlf)에서도 같은 결과가 나오도록 줄바꿈을 LF로 맞춘다.
+export const readRepo = (rel: string) =>
+  fs.readFileSync(path.join(root, rel), "utf8").replace(/\r\n/g, "\n");
 
 export const STUBS = readRepo("scripts/schema/pglite-stubs.sql");
 export const BASELINE = readRepo("supabase/baseline/20260924_prod_snapshot.sql");
