@@ -1,12 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPureClient, createClient } from '@/lib/supabase/server';
+import { createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
+import { pickAllowed } from '@/app/api/projects/_lib/access';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+/** PATCH 허용 컬럼 (R4). `id`, `created_at` 등은 무시한다. */
+const VEHICLE_PATCH_COLUMNS = ['name', 'license_plate', 'description', 'is_active'] as const;
+
+/** 차량 수정·삭제는 지금처럼 관리자만 한다(R4). */
+async function requireAdmin(message: string) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  if (guard.appUser.role !== 'admin') {
+    return NextResponse.json({ error: message }, { status: 403 });
+  }
+  return null;
+}
+
 export async function GET(_request: NextRequest, context: RouteContext) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
-    const params = await context.params;
-    const id = params.id;
+    const { id } = await context.params;
     const supabase = await createPureClient();
 
     const { data, error } = await supabase
@@ -24,33 +41,18 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const denied = await requireAdmin('관리자만 차량을 수정할 수 있습니다.');
+  if (denied) return denied;
+
   try {
-    const params = await context.params;
-    const id = params.id;
-    const supabase = await createClient();
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: appUser } = await supabase
-      .from('app_users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!appUser || appUser.role !== 'admin') {
-      return NextResponse.json({ error: '관리자만 차량을 수정할 수 있습니다.' }, { status: 403 });
-    }
-
-    const body = await request.json();
+    const { id } = await context.params;
+    const body = await request.json().catch(() => null);
 
     const pureClient = await createPureClient();
     const { data, error } = await pureClient
       .from('vehicles')
       .update({
-        ...body,
+        ...pickAllowed(body, VEHICLE_PATCH_COLUMNS),
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -66,31 +68,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const denied = await requireAdmin('관리자만 차량을 삭제할 수 있습니다.');
+  if (denied) return denied;
+
   try {
-    const params = await context.params;
-    const id = params.id;
-    const supabase = await createClient();
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: appUser } = await supabase
-      .from('app_users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!appUser || appUser.role !== 'admin') {
-      return NextResponse.json({ error: '관리자만 차량을 삭제할 수 있습니다.' }, { status: 403 });
-    }
-
+    const { id } = await context.params;
     const pureClient = await createPureClient();
-    const { error } = await pureClient
-      .from('vehicles')
-      .delete()
-      .eq('id', id);
+    const { error } = await pureClient.from('vehicles').delete().eq('id', id);
 
     if (error) throw error;
 

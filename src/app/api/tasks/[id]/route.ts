@@ -1,57 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPureClient, createClient } from '@/lib/supabase/server';
-import { 
-  canEditTask, 
-  canDeleteTask, 
+import { createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
+import {
+  canCreateTask,
+  canEditTask,
+  canDeleteTask,
   canOnlyUpdateTaskStatus,
-  type AppUser, 
+  canViewTask,
   type Task as PermTask,
-  type Project as PermProject 
+  type Project as PermProject,
 } from '@/lib/permissions';
 import { createTaskStatusChangeLog } from '@/lib/activity-logger';
 import { notifyTaskAssigned, notifyTaskStatusChange } from '@/lib/notification-sender';
+import { loadPermProject, pickAllowed } from '@/app/api/projects/_lib/access';
 
-async function getCurrentUser(): Promise<AppUser | null> {
-  const [authSupabase, supabase] = await Promise.all([
-    createClient(),
-    createPureClient(),
-  ]);
-  
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) return null;
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-  const { data: appUser } = await supabase
-    .from('app_users')
-    .select('id, role, bu_code, name, position')
-    .eq('id', user.id)
-    .single();
+/**
+ * PATCH 허용 컬럼 (R4). `bu_code`는 받지 않는다 — 할일 사업부는 소속 프로젝트가 정한다(R5).
+ * `id`, `created_by`, `created_at`, `updated_at` 등은 무시한다.
+ */
+const TASK_PATCH_COLUMNS = [
+  'project_id', 'title', 'description', 'assignee_id', 'assignee',
+  'due_date', 'status', 'priority', 'tag', 'manual_id',
+] as const;
 
-  return appUser as AppUser | null;
-}
-
-async function getTaskWithProjectAndOldStatus(supabase: any, taskId: string) {
-  // 병렬로 task 전체 정보 조회 (oldStatus 포함)
-  const { data: task } = await supabase
+async function loadTaskContext(supabase: any, taskId: string) {
+  const { data: task, error } = await supabase
     .from('project_tasks')
     .select('id, project_id, bu_code, assignee_id, created_by, title, status')
     .eq('id', taskId)
-    .single();
-
+    .maybeSingle();
+  if (error) throw error;
   if (!task) return null;
 
-  // 프로젝트 정보 조회
-  const { data: project } = await supabase
-    .from('projects')
-    .select('id, name, bu_code, pm_id, participants')
-    .eq('id', task.project_id)
-    .single();
-
-  if (!project) return null;
-
-  // participants에서 user_id만 추출 (객체 배열인 경우)
-  const participantIds = (project.participants || [])
-    .map((participant: any) => participant.user_id)
-    .filter((id: any): id is string => !!id);
+  const loaded = await loadPermProject(supabase, task.project_id, 'name');
+  if (!loaded) return null;
 
   return {
     task: {
@@ -61,16 +45,11 @@ async function getTaskWithProjectAndOldStatus(supabase: any, taskId: string) {
       assignee_id: task.assignee_id,
       created_by: task.created_by,
     } as PermTask,
-    project: {
-      id: project.id,
-      bu_code: project.bu_code,
-      pm_id: project.pm_id,
-      participants: participantIds,
-    } as PermProject,
-    projectName: project.name,
-    oldStatus: task.status,
-    oldTitle: task.title,
-    oldAssigneeId: task.assignee_id,
+    project: loaded.perm as PermProject,
+    projectName: loaded.row.name as string | undefined,
+    oldStatus: task.status as string | undefined,
+    oldTitle: task.title as string | undefined,
+    oldAssigneeId: task.assignee_id as string | null,
   };
 }
 
@@ -78,52 +57,62 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    // 병렬로 supabase 클라이언트 생성, params 처리, body 파싱
-    const [supabase, { id }, body, currentUser] = await Promise.all([
-      createPureClient(),
-      params,
-      request.json(),
-      getCurrentUser(),
-    ]);
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { appUser } = guard;
 
-    if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const supabase: any = await createPureClient();
+    const { id } = await params;
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
     }
 
-    // 할일 및 프로젝트 정보 + 이전 상태를 한 번에 가져오기
-    const taskData = await getTaskWithProjectAndOldStatus(supabase, id);
-    if (!taskData) {
+    const ctx = await loadTaskContext(supabase, id);
+    if (!ctx || !canViewTask(appUser, ctx.task, ctx.project)) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
+    const { task, project, projectName, oldStatus, oldTitle, oldAssigneeId } = ctx;
 
-    const { task, project, projectName, oldStatus, oldTitle, oldAssigneeId } = taskData;
-
-    // 수정 권한 체크
-    if (!canEditTask(currentUser, task, project)) {
+    if (!canEditTask(appUser, task, project)) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    // 상태만 수정 가능한 경우 체크
-    if (canOnlyUpdateTaskStatus(currentUser, task, project)) {
-      const allowedFields = ['status'];
-      const requestedFields = Object.keys(body);
-      const hasDisallowedFields = requestedFields.some(f => !allowedFields.includes(f));
-      
-      if (hasDisallowedFields) {
+    const picked = pickAllowed(body, TASK_PATCH_COLUMNS);
+
+    // 배정자(상태만 수정 가능)는 status 외 칸을 바꿀 수 없다. 사업부 칸은 원래 무시하므로 판정에서 뺀다.
+    if (canOnlyUpdateTaskStatus(appUser, task, project)) {
+      const disallowed = Object.keys(body).filter((f) => f !== 'status' && f !== 'bu_code');
+      if (disallowed.length > 0) {
         return NextResponse.json({ error: 'You can only update task status' }, { status: 403 });
       }
     }
 
     const updateData: Record<string, unknown> = {
-      ...body,
+      ...picked,
       updated_at: new Date().toISOString(),
     };
-    if (body.bu_code || body.project_id) {
-      updateData.bu_code = project.bu_code;
+
+    // 다른 프로젝트로 이동: 새 프로젝트 사업부를 쓴다(R5). 리더는 새 프로젝트도 자기 사업부여야 한다(R10).
+    let targetProjectName = projectName;
+    if ('project_id' in picked && String(picked.project_id) !== String(task.project_id)) {
+      const target = picked.project_id == null ? null : await loadPermProject(supabase, picked.project_id as any, 'name');
+      if (!target) {
+        return NextResponse.json({ error: '옮길 프로젝트를 찾을 수 없습니다.' }, { status: 400 });
+      }
+      if (!canCreateTask(appUser, target.perm)) {
+        return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+      }
+      updateData.project_id = target.perm.id;
+      updateData.bu_code = target.perm.bu_code;
+      targetProjectName = target.row.name;
+    } else {
+      delete updateData.project_id;
     }
-    if (body.status !== undefined) {
-      updateData.status = body.status === 'on-hold' ? 'on_hold' : body.status;
+
+    if (picked.status !== undefined) {
+      updateData.status = picked.status === 'on-hold' ? 'on_hold' : picked.status;
     }
 
     const { data, error } = await supabase
@@ -135,17 +124,12 @@ export async function PATCH(
 
     if (error) throw error;
 
-    // 상태가 변경된 경우 활동 로그 기록 및 알림 (비동기, 응답 대기 안 함)
-    if (body.status && oldStatus !== body.status) {
-      createTaskStatusChangeLog(
-        currentUser.id,
-        id,
-        data.title || oldTitle || '',
-        oldStatus || '',
-        body.status
-      ).catch(console.error);
+    const newStatus = picked.status as string | undefined;
+    if (newStatus && oldStatus !== newStatus) {
+      createTaskStatusChangeLog(appUser.id, id, data.title || oldTitle || '', oldStatus || '', newStatus).catch(
+        console.error
+      );
 
-      // 할일 상태 변경 알림: 담당자, 생성자, PM, 댓글 작성자에게
       const statusRecipientIds: string[] = [];
       if (data.assignee_id) statusRecipientIds.push(data.assignee_id);
       if (data.created_by) statusRecipientIds.push(data.created_by);
@@ -157,31 +141,27 @@ export async function PATCH(
         .eq('entity_id', Number(id));
       const taskCommenterIds = [...new Set((taskCommentRows || []).map((r: { author_id: string }) => r.author_id))];
       taskCommenterIds.forEach((uid) => {
-        if (uid && !statusRecipientIds.includes(uid)) statusRecipientIds.push(uid);
+        if (uid && !statusRecipientIds.includes(uid as string)) statusRecipientIds.push(uid as string);
       });
       if (statusRecipientIds.length > 0) {
         notifyTaskStatusChange(
           statusRecipientIds,
           data.title || oldTitle || '',
-          projectName || '',
+          targetProjectName || '',
           id,
           oldStatus || '',
-          body.status,
-          currentUser.name,
-          currentUser.id
+          newStatus,
+          appUser.name,
+          appUser.id
         ).catch(console.error);
       }
     }
 
-    // 담당자가 변경된 경우 새 담당자에게 알림 전송 (누가 배정했는지 포함)
-    if (body.assignee_id && body.assignee_id !== oldAssigneeId && body.assignee_id !== currentUser.id) {
-      notifyTaskAssigned(
-        body.assignee_id,
-        data.title || oldTitle || '',
-        projectName || '',
-        id,
-        currentUser.name
-      ).catch(console.error);
+    const newAssignee = picked.assignee_id as string | undefined;
+    if (newAssignee && newAssignee !== oldAssigneeId && newAssignee !== appUser.id) {
+      notifyTaskAssigned(newAssignee, data.title || oldTitle || '', targetProjectName || '', id, appUser.name).catch(
+        console.error
+      );
     }
 
     return NextResponse.json(data);
@@ -191,36 +171,27 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { appUser } = guard;
+
   try {
-    // 병렬로 처리
-    const [supabase, { id }, currentUser] = await Promise.all([
-      createPureClient(),
-      params,
-      getCurrentUser(),
-    ]);
+    const supabase: any = await createPureClient();
+    const { id } = await params;
 
-    if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 할일 및 프로젝트 정보 가져오기
-    const taskData = await getTaskWithProjectAndOldStatus(supabase, id);
-    if (!taskData) {
+    const ctx = await loadTaskContext(supabase, id);
+    if (!ctx || !canViewTask(appUser, ctx.task, ctx.project)) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    const { task, project } = taskData;
-
-    // 삭제 권한 체크
-    if (!canDeleteTask(currentUser, task, project)) {
+    if (!canDeleteTask(appUser, ctx.task, ctx.project)) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
     const { error } = await supabase.from('project_tasks').delete().eq('id', id);
-
     if (error) throw error;
 
     return NextResponse.json({ success: true });
