@@ -9,6 +9,8 @@ import type {
   PartnerOption,
 } from './types';
 
+import { toApiError } from '@/features/erp/finance-ui';
+
 const API_BASE = '/api';
 
 // 프로젝트별 분배 설정 조회
@@ -29,7 +31,7 @@ export async function fetchProjectShareSettings(
   }
 
   const res = await fetch(`${API_BASE}/projects?${params.toString()}`);
-  if (!res.ok) throw new Error('프로젝트 조회 실패');
+  if (!res.ok) throw await toApiError(res, '프로젝트 조회 실패');
 
   const data = await res.json();
   return (data.data || []).map((p: any) => ({
@@ -66,8 +68,7 @@ export async function updateProjectShareSetting(
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || '분배 설정 저장 실패');
+    throw await toApiError(res, '분배 설정 저장 실패');
   }
 }
 
@@ -81,7 +82,7 @@ export async function fetchPartnerSettlements(
   }
 
   const res = await fetch(`${API_BASE}/partner-settlements?${params.toString()}`);
-  if (!res.ok) throw new Error('정산서 조회 실패');
+  if (!res.ok) throw await toApiError(res, '정산서 조회 실패');
 
   const data = await res.json();
   return (data.data || []).map(mapSettlement);
@@ -90,7 +91,7 @@ export async function fetchPartnerSettlements(
 // 정산서 상세 조회
 export async function fetchPartnerSettlement(id: number): Promise<PartnerSettlement> {
   const res = await fetch(`${API_BASE}/partner-settlements/${id}`);
-  if (!res.ok) throw new Error('정산서 조회 실패');
+  if (!res.ok) throw await toApiError(res, '정산서 조회 실패');
 
   const data = await res.json();
   return mapSettlement(data.data);
@@ -113,8 +114,7 @@ export async function createPartnerSettlement(
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || '정산서 생성 실패');
+    throw await toApiError(res, '정산서 생성 실패');
   }
 
   const data = await res.json();
@@ -135,8 +135,7 @@ export async function updatePartnerSettlement(
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || '정산서 수정 실패');
+    throw await toApiError(res, '정산서 수정 실패');
   }
 
   const data = await res.json();
@@ -150,15 +149,14 @@ export async function deletePartnerSettlement(id: number): Promise<void> {
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || '정산서 삭제 실패');
+    throw await toApiError(res, '정산서 삭제 실패');
   }
 }
 
 // 파트너 목록 조회
 export async function fetchPartnerOptions(): Promise<PartnerOption[]> {
   const res = await fetch(`${API_BASE}/unified-partners?limit=500`);
-  if (!res.ok) throw new Error('파트너 조회 실패');
+  if (!res.ok) throw await toApiError(res, '파트너 조회 실패');
 
   const data = await res.json();
   return (data.data || []).map((p: any) => ({

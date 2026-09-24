@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
 import type { FinancialEntry } from '../types';
 import { formatCurrency } from '../types';
 import { cn } from '@/lib/utils';
+import { isInternalAllocation, summarizeProjectPnl } from '../finance-ui';
 
 interface ProjectDetailFinanceProps {
   financeData: FinancialEntry[];
@@ -34,7 +35,7 @@ function FinanceItem({
   onClick?: () => void;
 }) {
   const isRevenue = entry.type === 'revenue';
-  const isInternalAllocation = entry.entry_scope === 'internal_allocation';
+  const isInternal = isInternalAllocation(entry);
   const badge = STATUS_BADGE[entry.status] ?? STATUS_BADGE.planned;
 
   return (
@@ -64,18 +65,21 @@ function FinanceItem({
         <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">
           {entry.name}
         </p>
-        {entry.category && (
+        {(entry.category || (entry.status === 'planned' && entry.due_date)) && (
           <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
             {entry.category}
+            {entry.status === 'planned' && entry.due_date && (
+              <span className="ml-1">· 기한 {entry.due_date}</span>
+            )}
           </p>
         )}
       </div>
       <span className={cn('text-[10px] font-medium rounded px-1.5 py-0.5', badge.className)}>
         {badge.label}
       </span>
-      {isInternalAllocation && (
+      {isInternal && (
         <span className="text-[10px] font-medium rounded bg-violet-100 px-1.5 py-0.5 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
-          내부배부
+          내부
         </span>
       )}
       <span
@@ -99,20 +103,14 @@ export function ProjectDetailFinance({
 }: ProjectDetailFinanceProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const activeEntries = financeData.filter((f) => f.status !== 'canceled');
-  const externalEntries = activeEntries.filter((f) => f.entry_scope !== 'internal_allocation');
-  const internalEntries = activeEntries.filter((f) => f.entry_scope === 'internal_allocation');
-  const revenues = externalEntries.filter((f) => f.type === 'revenue');
-  const expenses = externalEntries.filter((f) => f.type === 'expense');
-  const totalRevenue = revenues.reduce((sum, r) => sum + r.amount, 0);
-  const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const netProfit = totalRevenue - totalExpense;
-  const internalRevenue = internalEntries
-    .filter((f) => f.type === 'revenue')
-    .reduce((sum, entry) => sum + entry.amount, 0);
-  const internalExpense = internalEntries
-    .filter((f) => f.type === 'expense')
-    .reduce((sum, entry) => sum + entry.amount, 0);
+  // R26: 프로젝트 상세는 외부 손익과 내부배부 합계를 나눠 보여 준다(취소 제외).
+  const pnl = summarizeProjectPnl(financeData);
+  const totalRevenue = pnl.externalRevenue;
+  const totalExpense = pnl.externalExpense;
+  const netProfit = pnl.externalProfit;
+  const internalRevenue = pnl.internalRevenue;
+  const internalExpense = pnl.internalExpense;
+  const hasInternal = financeData.some((f) => isInternalAllocation(f) && f.status !== 'canceled');
 
   if (financeData.length === 0) return null;
 
@@ -132,6 +130,7 @@ export function ProjectDetailFinance({
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-[11px] tabular-nums">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">외부 손익</span>
             <span className="text-blue-600 dark:text-blue-400 font-semibold">
               +{formatCurrency(totalRevenue)}
             </span>
@@ -161,10 +160,12 @@ export function ProjectDetailFinance({
 
       {isExpanded && (
         <div className="border-t border-slate-100 dark:border-slate-700">
-          {(internalRevenue > 0 || internalExpense > 0) && (
+          {hasInternal && (
             <div className="flex items-center justify-between bg-violet-50/60 px-3 py-2 text-[10px] text-violet-700 dark:bg-violet-900/10 dark:text-violet-300">
-              <span className="font-semibold">내부 BU 배부 · 외부 손익 제외</span>
-              <span className="tabular-nums">매출 {formatCurrency(internalRevenue)} · 지출 {formatCurrency(internalExpense)}</span>
+              <span className="font-semibold">내부배부 합계 (외부 손익에 포함하지 않음)</span>
+              <span className="tabular-nums">
+                매출 {formatCurrency(internalRevenue)} · 지출 {formatCurrency(internalExpense)} · 차액 {formatCurrency(internalRevenue - internalExpense)}
+              </span>
             </div>
           )}
           <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
