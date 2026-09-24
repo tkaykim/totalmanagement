@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
+import { rejectUnauthorizedCron } from '@/lib/cron-auth';
 import { createActivityLog } from '@/lib/activity-logger';
 import { getTodayKST } from '@/lib/timezone.server';
 import { notifyAutoCheckout } from '@/lib/notification-sender';
@@ -21,17 +22,13 @@ const MAX_WORK_HOURS = 16; // 최대 근무시간 (시간) - 이 시간 이후 �
  * - 단, work_date의 23:59를 초과하지 않음
  * 
  * Vercel Cron 또는 외부 스케줄러에서 호출할 수 있습니다.
- * Authorization 헤더에 CRON_SECRET을 포함해야 합니다.
+ * Authorization: Bearer <CRON_SECRET> 헤더가 필요합니다(미설정 시 401).
  */
 export async function POST(request: NextRequest) {
   try {
-    // Cron job 인증 (선택적: 환경변수로 시크릿 확인)
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // 크론 인증: Authorization: Bearer <CRON_SECRET>. 시크릿 미설정이면 거부.
+    const unauthorized = rejectUnauthorizedCron(request);
+    if (unauthorized) return unauthorized;
 
     const supabase = await createPureClient();
     const today = getTodayKST();
