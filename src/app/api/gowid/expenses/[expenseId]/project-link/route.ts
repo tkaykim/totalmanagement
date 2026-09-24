@@ -8,11 +8,13 @@ import {
   canMoveFinanceBu,
   canTransitionFinance,
   canViewProject,
+  toPaidAtTimestamp,
   type BuCode,
   type FinancialEntry,
   type Project,
 } from '@/lib/permissions';
 import type { FinancialStatus } from '@/types/database';
+import { getTodayKST } from '@/lib/timezone.server';
 import { getAuthContext, requireAuth, canAccessCorporateCard, unauthorizedResponse, forbiddenResponse } from '../../../_lib/gowid-client';
 
 /**
@@ -215,7 +217,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const financialEntryName = `[법인카드] ${expense_store_name || '카드결제'}`;
     const financialDate = expense_date
       ? `${expense_date.slice(0, 4)}-${expense_date.slice(4, 6)}-${expense_date.slice(6, 8)}`
-      : new Date().toISOString().slice(0, 10);
+      : getTodayKST();
     const financialMemo = card_alias
       ? `Gowid 법인카드 자동연동 (${card_alias})`
       : 'Gowid 법인카드 자동연동';
@@ -239,6 +241,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             name: financialEntryName,
             amount: expense_amount || 0,
             occurred_at: financialDate,
+            // 완료(paid) 행은 입금·지급일이 사용일을 따라간다(R14)
+            ...((existingEntry.status ?? 'paid') === 'paid' ? { paid_at: toPaidAtTimestamp(financialDate) } : {}),
             memo: financialMemo,
             updated_at: now,
             ...auditFields(userId),
@@ -293,6 +297,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         amount: expense_amount || 0,
         occurred_at: financialDate,
         status: 'paid',
+        // 완료(paid) 행은 입금·지급일이 필요하다(R14): 카드 사용일 한국 자정
+        paid_at: toPaidAtTimestamp(financialDate),
         memo: financialMemo,
         created_by: userId,
         ...auditFields(userId),

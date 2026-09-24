@@ -8,6 +8,7 @@ import {
   canEditFinance,
   canMoveFinanceBu,
   canTransitionFinance,
+  isValidDateString,
   validateFinanceDates,
   validateFinanceScope,
   type BuCode,
@@ -79,6 +80,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     if (input.kind !== undefined && !isFinancialKind(input.kind)) {
       return bad(400, '구분(kind)은 revenue 또는 expense여야 합니다.');
+    }
+    if (input.occurred_at !== undefined && !isValidDateString(input.occurred_at)) {
+      return bad(400, '발생일(occurred_at)은 YYYY-MM-DD 형식이어야 합니다.');
     }
     let amount: number | undefined;
     if (input.amount !== undefined) {

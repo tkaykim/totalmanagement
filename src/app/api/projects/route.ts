@@ -5,7 +5,8 @@ import { canCreateProject, canViewProject } from '@/lib/permissions';
 import { isBuCode } from '@/lib/business-units';
 import { createActivityLog } from '@/lib/activity-logger';
 import { notifyProjectPMAssigned, notifyProjectParticipantAdded } from '@/lib/notification-sender';
-import { fetchAllRows, toPermProject } from '@/app/api/projects/_lib/access';
+import { toPermProject } from '@/app/api/projects/_lib/access';
+import { fetchAllRows } from '@/lib/supabase/fetch-all';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -45,14 +46,14 @@ export async function GET(request: NextRequest) {
       ? `*, ${creatorJoin}, share_partner:partners!share_partner_id(id, display_name)`
       : `*, ${creatorJoin}`;
 
-    const allProjects = await fetchAllRows<any>(() => {
+    const allProjects = await fetchAllRows<any>((from, to) => {
       let q = supabase
         .from('projects')
         .select(selectQuery)
         .order('created_at', { ascending: false })
         .order('id', { ascending: false });
       if (bu) q = q.eq('bu_code', bu);
-      return q;
+      return q.range(from, to);
     });
 
     const projects = allProjects.filter((p) => {
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
     const totals = new Map<string, Totals>();
     if (projects.length > 0) {
       const visibleIds = new Set(projects.map((p) => String(p.id)));
-      const entries = await fetchAllRows<any>(() => {
+      const entries = await fetchAllRows<any>((from, to) => {
         let q = supabase
           .from('financial_entries')
           .select('id, project_id, kind, amount, entry_scope, status')
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
           .order('id', { ascending: true });
         if (startDate) q = q.gte('occurred_at', startDate);
         if (endDate) q = q.lte('occurred_at', endDate);
-        return q;
+        return q.range(from, to);
       });
 
       for (const f of entries) {

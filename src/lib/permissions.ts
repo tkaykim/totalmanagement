@@ -2,9 +2,10 @@
  * 역할 기반 권한 판정 — 이 파일이 역할·사업부·재직 판정의 한 곳 정의다.
  * 라우트·화면에 역할 조건을 따로 쓰지 말고 여기에 함수를 추가한다.
  *
- * 기준: `.dryforge/spec.md`(전사 통합 1차) 2·4·5·6·7·10절, 8-1절(R32).
+ * 규칙 원문: `docs/business-rules.md`(프로젝트·할일·매출지출 권한, 상태 전이, 기한·입금일, 가입 승인),
+ * `docs/security.md`(권한 표, 재직 판정). 주석의 R 번호는 전사 통합 1차 규칙 번호다.
  *
- * 사람 구분 (spec 2절)
+ * 사람 구분
  * - 재직 직원: `status='active'`이고 `bu_code`가 있는 사람(역할은 admin·leader·manager·member)
  * - 관리자(admin): 전사 보기·쓰기
  * - 사업부 리더(leader): 전사 보기(R7), 쓰기는 자기 사업부만(R10)
@@ -73,7 +74,7 @@ export interface FinancialEntry {
 }
 
 // ============================================
-// 재직·역할 판정 (spec 2절, R1)
+// 재직·역할 판정 (R1)
 // ============================================
 
 function isStaffRole(role: Role | string | null | undefined): boolean {
@@ -605,6 +606,11 @@ export function canViewUserChanges(user: AppUser | null | undefined): boolean {
   return isActiveAdmin(user);
 }
 
+/** 직원 등록·정보 수정 (R22·R23): 재직 관리자만 */
+export function canManageUsers(user: AppUser | null | undefined): boolean {
+  return isActiveAdmin(user);
+}
+
 /** 직원 역할·사업부·재직 상태 변경 (R22): 관리자만, 본인 값은 불가 */
 export function canChangeUserRoleBuStatus(user: AppUser | null | undefined, targetUserId: string): boolean {
   if (!isActiveAdmin(user)) return false;
@@ -1015,6 +1021,7 @@ export const Permissions = {
     getPermissions: getFinancePermissions,
   },
   users: {
+    canManage: canManageUsers,
     canViewChanges: canViewUserChanges,
     canChangeRoleBuStatus: canChangeUserRoleBuStatus,
   },

@@ -8,8 +8,8 @@ import { isGuardFailure, requireActiveStaff } from '@/lib/auth-guard';
 import { isAuditV2Enabled } from '@/lib/feature-flags';
 import { canCreateFinance, canViewProject, validateFinanceDates } from '@/lib/permissions';
 import { getTodayKST } from '@/lib/timezone.server';
+import { fetchAllRows } from '@/lib/supabase/fetch-all';
 import {
-  fetchAllRows,
   isEntryVisible,
   seesAllFinance,
   toPermProject,

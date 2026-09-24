@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 import { isGuardFailure, requireActiveStaff } from '@/lib/auth-guard';
-import { STAFF_ROLES } from '@/lib/permissions';
+import { canManageUsers, STAFF_ROLES } from '@/lib/permissions';
 import { isBuCode } from '@/lib/business-units';
 
 function fail(status: number, error: string) {
@@ -53,14 +53,14 @@ export async function GET() {
 }
 
 /**
- * 관리자 직접 등록 (재직 상태로 생성). 관리자만.
- * 역할은 admin·leader·manager·member, 사업부는 7개 중 하나(비우면 null).
+ * 관리자 직접 등록 (재직 상태로 생성). 관리자만(`canManageUsers`).
+ * 역할은 admin·leader·manager·member, 사업부는 7개 중 하나(필수 — 재직 직원은 사업부가 있어야 한다).
  * app_users 삽입이 실패하면 인증 계정을 지워 되돌린다.
  */
 export async function POST(request: NextRequest) {
   const guard = await requireActiveStaff();
   if (isGuardFailure(guard)) return guard;
-  if (guard.appUser.role !== 'admin') {
+  if (!canManageUsers(guard.appUser)) {
     return fail(403, '관리자만 회원을 추가할 수 있습니다.');
   }
 
@@ -86,6 +86,10 @@ export async function POST(request: NextRequest) {
   const buCode = body.bu_code === undefined || body.bu_code === '' || body.bu_code === null ? null : body.bu_code;
   if (buCode !== null && !isBuCode(buCode)) {
     return fail(400, '사업부가 올바르지 않습니다.');
+  }
+  // 재직(active)으로 만들므로 사업부가 반드시 있어야 한다(사업부 없는 재직자는 가드가 막는다)
+  if (buCode === null) {
+    return fail(400, '재직 직원은 사업부가 필요합니다.');
   }
 
   try {

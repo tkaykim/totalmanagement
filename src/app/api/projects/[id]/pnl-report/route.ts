@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 import { isGuardFailure, requireActiveStaff } from '@/lib/auth-guard';
 import { canEditProject, canViewProject, type AppUser, type Project } from '@/lib/permissions';
+import { fetchAllRows } from '@/lib/supabase/fetch-all';
 import {
-  fetchAllRows,
   isEntryVisible,
   loadPermProject,
   seesAllFinance,

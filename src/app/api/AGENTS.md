@@ -4,7 +4,7 @@
 - 화면과 Vercel 크론이 부르는 모든 HTTP 엔드포인트(`route.ts`)
 - 재직 가드 호출, 역할·사업부 판정 호출, 입력 검증, DB 읽기·쓰기, 활동 기록(`activity_logs`)·알림 발송
 - 라우트 묶음 전용 도우미
-  - `financial-entries/_lib/finance-access.ts`: 매출·지출 보기 범위, 허용 칸, 1,000행 넘는 조회(`fetchAllRows`), `paid_at` 입력 정리
+  - `financial-entries/_lib/finance-access.ts`: 매출·지출 보기 범위, 허용 칸, 프로젝트 행 변환(`toPermProject`, 참여자 두 모양), `paid_at` 입력 정리
   - `projects/_lib/access.ts`: 프로젝트 보기·수정 판정용 조회
   - `users/signup-requests/_guard.ts`: 본사 관리자 가드(`requireHeadAdmin`)
   - `gowid/_lib/gowid-client.ts`: Gowid API 호출과 법인카드 인증(`getAuthContext` → `requireAuth`)
@@ -40,12 +40,14 @@
   - `financial_entries` delete는 `status='planned'` 조건을 같이 건다. `paid`·`canceled` 삭제 요청은 409.
   - 법인카드 연결 이동은 지출 행을 update(프로젝트·사업부)하고, 해제는 `canceled`로 바꾼 뒤 연결표 행만 지운다. 이 라우트는 `financial_entries`에 delete를 부르지 않는다.
 - **프로젝트 삭제**: 매출·지출이 한 건이라도 있으면 삭제 호출 전에 409와 "보류로 바꾸세요" 문구를 준다. DB 트리거도 거부하지만, 트리거에 기대지 말고 먼저 확인한다(봉인 전 DB에서는 연쇄 삭제된다).
+- **프로젝트 하위 쓰기**: 문서 올리기·삭제, 참여자 추가·삭제는 프로젝트 수정이다. 볼 수 없으면 404, 볼 수만 있으면(다른 사업부 리더, 참여만 한 직원) 403. 조회는 보기 범위만 본다.
 - **할일 사업부**: 할일의 `bu_code`는 입력으로 받지 않는다. `project_id`가 바뀌면 새 프로젝트의 `bu_code`를 넣는다.
 - **변경자 전달**: 매출·지출·`app_users` 쓰기에는 `isAuditV2Enabled()`가 참일 때만 `updated_by = appUser.id`를 넣는다. 스위치가 꺼졌는데 넣으면 봉인 전 DB에서 칸이 없어 저장이 실패한다. 변경 기록 조회 라우트(`financial-entries/[id]/changes`, `users/[id]/changes`)는 가드 다음에 스위치를 보고, 꺼져 있으면 200 `{ changes: [], enabled: false }`를 준다.
-- **사용자 변경**: `users/[id]`는 관리자만, 역할·사업부·재직 상태는 `canChangeUserRoleBuStatus`(본인은 불가). 새 역할은 `STAFF_ROLES` 4개만. 사람 행을 지우는 라우트를 만들지 않는다.
+- **사용자 등록·변경**: `users`(POST)·`users/[id]`는 `canManageUsers`(재직 관리자)만, 역할·사업부·재직 상태는 `canChangeUserRoleBuStatus`(본인은 불가). 새 역할은 `STAFF_ROLES` 4개만. 재직(`active`)으로 만들거나 남기는 사람에게 사업부가 없으면 400. 사람 행을 지우는 라우트를 만들지 않는다.
 - **응답 형식**: 오류는 `{ error: string }`. 목록은 배열, 삭제 성공은 `{ success: true }`. 가입·승인은 `{ ok: true }`·`{ requests }`·`{ user }`, 변경 기록은 `{ changes, enabled }`. 화면 훅과 reactstudio.kr 계약이 이 형태를 전제로 한다.
+- **법인카드 연결의 지출 행**: 새로 만드는 `paid` 행에는 카드 사용일 한국 자정을 `paid_at`으로 넣는다. 같은 프로젝트로 다시 연결해 사용일이 바뀌면 `paid` 행의 `paid_at`도 맞춘다.
 - **날짜**: "오늘"은 `src/lib/timezone.server.ts`·`timezone.ts`의 KST 헬퍼로 구한다. `paid_at`은 `validateFinanceDates`가 돌려준 값(한국 자정 timestamptz)을 그대로 저장한다.
-- **대량 조회**: 목록·합계는 `range`로 끝까지 읽는다. `.in('id', [...수백 개])`는 URL 길이를 넘으므로 쓰지 않는다.
+- **대량 조회**: 목록·합계는 `src/lib/supabase/fetch-all.ts`의 `fetchAllRows`로 끝까지 읽는다. `.in('id', [...수백 개])`는 URL 길이를 넘으므로 쓰지 않는다.
 - **알림**: 상태 변경 알림은 `src/lib/notification-sender.ts`를 부른다. DB를 SQL로 직접 바꾸면 알림이 나가지 않는다.
 
 ## 테스트할 것 (라우트마다)
@@ -53,7 +55,7 @@
 - 권한 없는 역할 → 403, DB 변화 없음. 다른 사업부 리더의 쓰기 → 403.
 - 볼 수 없는 대상의 id 직접 요청 → 404.
 - 허용 외 칸을 섞어 보냄 → 무시하고 나머지만 저장.
-- 매출·지출: `paid` 삭제 409, 되돌리기·되살리기는 관리자만, `planned` 기한 누락 400, `paid` 전환 시 입금일 누락 400.
+- 매출·지출: 발생일 누락·형식 오류 400, `paid` 삭제 409, 되돌리기·되살리기는 관리자만, `planned` 기한 누락 400, `paid` 전환 시 입금일 누락 400.
 - 재무 행 있는 프로젝트 삭제 → 409, 재무 행 그대로.
 - 스위치 꺼진 상태에서 수정 라우트가 `updated_by`를 보내지 않는지.
 - 서버 라우트 단위 테스트는 `tests/unit/`의 가짜 Supabase 클라이언트로, 미리보기 대상 통합 테스트는 `tests/api/`로 한다.

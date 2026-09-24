@@ -247,6 +247,41 @@ describe("T7 법인카드 연결 — 연결 → 이동 → 해제 → 재연결"
     expect(financeCalls("delete")).toHaveLength(0);
   });
 
+  it("새 연결의 paid 지출 행에 paid_at(사용일 한국 자정)을 쓴다", async () => {
+    const res = await POST(postReq(linkBody(1)), params());
+    expect(res.status).toBe(200);
+    expect(entries()[0]).toMatchObject({ status: "paid", paid_at: "2026-09-24T00:00:00+09:00" });
+  });
+
+  it("해제 후 재연결한 새 행에도 paid_at을 쓴다", async () => {
+    await POST(postReq(linkBody(1)), params());
+    await DELETE(delReq(), params());
+    const res = await POST(postReq({ ...linkBody(2), expense_date: "20260131" }), params());
+    expect(res.status).toBe(200);
+    const fresh = entries().find((e) => e.status === "paid")!;
+    expect(fresh).toMatchObject({ project_id: 2, occurred_at: "2026-01-31", paid_at: "2026-01-31T00:00:00+09:00" });
+  });
+
+  it("같은 프로젝트 재연결로 사용일이 바뀌면 paid 행의 paid_at도 맞춘다", async () => {
+    await POST(postReq(linkBody(1)), params());
+    const res = await POST(postReq({ ...linkBody(1), expense_date: "20260920" }), params());
+    expect(res.status).toBe(200);
+    expect(entries()[0]).toMatchObject({ occurred_at: "2026-09-20", paid_at: "2026-09-20T00:00:00+09:00" });
+  });
+
+  it("사용일이 없으면 오늘(한국 날짜)로 occurred_at·paid_at을 쓴다", async () => {
+    vi.useFakeTimers();
+    // UTC 9/24 16:00 = 한국 9/25 01:00
+    vi.setSystemTime(new Date("2026-09-24T16:00:00Z"));
+    try {
+      const res = await POST(postReq({ ...linkBody(1), expense_date: undefined }), params());
+      expect(res.status).toBe(200);
+      expect(entries()[0]).toMatchObject({ occurred_at: "2026-09-25", paid_at: "2026-09-25T00:00:00+09:00" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("스위치가 켜지면 insert·update에 updated_by를 쓴다", async () => {
     process.env.ERP_AUDIT_V2 = "1";
     await POST(postReq(linkBody(1)), params());

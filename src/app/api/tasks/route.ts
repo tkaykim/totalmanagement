@@ -5,7 +5,8 @@ import { canCreateTask, canViewProject, canViewTask, type Task as PermTask, type
 import { isBuCode } from '@/lib/business-units';
 import { createActivityLog, createTaskAssignedLog } from '@/lib/activity-logger';
 import { notifyTaskAssigned } from '@/lib/notification-sender';
-import { fetchAllRows, loadPermProject, PERM_PROJECT_COLUMNS, toPermProject } from '@/app/api/projects/_lib/access';
+import { loadPermProject, PERM_PROJECT_COLUMNS, toPermProject } from '@/app/api/projects/_lib/access';
+import { fetchAllRows } from '@/lib/supabase/fetch-all';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -38,15 +39,15 @@ export async function GET(request: NextRequest) {
     let tasks: any[];
     if (bu) {
       const [buTasks, assignedTasks] = await Promise.all([
-        fetchAllRows<any>(() => base().eq('bu_code', bu)),
-        fetchAllRows<any>(() => base().eq('assignee_id', appUser.id)),
+        fetchAllRows<any>((from, to) => base().eq('bu_code', bu).range(from, to)),
+        fetchAllRows<any>((from, to) => base().eq('assignee_id', appUser.id).range(from, to)),
       ]);
       const taskMap = new Map<string, any>();
       buTasks.forEach((t) => taskMap.set(String(t.id), t));
       assignedTasks.forEach((t) => taskMap.set(String(t.id), t));
       tasks = Array.from(taskMap.values());
     } else {
-      tasks = await fetchAllRows<any>(base);
+      tasks = await fetchAllRows<any>((from, to) => base().range(from, to));
     }
 
     // 보기 판정용 프로젝트: id 수백 개를 `.in()`에 넣지 않고 끝까지 읽어 맵으로 쓴다(URL 길이 한도)
@@ -54,8 +55,8 @@ export async function GET(request: NextRequest) {
     if (tasks.length > 0) {
       const projects = projectId
         ? (await supabase.from('projects').select(PERM_PROJECT_COLUMNS).eq('id', projectId)).data ?? []
-        : await fetchAllRows<any>(() =>
-            supabase.from('projects').select(PERM_PROJECT_COLUMNS).order('id', { ascending: true })
+        : await fetchAllRows<any>((from, to) =>
+            supabase.from('projects').select(PERM_PROJECT_COLUMNS).order('id', { ascending: true }).range(from, to)
           );
       for (const p of projects) projectMap.set(String(p.id), toPermProject(p));
     }

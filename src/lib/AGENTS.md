@@ -5,7 +5,8 @@
   - `createClient()`: 쿠키 세션·익명 키. RLS를 받는다. 사용자 확인용.
   - `createPureClient()`: 서비스 권한 키, 쿠키 없음. RLS를 무시한다.
 - `supabase/client.ts`: 브라우저 클라이언트(익명 키 + 세션).
-- `permissions.ts`: 역할·사업부·재직 판정 함수와 사이드바 메뉴(`getVisibleMenus`). 보기 범위, 매출·지출 등록·수정·삭제·상태 전이·사업부 이동, 거래 범위·기한·입금일 검증, 변경 기록 보기, 사용자 역할 변경, 외부인 기능 차단까지 모든 권한 규칙이 여기 있다.
+- `supabase/fetch-all.ts`: `fetchAllRows` — `range`로 페이지를 넘겨 1,000행 절단 없이 끝까지 읽는 유일한 구현. 라우트 묶음 도우미에 같은 함수를 다시 만들지 않는다.
+- `permissions.ts`: 역할·사업부·재직 판정 함수와 사이드바 메뉴(`getVisibleMenus`). 보기 범위, 매출·지출 등록·수정·삭제·상태 전이·사업부 이동, 거래 범위·기한·입금일 검증, 변경 기록 보기, 직원 등록·수정(`canManageUsers`), 사용자 역할 변경, 외부인 기능 차단까지 모든 권한 규칙이 여기 있다.
 - `auth-guard.ts`: 서버 라우트 공통 재직 가드 `requireActiveStaff()`와 `isGuardFailure()`. 세션 → `app_users`(서비스 권한 키) → 재직 확인.
 - `business-units.ts`: 사업부 7개(`BU_CODES`)와 표시명·짧은 라벨·영문 라벨·색상(`BU_META`), 거기서 만든 맵·선택지, `isBuCode`. 사업부 목록의 유일한 정의다.
 - `feature-flags.ts`: `isAuditV2Enabled()` — 서버 환경변수 `ERP_AUDIT_V2`가 정확히 `'1'`일 때만 참.

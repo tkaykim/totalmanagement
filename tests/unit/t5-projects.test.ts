@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 import { FakeDb, IDS, jsonRequest, params, staff } from './t5-fake-supabase';
 import { t5State, signInAs, signOut, blocked } from './t5-mocks';
 
@@ -275,6 +276,42 @@ describe('외부인·파트너 하위 경로 (R27·R2)', () => {
     const res = await DocumentRoute.DELETE(jsonRequest(`${BASE}/3/documents/1`, 'DELETE'), params({ id: '3', documentId: '1' }));
     expect(res.status).toBe(404);
     expect(t5State.db.writes).toHaveLength(0);
+  });
+
+  it('documents: 다른 사업부 리더는 조회만(R10) — 올리기·삭제 403, 쓰기 없음', async () => {
+    t5State.db.table('project_documents').push({ id: 7, project_id: 1, file_path: 'projects/1/a.pdf' });
+    signInAs(staff('reactLeader'));
+    expect((await DocumentsRoute.GET(jsonRequest(`${BASE}/1/documents`, 'GET'), params({ id: '1' }))).status).toBe(200);
+
+    const form = new FormData();
+    form.append('files', new File(['x'], 'a.pdf', { type: 'application/pdf' }));
+    const upload = await DocumentsRoute.POST(
+      new NextRequest(`${BASE}/1/documents`, { method: 'POST', body: form }),
+      params({ id: '1' })
+    );
+    expect(upload.status).toBe(403);
+
+    const del = await DocumentRoute.DELETE(jsonRequest(`${BASE}/1/documents/7`, 'DELETE'), params({ id: '1', documentId: '7' }));
+    expect(del.status).toBe(403);
+    expect(t5State.db.writes).toHaveLength(0);
+  });
+
+  it('documents: 볼 수만 있는 참여 멤버는 올리기·삭제 403, 수정 권한자(생성자·자기 사업부 리더)는 가능', async () => {
+    t5State.db.table('project_documents').push({ id: 8, project_id: 2, file_path: 'projects/2/b.pdf' });
+    t5State.db.table('project_documents').push({ id: 9, project_id: 1, file_path: 'projects/1/c.pdf' });
+    signInAs(staff('member'));
+    expect((await DocumentsRoute.GET(jsonRequest(`${BASE}/2/documents`, 'GET'), params({ id: '2' }))).status).toBe(200);
+    const del = await DocumentRoute.DELETE(jsonRequest(`${BASE}/2/documents/8`, 'DELETE'), params({ id: '2', documentId: '8' }));
+    expect(del.status).toBe(403);
+    expect(t5State.db.writes).toHaveLength(0);
+
+    // 생성자 멤버는 자기 프로젝트 문서를 지울 수 있다
+    const own = await DocumentRoute.DELETE(jsonRequest(`${BASE}/1/documents/9`, 'DELETE'), params({ id: '1', documentId: '9' }));
+    expect(own.status).toBe(200);
+
+    signInAs(staff('flowLeader'));
+    const leaderDel = await DocumentRoute.DELETE(jsonRequest(`${BASE}/2/documents/8`, 'DELETE'), params({ id: '2', documentId: '8' }));
+    expect(leaderDel.status).toBe(200);
   });
 
   it('participants: 조회는 보기 범위, 변경은 수정 권한(다른 사업부 리더 403)', async () => {

@@ -2,7 +2,7 @@
  * 프로젝트·할일 라우트 공통 도우미 (T5).
  *
  * - 서비스 권한 키 클라이언트(`createPureClient`)로 읽은 행을 권한 판정용 모양으로 바꾼다.
- * - PostgREST 1,000행 절단을 피하려고 `range`로 끝까지 읽는다(docs/engineering-notes.md).
+ * - 전체 조회는 `@/lib/supabase/fetch-all`의 `fetchAllRows`로 끝까지 읽는다(1,000행 절단).
  * - 권한 판정 자체는 `src/lib/permissions.ts`만 쓴다. 여기서 역할 조건을 새로 짜지 않는다.
  */
 
@@ -10,29 +10,8 @@ import type { Project as PermProject } from '@/lib/permissions';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export const PAGE_SIZE = 1000;
-
 /** 권한 판정에 필요한 프로젝트 칸 */
 export const PERM_PROJECT_COLUMNS = 'id, bu_code, pm_id, participants, created_by';
-
-/**
- * 1,000행 절단 없이 모든 행을 읽는다.
- * `build()`는 매 페이지마다 새 쿼리를 만들어야 한다(정렬 포함 권장).
- */
-export async function fetchAllRows<T = any>(
-  build: () => any,
-  pageSize: number = PAGE_SIZE
-): Promise<T[]> {
-  const rows: T[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await build().range(from, from + pageSize - 1);
-    if (error) throw error;
-    const page = (data ?? []) as T[];
-    rows.push(...page);
-    if (page.length < pageSize) break;
-  }
-  return rows;
-}
 
 /** `participants` JSONB(객체 배열)에서 내부 직원 id만 뽑는다 */
 export function participantUserIds(participants: unknown): string[] {

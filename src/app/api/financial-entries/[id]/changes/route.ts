@@ -8,6 +8,7 @@ import {
   type FinancialEntry,
   type Project,
 } from '@/lib/permissions';
+import { PROJECT_PERM_COLUMNS, toPermProject } from '../../_lib/finance-access';
 import {
   collectChangerIds,
   loadChangerNames,
@@ -61,29 +62,15 @@ export async function GET(
     if (entry.project_id !== null && entry.project_id !== undefined) {
       const { data: projectRow, error: projectError } = await supabase
         .from('projects')
-        .select('id, bu_code, pm_id, participants, created_by')
+        .select(PROJECT_PERM_COLUMNS)
         .eq('id', entry.project_id)
         .maybeSingle();
       if (projectError) {
         return NextResponse.json({ error: 'Failed to load project' }, { status: 500 });
       }
       if (projectRow) {
-        const raw = projectRow as {
-          id: string | number;
-          bu_code: Project['bu_code'];
-          pm_id: string | null;
-          participants: { user_id?: string | null }[] | null;
-          created_by: string | null;
-        };
-        project = {
-          id: raw.id,
-          bu_code: raw.bu_code,
-          pm_id: raw.pm_id ?? null,
-          participants: (raw.participants ?? [])
-            .map((p) => p?.user_id)
-            .filter((v): v is string => !!v),
-          created_by: raw.created_by ?? null,
-        };
+        // participants는 `[{ user_id }]`·`[id]` 두 모양을 모두 받는다(공통 변환)
+        project = toPermProject(projectRow as Record<string, unknown>);
       }
     }
 

@@ -243,6 +243,15 @@ describe("POST 등록 (R11·R13·R14)", () => {
     expect((await POST(jsonReq("POST", { ...base, counterparty_bu_code: "FLOW" }))).status).toBe(200);
     expect(financeWrites()[0].payload.counterparty_bu_code).toBeNull();
   });
+  it("발생일(occurred_at) 없음·형식 오류 → 400(500 아님), 쓰기 없음", async () => {
+    as(ADMIN);
+    await expectError(await POST(jsonReq("POST", { ...base, occurred_at: undefined })), 400);
+    await expectError(await POST(jsonReq("POST", { ...base, occurred_at: null })), 400);
+    await expectError(await POST(jsonReq("POST", { ...base, occurred_at: "" })), 400);
+    await expectError(await POST(jsonReq("POST", { ...base, occurred_at: "2026/09/20" })), 400);
+    await expectError(await POST(jsonReq("POST", { ...base, occurred_at: "2026-02-30" })), 400);
+    expect(financeWrites()).toHaveLength(0);
+  });
   it("잘못된 kind·status·사업부 → 400", async () => {
     as(ADMIN);
     await expectError(await POST(jsonReq("POST", { ...base, kind: "x" })), 400);
@@ -263,6 +272,12 @@ describe("PATCH 수정 (R4·R11~R14)", () => {
     as(FLOW_LEADER);
     await expectError(await PATCH(jsonReq("PATCH", { amount: 1 }, "/1"), ctx(1)), 403);
     expect(row(1).amount).toBe(1000);
+    expect(financeWrites()).toHaveLength(0);
+  });
+  it("발생일(occurred_at)을 비우거나 형식이 틀리면 400, 쓰기 없음", async () => {
+    as(ADMIN);
+    await expectError(await PATCH(jsonReq("PATCH", { occurred_at: null }, "/1"), ctx(1)), 400);
+    await expectError(await PATCH(jsonReq("PATCH", { occurred_at: "20260920" }, "/1"), ctx(1)), 400);
     expect(financeWrites()).toHaveLength(0);
   });
   it("등록자: 본인 행 수정 가능, 허용 외 칸 무시", async () => {

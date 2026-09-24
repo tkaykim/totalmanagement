@@ -171,6 +171,36 @@ describe("PATCH /api/users/[id]", () => {
     });
   }
 
+  it("사업부를 비우며 재직 유지 → 400, DB 변경 없음", async () => {
+    for (const bu of [null, ""]) {
+      const { status } = await readJson(await PATCH(patch({ bu_code: bu }), params(OTHER)));
+      expect(status).toBe(400);
+    }
+    expect(updates()).toHaveLength(0);
+  });
+
+  it("사업부 없는 사람을 재직으로 바꿈 → 400, 사업부를 같이 주면 200", async () => {
+    targets[OTHER] = { id: OTHER, role: "member", bu_code: null, status: "retired" };
+    expect((await readJson(await PATCH(patch({ status: "active" }), params(OTHER)))).status).toBe(400);
+    expect((await readJson(await PATCH(patch({ status: "active", bu_code: "" }), params(OTHER)))).status).toBe(400);
+    expect(updates()).toHaveLength(0);
+    const ok = await readJson(await PATCH(patch({ status: "active", bu_code: "FLOW" }), params(OTHER)));
+    expect(ok.status).toBe(200);
+    expect(updates()[0].payload).toMatchObject({ status: "active", bu_code: "FLOW" });
+  });
+
+  it("퇴사 처리하며 사업부를 비우는 것은 허용", async () => {
+    const { status } = await readJson(await PATCH(patch({ status: "retired", bu_code: null }), params(OTHER)));
+    expect(status).toBe(200);
+  });
+
+  it("퇴사한 관리자는 수정 불가 → 가드 403", async () => {
+    caller = { ...ADMIN, status: "retired" };
+    const { status } = await readJson(await PATCH(patch({ name: "x" }), params(OTHER)));
+    expect(status).toBe(403);
+    expect(updates()).toHaveLength(0);
+  });
+
   it("없는 사람 → 404", async () => {
     const { status } = await readJson(await PATCH(patch({ name: "x" }), params("nope")));
     expect(status).toBe(404);
@@ -239,6 +269,31 @@ describe("GET·POST /api/users", () => {
     );
     expect(res.status).toBe(400);
     expect(fake.auth.admin.createUser).not.toHaveBeenCalled();
+  });
+
+  it("POST 관리자 → 사업부 없이 재직 등록은 400, 계정 생성 안 함", async () => {
+    for (const bu of [undefined, null, ""]) {
+      const res = await CREATE(
+        new Request("http://localhost/api/users", {
+          method: "POST",
+          body: JSON.stringify({ email: "e2e@example.test", password: "longenough1", name: "x", role: "member", bu_code: bu }),
+        }) as any
+      );
+      expect(res.status).toBe(400);
+    }
+    expect(fake.auth.admin.createUser).not.toHaveBeenCalled();
+  });
+
+  it("POST 관리자 → 사업부 있으면 재직으로 생성", async () => {
+    const res = await CREATE(
+      new Request("http://localhost/api/users", {
+        method: "POST",
+        body: JSON.stringify({ email: "e2e@example.test", password: "longenough1", name: "x", role: "member", bu_code: "FLOW" }),
+      }) as any
+    );
+    expect(res.status).toBe(200);
+    const ins = fake.queries.find((q) => q.op === "insert")!;
+    expect(ins.payload).toMatchObject({ status: "active", bu_code: "FLOW", role: "member" });
   });
 
   it("POST 삽입 실패 → 인증 계정 되돌림", async () => {

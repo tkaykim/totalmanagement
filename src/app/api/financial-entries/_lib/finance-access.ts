@@ -15,32 +15,12 @@ import {
   type Project as PermProject,
 } from '@/lib/permissions';
 import { isBuCode } from '@/lib/business-units';
+import { fetchAllRows } from '@/lib/supabase/fetch-all';
 
 export type ServiceDb = Awaited<ReturnType<typeof createPureClient>>;
 
-/** PostgREST 한 번 조회 상한 */
-export const PAGE_SIZE = 1000;
-
 /** 권한 판정에 필요한 프로젝트 칸 */
 export const PROJECT_PERM_COLUMNS = 'id, bu_code, pm_id, created_by, participants';
-
-type RangeQuery = PromiseLike<{ data: unknown[] | null; error: unknown }>;
-
-/**
- * 1,000행 절단 없이 끝까지 읽는다.
- * @param build 매 페이지마다 새 쿼리를 만들어 `.range(from, to)`를 붙여 돌려준다(정렬은 호출자가 고정).
- */
-export async function fetchAllRows<T>(build: (from: number, to: number) => RangeQuery): Promise<T[]> {
-  const rows: T[] = [];
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await build(from, from + PAGE_SIZE - 1);
-    if (error) throw error;
-    const page = (data ?? []) as T[];
-    rows.push(...page);
-    if (page.length < PAGE_SIZE) break;
-  }
-  return rows;
-}
 
 /** projects 행 → 권한 판정용 모양. participants는 `[{ user_id }]` 또는 `[id]` 둘 다 받는다. */
 export function toPermProject(row: Record<string, unknown>): PermProject {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
 import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
-import { canViewProject } from '@/lib/permissions';
+import { canEditProject, canViewProject } from '@/lib/permissions';
 import { loadPermProject } from '@/app/api/projects/_lib/access';
 
 export async function DELETE(
@@ -19,6 +19,10 @@ export async function DELETE(
     const loaded = await loadPermProject(supabase, id);
     if (!loaded || !canViewProject(guard.appUser, loaded.perm)) {
       return NextResponse.json({ error: '문서를 찾을 수 없습니다' }, { status: 404 });
+    }
+    // 문서 삭제는 프로젝트 수정이다(R10): 볼 수만 있는 사람은 403
+    if (!canEditProject(guard.appUser, loaded.perm)) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
     // 문서 정보 조회

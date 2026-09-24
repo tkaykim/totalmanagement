@@ -4,6 +4,7 @@ import {
   canAccessExternalFeature,
   canAccessSettlement,
   canChangeUserRoleBuStatus,
+  canManageUsers,
   canCreateFinance,
   canCreateProject,
   canCreateTask,
@@ -415,6 +416,15 @@ describe("R18·R19·R22 변경 기록 보기·사람 값 변경", () => {
     expect(canViewUserChanges(user("admin"))).toBe(true);
     for (const role of ["leader", "manager", "member"] as Role[]) expect(canViewUserChanges(user(role))).toBe(false);
     expect(canViewUserChanges(user("admin", "pending"))).toBe(false);
+  });
+  it("직원 등록·수정: 재직 관리자만", () => {
+    expect(canManageUsers(user("admin"))).toBe(true);
+    for (const role of ["leader", "manager", "member", "viewer", "artist"] as Role[]) expect(canManageUsers(user(role))).toBe(false);
+    for (const st of ["pending", "retired", "dormant", "rejected"] as const) expect(canManageUsers(user("admin", st))).toBe(false);
+    expect(canManageUsers({ id: ME, role: "admin", bu_code: "HEAD" })).toBe(false); // status 없음
+    expect(canManageUsers({ id: ME, role: "admin", bu_code: null, status: "active" })).toBe(false); // 사업부 없음
+    expect(canManageUsers(null)).toBe(false);
+    expect(canManageUsers(undefined)).toBe(false);
   });
   it("역할·사업부·재직 변경: 관리자만, 본인은 불가", () => {
     expect(canChangeUserRoleBuStatus(user("admin"), SOMEONE)).toBe(true);

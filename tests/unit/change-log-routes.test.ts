@@ -115,6 +115,19 @@ describe("GET /api/financial-entries/[id]/changes", () => {
     expect(from).not.toHaveBeenCalledWith("financial_entry_changes");
   });
 
+  it("참여자가 id 문자열 배열이어도 참여로 본다 → 403(404 아님)", async () => {
+    tables.projects = { single: { data: { ...PROJECT, participants: [ME] }, error: null } };
+    const res = await getFinanceChanges(req, financeParams());
+    expect(res.status).toBe(403);
+    expect(from).not.toHaveBeenCalledWith("financial_entry_changes");
+  });
+
+  it("프로젝트 조회 오류 → 500", async () => {
+    tables.projects = { single: { data: null, error: { message: "db down" } } };
+    const res = await getFinanceChanges(req, financeParams());
+    expect(res.status).toBe(500);
+  });
+
   it("다른 사업부 리더 → 403", async () => {
     setMe({ role: "leader", bu_code: "GRIGO" });
     const res = await getFinanceChanges(req, financeParams());

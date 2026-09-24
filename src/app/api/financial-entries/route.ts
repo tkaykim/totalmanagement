@@ -6,12 +6,13 @@ import { isAuditV2Enabled } from '@/lib/feature-flags';
 import {
   canCreateFinance,
   canViewProject,
+  isValidDateString,
   validateFinanceDates,
   validateFinanceScope,
   type BuCode,
 } from '@/lib/permissions';
+import { fetchAllRows } from '@/lib/supabase/fetch-all';
 import {
-  fetchAllRows,
   isBuCode,
   isEntryVisible,
   isFinancialKind,
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
     const status = input.status ?? 'planned';
     if (!isFinancialStatusValue(status)) return bad(400, '상태(status) 값이 올바르지 않습니다.');
     if (typeof input.name !== 'string' || !input.name.trim()) return bad(400, '항목명(name)이 필요합니다.');
+    if (!isValidDateString(input.occurred_at)) return bad(400, '발생일(occurred_at)은 YYYY-MM-DD 형식으로 필요합니다.');
     const amount = Number(input.amount);
     if (input.amount === null || input.amount === undefined || input.amount === '' || !Number.isFinite(amount)) {
       return bad(400, '금액(amount)이 올바르지 않습니다.');
