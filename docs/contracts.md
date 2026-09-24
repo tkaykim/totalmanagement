@@ -40,6 +40,8 @@
   - `financial_entries`: REACT 지출(`kind='expense'`, `bu_code='REACT'`) 생성·수정·지급 처리·삭제, 재무 조회
   - `app_users`: 가입 행 생성, 가입 승인·거절
   - 그 밖에 `portfolio_items`, `quotes`, `inquiries`, `contracts`, `agreements`, `partners`, `clients`, `company_documents`
+  - 이 중 `clients`·`portfolio_items`·`inquiries`·`partners`(명단)·`agreements`·`quotes` 일부는 로그인 세션(익명 키 + 쿠키)으로 직접 읽고 쓴다. 봉인 SQL 7절 뒤에도 재직 직원(`status='active'` + 사업부 있음)은 그대로 쓸 수 있다. reactstudio.kr 관리자 조건(REACT·HEAD 재직 admin·leader·manager)은 이를 만족한다. 재직 직원이 아닌 계정은 이 세션 경로에서 0건·쓰기 거부가 된다.
+  - 공개 페이지(`clients`·`portfolio_items`)도 쿠키 세션 클라이언트로 읽는다. 비로그인은 전과 같고, 재직 직원이 아닌 계정으로 로그인한 채 보면 목록이 빈다.
 - 지금 운영 중인 reactstudio.kr 관리 화면 일부는 로그인 세션(익명 키 + 쿠키)으로 `projects`·`project_tasks`·`financial_entries`를 직접 읽고 쓴다.
   - 봉인 SQL을 적용하면 세션의 쓰기 정책이 없어져 이 경로가 멈춘다.
   - 그 저장소의 봉인 대비 커밋(`0465a9e`)이 이 경로를 서비스 권한 키 서버 라우트로 옮겼다(운영 미배포). **봉인 SQL 적용 전에 배포되어야 한다.**

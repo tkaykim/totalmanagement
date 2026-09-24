@@ -102,8 +102,8 @@ GitHub 저장소 `tkaykim/totalmanagement`는 **공개**이고, 대표 결정으
 | 가입 신청 목록·승인·거절 | 본사 관리자만 |
 | 직원 변경 기록 보기 | 관리자만 |
 | 회의실·차량 자원 수정 | 관리자만. 허용 컬럼만 받는다 |
-| 근태 기록(RLS) | 본인, admin, 같은 사업부 manager·admin |
-| 휴가 신청(RLS) | 본인 신청. 승인은 admin 전체, leader는 같은 사업부 |
+| 근태 기록(RLS) | 본인, admin, 같은 사업부 manager·admin. 봉인 뒤에는 모두 재직 직원일 때만 |
+| 휴가 신청(RLS) | 본인 신청. 승인은 admin 전체, leader는 같은 사업부. 봉인 뒤에는 모두 재직 직원일 때만 |
 | 법인카드 API | 재직 가드 + `canAccessCorporateCard`. admin·leader 전체, manager·member는 Gowid 사용자 매핑이 있을 때만. 프로젝트 연결의 이동·해제는 매출·지출 표의 `paid`→`canceled` 권한을 따른다 |
 | 정산 메뉴(사업부별 매출·지출·미수금) | 관리자와 모든 리더 |
 | 리소스 현황 메뉴 | HEAD 사업부 admin·leader |
@@ -133,11 +133,20 @@ GitHub 저장소 `tkaykim/totalmanagement`는 **공개**이고, 대표 결정으
 - `paid`·`canceled` 매출·지출 삭제와 재무 행이 붙은 프로젝트 삭제는 트리거가 거부한다. 서비스 권한 키를 포함한 모든 경로(reactstudio.kr·워커·SQL)에 걸린다. 프로젝트 삭제 거부는 외래키 연쇄 삭제보다 먼저 돈다.
 - 뷰 2개는 호출자 권한(`security_invoker=true`)으로 바뀐다.
 - 판정 함수(`is_active_staff`, `is_staff_admin`, `is_staff_admin_or_leader`, `can_view_project`, `can_view_financial_entry_changes`)는 소유자 권한으로 `app_users`를 읽는다. 정책이 `app_users` 정책을 다시 부르는 순환을 피하기 위해서다.
-- 되돌리기는 `supabase/apply/20260925_seal_rollback.sql`이다. 변경 기록 테이블과 `updated_by` 칸은 되돌린 뒤에도 남는다.
+- 봉인 5개 밖의 public 테이블(47개, `react_*` 제외)은 로그인 계정 정책에 재직 직원 조건을 붙인다(봉인 SQL 7절).
+  - `authenticated` 정책과 역할 지정 없는(PUBLIC) 정책 83개의 USING·WITH CHECK를 `((SELECT public.is_active_staff()) AND <기존 식>)`으로 바꾼다. 이름·명령·역할·기존 식은 그대로다.
+  - 재직 직원에게는 기존 규칙(`partners`·`contracts`·`comments` 등의 전권, 근태·휴가의 본인·역할·사업부 규칙)이 그대로 적용된다.
+  - 승인 대기·거절·퇴사·휴면·사업부 없는 로그인 계정은 이 테이블들에서 0건이고 쓰기가 거부된다. 본인 근태·휴가·알림·푸시 토큰도 마찬가지다.
+  - `clients`·`company_documents`에는 로그인 계정에만 걸리는 RESTRICTIVE 정책 "seal active staff only"를 더한다. 두 테이블의 공개 읽기 정책이 PUBLIC이라 그 정책을 바꾸지 않고 로그인 계정만 막기 위해서다.
+  - 바꾸지 않는 것: `service_role` 정책, anon 정책(`portfolio_items` 공개 읽기), `clients` "Allow public read access", `company_documents` "company_documents read all", `push_tokens` "Service role can manage all push tokens".
+  - anon 결과는 전과 같다. 예외는 `notifications` INSERT다. 전에는 PUBLIC `WITH CHECK (true)`라 비로그인도 알림을 넣을 수 있었고, 이제는 서버(서비스 권한)만 넣는다.
+- 로그인 직후 안내 화면(승인 대기·거절)은 본인 `app_users` 행만 읽으므로 이 변경의 영향을 받지 않는다.
+- 되돌리기는 `supabase/apply/20260925_seal_rollback.sql`이다. 봉인 밖 정책 83개도 기준선 본문으로 되돌리고 RESTRICTIVE 정책 2개를 지운다. 변경 기록 테이블과 `updated_by` 칸은 되돌린 뒤에도 남는다.
 
-**봉인 범위 밖(현재 정책 유지)**
-- `portfolio_items`, `clients`, `partners`, `partner_relations`, `contracts`와 그 밖의 테이블은 봉인 뒤에도 지금 정책 그대로다.
+**봉인 뒤에도 남는 공개 범위**
 - 비로그인 읽기 허용은 reactstudio.kr을 위한 것으로, `portfolio_items` 전체, `projects` 중 '완료', `clients` 전체다.
+- `company_documents`는 비로그인도 전체를 읽는다(PUBLIC 읽기 정책). 이 표에는 통장사본·사업자등록증의 공개 URL이 있고 버킷 `company-docs`가 공개다. 미해결 문제로 따로 적었다(`docs/tracking/findings.md`).
+- 로그인했지만 재직 직원이 아닌 계정으로 reactstudio.kr 공개 페이지를 보면 `portfolio_items`·`clients` 목록이 비어 보인다(그 페이지는 쿠키 세션으로 읽는다). reactstudio.kr은 비재직 계정의 관리 화면 로그인을 로그아웃시키므로 드문 경우다.
 - `react_*` 13개 테이블은 정책이 0개다. 서비스 권한 키로만 접근되고, reactstudio.kr이 그 방식으로 쓴다.
 
 ### 명시적으로 허용하지 않는 것

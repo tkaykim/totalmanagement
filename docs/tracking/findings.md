@@ -22,11 +22,18 @@
 - **지금 못 고치는 이유**: 수정은 작업 브랜치에 모두 구현되어 있다(서버 가드·권한표·가입 승인·서명 URL 삭제·카드 연결 보존·크론 Bearer, 봉인 SQL·되돌리기 스크립트). 운영 반영에는 대표 승인 두 번(① 코드 배포 + `CRON_SECRET` 설정, ② 봉인 SQL 적용 + `ERP_AUDIT_V2` 켜기)과, 그 사이 reactstudio.kr 봉인 대비 변경의 운영 배포가 필요하다.
 - **접근**: 승인 ① → reactstudio.kr 배포 → 승인 ② 순서로 반영한다. ② 전에 reactstudio.kr 배포가 끝나지 않으면 ②를 요청하지 않는다. 반영이 끝나면 이 항목을 닫는다.
 
+### 비로그인 누구나 회사 통장사본·사업자등록증을 내려받을 수 있다
+- **증상**: `company_documents`의 읽기 정책 "company_documents read all"이 역할 지정 없는(PUBLIC) `USING (true)`라 비로그인(anon)도 전체 행을 읽는다. 행에는 통장사본·사업자등록증 파일의 `public_url`이 있고, 버킷 `company-docs`는 공개 버킷이다(2026-09-25 운영 조회, 행 2개). 익명 키는 reactstudio.kr 브라우저 번들에 들어 있다.
+- **영향**: 누구나 익명 키로 PostgREST를 불러 URL을 얻고 파일을 내려받을 수 있다. 계좌·사업자 정보가 악용될 수 있다. 같은 이유로 공개 버킷 `comment-attachments`·`project-documents`의 파일도 경로만 알면 누구나 받는다.
+- **지금 못 고치는 이유**: 봉인 SQL은 anon 정책을 바꾸지 않는다는 범위로 만들었다. 이 정책을 바꾸거나 버킷을 비공개로 돌리는 것은 운영 DB·Storage 변경이라 대표 승인이 필요하다. reactstudio.kr의 문서 첨부(`lib/company-docs.ts`)는 서비스 권한 키로 읽으므로 정책을 좁혀도 그쪽은 깨지지 않을 것으로 보이지만, 공개 URL을 쓰는 다른 곳이 없는지 확인해야 한다.
+- **접근**: 읽기 정책을 `service_role` 전용으로 바꾸고(또는 `is_active_staff()` 조건), `company-docs` 버킷을 비공개로 바꾼 뒤 서명 URL로만 내보낸다. 되돌리기 SQL을 함께 둔다.
+
+## 준비된 SQL로 해결(운영 미적용)
+
 ### 봉인 뒤에도 가입 대기·퇴사 계정이 봉인 밖 테이블을 PostgREST로 읽고 쓴다
-- **증상**: 봉인 SQL은 5개 테이블(`app_users`, `projects`, `project_tasks`, `financial_entries`, `gowid_expense_project_link`)만 바꾼다. `partners`, `contracts`, `comments`, `document_room_files` 등은 `authenticated` 전권 정책이 그대로이고, `clients`는 `authenticated` 쓰기가 열려 있다. 가입은 누구나 할 수 있고 가입 직후 `authenticated` 세션이 생기므로, 승인 전 계정과 퇴사자가 브라우저에서 이 테이블들을 직접 읽고 쓸 수 있다.
-- **영향**: 거래처 연락처·계약·댓글·자료실 파일 목록이 외부인에게 노출·변조될 수 있다. 서버 라우트는 모두 막히므로 화면으로는 보이지 않아 놓치기 쉽다.
-- **지금 못 고치는 이유**: 1차 범위는 대표 결정으로 핵심 5개 테이블로 정했다. 나머지 테이블은 reactstudio.kr·워커·flowmaker의 사용처를 확인하고 테이블마다 정책을 설계해야 하며, 운영 DB 변경이라 별도 대표 승인이 필요하다.
-- **접근**: 봉인 5개와 같은 방식으로 `is_active_staff()` 기반 SELECT만 두고 쓰기는 서버 전용으로 바꾼다. `clients` 비로그인 읽기(reactstudio.kr)는 유지한다. 그 전까지 임시로 가입 직후 `authenticated`가 되지 않게 하는 방법(가입 계정의 이메일 확인 보류 등)도 검토할 수 있다.
+- **증상**: 처음 봉인 SQL은 5개 테이블(`app_users`, `projects`, `project_tasks`, `financial_entries`, `gowid_expense_project_link`)만 바꿨다. `partners`, `contracts`, `comments`, `document_room_files` 등은 `authenticated` 전권 정책이 그대로였고, `clients`는 `authenticated` 쓰기가 열려 있었다. 가입 직후 `authenticated` 세션이 생기므로 승인 전 계정과 퇴사자가 이 테이블들을 직접 읽고 쓸 수 있었다.
+- **해결(준비됨)**: 봉인 SQL 7절이 봉인 5개·`react_*` 밖의 47개 테이블에서 `authenticated`·PUBLIC 정책 83개의 USING·WITH CHECK에 `is_active_staff()`를 AND로 붙이고, `clients`·`company_documents`에 로그인 계정 전용 RESTRICTIVE 정책을 더한다. 재직 직원의 결과와 anon 결과는 전과 같다(알림 anon INSERT만 막힘). `tests/db/seal-outside.test.ts`가 검증하고, 되돌리기 스크립트가 기준선 본문으로 복원한다.
+- **남은 일**: 봉인 SQL 운영 적용(대표 승인 ②, 반영 순서는 `docs/operations.md`)과 적용 뒤 확인 6(조건 없는 정책이 의도한 3개뿐인지). 운영 적용이 끝나면 이 항목을 닫는다. 재직 직원 사이의 역할·사업부별 세부 RLS는 이 항목 범위가 아니다(`docs/tracking/status.md`).
 
 ## 높음
 

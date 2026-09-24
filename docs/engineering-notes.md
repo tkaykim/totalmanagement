@@ -36,7 +36,8 @@
 - **대응**
   - 권한 작업을 할 때는 서버 라우트와 RLS 둘 다에서 막힌 것을 확인한다. RLS 규칙은 `tests/db`로, 서버 규칙은 `tests/unit`·`tests/api`로 검사한다.
   - 확인 방법: 퇴사 처리한 테스트 계정으로 API를 직접 호출해 403이 나오는지, 봉인 DB에서 같은 세션의 PostgREST 조회가 0행인지 본다.
-  - 봉인 뒤에도 `portfolio_items`·`clients`·`partners`·`contracts` 등 봉인 5개 밖 테이블은 `authenticated` 전권으로 남는다.
+  - 봉인 SQL 7절이 봉인 5개 밖 테이블의 로그인 계정 정책에도 `is_active_staff()`를 AND로 붙인다. 재직 직원에게는 여전히 `authenticated` 전권인 테이블(`partners`·`contracts` 등)이 많으므로, 역할·사업부 범위는 서버 가드와 `permissions.ts`가 맡는다.
+  - 새 테이블·정책을 만들 때 `authenticated`·PUBLIC 정책에는 `(SELECT public.is_active_staff())`를 같이 넣는다. `tests/db/seal-outside.test.ts`가 조건 없는 정책을 찾아 실패시킨다.
 
 ## 재직 판정이 두 가지다
 

@@ -4,7 +4,8 @@
 --
 -- 봉인 대상(정확히 5개): app_users, projects, project_tasks, financial_entries,
 --                        gowid_expense_project_link
--- 그 밖의 테이블 정책(portfolio_items, clients, partners 등)은 건드리지 않는다.
+-- 그 밖의 public 테이블(react_* 제외)은 로그인 계정 정책에 재직 직원 조건만 AND로 붙인다(7절).
+-- 공개 읽기(anon) 정책과 service_role 정책은 건드리지 않는다.
 --
 -- - 추가만 한다. 기존 컬럼·enum 값은 지우거나 이름을 바꾸지 않는다.
 -- - 5개 테이블의 authenticated 전권 정책, anon 가입 INSERT 정책, gowid 연결 전권 정책을 교체한다.
@@ -401,3 +402,458 @@ REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.app_user_changes FROM anon, au
 
 ALTER VIEW public.attendance_logs_with_user SET (security_invoker = true);
 ALTER VIEW public.project_pnl_reports_with_profit SET (security_invoker = true);
+
+-- -----------------------------------------------------------------------------
+-- 7. 봉인 밖 테이블: 로그인 계정 정책에 재직 직원 조건을 AND로 붙인다
+--    대상: public 테이블 중 봉인 5개·react_*·변경 기록 2개를 뺀 전부(47개 테이블, 정책 83개)
+--    - authenticated 정책과 PUBLIC(역할 지정 없음) 정책의 USING·WITH CHECK를
+--      ((SELECT public.is_active_staff()) AND <기준선 식>)으로 바꾼다. 기준선 식·이름·명령·역할은 그대로다.
+--      재직 직원에게는 기존 역할·사업부 규칙이 그대로 적용되고, 그 밖의 로그인 계정은 0건·쓰기 거부가 된다.
+--    - 바꾸지 않는 것
+--      - service_role 정책, anon 정책("public read portfolio_items")
+--      - clients "Allow public read access", company_documents "company_documents read all"
+--        (PUBLIC이지만 비로그인 공개 읽기 목적이라 anon 결과를 바꾸지 않기 위해 유지)
+--      - push_tokens "Service role can manage all push tokens"(jwt role=service_role 조건, 서비스 권한 목적)
+--    - 위 두 공개 읽기 정책 때문에 clients·company_documents는 로그인 계정에만 걸리는
+--      RESTRICTIVE 정책 "seal active staff only"를 더한다(anon에는 걸리지 않는다).
+--    - PUBLIC 정책은 anon에도 적용되지만, 바꾼 PUBLIC 정책은 모두 auth.uid() 또는 app_users 조회에 기대므로
+--      anon 결과는 전과 같다. 예외: notifications "Service role can insert notifications"(WITH CHECK true)는
+--      이제 anon INSERT도 받지 않는다(알림은 서버가 서비스 권한으로만 넣는다).
+--    - 로그인 직후 안내 화면(승인 대기·거절)은 본인 app_users 행만 읽는다(5절 "seal read app_users").
+--    - 정책 본문은 supabase/baseline/20260924_prod_snapshot.sql 에서 기계적으로 옮겼다. 적용 시점에 동적 SQL을 쓰지 않는다.
+--    되돌리기: supabase/apply/20260925_seal_rollback.sql 3-2절(기준선 본문 그대로 복원)
+-- -----------------------------------------------------------------------------
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.activity_logs;
+CREATE POLICY "erp authenticated full access" ON public.activity_logs AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.agreements;
+CREATE POLICY "erp authenticated full access" ON public.agreements AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Admins can update all attendance logs" ON public.attendance_logs;
+CREATE POLICY "Admins can update all attendance logs" ON public.attendance_logs AS PERMISSIVE FOR UPDATE TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS "Admins can view all attendance logs" ON public.attendance_logs;
+CREATE POLICY "Admins can view all attendance logs" ON public.attendance_logs AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS "Managers can update team member attendance logs" ON public.attendance_logs;
+CREATE POLICY "Managers can update team member attendance logs" ON public.attendance_logs AS PERMISSIVE FOR UPDATE TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users au
+  WHERE ((au.id = auth.uid()) AND (au.role = ANY (ARRAY['manager'::public.erp_role, 'admin'::public.erp_role])) AND (au.bu_code = ( SELECT app_users.bu_code
+           FROM public.app_users
+          WHERE (app_users.id = attendance_logs.user_id))))))));
+
+DROP POLICY IF EXISTS "Managers can view team member attendance logs" ON public.attendance_logs;
+CREATE POLICY "Managers can view team member attendance logs" ON public.attendance_logs AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users au
+  WHERE ((au.id = auth.uid()) AND (au.role = ANY (ARRAY['manager'::public.erp_role, 'admin'::public.erp_role])) AND (au.bu_code = ( SELECT app_users.bu_code
+           FROM public.app_users
+          WHERE (app_users.id = attendance_logs.user_id))))))));
+
+DROP POLICY IF EXISTS "Users can create and update their own attendance logs" ON public.attendance_logs;
+CREATE POLICY "Users can create and update their own attendance logs" ON public.attendance_logs AS PERMISSIVE FOR ALL TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)))
+    WITH CHECK ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "Users can view their own attendance logs" ON public.attendance_logs;
+CREATE POLICY "Users can view their own attendance logs" ON public.attendance_logs AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.bug_reports;
+CREATE POLICY "erp authenticated full access" ON public.bug_reports AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.business_signals;
+CREATE POLICY "erp authenticated full access" ON public.business_signals AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.business_units;
+CREATE POLICY "erp authenticated full access" ON public.business_units AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.channel_contents;
+CREATE POLICY "erp authenticated full access" ON public.channel_contents AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.channels;
+CREATE POLICY "erp authenticated full access" ON public.channels AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Allow authenticated delete" ON public.clients;
+CREATE POLICY "Allow authenticated delete" ON public.clients AS PERMISSIVE FOR DELETE TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Allow authenticated insert" ON public.clients;
+CREATE POLICY "Allow authenticated insert" ON public.clients AS PERMISSIVE FOR INSERT TO authenticated
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Allow authenticated update" ON public.clients;
+CREATE POLICY "Allow authenticated update" ON public.clients AS PERMISSIVE FOR UPDATE TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.comment_attachments;
+CREATE POLICY "erp authenticated full access" ON public.comment_attachments AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.comment_mentions_reads;
+CREATE POLICY "erp authenticated full access" ON public.comment_mentions_reads AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.comments;
+CREATE POLICY "erp authenticated full access" ON public.comments AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Admins can view all compensatory requests" ON public.compensatory_requests;
+CREATE POLICY "Admins can view all compensatory requests" ON public.compensatory_requests AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = ANY (ARRAY['admin'::public.erp_role, 'leader'::public.erp_role])))))));
+
+DROP POLICY IF EXISTS "HEAD Admins can update compensatory requests" ON public.compensatory_requests;
+CREATE POLICY "HEAD Admins can update compensatory requests" ON public.compensatory_requests AS PERMISSIVE FOR UPDATE TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role) AND (app_users.bu_code = 'HEAD'::public.bu_code))))));
+
+DROP POLICY IF EXISTS "Users can create own compensatory requests" ON public.compensatory_requests;
+CREATE POLICY "Users can create own compensatory requests" ON public.compensatory_requests AS PERMISSIVE FOR INSERT TO public
+    WITH CHECK ((SELECT public.is_active_staff()) AND ((auth.uid() = requester_id)));
+
+DROP POLICY IF EXISTS "Users can view own compensatory requests" ON public.compensatory_requests;
+CREATE POLICY "Users can view own compensatory requests" ON public.compensatory_requests AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = requester_id)));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.contracts;
+CREATE POLICY "erp authenticated full access" ON public.contracts AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.daily_work_logs;
+CREATE POLICY "erp authenticated full access" ON public.daily_work_logs AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.document_room_files;
+CREATE POLICY "erp authenticated full access" ON public.document_room_files AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.equipment;
+CREATE POLICY "erp authenticated full access" ON public.equipment AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS admin_manage_gowid_cards ON public.gowid_cards;
+CREATE POLICY admin_manage_gowid_cards ON public.gowid_cards AS PERMISSIVE FOR ALL TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS authenticated_users_read_gowid_cards ON public.gowid_cards;
+CREATE POLICY authenticated_users_read_gowid_cards ON public.gowid_cards AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() IS NOT NULL)));
+
+DROP POLICY IF EXISTS admin_manage_gowid_mapping ON public.gowid_user_mapping;
+CREATE POLICY admin_manage_gowid_mapping ON public.gowid_user_mapping AS PERMISSIVE FOR ALL TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS users_view_own_gowid_mapping ON public.gowid_user_mapping;
+CREATE POLICY users_view_own_gowid_mapping ON public.gowid_user_mapping AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((erp_user_id = auth.uid())));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.inquiries;
+CREATE POLICY "erp authenticated full access" ON public.inquiries AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Admins can manage leave balances" ON public.leave_balances;
+CREATE POLICY "Admins can manage leave balances" ON public.leave_balances AS PERMISSIVE FOR ALL TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role) AND (app_users.bu_code = 'HEAD'::public.bu_code))))));
+
+DROP POLICY IF EXISTS "Admins can view all leave balances" ON public.leave_balances;
+CREATE POLICY "Admins can view all leave balances" ON public.leave_balances AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = ANY (ARRAY['admin'::public.erp_role, 'leader'::public.erp_role])))))));
+
+DROP POLICY IF EXISTS "Users can view own leave balances" ON public.leave_balances;
+CREATE POLICY "Users can view own leave balances" ON public.leave_balances AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "Admins can view all leave grants" ON public.leave_grants;
+CREATE POLICY "Admins can view all leave grants" ON public.leave_grants AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = ANY (ARRAY['admin'::public.erp_role, 'leader'::public.erp_role])))))));
+
+DROP POLICY IF EXISTS "HEAD Admins can manage leave grants" ON public.leave_grants;
+CREATE POLICY "HEAD Admins can manage leave grants" ON public.leave_grants AS PERMISSIVE FOR ALL TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role) AND (app_users.bu_code = 'HEAD'::public.bu_code))))));
+
+DROP POLICY IF EXISTS "Users can view own leave grants" ON public.leave_grants;
+CREATE POLICY "Users can view own leave grants" ON public.leave_grants AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "Admins can create leave requests for any user" ON public.leave_requests;
+CREATE POLICY "Admins can create leave requests for any user" ON public.leave_requests AS PERMISSIVE FOR INSERT TO public
+    WITH CHECK ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS "Admins can view all leave requests" ON public.leave_requests;
+CREATE POLICY "Admins can view all leave requests" ON public.leave_requests AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS "Leaders and Admins can update leave requests" ON public.leave_requests;
+CREATE POLICY "Leaders and Admins can update leave requests" ON public.leave_requests AS PERMISSIVE FOR UPDATE TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = ANY (ARRAY['admin'::public.erp_role, 'leader'::public.erp_role])))))));
+
+DROP POLICY IF EXISTS "Leaders can view BU leave requests" ON public.leave_requests;
+CREATE POLICY "Leaders can view BU leave requests" ON public.leave_requests AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM (public.app_users au
+     JOIN public.app_users req ON ((req.id = leave_requests.requester_id)))
+  WHERE ((au.id = auth.uid()) AND (au.role = 'leader'::public.erp_role) AND (au.bu_code = req.bu_code))))));
+
+DROP POLICY IF EXISTS "Users can create own leave requests" ON public.leave_requests;
+CREATE POLICY "Users can create own leave requests" ON public.leave_requests AS PERMISSIVE FOR INSERT TO public
+    WITH CHECK ((SELECT public.is_active_staff()) AND ((auth.uid() = requester_id)));
+
+DROP POLICY IF EXISTS "Users can view own leave requests" ON public.leave_requests;
+CREATE POLICY "Users can view own leave requests" ON public.leave_requests AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = requester_id)));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.manuals;
+CREATE POLICY "erp authenticated full access" ON public.manuals AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.meeting_rooms;
+CREATE POLICY "erp authenticated full access" ON public.meeting_rooms AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Service role can insert notifications" ON public.notifications;
+CREATE POLICY "Service role can insert notifications" ON public.notifications AS PERMISSIVE FOR INSERT TO public
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
+CREATE POLICY "Users can update their own notifications" ON public.notifications AS PERMISSIVE FOR UPDATE TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
+CREATE POLICY "Users can view their own notifications" ON public.notifications AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "Admins can manage office IPs" ON public.office_ips;
+CREATE POLICY "Admins can manage office IPs" ON public.office_ips AS PERMISSIVE FOR ALL TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.org_units;
+CREATE POLICY "erp authenticated full access" ON public.org_units AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partner_access_requests;
+CREATE POLICY "erp authenticated full access" ON public.partner_access_requests AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partner_bu_access;
+CREATE POLICY "erp authenticated full access" ON public.partner_bu_access AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partner_categories;
+CREATE POLICY "erp authenticated full access" ON public.partner_categories AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partner_category_mappings;
+CREATE POLICY "erp authenticated full access" ON public.partner_category_mappings AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partner_relations;
+CREATE POLICY "erp authenticated full access" ON public.partner_relations AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partner_settlement_projects;
+CREATE POLICY "erp authenticated full access" ON public.partner_settlement_projects AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partner_settlements;
+CREATE POLICY "erp authenticated full access" ON public.partner_settlements AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partner_user_access;
+CREATE POLICY "erp authenticated full access" ON public.partner_user_access AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.partners;
+CREATE POLICY "erp authenticated full access" ON public.partners AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.portfolio_items;
+CREATE POLICY "erp authenticated full access" ON public.portfolio_items AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.project_documents;
+CREATE POLICY "erp authenticated full access" ON public.project_documents AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Authenticated users can delete pnl reports" ON public.project_pnl_reports;
+CREATE POLICY "Authenticated users can delete pnl reports" ON public.project_pnl_reports AS PERMISSIVE FOR DELETE TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Authenticated users can insert pnl reports" ON public.project_pnl_reports;
+CREATE POLICY "Authenticated users can insert pnl reports" ON public.project_pnl_reports AS PERMISSIVE FOR INSERT TO authenticated
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Authenticated users can read pnl reports" ON public.project_pnl_reports;
+CREATE POLICY "Authenticated users can read pnl reports" ON public.project_pnl_reports AS PERMISSIVE FOR SELECT TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Authenticated users can update pnl reports" ON public.project_pnl_reports;
+CREATE POLICY "Authenticated users can update pnl reports" ON public.project_pnl_reports AS PERMISSIVE FOR UPDATE TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Users can delete their own push tokens" ON public.push_tokens;
+CREATE POLICY "Users can delete their own push tokens" ON public.push_tokens AS PERMISSIVE FOR DELETE TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "Users can insert their own push tokens" ON public.push_tokens;
+CREATE POLICY "Users can insert their own push tokens" ON public.push_tokens AS PERMISSIVE FOR INSERT TO public
+    WITH CHECK ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "Users can update their own push tokens" ON public.push_tokens;
+CREATE POLICY "Users can update their own push tokens" ON public.push_tokens AS PERMISSIVE FOR UPDATE TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "Users can view their own push tokens" ON public.push_tokens;
+CREATE POLICY "Users can view their own push tokens" ON public.push_tokens AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = user_id)));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.quotes;
+CREATE POLICY "erp authenticated full access" ON public.quotes AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.reservations;
+CREATE POLICY "erp authenticated full access" ON public.reservations AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.task_templates;
+CREATE POLICY "erp authenticated full access" ON public.task_templates AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Admins can manage all work status" ON public.user_work_status;
+CREATE POLICY "Admins can manage all work status" ON public.user_work_status AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))))
+    WITH CHECK ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS "Allow authenticated users to view work status" ON public.user_work_status;
+CREATE POLICY "Allow authenticated users to view work status" ON public.user_work_status AS PERMISSIVE FOR SELECT TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Users can update their own status" ON public.user_work_status;
+CREATE POLICY "Users can update their own status" ON public.user_work_status AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND ((user_id = auth.uid())))
+    WITH CHECK ((SELECT public.is_active_staff()) AND ((user_id = auth.uid())));
+
+DROP POLICY IF EXISTS "erp authenticated full access" ON public.vehicles;
+CREATE POLICY "erp authenticated full access" ON public.vehicles AS PERMISSIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()) AND (true))
+    WITH CHECK ((SELECT public.is_active_staff()) AND (true));
+
+DROP POLICY IF EXISTS "Admins can update all work requests" ON public.work_requests;
+CREATE POLICY "Admins can update all work requests" ON public.work_requests AS PERMISSIVE FOR UPDATE TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS "Admins can view all work requests" ON public.work_requests;
+CREATE POLICY "Admins can view all work requests" ON public.work_requests AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users
+  WHERE ((app_users.id = auth.uid()) AND (app_users.role = 'admin'::public.erp_role))))));
+
+DROP POLICY IF EXISTS "Managers can update team member work requests" ON public.work_requests;
+CREATE POLICY "Managers can update team member work requests" ON public.work_requests AS PERMISSIVE FOR UPDATE TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users au
+  WHERE ((au.id = auth.uid()) AND (au.role = ANY (ARRAY['manager'::public.erp_role, 'admin'::public.erp_role])) AND (au.bu_code = ( SELECT app_users.bu_code
+           FROM public.app_users
+          WHERE (app_users.id = work_requests.requester_id))))))));
+
+DROP POLICY IF EXISTS "Managers can view team member work requests" ON public.work_requests;
+CREATE POLICY "Managers can view team member work requests" ON public.work_requests AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((EXISTS ( SELECT 1
+   FROM public.app_users au
+  WHERE ((au.id = auth.uid()) AND (au.role = ANY (ARRAY['manager'::public.erp_role, 'admin'::public.erp_role])) AND (au.bu_code = ( SELECT app_users.bu_code
+           FROM public.app_users
+          WHERE (app_users.id = work_requests.requester_id))))))));
+
+DROP POLICY IF EXISTS "Users can create their own work requests" ON public.work_requests;
+CREATE POLICY "Users can create their own work requests" ON public.work_requests AS PERMISSIVE FOR INSERT TO public
+    WITH CHECK ((SELECT public.is_active_staff()) AND ((auth.uid() = requester_id)));
+
+DROP POLICY IF EXISTS "Users can view their own work requests" ON public.work_requests;
+CREATE POLICY "Users can view their own work requests" ON public.work_requests AS PERMISSIVE FOR SELECT TO public
+    USING ((SELECT public.is_active_staff()) AND ((auth.uid() = requester_id)));
+
+DROP POLICY IF EXISTS "seal active staff only" ON public.clients;
+CREATE POLICY "seal active staff only" ON public.clients AS RESTRICTIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()))
+    WITH CHECK ((SELECT public.is_active_staff()));
+
+DROP POLICY IF EXISTS "seal active staff only" ON public.company_documents;
+CREATE POLICY "seal active staff only" ON public.company_documents AS RESTRICTIVE FOR ALL TO authenticated
+    USING ((SELECT public.is_active_staff()))
+    WITH CHECK ((SELECT public.is_active_staff()));

@@ -15,7 +15,7 @@
   - `20260925_seal_apply.sql`: 한 트랜잭션으로 봉인 마이그레이션 전문 + 데이터 보정 전문 + 확인 SELECT
   - `20260925_data_fix.sql`: 사업부 없는 `active` 계정을 `pending`으로(대상 2건 이상이면 중단)
   - `20260925_data_fix_rollback.sql`: 위 보정을 `app_user_changes` 기록으로 찾아 되돌린다
-  - `20260925_seal_rollback.sql`: 정책·뷰·트리거·함수를 기준선 상태로 되돌린다. 변경 기록 테이블과 `updated_by` 칸은 남긴다
+  - `20260925_seal_rollback.sql`: 정책(봉인 5개 + 봉인 밖 83개·RESTRICTIVE 2개)·뷰·트리거·함수를 기준선 상태로 되돌린다. 변경 기록 테이블과 `updated_by` 칸은 남긴다
 - `functions/send-push/index.ts`: FCM HTTP v1 푸시 발송 Edge Function.
   - Supabase 쪽 비밀값으로 Firebase 서비스 계정을 받는다. `FIREBASE_PROJECT_ID`·`FIREBASE_CLIENT_EMAIL`·`FIREBASE_PRIVATE_KEY` 또는 `FIREBASE_SERVICE_ACCOUNT_JSON`을 쓴다.
   - 토큰은 서비스 권한 키로 `push_tokens`에서 읽는다.
@@ -23,7 +23,7 @@
 ## 맡지 않는 것
 - 운영 스키마의 최신 정의. 운영 적용 이력은 128개(2026-09-24)이고 `migrations/`만으로는 재구성할 수 없다. 기준선도 추출일 시점 사본이다. 최신 사실은 운영 DB 직접 조회다. 루트 `schema_.sql`은 오래된 사본이다.
 - `react_*` 테이블. reactstudio 레포가 주인이다.
-- 봉인 5개 밖 테이블(`partners`, `clients`, `contracts`, `comments`, `document_room_files` 등)의 정책. 봉인 SQL은 건드리지 않는다.
+- 봉인 5개 밖 테이블의 역할·사업부별 세부 정책 설계. 봉인 SQL 7절은 로그인 계정 정책에 재직 직원 조건(`is_active_staff()`)만 AND로 붙이고 기존 식은 그대로 둔다.
 
 ## 지켜야 할 것
 - **운영 적용**: 대표 승인 뒤에만 한다. `apply/`의 트랜잭션 스크립트로 적용하고, 되돌리기 스크립트를 먼저 준비한다.
