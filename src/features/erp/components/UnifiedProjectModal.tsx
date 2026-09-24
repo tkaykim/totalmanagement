@@ -2013,9 +2013,22 @@ export function UnifiedProjectModal({
         <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur pb-safe-area">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl p-6">
             <h3 className="mb-2 text-lg font-bold text-slate-800 dark:text-slate-200">프로젝트 삭제</h3>
-            <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
-              정말 이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-            </p>
+            {financeData.length > 0 ? (
+              // R15: 매출·지출이 한 건이라도 있으면 삭제할 수 없다(서버 409와 같은 안내)
+              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                재무 기록이 있는 프로젝트는 삭제할 수 없습니다. 보류로 바꾸세요.
+                <span className="mt-1 block text-xs text-amber-700/80 dark:text-amber-300/80">
+                  이 프로젝트에 매출·지출 {financeData.length}건이 있습니다(취소 건 포함).
+                </span>
+              </div>
+            ) : (
+              <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
+                정말 이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+                <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                  매출·지출이 있는 프로젝트는 삭제되지 않습니다. 진행하지 않는 건은 보류로 바꾸세요.
+                </span>
+              </p>
+            )}
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
@@ -2029,7 +2042,7 @@ export function UnifiedProjectModal({
                   await handleDelete();
                   setShowDeleteConfirm(false);
                 }}
-                disabled={isDeleting}
+                disabled={isDeleting || financeData.length > 0}
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isDeleting && (
