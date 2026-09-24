@@ -74,6 +74,7 @@ interface OverviewResponse {
 
 const BU_LABELS: Record<string, string> = {
   GRIGO: '그리고엔터',
+  DEETZ: 'deetz 에이전시',
   FLOW: '플로우메이커',
   REACT: '리액트스튜디오',
   MODOO: '모두굿즈',

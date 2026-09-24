@@ -95,7 +95,7 @@ export function ManualsView({ currentBu, currentUser }: ManualsViewProps) {
     }
   };
 
-  const buOptions: (BU | 'ALL')[] = ['ALL', 'GRIGO', 'REACT', 'FLOW', 'AST', 'MODOO', 'HEAD'];
+  const buOptions: (BU | 'ALL')[] = ['ALL', 'GRIGO', 'DEETZ', 'REACT', 'FLOW', 'AST', 'MODOO', 'HEAD'];
 
   return (
     <div className="space-y-4">

@@ -21,11 +21,13 @@ async function getCurrentUser(): Promise<AppUser | null> {
 async function aggregateActualFinance(projectId: number): Promise<{
   actual_revenue: number;
   actual_expense: number;
+  internal_revenue: number;
+  internal_expense: number;
 }> {
   const supabase = await createPureClient();
   const { data, error } = await supabase
     .from('financial_entries')
-    .select('kind, amount, status')
+    .select('kind, amount, status, entry_scope')
     .eq('project_id', projectId)
     .neq('status', 'canceled');
 
@@ -33,12 +35,24 @@ async function aggregateActualFinance(projectId: number): Promise<{
 
   let actual_revenue = 0;
   let actual_expense = 0;
-  for (const entry of (data ?? []) as { kind: string; amount: number | null }[]) {
+  let internal_revenue = 0;
+  let internal_expense = 0;
+  for (const entry of (data ?? []) as {
+    kind: string;
+    amount: number | null;
+    entry_scope: 'external' | 'internal_allocation' | null;
+  }[]) {
     const amount = Number(entry.amount ?? 0);
-    if (entry.kind === 'revenue') actual_revenue += amount;
-    else if (entry.kind === 'expense') actual_expense += amount;
+    if (entry.entry_scope === 'internal_allocation') {
+      if (entry.kind === 'revenue') internal_revenue += amount;
+      else if (entry.kind === 'expense') internal_expense += amount;
+    } else if (entry.kind === 'revenue') {
+      actual_revenue += amount;
+    } else if (entry.kind === 'expense') {
+      actual_expense += amount;
+    }
   }
-  return { actual_revenue, actual_expense };
+  return { actual_revenue, actual_expense, internal_revenue, internal_expense };
 }
 
 /** GET: 프로젝트의 P&L 보고서 조회. 보고서가 없으면 null 반환하되, 자동 집계된 매출/지출은 함께 제공 */

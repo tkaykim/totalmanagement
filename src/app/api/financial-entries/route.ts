@@ -68,16 +68,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // 서버사이드 validation: due_date 필수
+    if (!body.due_date) {
+      return NextResponse.json({ error: '납기일(due_date)은 필수 입력 항목입니다.' }, { status: 400 });
+    }
+
     const { data, error } = await supabase
       .from('financial_entries')
       .insert({
         project_id: body.project_id,
         bu_code: body.bu_code,
+        entry_scope: body.entry_scope || 'external',
+        counterparty_bu_code: body.entry_scope === 'internal_allocation'
+          ? body.counterparty_bu_code
+          : null,
         kind: body.kind,
         category: body.category,
         name: body.name,
         amount: body.amount,
         occurred_at: body.occurred_at,
+        due_date: body.due_date,
         status: body.status || 'planned',
         memo: body.memo,
         partner_id: body.partner_id || null,

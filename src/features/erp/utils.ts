@@ -6,6 +6,9 @@ import { getTodayKST } from '@/lib/timezone';
 export function dbProjectToFrontend(p: Project): {
   id: string;
   bu: BU;
+  brand_bu: BU;
+  delivery_bu: BU;
+  artist_management_bu?: BU | null;
   name: string;
   description?: string | null;
   cat: string;
@@ -26,6 +29,9 @@ export function dbProjectToFrontend(p: Project): {
   return {
     id: String(p.id),
     bu: p.bu_code,
+    brand_bu: p.brand_bu_code || p.bu_code,
+    delivery_bu: p.delivery_bu_code || p.bu_code,
+    artist_management_bu: p.artist_management_bu_code || null,
     name: p.name,
     description: p.description,
     cat: p.category,
@@ -82,6 +88,9 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
   id: string;
   projectId: string;
   bu: BU;
+  entry_scope: 'external' | 'internal_allocation';
+  counterparty_bu?: BU | null;
+  memo?: string | null;
   type: 'revenue' | 'expense';
   category: string;
   name: string;
@@ -100,6 +109,9 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
     // UI/매칭에 새는 잠복 위험(2026-04-22 테스트 잔류 row 4건에서 관찰)을 차단.
     projectId: f.project_id == null ? '' : String(f.project_id),
     bu: f.bu_code,
+    entry_scope: f.entry_scope || 'external',
+    counterparty_bu: f.counterparty_bu_code || null,
+    memo: f.memo || null,
     type: f.kind,
     category: f.category,
     name: f.name,
@@ -115,6 +127,9 @@ export function dbFinancialToFrontend(f: FinancialEntry): {
 // 프론트 타입 -> DB 타입 변환
 export function frontendProjectToDb(p: {
   bu: BU;
+  brand_bu?: BU;
+  delivery_bu?: BU;
+  artist_management_bu?: BU | null;
   name: string;
   description?: string | null;
   cat?: string | null;
@@ -130,6 +145,9 @@ export function frontendProjectToDb(p: {
   participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
 }): {
   bu_code: BU;
+  brand_bu_code: BU;
+  delivery_bu_code: BU;
+  artist_management_bu_code?: BU | null;
   name: string;
   description?: string | null;
   category: string;
@@ -147,6 +165,9 @@ export function frontendProjectToDb(p: {
   const today = getTodayKST();
   const result: {
     bu_code: BU;
+    brand_bu_code: BU;
+    delivery_bu_code: BU;
+    artist_management_bu_code?: BU | null;
     name: string;
     description?: string | null;
     category: string;
@@ -162,6 +183,9 @@ export function frontendProjectToDb(p: {
     participants?: Array<{ user_id?: string; partner_worker_id?: number; partner_company_id?: number; external_worker_id?: number; role?: string; is_pm?: boolean }>;
   } = {
     bu_code: p.bu,
+    brand_bu_code: p.brand_bu || p.bu,
+    delivery_bu_code: p.delivery_bu || p.bu,
+    artist_management_bu_code: p.artist_management_bu || null,
     name: p.name,
     category: p.cat || '',
     status: p.status || '준비중',
@@ -249,11 +273,15 @@ export function frontendTaskToDb(t: {
 export function frontendFinancialToDb(f: {
   projectId: string;
   bu: BU;
+  entry_scope?: 'external' | 'internal_allocation';
+  counterparty_bu?: BU | null;
+  memo?: string | null;
   type: 'revenue' | 'expense';
   category?: string;
   name: string;
   amount: number;
   date: string;
+  due_date?: string | null;
   status?: 'planned' | 'paid' | 'canceled';
   partner_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
@@ -261,11 +289,15 @@ export function frontendFinancialToDb(f: {
 }): {
   project_id: number;
   bu_code: BU;
+  entry_scope: 'external' | 'internal_allocation';
+  counterparty_bu_code?: BU | null;
+  memo?: string | null;
   kind: 'revenue' | 'expense';
   category: string;
   name: string;
   amount: number;
   occurred_at: string;
+  due_date?: string | null;
   status: 'planned' | 'paid' | 'canceled';
   partner_id?: number | null;
   payment_method?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | null;
@@ -275,11 +307,15 @@ export function frontendFinancialToDb(f: {
   return {
     project_id: Number(f.projectId),
     bu_code: f.bu,
+    entry_scope: f.entry_scope || 'external',
+    counterparty_bu_code: f.counterparty_bu || null,
+    memo: f.memo || null,
     kind: f.type,
     category: f.category || f.type,
     name: f.name,
     amount: f.amount,
     occurred_at: f.date || today,
+    due_date: f.due_date || null,
     status: f.status || 'planned',
     partner_id: f.partner_id || null,
     payment_method: f.payment_method || null,

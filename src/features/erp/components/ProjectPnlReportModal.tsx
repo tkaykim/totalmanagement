@@ -24,6 +24,8 @@ interface PnlReportApiResponse {
   aggregated: {
     actual_revenue: number;
     actual_expense: number;
+    internal_revenue: number;
+    internal_expense: number;
   };
 }
 
@@ -68,7 +70,12 @@ export function ProjectPnlReportModal({
 }: ProjectPnlReportModalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [aggregated, setAggregated] = useState({ actual_revenue: 0, actual_expense: 0 });
+  const [aggregated, setAggregated] = useState({
+    actual_revenue: 0,
+    actual_expense: 0,
+    internal_revenue: 0,
+    internal_expense: 0,
+  });
   const [form, setForm] = useState({
     target_revenue: 0,
     target_expense: 0,
@@ -388,6 +395,19 @@ export function ProjectPnlReportModal({
                     </div>
                   )}
                 </div>
+
+                {(aggregated.internal_revenue > 0 || aggregated.internal_expense > 0) && (
+                  <div className="rounded-xl border border-violet-100 dark:border-violet-900 bg-violet-50/40 dark:bg-violet-900/10 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold text-violet-700 dark:text-violet-300">
+                        내부 BU 배부 · 연결 손익 제외
+                      </span>
+                      <span className="tabular-nums text-violet-600 dark:text-violet-400">
+                        매출 ₩{formatCurrency(aggregated.internal_revenue)} · 지출 ₩{formatCurrency(aggregated.internal_expense)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </section>
 
               {/* 2. 회고 - 좋았던 점 */}

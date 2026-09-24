@@ -15,7 +15,7 @@ import { ProjectAttachmentDisplay } from '@/features/erp/components/ProjectAttac
 import { ResizableDescriptionTextarea } from '@/features/erp/components/ResizableDescriptionTextarea';
 import type { Project as ErpProject, TaskPriority as ErpTaskPriority } from '@/features/erp/types';
 
-type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+type BU = 'GRIGO' | 'DEETZ' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type ModalMode = 'create' | 'view' | 'edit';
 type FinancePermission = 'none' | 'view' | 'edit';
 
@@ -27,6 +27,8 @@ type FinanceEntry = {
   amount: number;
   status: string;
   occurred_at: string;
+  entry_scope: 'external' | 'internal_allocation';
+  counterparty_bu?: BU | null;
 };
 
 type TaskStatus = 'todo' | 'in-progress' | 'on-hold' | 'done';
@@ -50,6 +52,9 @@ type Participant = {
 type Project = {
   id: string;
   bu: BU;
+  brand_bu?: BU;
+  delivery_bu?: BU;
+  artist_management_bu?: BU | null;
   name: string;
   cat: string;
   startDate: string;
@@ -66,6 +71,7 @@ type Project = {
 
 const BU_TITLES: Record<BU, string> = {
   GRIGO: '그리고 엔터',
+  DEETZ: 'deetz 에이전시',
   REACT: '리액트 스튜디오',
   FLOW: '플로우메이커',
   AST: '아스트 컴퍼니',
@@ -90,6 +96,9 @@ interface UnifiedProjectModalProps {
     id?: string;
     name: string;
     bu: BU;
+    brand_bu: BU;
+    delivery_bu: BU;
+    artist_management_bu?: BU | null;
     cat: string;
     startDate: string;
     endDate: string;
@@ -720,6 +729,9 @@ export function UnifiedProjectModal({
     const projectData: DbProject | null = project ? {
       id: parseInt(project.id) || 0,
       bu_code: project.bu,
+      brand_bu_code: project.brand_bu || project.bu,
+      delivery_bu_code: project.delivery_bu || project.bu,
+      artist_management_bu_code: project.artist_management_bu || null,
       name: project.name,
       category: project.cat,
       status: project.status as any,
@@ -753,9 +765,28 @@ export function UnifiedProjectModal({
   const canEditFinance = financePermission === 'edit';
 
   // 폼 상태
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    name: string;
+    bu: BU;
+    brand_bu: BU;
+    delivery_bu: BU;
+    artist_management_bu: BU | '';
+    cat: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+    pm_id: string;
+    partner_company_id: string;
+    partner_worker_id: string;
+    artist_id: string;
+    channel_id: string;
+    status: string;
+  }>({
     name: project?.name || '',
     bu: project?.bu || defaultBu,
+    brand_bu: project?.brand_bu || project?.bu || defaultBu,
+    delivery_bu: project?.delivery_bu || project?.bu || defaultBu,
+    artist_management_bu: project?.artist_management_bu || '',
     cat: project?.cat || '',
     startDate: project?.startDate || '',
     endDate: project?.endDate || '',
@@ -837,7 +868,11 @@ export function UnifiedProjectModal({
   // 재무 요약
   const financeSummary = financeData.reduce(
     (acc, entry) => {
-      if (entry.kind === 'revenue') {
+      if (entry.status === 'canceled') return acc;
+      if (entry.entry_scope === 'internal_allocation') {
+        if (entry.kind === 'revenue') acc.internalRevenue += entry.amount;
+        else acc.internalExpense += entry.amount;
+      } else if (entry.kind === 'revenue') {
         acc.totalRevenue += entry.amount;
         acc.revenueCount += 1;
       } else {
@@ -846,7 +881,14 @@ export function UnifiedProjectModal({
       }
       return acc;
     },
-    { totalRevenue: 0, totalExpense: 0, revenueCount: 0, expenseCount: 0 }
+    {
+      totalRevenue: 0,
+      totalExpense: 0,
+      revenueCount: 0,
+      expenseCount: 0,
+      internalRevenue: 0,
+      internalExpense: 0,
+    }
   );
 
   const handleAddParticipant = () => {
@@ -924,6 +966,9 @@ export function UnifiedProjectModal({
         ...(project && { id: project.id }),
         name: form.name,
         bu: form.bu,
+        brand_bu: form.brand_bu,
+        delivery_bu: form.delivery_bu,
+        artist_management_bu: form.artist_management_bu || null,
         cat: form.cat,
         startDate: form.startDate,
         endDate: form.endDate,
@@ -992,6 +1037,9 @@ export function UnifiedProjectModal({
         id: project.id,
         name: form.name,
         bu: form.bu,
+        brand_bu: form.brand_bu,
+        delivery_bu: form.delivery_bu,
+        artist_management_bu: form.artist_management_bu || null,
         cat: form.cat,
         startDate: form.startDate,
         endDate: form.endDate,
@@ -1106,7 +1154,15 @@ export function UnifiedProjectModal({
                 {isEditable ? (
                   <select
                     value={form.bu}
-                    onChange={(e) => setForm({ ...form, bu: e.target.value as BU })}
+                    onChange={(e) => {
+                      const nextBu = e.target.value as BU;
+                      setForm((prev) => ({
+                        ...prev,
+                        bu: nextBu,
+                        brand_bu: prev.brand_bu === prev.bu ? nextBu : prev.brand_bu,
+                        delivery_bu: prev.delivery_bu === prev.bu ? nextBu : prev.delivery_bu,
+                      }));
+                    }}
                     className="text-xs font-semibold rounded-full px-3 py-1 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 border-0 outline-none cursor-pointer"
                   >
                     {Object.entries(BU_TITLES).map(([key, label]) => (
@@ -1267,6 +1323,57 @@ export function UnifiedProjectModal({
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto space-y-5 px-6 py-5">
+            <section className="space-y-2">
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">BU 역할 분리</h4>
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  손익 소유는 상단 사업부이며, 브랜드·실행·전속 아티스트 관리를 별도로 기록합니다.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="space-y-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  브랜드 BU
+                  <select
+                    value={form.brand_bu}
+                    onChange={(e) => setForm((prev) => ({ ...prev, brand_bu: e.target.value as BU }))}
+                    disabled={!isEditable}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-800 dark:text-slate-200 disabled:opacity-70"
+                  >
+                    {Object.entries(BU_TITLES).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  실행·제작 BU
+                  <select
+                    value={form.delivery_bu}
+                    onChange={(e) => setForm((prev) => ({ ...prev, delivery_bu: e.target.value as BU }))}
+                    disabled={!isEditable}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-800 dark:text-slate-200 disabled:opacity-70"
+                  >
+                    {Object.entries(BU_TITLES).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  아티스트 관리 BU
+                  <select
+                    value={form.artist_management_bu}
+                    onChange={(e) => setForm((prev) => ({ ...prev, artist_management_bu: e.target.value as BU | '' }))}
+                    disabled={!isEditable}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-800 dark:text-slate-200 disabled:opacity-70"
+                  >
+                    <option value="">해당 없음</option>
+                    {Object.entries(BU_TITLES).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </section>
+
             {/* 설명 섹션 */}
             <section className="space-y-2">
               <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">설명</h4>
@@ -1737,6 +1844,15 @@ export function UnifiedProjectModal({
                   </div>
                 </div>
 
+                {(financeSummary.internalRevenue > 0 || financeSummary.internalExpense > 0) && (
+                  <div className="flex items-center justify-between rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
+                    <span className="font-semibold">내부 BU 배부 · 외부 손익 제외</span>
+                    <span className="tabular-nums">
+                      매출 ₩{formatCurrency(financeSummary.internalRevenue)} · 지출 ₩{formatCurrency(financeSummary.internalExpense)}
+                    </span>
+                  </div>
+                )}
+
                 {/* 매출/지출 추가 버튼 - view와 edit 모드 모두에서 표시 */}
                 {canEditFinance && (
                   <div className="flex gap-2">
@@ -1799,6 +1915,11 @@ export function UnifiedProjectModal({
                           )}>
                             {entry.status === 'paid' ? '지급완료' : entry.status === 'planned' ? '지급예정' : entry.status === 'canceled' ? '취소' : entry.status}
                           </span>
+                          {entry.entry_scope === 'internal_allocation' && (
+                            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
+                              내부배부{entry.counterparty_bu ? ` · ${entry.counterparty_bu}` : ''}
+                            </span>
+                          )}
                         </div>
                         <p className={cn(
                           "text-sm font-bold",
@@ -1970,6 +2091,9 @@ export function UnifiedProjectModal({
         const virtualProject: ErpProject = {
           id: '__pending__',
           bu: form.bu as ErpProject['bu'],
+          brand_bu: form.brand_bu as ErpProject['brand_bu'],
+          delivery_bu: form.delivery_bu as ErpProject['delivery_bu'],
+          artist_management_bu: form.artist_management_bu || null,
           name: form.name || '새 프로젝트',
           cat: form.cat,
           startDate: form.startDate,

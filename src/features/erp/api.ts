@@ -44,6 +44,9 @@ export async function fetchProjects(bu?: BU): Promise<Project[]> {
 
 export async function createProject(data: {
   bu_code: BU;
+  brand_bu_code?: BU;
+  delivery_bu_code?: BU;
+  artist_management_bu_code?: BU | null;
   name: string;
   category: string;
   status?: string;
@@ -180,6 +183,7 @@ export async function createFinancialEntry(data: {
   name: string;
   amount: number;
   occurred_at: string;
+  due_date?: string | null;
   status?: string;
   memo?: string;
   created_by?: string;

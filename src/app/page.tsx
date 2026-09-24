@@ -798,6 +798,9 @@ function HomePage() {
   const handleCreateProject = async (payload: {
     name: string;
     bu: BU;
+    brand_bu: BU;
+    delivery_bu: BU;
+    artist_management_bu?: BU | null;
     cat: string;
     startDate: string;
     endDate: string;
@@ -866,6 +869,9 @@ function HomePage() {
     id?: string;
     name: string;
     bu: BU;
+    brand_bu: BU;
+    delivery_bu: BU;
+    artist_management_bu?: BU | null;
     cat: string;
     startDate: string;
     endDate: string;
@@ -882,6 +888,9 @@ function HomePage() {
     try {
       const dbData = frontendProjectToDb({
         bu: payload.bu,
+        brand_bu: payload.brand_bu,
+        delivery_bu: payload.delivery_bu,
+        artist_management_bu: payload.artist_management_bu,
         name: payload.name,
         cat: payload.cat,
         startDate: payload.startDate,
@@ -951,10 +960,14 @@ function HomePage() {
     type: 'revenue' | 'expense';
     projectId: string;
     bu: BU;
+    entryScope: 'external' | 'internal_allocation';
+    counterpartyBu?: BU | '';
+    memo?: string;
     cat: string;
     name: string;
     amount: string;
     date: string;
+    dueDate: string;
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
@@ -964,6 +977,7 @@ function HomePage() {
     if (!payload.cat) missingFields.push('구분');
     if (!payload.name) missingFields.push('항목명');
     if (!payload.amount) missingFields.push('금액');
+    if (!payload.dueDate) missingFields.push('납기일');
 
     if (missingFields.length > 0) {
       return `다음 항목을 입력해주세요: ${missingFields.join(', ')}`;
@@ -978,11 +992,15 @@ function HomePage() {
       const dbData = frontendFinancialToDb({
         projectId: payload.projectId,
         bu: payload.bu,
+        entry_scope: payload.entryScope,
+        counterparty_bu: payload.counterpartyBu || null,
+        memo: payload.memo || null,
         type: payload.type,
         category: payload.cat,
         name: payload.name,
         amount: amount,
         date: payload.date,
+        due_date: payload.dueDate,
         status: payload.status,
         partner_id: payload.partnerId ? Number(payload.partnerId) : null,
         payment_method: payload.paymentMethod || null,
@@ -1002,10 +1020,14 @@ function HomePage() {
     type: 'revenue' | 'expense';
     projectId: string;
     bu: BU;
+    entryScope: 'external' | 'internal_allocation';
+    counterpartyBu?: BU | '';
+    memo?: string;
     cat: string;
     name: string;
     amount: string;
     date: string;
+    dueDate: string;
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
@@ -1019,11 +1041,18 @@ function HomePage() {
         : null;
 
       const dbData = {
+        bu_code: payload.bu,
+        entry_scope: payload.entryScope,
+        counterparty_bu_code: payload.entryScope === 'internal_allocation'
+          ? payload.counterpartyBu || null
+          : null,
+        memo: payload.memo || null,
         kind: payload.type,
         category: payload.cat,
         name: payload.name,
         amount: amount,
         occurred_at: payload.date || today,
+        due_date: payload.dueDate || null,
         status: payload.status,
         partner_id: payload.partnerId ? Number(payload.partnerId) : null,
         payment_method: payload.paymentMethod || null,
@@ -1760,6 +1789,8 @@ function HomePage() {
             amount: f.amount,
             status: f.status,
             occurred_at: f.date,
+            entry_scope: f.entry_scope,
+            counterparty_bu: f.counterparty_bu,
           }))}
           tasksData={tasks
             .filter((t) => t.projectId === isEditProjectModalOpen.id)

@@ -7,7 +7,7 @@ import { checkFinancePermission } from '@/features/erp/lib/financePermissions';
 import { toast } from '@/hooks/use-toast';
 import type { AppUser, Project as ProjectType } from '@/types/database';
 
-type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+type BU = 'GRIGO' | 'DEETZ' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
 type FinancePermission = 'none' | 'view' | 'edit';
 
 type FinanceEntry = {
@@ -22,6 +22,7 @@ type FinanceEntry = {
 
 const BU_TITLES: Record<BU, string> = {
   GRIGO: '그리고 엔터',
+  DEETZ: 'deetz 에이전시',
   REACT: '리액트 스튜디오',
   FLOW: '플로우메이커',
   AST: '아스트 컴퍼니',
@@ -114,6 +115,9 @@ export function ProjectModal({
     const projectData: ProjectType | null = project ? {
       id: parseInt(project.id) || 0,
       bu_code: project.bu,
+      brand_bu_code: project.bu,
+      delivery_bu_code: project.bu,
+      artist_management_bu_code: null,
       name: project.name,
       category: project.cat,
       status: project.status as any,

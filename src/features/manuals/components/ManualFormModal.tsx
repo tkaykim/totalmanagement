@@ -32,7 +32,7 @@ const CATEGORY_OPTIONS = [
   '기타',
 ];
 
-const BU_OPTIONS: BU[] = ['GRIGO', 'REACT', 'FLOW', 'AST', 'MODOO', 'HEAD'];
+const BU_OPTIONS: BU[] = ['GRIGO', 'DEETZ', 'REACT', 'FLOW', 'AST', 'MODOO', 'HEAD'];
 
 /** 기존 콘텐츠를 HTML 문자열로 변환 (에디터 초기값용) */
 function getInitialHtml(manual?: Manual): string {

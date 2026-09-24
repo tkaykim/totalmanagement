@@ -30,6 +30,7 @@ import { LEAVE_TYPE_LABELS } from '../types';
 const BU_DISPLAY_NAMES: Record<string, string> = {
   HEAD: '본사',
   GRIGO: '그리고엔터',
+  DEETZ: 'deetz 에이전시',
   FLOW: '플로우메이커',
   REACT: '리액트스튜디오',
   MODOO: '모두굿즈',

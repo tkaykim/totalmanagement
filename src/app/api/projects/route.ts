@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       // 재무 데이터 조회 (기간 필터 적용)
       let financeQuery = supabase
         .from('financial_entries')
-        .select('project_id, kind, amount')
+        .select('project_id, kind, amount, entry_scope')
         .in('project_id', projectIds)
         .neq('status', 'canceled');
       
@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
       // 프로젝트별 매출/지출 합계 계산
       const financeMap: Record<string, { revenue: number; expense: number }> = {};
       (finances || []).forEach((f: any) => {
+        if (f.entry_scope === 'internal_allocation') return;
         if (!financeMap[f.project_id]) {
           financeMap[f.project_id] = { revenue: 0, expense: 0 };
         }
@@ -149,6 +150,9 @@ export async function POST(request: NextRequest) {
     // insert 객체 생성 (undefined인 필드는 제외)
     const insertData: any = {
       bu_code: body.bu_code,
+      brand_bu_code: body.brand_bu_code || body.bu_code,
+      delivery_bu_code: body.delivery_bu_code || body.bu_code,
+      artist_management_bu_code: body.artist_management_bu_code || null,
       name: body.name,
       category: body.category || '',
       status: body.status || '준비중',

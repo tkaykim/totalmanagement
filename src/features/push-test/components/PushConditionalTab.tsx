@@ -17,6 +17,7 @@ const ROLES = [
 const BU_CODES = [
   { value: 'HEAD', label: '본사 (HEAD)' },
   { value: 'GRIGO', label: '그리고 엔터 (GRIGO)' },
+  { value: 'DEETZ', label: 'deetz 에이전시 (DEETZ)' },
   { value: 'REACT', label: '리액트 스튜디오 (REACT)' },
   { value: 'FLOW', label: '플로우메이커 (FLOW)' },
   { value: 'AST', label: '아스트 컴퍼니 (AST)' },

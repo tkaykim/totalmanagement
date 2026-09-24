@@ -18,6 +18,7 @@ export type WorkStatus = 'OFF_WORK' | 'WORKING' | 'MEETING' | 'OUTSIDE' | 'BREAK
 const BU_NAMES: Record<string, string> = {
   HEAD: '본사',
   GRIGO: '그리고엔터',
+  DEETZ: 'deetz 에이전시',
   AST: 'AST컴퍼니',
   REACT: '리액트스튜디오',
   FLOW: '플로우메이커',

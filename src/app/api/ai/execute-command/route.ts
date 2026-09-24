@@ -6,7 +6,7 @@ import { notifyProjectPMAssigned, notifyTaskAssigned } from '@/lib/notification-
 
 export const dynamic = 'force-dynamic';
 
-const BU_CODES = ['GRIGO', 'FLOW', 'REACT', 'MODOO', 'AST', 'HEAD'] as const;
+const BU_CODES = ['GRIGO', 'DEETZ', 'FLOW', 'REACT', 'MODOO', 'AST', 'HEAD'] as const;
 
 type BuCode = (typeof BU_CODES)[number];
 

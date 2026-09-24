@@ -11,7 +11,7 @@
  */
 
 export type Role = 'admin' | 'leader' | 'manager' | 'member' | 'viewer' | 'artist';
-export type BuCode = 'GRIGO' | 'FLOW' | 'REACT' | 'MODOO' | 'AST' | 'HEAD';
+export type BuCode = 'GRIGO' | 'DEETZ' | 'FLOW' | 'REACT' | 'MODOO' | 'AST' | 'HEAD';
 
 export interface AppUser {
   id: string;
