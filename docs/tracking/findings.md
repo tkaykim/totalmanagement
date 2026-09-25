@@ -28,12 +28,12 @@
 - **지금 못 고치는 이유**: 봉인 SQL은 anon 정책을 바꾸지 않는다는 범위로 만들었다. 이 정책을 바꾸거나 버킷을 비공개로 돌리는 것은 운영 DB·Storage 변경이라 대표 승인이 필요하다. reactstudio.kr의 문서 첨부(`lib/company-docs.ts`)는 서비스 권한 키로 읽으므로 정책을 좁혀도 그쪽은 깨지지 않을 것으로 보이지만, 공개 URL을 쓰는 다른 곳이 없는지 확인해야 한다.
 - **접근**: 읽기 정책을 `service_role` 전용으로 바꾸고(또는 `is_active_staff()` 조건), `company-docs` 버킷을 비공개로 바꾼 뒤 서명 URL로만 내보낸다. 되돌리기 SQL을 함께 둔다.
 
-## 준비된 SQL로 해결(운영 미적용)
+## 해결됨(2026-09-25 봉인 SQL 운영 적용)
 
 ### 봉인 뒤에도 가입 대기·퇴사 계정이 봉인 밖 테이블을 PostgREST로 읽고 쓴다
 - **증상**: 처음 봉인 SQL은 5개 테이블(`app_users`, `projects`, `project_tasks`, `financial_entries`, `gowid_expense_project_link`)만 바꿨다. `partners`, `contracts`, `comments`, `document_room_files` 등은 `authenticated` 전권 정책이 그대로였고, `clients`는 `authenticated` 쓰기가 열려 있었다. 가입 직후 `authenticated` 세션이 생기므로 승인 전 계정과 퇴사자가 이 테이블들을 직접 읽고 쓸 수 있었다.
 - **해결(준비됨)**: 봉인 SQL 7절이 봉인 5개·`react_*` 밖의 47개 테이블에서 `authenticated`·PUBLIC 정책 83개의 USING·WITH CHECK에 `is_active_staff()`를 AND로 붙이고, `clients`·`company_documents`에 로그인 계정 전용 RESTRICTIVE 정책을 더한다. 재직 직원의 결과와 anon 결과는 전과 같다(알림 anon INSERT만 막힘). `tests/db/seal-outside.test.ts`가 검증하고, 되돌리기 스크립트가 기준선 본문으로 복원한다.
-- **남은 일**: 봉인 SQL 운영 적용(대표 승인 ②, 반영 순서는 `docs/operations.md`)과 적용 뒤 확인 6(조건 없는 정책이 의도한 3개뿐인지). 운영 적용이 끝나면 이 항목을 닫는다. 재직 직원 사이의 역할·사업부별 세부 RLS는 이 항목 범위가 아니다(`docs/tracking/status.md`).
+- **닫음**: 2026-09-25 운영 적용, 확인 6 결과 의도한 3개(`clients` 공개 읽기, `company_documents` 공개 읽기, `push_tokens` 서비스 정책)만 남았다. 재직 직원 사이의 역할·사업부별 세부 RLS는 이 항목 범위가 아니다(`docs/tracking/status.md`).
 
 ## 높음
 

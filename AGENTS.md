@@ -7,8 +7,8 @@
 Next.js 15 앱 하나와 Supabase(`wqtoahrekijirxxpbfqg`)로 되어 있다.
 이 DB는 reactstudio.kr, 사내 워커, flowmaker와 함께 쓴다.
 
-2026-09-24 대표 결정으로 이 ERP가 전사 프로젝트 키·재무 허브가 되었다. 그 전제인 권한 봉인(재직 가드, 관리자·리더 전사 보기, 가입 승인, 확정 건 보호, 변경 기록)은 작업 브랜치에 구현되어 있지만 운영에는 반영되지 않았다. 코드 배포(승인 ①)와 DB 봉인 SQL 적용(승인 ②)을 따로 받는다.
-운영 배포본은 `main`(`d504793`, 2026-06-09)이고, 운영 DB는 그보다 앞서 있다(DEETZ·내부배부 칸).
+2026-09-24 대표 결정으로 이 ERP가 전사 프로젝트 키·재무 허브가 되었다. 그 전제인 권한 봉인(재직 가드, 관리자·리더 전사 보기, 가입 승인, 확정 건 보호, 변경 기록)은 2026-09-25 코드 배포·DB 봉인 SQL 적용·`ERP_AUDIT_V2=1`까지 운영에 반영되었다.
+운영 배포본은 `main`(`3417822`, 2026-09-25)이다.
 자동 테스트는 `npm test`(단위 + 로컬 PGlite DB)와 미리보기 대상 `npm run test:api`가 있다. CI는 없다.
 
 ## 구조
@@ -58,7 +58,7 @@ totalmanagements/
 ## 작업 전 확인
 
 - 항상 `docs/standards.md`, `docs/engineering-notes.md`, 그리고 손댈 폴더의 `AGENTS.md`를 먼저 읽는다.
-- **권한·로그인·API 라우트를 건드릴 때**: `docs/security.md`의 권한 표와 RLS 현황, `src/app/api/AGENTS.md`의 가드와 예외, `src/lib/AGENTS.md`의 재직 판정 두 가지. 봉인 SQL이 운영에 적용되기 전까지 PostgREST 직접 조회는 서버 가드와 무관하게 열려 있다. 봉인 뒤에는 모든 public 테이블(`react_*` 제외)이 재직 직원만 읽고 쓰지만, 봉인 5개 밖 테이블은 재직 직원에게 여전히 `authenticated` 전권인 곳이 많다. 판정을 바꾸면 `tests/unit`의 조합 표 테스트를 같이 고친다.
+- **권한·로그인·API 라우트를 건드릴 때**: `docs/security.md`의 권한 표와 RLS 현황, `src/app/api/AGENTS.md`의 가드와 예외, `src/lib/AGENTS.md`의 재직 판정 두 가지. 봉인 SQL은 운영에 적용되어 있다(2026-09-25). 그래서 모든 public 테이블(`react_*` 제외)이 재직 직원만 읽고 쓰지만, 봉인 5개 밖 테이블은 재직 직원에게 여전히 `authenticated` 전권인 곳이 많다. 판정을 바꾸면 `tests/unit`의 조합 표 테스트를 같이 고친다.
 - **매출·지출·손익 코드를 건드릴 때**: `docs/business-rules.md`의 2-4~2-7절(상태 전이, 기한·입금일 필수, 행 사업부 기준 권한, 내부배부 손익, 금액 뜻, 인건비). 매출·지출을 쓰는 모든 경로(`financial-entries`, 법인카드 연결, AI 지시, 프로젝트 삭제)가 같은 판정을 부르는지 본다. 기존 행 금액을 보정하는 계산을 넣지 않는다.
 - **스키마·enum·RLS·트리거를 바꿀 때**: `docs/contracts.md`의 외부 사용자 표, `supabase/AGENTS.md`, `docs/engineering-notes.md`의 "운영 DB와 코드가 서로 다른 시점"·"운영 적용 스크립트는 원본 SQL의 복사본" 항목, `docs/operations.md`의 봉인 반영 순서. 스키마는 운영 DB를 직접 조회해 확인하고, SQL은 `tests/db`(PGlite)로 검사한다. 새 DB 칸에 의존하는 서버 코드는 `ERP_AUDIT_V2` 스위치 뒤에 둔다.
 - **사업부 목록·DEETZ를 다룰 때**: 목록·표시명·색상은 `src/lib/business-units.ts` 한 곳뿐이다. 다른 파일에 사업부 배열이나 라벨 맵을 만들지 않는다.

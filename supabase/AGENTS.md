@@ -4,7 +4,7 @@
 - `migrations/`: 이 레포의 SQL 변경 34개. 파일명은 `YYYYMMDD_설명.sql` 또는 `YYYYMMDDHHMMSS_설명.sql`이다.
   - 옛 31개(2025-03 ~ 2026-06). 고치지 않는다.
   - `20260810102059_add_deetz_bu_code.sql`, `20260810102123_add_cross_bu_accounting.sql`: 2026-08-10 운영에 직접 적용된 DEETZ·내부배부 변경의 사본. 운영에는 이미 있다.
-  - `20260925000000_unified_ops_seal.sql`: 권한 봉인. **운영 미적용.** 추가만 하는 변경이다.
+  - `20260925000000_unified_ops_seal.sql`: 권한 봉인. **2026-09-25 운영 적용.** 추가만 하는 변경이다.
     - 칸 `financial_entries.updated_by`·`app_users.updated_by`, 변경 기록 테이블 `financial_entry_changes`·`app_user_changes`
     - 판정 함수 `is_active_staff`·`is_staff_admin`·`is_staff_admin_or_leader`·`can_view_project`·`can_view_financial_entry_changes`(SECURITY DEFINER, `search_path` 고정)
     - 트리거: 본인 역할·사업부·재직 변경 거부, 직원·매출지출 변경 기록, `paid`·`canceled` 삭제 거부, 재무 있는 프로젝트 삭제 거부

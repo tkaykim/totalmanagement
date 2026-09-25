@@ -114,7 +114,7 @@ GitHub 저장소 `tkaykim/totalmanagement`는 **공개**이고, 대표 결정으
 
 ### DB(RLS) 현황
 
-**운영 DB의 현재 상태(2026-09-25 기준, 봉인 SQL 미적용)**
+**봉인 SQL 적용 전 운영 DB 상태(2026-09-25 적용 전, 기록용)**
 - RLS는 모든 public 테이블에 켜져 있다(2026-09-21 일괄 조치).
 - 하지만 `projects`, `financial_entries`, `project_tasks`, `partners`, `contracts`, `app_users` 등 핵심 테이블의 정책은 "`authenticated`면 전부 허용"이다.
   - 로그인만 하면(승인 대기·퇴사자 포함) 브라우저에서 PostgREST로 직접 읽고 쓸 수 있다. 서버 가드를 우회한다.
@@ -123,7 +123,7 @@ GitHub 저장소 `tkaykim/totalmanagement`는 **공개**이고, 대표 결정으
 - 뷰 `attendance_logs_with_user`, `project_pnl_reports_with_profit`은 뷰 소유자 권한으로 실행돼 호출자의 RLS를 무시한다.
 - `paid`·`canceled` 삭제 금지, 재무 있는 프로젝트 삭제 차단, 변경 기록 트리거가 없다. 프로젝트를 지우면 딸린 매출·지출이 외래키 연쇄 삭제로 사라진다.
 
-**봉인 SQL(`supabase/migrations/20260925000000_unified_ops_seal.sql`, 준비됨·운영 미적용) 적용 후**
+**봉인 SQL(`supabase/migrations/20260925000000_unified_ops_seal.sql`, 2026-09-25 운영 적용) 적용 후 = 현재 상태**
 - 봉인 대상은 정확히 5개 테이블이다: `app_users`, `projects`, `project_tasks`, `financial_entries`, `gowid_expense_project_link`.
   - `authenticated`·`anon` 쓰기 정책이 없다. 쓰기는 ERP 서버의 서비스 권한 키로만 한다.
   - `projects`·`project_tasks`·`financial_entries` SELECT는 위 보기 범위와 같다. 할일은 볼 수 있는 프로젝트의 할일 + 본인 배정 할일이다.
