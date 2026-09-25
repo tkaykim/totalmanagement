@@ -1,9 +1,16 @@
-export type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+import { BU_CODES, BU_NAMES, BU_ENGLISH_LABELS, BU_CHIP_CLASSES, type BuCode } from '@/lib/business-units';
+
+/** 사업부 코드. 정의는 `@/lib/business-units`의 BU_CODES 한 곳이다. */
+export type BU = BuCode;
+export { BU_CODES };
 export type View = 'dashboard' | 'projects' | 'settlement' | 'tasks' | 'taskTemplates' | 'manuals' | 'documentRoom' | 'organization' | 'reactstudio' | 'attendance' | 'attendanceAdmin' | 'leave' | 'leaveAdmin' | 'partners' | 'meetingRooms' | 'equipment' | 'vehicles' | 'workLog' | 'workLogAdmin' | 'bugReports' | 'exclusiveArtists' | 'pushTest' | 'resourceOverview' | 'aiWorkInsight' | 'corporateCard';
 
 export type Project = {
   id: string;
   bu: BU;
+  brand_bu: BU;
+  delivery_bu: BU;
+  artist_management_bu?: BU | null;
   name: string;
   cat: string;
   description?: string | null;
@@ -23,11 +30,15 @@ export type FinancialEntry = {
   id: string;
   projectId: string;
   bu: BU;
+  entry_scope: 'external' | 'internal_allocation';
+  counterparty_bu?: BU | null;
+  memo?: string | null;
   type: 'revenue' | 'expense';
   category: string;
   name: string;
   amount: number;
   date: string;
+  due_date?: string | null;
   status: FinancialEntryStatus;
   partner_id?: number | null;
   partner_company_id?: number | null;
@@ -60,32 +71,14 @@ export type TaskItem = {
   creator_name?: string | null;
 };
 
-export const BU_TITLES: Record<BU, string> = {
-  GRIGO: '그리고 엔터',
-  REACT: '리액트 스튜디오',
-  FLOW: '플로우메이커',
-  AST: '아스트 컴퍼니',
-  MODOO: '모두굿즈',
-  HEAD: '본사',
-};
+/** 코드 → 한국어 이름. `@/lib/business-units` BU_META에서 파생된다. */
+export const BU_TITLES: Record<BU, string> = BU_NAMES;
 
-export const BU_LABELS: Record<BU, string> = {
-  GRIGO: 'GRIGO',
-  REACT: 'REACT STUDIO',
-  FLOW: 'FLOWMAKER',
-  AST: 'AST',
-  MODOO: 'MODOO',
-  HEAD: 'HEAD',
-};
+/** 코드 → 영문 라벨. `@/lib/business-units` BU_META에서 파생된다. */
+export const BU_LABELS: Record<BU, string> = BU_ENGLISH_LABELS;
 
-export const BU_CHIP_STYLES: Record<BU, string> = {
-  GRIGO: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-  REACT: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-  FLOW: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
-  AST: 'bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800',
-  MODOO: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-  HEAD: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-};
+/** 코드 → 칩 색상. `@/lib/business-units` BU_META에서 파생된다. */
+export const BU_CHIP_STYLES: Record<BU, string> = BU_CHIP_CLASSES;
 
 export const formatCurrency = (value: number) =>
   `₩ ${value.toLocaleString('ko-KR')}`;

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 export async function GET() {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const { data: { user } } = await authSupabase.auth.getUser();
@@ -50,6 +54,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const { data: { user } } = await authSupabase.auth.getUser();
@@ -88,6 +95,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const { data: { user } } = await authSupabase.auth.getUser();

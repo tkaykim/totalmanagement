@@ -4,14 +4,6 @@ import { useState } from 'react';
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { formatKST } from '@/lib/timezone';
 
-const BU_DISPLAY_NAMES: Record<string, string> = {
-  HEAD: '본사',
-  GRIGO: '그리고엔터',
-  FLOW: '플로우메이커',
-  REACT: '리액트스튜디오',
-  MODOO: '모두굿즈',
-  AST: '아스트컴퍼니',
-};
 import {
   Table,
   TableBody,
@@ -39,6 +31,7 @@ import {
 } from '../api';
 import type { PendingApprovalItem } from '../api';
 import { LEAVE_REQUEST_TYPE_LABELS } from '../types';
+import { getBuName } from '@/lib/business-units';
 
 interface LeaveApprovalQueueProps {
   items: PendingApprovalItem[];
@@ -135,7 +128,7 @@ export function LeaveApprovalQueue({ items, isLoading, onRefresh }: LeaveApprova
                     <span className="font-medium text-sm">{item.requester_name}</span>
                     {item.requester_bu_code && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                        {BU_DISPLAY_NAMES[item.requester_bu_code] || item.requester_bu_code}
+                        {getBuName(item.requester_bu_code)}
                       </span>
                     )}
                   </div>
@@ -218,7 +211,7 @@ export function LeaveApprovalQueue({ items, isLoading, onRefresh }: LeaveApprova
                   <div>
                     <p className="font-medium">{item.requester_name}</p>
                     {item.requester_bu_code && (
-                      <p className="text-xs text-slate-500">{BU_DISPLAY_NAMES[item.requester_bu_code] || item.requester_bu_code}</p>
+                      <p className="text-xs text-slate-500">{getBuName(item.requester_bu_code)}</p>
                     )}
                   </div>
                 </TableCell>

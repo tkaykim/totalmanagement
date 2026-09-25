@@ -17,6 +17,7 @@ export async function GET(
     return NextResponse.json(data);
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Gowid expense detail error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -40,6 +41,7 @@ export async function PUT(
     return NextResponse.json(data);
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') return unauthorizedResponse();
+    if ((error as Error).message === 'Forbidden') return forbiddenResponse();
     console.error('Gowid expense update error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

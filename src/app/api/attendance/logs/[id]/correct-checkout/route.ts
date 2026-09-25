@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { toKSTISOString } from '@/lib/timezone.server';
@@ -14,6 +15,9 @@ interface RouteParams {
  * - 수정 후 user_confirmed를 true로 변경
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const { id } = await params;

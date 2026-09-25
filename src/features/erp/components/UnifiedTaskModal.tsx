@@ -8,6 +8,7 @@ import { ManualSelector } from './ManualSelector';
 import { ManualDetailModal } from './ManualDetailModal';
 import { useManuals } from '../hooks';
 import { BU, BU_TITLES, Project, TaskItem, TaskPriority } from '../types';
+import { BU_CODES } from '@/lib/business-units';
 
 type ModalMode = 'create' | 'view' | 'edit';
 type TaskStatus = 'todo' | 'in-progress' | 'on-hold' | 'done';
@@ -699,7 +700,7 @@ export function UnifiedTaskModal({
               <div className="flex items-center gap-2">
                 <HeaderChipDropdown
                   value={form.bu}
-                  options={(Object.keys(BU_TITLES) as BU[]).map((k) => ({ value: k, label: BU_TITLES[k] }))}
+                  options={BU_CODES.map((k) => ({ value: k, label: BU_TITLES[k] }))}
                   onChange={(val) => {
                     const nextBu = val as BU;
                     const firstProject = projects.find((p) => p.bu === nextBu)?.id ?? '';
@@ -733,7 +734,7 @@ export function UnifiedTaskModal({
                     }}
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
                   >
-                    {(Object.keys(BU_TITLES) as BU[]).map((k) => (
+                    {BU_CODES.map((k) => (
                       <option key={k} value={k}>{BU_TITLES[k]}</option>
                     ))}
                   </select>

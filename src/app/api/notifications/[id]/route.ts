@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -9,6 +10,9 @@ interface RouteParams {
  * 알림 읽음 처리 API
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const { id } = await params;
@@ -47,6 +51,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  * 알림 삭제 API
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const { id } = await params;

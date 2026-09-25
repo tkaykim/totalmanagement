@@ -3,15 +3,7 @@
 import { X, Pencil, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BU, Project } from '../types';
-
-const BU_TITLES: Record<BU, string> = {
-  GRIGO: '그리고 엔터',
-  REACT: '리액트 스튜디오',
-  FLOW: '플로우메이커',
-  AST: '아스트 컴퍼니',
-  MODOO: '모두굿즈',
-  HEAD: '본사',
-};
+import { BU_NAMES as BU_TITLES } from '@/lib/business-units';
 
 const STATUS_COLORS: Record<string, string> = {
   '준비중': 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',

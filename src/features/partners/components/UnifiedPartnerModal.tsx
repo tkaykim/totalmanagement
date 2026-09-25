@@ -20,6 +20,7 @@ import {
   PartnerSharingPolicy,
 } from '../types';
 import { useToast } from '@/hooks/use-toast';
+import { BU_CODES, BU_META } from '@/lib/business-units';
 
 const ENTITY_TYPE_REACT_ICONS: Record<PartnerEntityType, React.ReactNode> = {
   person: <User className="w-4 h-4" />,
@@ -563,7 +564,7 @@ export function UnifiedPartnerModal({
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">공유할 사업부</label>
                     <div className="flex flex-wrap gap-3">
-                      {['GRIGO', 'FLOW', 'AST', 'MODOO', 'REACT'].map((bu) => (
+                      {BU_CODES.map((bu) => (
                         <label key={bu} className="flex items-center gap-1 text-sm">
                           <input
                             type="checkbox"
@@ -571,7 +572,7 @@ export function UnifiedPartnerModal({
                             {...register('shared_bu_codes')}
                             className="rounded border-slate-300"
                           />
-                          {bu}
+                          {BU_META[bu].name}
                         </label>
                       ))}
                     </div>

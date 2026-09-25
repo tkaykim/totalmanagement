@@ -11,6 +11,7 @@ import { ManualFormModal } from './ManualFormModal';
 import { ManualDetailModal } from '@/features/erp/components/ManualDetailModal';
 import { DeleteConfirmModal } from '@/features/erp/components/modal-components';
 import { format } from 'date-fns';
+import { BU_CODES } from '@/lib/business-units';
 
 interface ManualsViewProps {
   currentBu: BU | 'ALL';
@@ -95,7 +96,7 @@ export function ManualsView({ currentBu, currentUser }: ManualsViewProps) {
     }
   };
 
-  const buOptions: (BU | 'ALL')[] = ['ALL', 'GRIGO', 'REACT', 'FLOW', 'AST', 'MODOO', 'HEAD'];
+  const buOptions: (BU | 'ALL')[] = ['ALL', ...BU_CODES];
 
   return (
     <div className="space-y-4">

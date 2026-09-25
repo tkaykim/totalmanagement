@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createNotification, createNotificationForUsers } from '@/lib/notification-sender';
@@ -16,6 +17,9 @@ import { createNotification, createNotificationForUsers } from '@/lib/notificati
  * }
  */
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 

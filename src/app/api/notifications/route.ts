@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -5,6 +6,9 @@ import { createClient } from '@/lib/supabase/server';
  * 알림 목록 조회 API
  */
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;
@@ -60,6 +64,9 @@ export async function GET(request: NextRequest) {
  * 알림 생성 API (내부 사용 또는 시스템용)
  */
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const body = await request.json();

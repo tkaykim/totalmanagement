@@ -14,6 +14,7 @@ import { UnifiedPartnerModal } from './UnifiedPartnerModal';
 import { PartnerDetailModal } from './PartnerDetailModal';
 import { AccessRequestsPanel } from './AccessRequestsPanel';
 import { useDebounce } from 'react-use';
+import { BU_SELECT_OPTIONS } from '@/lib/business-units';
 
 const ENTITY_TYPE_ICON_MAP: Record<PartnerEntityType, React.ReactNode> = {
   person: <User className="w-4 h-4" />,
@@ -118,14 +119,7 @@ export function PartnersView({ currentBu = 'ALL', currentUserRole = 'member' }: 
     { key: 'brand', label: '브랜드', icon: <Tag className="w-4 h-4" /> },
   ];
 
-  const buOptions = [
-    { value: 'ALL', label: '전체' },
-    { value: 'GRIGO', label: '그리고엔터' },
-    { value: 'FLOW', label: 'FLOW' },
-    { value: 'AST', label: 'AST' },
-    { value: 'MODOO', label: '모두굿즈' },
-    { value: 'REACT', label: '리액트' },
-  ];
+  const buOptions = [{ value: 'ALL', label: '전체' }, ...BU_SELECT_OPTIONS];
 
   return (
     <div className="flex flex-col h-full">

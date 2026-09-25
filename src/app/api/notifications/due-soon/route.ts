@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
+import { rejectUnauthorizedCron } from '@/lib/cron-auth';
 import { notifyDueSoonSummary, type DueSoonTaskItem } from '@/lib/notification-sender';
 import { format, addDays, startOfDay, endOfDay } from 'date-fns';
 
@@ -13,16 +14,15 @@ const DUE_SOON_SUMMARY_TITLE = '할일 마감이 임박했습니다';
  * GET /api/notifications/due-soon
  * Query params:
  *   - days: 마감까지 남은 일수 (기본값: 1)
- *   - key: API 보안 키 (환경변수 CRON_SECRET과 비교)
+ * Header: Authorization: Bearer <CRON_SECRET> (미설정 시 401)
  */
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const cronSecret = searchParams.get('key');
+    // 크론 인증: Authorization: Bearer <CRON_SECRET>. 시크릿 미설정이면 거부.
+    const unauthorized = rejectUnauthorizedCron(request);
+    if (unauthorized) return unauthorized;
 
-    if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const searchParams = request.nextUrl.searchParams;
 
     const daysAhead = parseInt(searchParams.get('days') || '1');
     const supabase = await createPureClient();

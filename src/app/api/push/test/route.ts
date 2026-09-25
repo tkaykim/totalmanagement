@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { sendPushToUser } from '@/lib/push-sender';
@@ -13,6 +14,9 @@ import { isFirebaseAdminReady } from '@/lib/firebase-admin';
  * admin 권한만 사용 가능
  */
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 
@@ -73,6 +77,9 @@ export async function POST(request: NextRequest) {
  * Firebase 설정 상태 및 현재 사용자의 Push 토큰 확인
  */
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 

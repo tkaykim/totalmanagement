@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BU, BU_TITLES } from '../types';
+import { isHeadAdmin } from '@/lib/permissions';
+import { SignupRequestsPanel } from './SignupRequestsPanel';
 
 const USER_STATUS_LABELS: Record<string, string> = {
   active: '재직',
@@ -49,6 +51,8 @@ export function OrganizationView({
   onAddUser: () => void;
 }) {
   const isAdmin = currentUser?.profile?.role === 'admin';
+  // 가입 신청 목록은 본사 관리자만 본다 (spec R21)
+  const canManageSignups = isHeadAdmin(currentUser?.profile ?? null);
   const users = usersData?.users || [];
   const retiredUsers = usersData?.retiredUsers ?? [];
   const [usersListTab, setUsersListTab] = useState<'active' | 'retired'>('active');
@@ -414,6 +418,8 @@ export function OrganizationView({
             </div>
           </div>
 
+          {canManageSignups && <SignupRequestsPanel />}
+
           <div className="mb-3 flex w-fit rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5">
             <button
               type="button"
@@ -495,7 +501,9 @@ export function OrganizationView({
                             'rounded-full px-2 py-0.5 text-[9px] font-semibold',
                             u.role === 'admin'
                               ? 'bg-red-100 text-red-700'
-                              : u.role === 'manager'
+                              : u.role === 'leader'
+                                ? 'bg-indigo-100 text-indigo-700'
+                                : u.role === 'manager'
                                 ? 'bg-blue-100 text-blue-700'
                                 : u.role === 'member'
                                   ? 'bg-emerald-100 text-emerald-700'
@@ -506,7 +514,9 @@ export function OrganizationView({
                         >
                           {u.role === 'admin'
                             ? '관리자'
-                            : u.role === 'manager'
+                            : u.role === 'leader'
+                              ? '리더'
+                              : u.role === 'manager'
                               ? '매니저'
                               : u.role === 'member'
                                 ? '멤버'

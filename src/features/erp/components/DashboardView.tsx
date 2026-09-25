@@ -7,10 +7,15 @@ import {
   BU,
   BU_TITLES,
   BU_CHIP_STYLES,
+  FinancialEntry,
   Project,
   TaskItem,
+  formatCurrency,
 } from '../types';
 import { Input } from '@/components/ui/input';
+import { BU_CODES } from '@/lib/business-units';
+import { canViewAllBuStats } from '@/lib/permissions';
+import { summarizePnl, toPermUser } from '../finance-ui';
 
 export interface DashboardViewProps {
   tasks: TaskItem[];
@@ -23,8 +28,8 @@ export interface DashboardViewProps {
   totals?: { totalRev: number; totalExp: number; totalProfit: number };
   buCards?: { bu: BU; projects: number; revenue: number; expense: number; profit: number }[];
   share?: { bu: BU; amount: number; ratio: number }[];
-  revenues?: unknown[];
-  expenses?: unknown[];
+  revenues?: FinancialEntry[];
+  expenses?: FinancialEntry[];
 }
 
 export function DashboardView({
@@ -34,6 +39,8 @@ export function DashboardView({
   onProjectClick,
   onTaskClick,
   usersData,
+  revenues = [],
+  expenses = [],
 }: DashboardViewProps) {
   const [selectedBu, setSelectedBu] = useState<BU | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +50,14 @@ export function DashboardView({
   const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<'all' | 'my' | 'unassigned'>('my');
 
   const searchLower = searchQuery.trim().toLowerCase();
+
+  // 손익 요약(R26): 관리자·리더만. '전체' = 회사 손익(내부배부 제외), 사업부 탭 = 관리손익(내부 포함)
+  const permUser = useMemo(() => toPermUser(currentUser?.profile), [currentUser?.profile]);
+  const showPnl = !!permUser && canViewAllBuStats(permUser);
+  const pnl = useMemo(
+    () => (showPnl ? summarizePnl([...revenues, ...expenses], selectedBu) : null),
+    [showPnl, revenues, expenses, selectedBu]
+  );
 
   const activeProjectStatuses = ['준비중', '기획중', '진행중', '운영중'];
   const onHoldProjectStatuses = ['보류'];
@@ -157,7 +172,7 @@ export function DashboardView({
           >
             전체
           </button>
-          {(Object.keys(BU_TITLES) as BU[]).map((key) => (
+          {BU_CODES.map((key) => (
             <button
               key={key}
               onClick={() => setSelectedBu(key)}
@@ -173,6 +188,27 @@ export function DashboardView({
           ))}
         </div>
       </div>
+
+      {pnl && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <span className="font-semibold text-slate-600 dark:text-slate-300">
+            {selectedBu === 'ALL' ? '회사 손익' : `${BU_TITLES[selectedBu]} 관리손익`}
+          </span>
+          <span className="tabular-nums text-blue-600 dark:text-blue-400">매출 {formatCurrency(pnl.revenue)}</span>
+          <span className="tabular-nums text-red-500 dark:text-red-400">지출 {formatCurrency(pnl.expense)}</span>
+          <span className={cn('tabular-nums font-bold', pnl.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+            순익 {formatCurrency(pnl.profit)}
+          </span>
+          {(pnl.internalRevenue > 0 || pnl.internalExpense > 0) && (
+            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+              {pnl.includesInternal
+                ? `내부 포함 · 매출 ${formatCurrency(pnl.internalRevenue)} · 지출 ${formatCurrency(pnl.internalExpense)}`
+                : `내부배부 제외 · 매출 ${formatCurrency(pnl.internalRevenue)} · 지출 ${formatCurrency(pnl.internalExpense)}`}
+            </span>
+          )}
+          <span className="text-[10px] text-slate-400">상단 기간 기준 · 취소 제외</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-8">
         <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 p-4 sm:p-6 shadow-sm">

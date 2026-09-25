@@ -8,6 +8,7 @@ import type { BU } from '@/features/erp/types';
 import { BU_TITLES } from '@/features/erp/types';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { contentToHtml } from '@/components/ui/rich-text-viewer';
+import { BU_CODES } from '@/lib/business-units';
 
 interface ManualFormModalProps {
   mode: 'create' | 'edit';
@@ -32,7 +33,7 @@ const CATEGORY_OPTIONS = [
   '기타',
 ];
 
-const BU_OPTIONS: BU[] = ['GRIGO', 'REACT', 'FLOW', 'AST', 'MODOO', 'HEAD'];
+const BU_OPTIONS: readonly BU[] = BU_CODES;
 
 /** 기존 콘텐츠를 HTML 문자열로 변환 (에디터 초기값용) */
 function getInitialHtml(manual?: Manual): string {

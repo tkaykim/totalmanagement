@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { retryPushRegistration } from '@/lib/capacitor';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AccountStatusNotice, isAccountNoticeStatus, type AccountNoticeStatus } from '@/components/AccountStatusNotice';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<{ status: AccountNoticeStatus; name: string | null } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,19 +36,38 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // 사용자 프로필에서 상태 확인 (퇴사자는 로그인 불가)
-        const { data: appUser } = await supabase
-          .from('app_users')
-          .select('bu_code, role, status')
-          .eq('id', data.user.id)
-          .single();
+        // 본인 계정 상태 확인 (서버 라우트, 재직 여부와 무관하게 본인 상태만 돌려준다)
+        const statusRes = await fetch('/api/users/me/status', { cache: 'no-store' });
+        const own = statusRes.ok
+          ? ((await statusRes.json()) as { status: string | null; name: string | null })
+          : null;
 
-        if (appUser?.status === 'retired') {
+        if (!own) {
+          await supabase.auth.signOut();
+          setError('계정 정보를 찾을 수 없습니다. 관리자에게 문의하세요.');
+          setLoading(false);
+          return;
+        }
+
+        // 승인 대기·거절 계정은 안내 화면만 본다 (spec R20)
+        if (isAccountNoticeStatus(own.status)) {
+          setNotice({ status: own.status, name: own.name });
+          setLoading(false);
+          return;
+        }
+
+        if (own.status === 'retired') {
           await supabase.auth.signOut();
           setError('퇴사 처리된 계정은 로그인할 수 없습니다.');
           setLoading(false);
           return;
         }
+
+        const { data: appUser } = await supabase
+          .from('app_users')
+          .select('role')
+          .eq('id', data.user.id)
+          .maybeSingle();
 
         // 네이티브 앱: 로그인 직후 푸시 토큰 재등록 (처음 401로 저장 실패했을 수 있음)
         retryPushRegistration().catch(() => {});
@@ -66,6 +87,10 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (notice) {
+    return <AccountStatusNotice status={notice.status} name={notice.name} />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">

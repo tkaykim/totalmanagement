@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 const BUCKET_NAME = 'manual-images';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -11,6 +12,9 @@ const ALLOWED_TYPES = [
 ];
 
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createPureClient();
     const formData = await request.formData();

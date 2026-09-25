@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BU_SELECT_OPTIONS } from '@/lib/business-units';
 
 interface TaskTemplateFormModalProps {
   template?: TaskTemplate | null;
@@ -26,14 +27,7 @@ const TEMPLATE_TYPE_OPTIONS = [
   { value: 'custom', label: '기타 (직접 입력)' },
 ];
 
-const BU_OPTIONS: { value: BU; label: string }[] = [
-  { value: 'GRIGO', label: '그리고 엔터' },
-  { value: 'REACT', label: '리액트 스튜디오' },
-  { value: 'FLOW', label: '플로우메이커' },
-  { value: 'AST', label: '아스트 컴퍼니' },
-  { value: 'MODOO', label: '모두굿즈' },
-  { value: 'HEAD', label: '본사' },
-];
+const BU_OPTIONS: ReadonlyArray<{ value: BU; label: string }> = BU_SELECT_OPTIONS;
 
 export function TaskTemplateFormModal({ template, defaultBu, onClose }: TaskTemplateFormModalProps) {
   const [name, setName] = useState('');

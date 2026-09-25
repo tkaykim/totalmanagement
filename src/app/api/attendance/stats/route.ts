@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { calculateMonthlyStats } from '@/features/attendance/lib/workTimeCalculator';
@@ -5,6 +6,9 @@ import { canViewAllAttendance, canViewTeamAttendance } from '@/features/attendan
 import type { AttendanceLog, AppUser } from '@/types/database';
 
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;

@@ -12,17 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getBuName } from '@/lib/business-units';
 
 export type WorkStatus = 'OFF_WORK' | 'WORKING' | 'MEETING' | 'OUTSIDE' | 'BREAK' | 'OVERTIME';
 
-const BU_NAMES: Record<string, string> = {
-  HEAD: '본사',
-  GRIGO: '그리고엔터',
-  AST: 'AST컴퍼니',
-  REACT: '리액트스튜디오',
-  FLOW: '플로우메이커',
-  MODOO: '모두굿즈',
-};
 
 const WELCOME_MESSAGES = [
   '오늘도 힘차게 시작해봐요! 화이팅! 🚀',
@@ -117,7 +110,7 @@ export function useWorkStatus() {
             setUserName(name);
 
             // BU 이름과 직급을 조합하여 표시
-            const buName = appUser.bu_code ? BU_NAMES[appUser.bu_code] || appUser.bu_code : '';
+            const buName = getBuName(appUser.bu_code);
             const position = appUser.position || '';
             
             if (buName && position) {

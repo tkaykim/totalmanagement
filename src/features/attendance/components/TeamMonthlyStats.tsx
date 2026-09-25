@@ -8,21 +8,14 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Clock, Users, TrendingUp, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BU_SELECT_OPTIONS } from '@/lib/business-units';
 
 interface TeamMonthlyStatsProps {
   onSelectUser: (userId: string) => void;
   selectedUserId?: string;
 }
 
-const BU_OPTIONS = [
-  { value: 'all', label: '전체' },
-  { value: 'HEAD', label: '본사' },
-  { value: 'GRIGO', label: '그리고엔터' },
-  { value: 'FLOW', label: '플로우메이커' },
-  { value: 'REACT', label: '리액트스튜디오' },
-  { value: 'MODOO', label: '모두굿즈' },
-  { value: 'AST', label: 'AST컴퍼니' },
-];
+const BU_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [{ value: 'all', label: '전체' }, ...BU_SELECT_OPTIONS];
 
 export function TeamMonthlyStats({ onSelectUser, selectedUserId }: TeamMonthlyStatsProps) {
   const [currentDate, setCurrentDate] = useState(new Date());

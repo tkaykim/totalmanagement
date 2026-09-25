@@ -3,6 +3,28 @@
 import { useState } from 'react';
 import { ModalShell, InputField, SelectField, ModalActions } from './modal-components';
 import { BU, BU_TITLES } from '../types';
+import { BU_CODES } from '@/lib/business-units';
+import { ChangeLogList } from './ChangeLogList';
+
+/**
+ * 새로 줄 수 있는 역할(spec 2절·R21): 관리자·리더·매니저·멤버.
+ * viewer·artist는 enum에만 남은 옛 역할이라 선택지에서 뺀다. 이미 그 역할인 계정은 읽기 전용으로 보여 준다.
+ */
+const ASSIGNABLE_ROLE_OPTIONS = [
+  { value: 'admin', label: '관리자' },
+  { value: 'leader', label: '리더' },
+  { value: 'manager', label: '매니저' },
+  { value: 'member', label: '멤버' },
+];
+
+const LEGACY_ROLE_LABELS: Record<string, string> = {
+  viewer: '뷰어(옛 역할)',
+  artist: '아티스트(옛 역할)',
+};
+
+function isAssignableRole(role: string | null | undefined): boolean {
+  return ASSIGNABLE_ROLE_OPTIONS.some((o) => o.value === role);
+}
 
 export function EditUserModal({
   user,
@@ -33,6 +55,10 @@ export function EditUserModal({
     status: (user.status || 'active') as 'active' | 'dormant' | 'retired',
   });
   const [error, setError] = useState<string>('');
+  // 옛 역할(viewer·artist 등)인 계정: 역할은 보여 주기만 하고, 저장할 때 역할을 보내지 않는다.
+  const legacyRole = !!user.role && !isAssignableRole(user.role) ? String(user.role) : null;
+  const [changeLegacyRole, setChangeLegacyRole] = useState(false);
+  const showRoleSelect = !legacyRole || changeLegacyRole;
 
   return (
     <ModalShell title="회원 정보 수정" onClose={onClose}>
@@ -50,25 +76,44 @@ export function EditUserModal({
           value={form.email}
           onChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
         />
-        <SelectField
-          label="역할"
-          value={form.role}
-          onChange={(val) => setForm((prev) => ({ ...prev, role: val }))}
-          options={[
-            { value: 'admin', label: '관리자' },
-            { value: 'manager', label: '매니저' },
-            { value: 'member', label: '멤버' },
-            { value: 'viewer', label: '뷰어' },
-            { value: 'artist', label: '아티스트' },
-          ]}
-        />
+        {showRoleSelect ? (
+          <SelectField
+            label="역할"
+            value={isAssignableRole(form.role) ? form.role : ''}
+            onChange={(val) => setForm((prev) => ({ ...prev, role: val }))}
+            options={[
+              ...(isAssignableRole(form.role) ? [] : [{ value: '', label: '역할 선택' }]),
+              ...ASSIGNABLE_ROLE_OPTIONS,
+            ]}
+          />
+        ) : (
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">역할</span>
+            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <span>{LEGACY_ROLE_LABELS[legacyRole!] ?? legacyRole}</span>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChangeLegacyRole(true);
+                    setForm((prev) => ({ ...prev, role: '' }));
+                  }}
+                  className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  역할 바꾸기
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400">이 역할은 더 이상 새로 줄 수 없습니다. 그대로 두면 바뀌지 않습니다.</p>
+          </div>
+        )}
         <SelectField
           label="소속사업부"
           value={form.bu_code}
           onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val }))}
           options={[
             { value: '', label: '선택 안함' },
-            ...(Object.keys(BU_TITLES) as BU[]).map((k) => ({
+            ...BU_CODES.map((k) => ({
               value: k,
               label: BU_TITLES[k],
             })),
@@ -107,10 +152,12 @@ export function EditUserModal({
           <p className="text-xs font-semibold text-red-600">{error}</p>
         </div>
       )}
+      {isAdmin && <ChangeLogList kind="user" id={user?.id} />}
       <ModalActions
         onPrimary={async () => {
           const missingFields: string[] = [];
           if (!form.name) missingFields.push('이름');
+          if (showRoleSelect && !isAssignableRole(form.role)) missingFields.push('역할');
 
           if (missingFields.length > 0) {
             setError(`다음 항목을 입력해주세요: ${missingFields.join(', ')}`);
@@ -121,7 +168,8 @@ export function EditUserModal({
           await onSubmit({
             name: form.name,
             email: form.email || undefined,
-            role: form.role,
+            // 옛 역할을 그대로 두면 역할은 보내지 않는다(바뀌지 않음)
+            role: showRoleSelect ? form.role : undefined,
             bu_code: form.bu_code || undefined,
             position: form.position || undefined,
             hire_date: isAdmin ? (form.hire_date || undefined) : undefined,
@@ -198,13 +246,7 @@ export function CreateUserModal({
           label="역할"
           value={form.role}
           onChange={(val) => setForm((prev) => ({ ...prev, role: val }))}
-          options={[
-            { value: 'admin', label: '관리자' },
-            { value: 'manager', label: '매니저' },
-            { value: 'member', label: '멤버' },
-            { value: 'viewer', label: '뷰어' },
-            { value: 'artist', label: '아티스트' },
-          ]}
+          options={ASSIGNABLE_ROLE_OPTIONS}
         />
         <SelectField
           label="소속사업부"
@@ -212,7 +254,7 @@ export function CreateUserModal({
           onChange={(val) => setForm((prev) => ({ ...prev, bu_code: val }))}
           options={[
             { value: '', label: '선택 안함' },
-            ...(Object.keys(BU_TITLES) as BU[]).map((k) => ({
+            ...BU_CODES.map((k) => ({
               value: k,
               label: BU_TITLES[k],
             })),

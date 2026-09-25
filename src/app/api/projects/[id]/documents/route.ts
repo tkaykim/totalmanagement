@@ -1,15 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
+import { canEditProject, canViewProject } from '@/lib/permissions';
+import { loadPermProject } from '@/app/api/projects/_lib/access';
+
+/**
+ * 재직 확인 + 프로젝트 보기 범위(R1·R2·R8). 볼 수 없으면 404.
+ * `edit`이면 수정 권한(R10)도 본다: 볼 수만 있는 사람(다른 사업부 리더 등)은 403.
+ */
+async function guardProject(id: string, edit: boolean) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return { error: guard };
+  const supabase: any = await createPureClient();
+  const loaded = await loadPermProject(supabase, id);
+  if (!loaded || !canViewProject(guard.appUser, loaded.perm)) {
+    return { error: NextResponse.json({ error: 'Project not found' }, { status: 404 }) };
+  }
+  if (edit && !canEditProject(guard.appUser, loaded.perm)) {
+    return { error: NextResponse.json({ error: 'Permission denied' }, { status: 403 }) };
+  }
+  return { supabase, appUser: guard.appUser };
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
+  let ctx;
   try {
-    const supabase = await createPureClient();
-    const { id } = await params;
+    ctx = await guardProject(id, false);
+  } catch (error) {
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
+  if ('error' in ctx) return ctx.error;
+  const { supabase } = ctx;
 
+  try {
     const { data: documents, error } = await supabase
       .from('project_documents')
       .select('*')
@@ -60,14 +87,18 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
+  let ctx;
   try {
-    const supabase = await createPureClient();
-    const authSupabase = await createClient();
-    const { id } = await params;
+    ctx = await guardProject(id, true);
+  } catch (error) {
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
+  if ('error' in ctx) return ctx.error;
+  const { supabase, appUser } = ctx;
+  const userId = appUser.id;
 
-    // 현재 로그인한 사용자 정보 가져오기
-    const { data: { user } } = await authSupabase.auth.getUser();
-    const userId = user?.id || null;
+  try {
 
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];

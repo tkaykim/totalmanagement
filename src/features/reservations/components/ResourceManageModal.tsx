@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Plus, Pencil, Trash2, Building, Car, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MeetingRoom, Vehicle, Equipment, CreateMeetingRoomPayload, CreateVehiclePayload, CreateEquipmentPayload } from '../types';
+import { BU_CODES, BU_META } from '@/lib/business-units';
 
 type ResourceTab = 'meeting_room' | 'vehicle' | 'equipment';
 
@@ -25,14 +26,7 @@ interface ResourceManageModalProps {
   onDeleteEquipment: (id: number) => Promise<void>;
 }
 
-const BU_OPTIONS = [
-  { code: 'GRIGO', name: '그리고' },
-  { code: 'FLOW', name: '플로우' },
-  { code: 'REACT', name: '리액트' },
-  { code: 'MODOO', name: '모두' },
-  { code: 'AST', name: 'AST' },
-  { code: 'HEAD', name: '본부' },
-];
+const BU_OPTIONS = BU_CODES.map((code) => ({ code, name: BU_META[code].shortLabel }));
 
 const EQUIPMENT_CATEGORIES = [
   '카메라',

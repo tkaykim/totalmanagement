@@ -1,3 +1,4 @@
+import { toApiError } from './finance-ui';
 import type {
   Project,
   ProjectTask,
@@ -38,12 +39,15 @@ const API_BASE = '/api';
 export async function fetchProjects(bu?: BU): Promise<Project[]> {
   const url = bu ? `${API_BASE}/projects?bu=${bu}` : `${API_BASE}/projects`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch projects');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch projects');
   return res.json();
 }
 
 export async function createProject(data: {
   bu_code: BU;
+  brand_bu_code?: BU;
+  delivery_bu_code?: BU;
+  artist_management_bu_code?: BU | null;
   name: string;
   category: string;
   status?: string;
@@ -59,19 +63,7 @@ export async function createProject(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) {
-    // 서버에서 전달한 에러 메시지를 그대로 노출해 디버깅 및 UX 개선
-    let message = 'Failed to create project';
-    try {
-      const errorBody = await res.json();
-      if (errorBody?.error) {
-        message = errorBody.error;
-      }
-    } catch {
-      // JSON 파싱 실패 시 기본 메시지 유지
-    }
-    throw new Error(message);
-  }
+  if (!res.ok) throw await toApiError(res, '프로젝트 등록에 실패했습니다.');
   return res.json();
 }
 
@@ -81,7 +73,7 @@ export async function updateProject(id: number, data: Partial<Project>): Promise
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update project');
+  if (!res.ok) throw await toApiError(res, 'Failed to update project');
   return res.json();
 }
 
@@ -89,7 +81,7 @@ export async function deleteProject(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/projects/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete project');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete project');
 }
 
 function normalizeTaskStatusFromApi(task: any): any {
@@ -105,7 +97,7 @@ export async function fetchTasks(bu?: BU, projectId?: number): Promise<ProjectTa
   if (projectId) params.append('project_id', String(projectId));
   const url = `${API_BASE}/tasks${params.toString() ? `?${params}` : ''}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch tasks');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch tasks');
   const data = await res.json();
   if (!Array.isArray(data)) return data;
   return data.map(normalizeTaskStatusFromApi);
@@ -130,7 +122,7 @@ export async function createTask(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create task');
+  if (!res.ok) throw await toApiError(res, 'Failed to create task');
   const task = await res.json();
   return normalizeTaskStatusFromApi(task);
 }
@@ -141,7 +133,7 @@ export async function updateTask(id: number, data: Partial<ProjectTask>): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update task');
+  if (!res.ok) throw await toApiError(res, 'Failed to update task');
   const task = await res.json();
   return normalizeTaskStatusFromApi(task);
 }
@@ -150,7 +142,7 @@ export async function deleteTask(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/tasks/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete task');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete task');
 }
 
 export async function fetchFinancialEntries(params?: {
@@ -168,7 +160,7 @@ export async function fetchFinancialEntries(params?: {
   if (params?.endDate) searchParams.append('end_date', params.endDate);
   const url = `${API_BASE}/financial-entries${searchParams.toString() ? `?${searchParams}` : ''}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch financial entries');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch financial entries');
   return res.json();
 }
 
@@ -180,6 +172,7 @@ export async function createFinancialEntry(data: {
   name: string;
   amount: number;
   occurred_at: string;
+  due_date?: string | null;
   status?: string;
   memo?: string;
   created_by?: string;
@@ -189,7 +182,7 @@ export async function createFinancialEntry(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create financial entry');
+  if (!res.ok) throw await toApiError(res, 'Failed to create financial entry');
   return res.json();
 }
 
@@ -202,7 +195,7 @@ export async function updateFinancialEntry(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update financial entry');
+  if (!res.ok) throw await toApiError(res, 'Failed to update financial entry');
   return res.json();
 }
 
@@ -210,12 +203,12 @@ export async function deleteFinancialEntry(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/financial-entries/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete financial entry');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete financial entry');
 }
 
 export async function fetchOrgMembers(): Promise<(OrgUnit & { members: any[] })[]> {
   const res = await fetch(`${API_BASE}/org-members`);
-  if (!res.ok) throw new Error('Failed to fetch org members');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch org members');
   return res.json();
 }
 
@@ -235,7 +228,7 @@ export async function createOrgMember(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create org member');
+  if (!res.ok) throw await toApiError(res, 'Failed to create org member');
   return res.json();
 }
 
@@ -258,7 +251,7 @@ export async function updateOrgMember(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update org member');
+  if (!res.ok) throw await toApiError(res, 'Failed to update org member');
   return res.json();
 }
 
@@ -266,12 +259,12 @@ export async function deleteOrgMember(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/org-members/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete org member');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete org member');
 }
 
 export async function fetchBusinessUnits(): Promise<any[]> {
   const res = await fetch(`${API_BASE}/business-units`);
-  if (!res.ok) throw new Error('Failed to fetch business units');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch business units');
   return res.json();
 }
 
@@ -281,7 +274,7 @@ export async function fetchUsers(): Promise<{
   currentUser: any;
 }> {
   const res = await fetch(`${API_BASE}/users`);
-  if (!res.ok) throw new Error('Failed to fetch users');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch users');
   return res.json();
 }
 
@@ -299,8 +292,7 @@ export async function createUser(data: {
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to create user');
+    throw await toApiError(res, 'Failed to create user');
   }
   return res.json();
 }
@@ -323,8 +315,7 @@ export async function updateUser(
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to update user');
+    throw await toApiError(res, 'Failed to update user');
   }
   return res.json();
 }
@@ -337,7 +328,7 @@ export async function updateUser(
 export async function fetchClients(bu?: BU): Promise<ClientCompany[]> {
   const url = bu ? `${API_BASE}/clients?bu=${bu}` : `${API_BASE}/clients`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch clients');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch clients');
   return res.json();
 }
 
@@ -357,7 +348,7 @@ export async function createClient(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create client');
+  if (!res.ok) throw await toApiError(res, 'Failed to create client');
   return res.json();
 }
 
@@ -367,7 +358,7 @@ export async function updateClient(id: number, data: Partial<ClientCompany>): Pr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update client');
+  if (!res.ok) throw await toApiError(res, 'Failed to update client');
   return res.json();
 }
 
@@ -375,7 +366,7 @@ export async function deleteClient(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/clients/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete client');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete client');
 }
 
 // Client Workers
@@ -384,7 +375,7 @@ export async function fetchClientWorkers(clientCompanyId?: number): Promise<Clie
     ? `${API_BASE}/client-workers?client_company_id=${clientCompanyId}`
     : `${API_BASE}/client-workers`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch client workers');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch client workers');
   return res.json();
 }
 
@@ -401,7 +392,7 @@ export async function createClientWorker(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create client worker');
+  if (!res.ok) throw await toApiError(res, 'Failed to create client worker');
   return res.json();
 }
 
@@ -411,7 +402,7 @@ export async function updateClientWorker(id: number, data: Partial<ClientWorker>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update client worker');
+  if (!res.ok) throw await toApiError(res, 'Failed to update client worker');
   return res.json();
 }
 
@@ -419,14 +410,14 @@ export async function deleteClientWorker(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/client-workers/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete client worker');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete client worker');
 }
 
 // Equipment
 export async function fetchEquipment(bu?: BU): Promise<Equipment[]> {
   const url = bu ? `${API_BASE}/equipment?bu=${bu}` : `${API_BASE}/equipment`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch equipment');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch equipment');
   return res.json();
 }
 
@@ -447,7 +438,7 @@ export async function createEquipment(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create equipment');
+  if (!res.ok) throw await toApiError(res, 'Failed to create equipment');
   return res.json();
 }
 
@@ -457,7 +448,7 @@ export async function updateEquipment(id: number, data: Partial<Equipment>): Pro
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update equipment');
+  if (!res.ok) throw await toApiError(res, 'Failed to update equipment');
   return res.json();
 }
 
@@ -465,14 +456,14 @@ export async function deleteEquipment(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/equipment/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete equipment');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete equipment');
 }
 
 // Channels
 export async function fetchChannels(bu?: BU): Promise<Channel[]> {
   const url = bu ? `${API_BASE}/channels?bu=${bu}` : `${API_BASE}/channels`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch channels');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch channels');
   return res.json();
 }
 
@@ -495,7 +486,7 @@ export async function createChannel(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create channel');
+  if (!res.ok) throw await toApiError(res, 'Failed to create channel');
   return res.json();
 }
 
@@ -505,7 +496,7 @@ export async function updateChannel(id: number, data: Partial<Channel>): Promise
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update channel');
+  if (!res.ok) throw await toApiError(res, 'Failed to update channel');
   return res.json();
 }
 
@@ -513,7 +504,7 @@ export async function deleteChannel(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/channels/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete channel');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete channel');
 }
 
 // Channel Contents
@@ -522,7 +513,7 @@ export async function fetchChannelContents(channelId?: number): Promise<ChannelC
     ? `${API_BASE}/channel-contents?channel_id=${channelId}`
     : `${API_BASE}/channel-contents`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch channel contents');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch channel contents');
   return res.json();
 }
 
@@ -539,7 +530,7 @@ export async function createChannelContent(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create channel content');
+  if (!res.ok) throw await toApiError(res, 'Failed to create channel content');
   return res.json();
 }
 
@@ -552,7 +543,7 @@ export async function updateChannelContent(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update channel content');
+  if (!res.ok) throw await toApiError(res, 'Failed to update channel content');
   return res.json();
 }
 
@@ -560,7 +551,7 @@ export async function deleteChannelContent(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/channel-contents/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete channel content');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete channel content');
 }
 
 // Events
@@ -571,7 +562,7 @@ export async function fetchEvents(bu?: BU, startDate?: string, endDate?: string)
   if (endDate) params.append('end_date', endDate);
   const url = `${API_BASE}/events${params.toString() ? `?${params}` : ''}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch events');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch events');
   return res.json();
 }
 
@@ -589,7 +580,7 @@ export async function createEvent(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create event');
+  if (!res.ok) throw await toApiError(res, 'Failed to create event');
   return res.json();
 }
 
@@ -599,7 +590,7 @@ export async function updateEvent(id: number, data: Partial<Event>): Promise<Eve
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update event');
+  if (!res.ok) throw await toApiError(res, 'Failed to update event');
   return res.json();
 }
 
@@ -607,7 +598,7 @@ export async function deleteEvent(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/events/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete event');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete event');
 }
 
 // Manuals
@@ -618,7 +609,7 @@ export async function fetchManuals(bu?: BU, category?: string, includeInactive?:
   if (includeInactive) params.append('active_only', 'false');
   const url = `${API_BASE}/manuals${params.toString() ? `?${params}` : ''}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch manuals');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch manuals');
   return res.json();
 }
 
@@ -635,7 +626,7 @@ export async function createManual(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create manual');
+  if (!res.ok) throw await toApiError(res, 'Failed to create manual');
   return res.json();
 }
 
@@ -645,7 +636,7 @@ export async function updateManual(id: number, data: Partial<Manual>): Promise<M
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update manual');
+  if (!res.ok) throw await toApiError(res, 'Failed to update manual');
   return res.json();
 }
 
@@ -653,7 +644,7 @@ export async function deleteManual(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/manuals/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete manual');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete manual');
 }
 
 // ============================================
@@ -667,7 +658,7 @@ export async function fetchCreators(bu?: BU): Promise<Creator[]> {
   if (bu) params.append('bu', bu);
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch creators');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch creators');
   const response = await res.json();
   return (response.data || []).map((p: any) => ({
     id: p.id,
@@ -733,7 +724,7 @@ export async function createCreator(data: {
       },
     }),
   });
-  if (!res.ok) throw new Error('Failed to create creator');
+  if (!res.ok) throw await toApiError(res, 'Failed to create creator');
   const partner = await res.json();
   return {
     id: partner.id,
@@ -778,7 +769,7 @@ export async function updateCreator(id: number, data: Partial<Creator>): Promise
       },
     }),
   });
-  if (!res.ok) throw new Error('Failed to update creator');
+  if (!res.ok) throw await toApiError(res, 'Failed to update creator');
   return res.json();
 }
 
@@ -786,7 +777,7 @@ export async function deleteCreator(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete creator');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete creator');
 }
 
 // ============================================
@@ -796,7 +787,7 @@ export async function deleteCreator(id: number): Promise<void> {
 export async function fetchExternalWorkers(bu?: BU): Promise<ExternalWorker[]> {
   const url = bu ? `${API_BASE}/external-workers?bu=${bu}` : `${API_BASE}/external-workers`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch external workers');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch external workers');
   return res.json();
 }
 
@@ -806,7 +797,7 @@ export async function fetchPartners(bu?: BU): Promise<{ id: number; display_name
   params.append('limit', '500'); // 충분히 많은 수의 파트너를 가져옴
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch partners');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch partners');
   const response = await res.json();
   // API 응답 형식: { data: [...], pagination: {...} }
   return (response.data || []).map((p: any) => ({
@@ -823,7 +814,7 @@ export async function fetchPartnerCompanies(bu?: BU): Promise<any[]> {
   if (bu) params.append('bu', bu);
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch partner companies');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch partner companies');
   const response = await res.json();
   return (response.data || []).map((p: any) => ({
     id: p.id,
@@ -844,7 +835,7 @@ export async function fetchPartnerWorkers(bu?: BU): Promise<any[]> {
   if (bu) params.append('bu', bu);
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch partner workers');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch partner workers');
   const response = await res.json();
   return (response.data || []).map((p: any) => ({
     id: p.id,
@@ -873,7 +864,7 @@ export async function createExternalWorker(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create external worker');
+  if (!res.ok) throw await toApiError(res, 'Failed to create external worker');
   return res.json();
 }
 
@@ -886,7 +877,7 @@ export async function updateExternalWorker(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update external worker');
+  if (!res.ok) throw await toApiError(res, 'Failed to update external worker');
   return res.json();
 }
 
@@ -894,7 +885,7 @@ export async function deleteExternalWorker(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/external-workers/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete external worker');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete external worker');
 }
 
 // ============================================
@@ -908,7 +899,7 @@ export async function fetchArtists(bu?: BU): Promise<Artist[]> {
   if (bu) params.append('bu', bu);
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch artists');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch artists');
   const response = await res.json();
   return (response.data || []).map((p: any) => ({
     id: p.id,
@@ -966,8 +957,7 @@ export async function createArtist(data: {
     }),
   });
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(errorData.error || 'Failed to create artist');
+    throw await toApiError(res, 'Failed to create artist');
   }
   const partner = await res.json();
   return {
@@ -1007,7 +997,7 @@ export async function updateArtist(id: number, data: Partial<Artist>): Promise<A
       },
     }),
   });
-  if (!res.ok) throw new Error('Failed to update artist');
+  if (!res.ok) throw await toApiError(res, 'Failed to update artist');
   return res.json();
 }
 
@@ -1015,7 +1005,7 @@ export async function deleteArtist(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete artist');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete artist');
 }
 
 // ============================================
@@ -1039,7 +1029,7 @@ export async function fetchDancers(
   
   const url = `${API_BASE}/unified-partners?${params.toString()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch dancers');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch dancers');
   const response = await res.json();
   const dancers = (response.data || []).map((p: any) => ({
     id: p.id,
@@ -1116,8 +1106,7 @@ export async function createDancer(data: {
     }),
   });
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(errorData.error || 'Failed to create dancer');
+    throw await toApiError(res, 'Failed to create dancer');
   }
   const partner = await res.json();
   return {
@@ -1169,7 +1158,7 @@ export async function updateDancer(id: number, data: Partial<Dancer>): Promise<D
       },
     }),
   });
-  if (!res.ok) throw new Error('Failed to update dancer');
+  if (!res.ok) throw await toApiError(res, 'Failed to update dancer');
   return res.json();
 }
 
@@ -1177,7 +1166,7 @@ export async function deleteDancer(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/unified-partners/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete dancer');
+  if (!res.ok) throw await toApiError(res, 'Failed to delete dancer');
 }
 
 // ============================================
@@ -1193,7 +1182,7 @@ export async function fetchComments(
   params.append('entity_id', String(entityId));
   const url = `${API_BASE}/comments?${params}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch comments');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch comments');
   return res.json();
 }
 
@@ -1209,8 +1198,7 @@ export async function createComment(data: {
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to create comment');
+    throw await toApiError(res, 'Failed to create comment');
   }
   return res.json();
 }
@@ -1225,8 +1213,7 @@ export async function updateComment(
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to update comment');
+    throw await toApiError(res, 'Failed to update comment');
   }
   return res.json();
 }
@@ -1236,14 +1223,13 @@ export async function deleteComment(id: number): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to delete comment');
+    throw await toApiError(res, 'Failed to delete comment');
   }
 }
 
 export async function fetchMentionedComments(): Promise<(Comment & { is_read: boolean; read_at: string | null })[]> {
   const res = await fetch(`${API_BASE}/comments/mentions`);
-  if (!res.ok) throw new Error('Failed to fetch mentioned comments');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch mentioned comments');
   return res.json();
 }
 
@@ -1253,15 +1239,14 @@ export async function markCommentAsRead(commentId: number): Promise<any> {
     headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to mark comment as read');
+    throw await toApiError(res, 'Failed to mark comment as read');
   }
   return res.json();
 }
 
 export async function fetchCommentReads(commentId: number): Promise<any[]> {
   const res = await fetch(`${API_BASE}/comments/${commentId}/reads`);
-  if (!res.ok) throw new Error('Failed to fetch comment reads');
+  if (!res.ok) throw await toApiError(res, 'Failed to fetch comment reads');
   return res.json();
 }
 
@@ -1280,8 +1265,7 @@ export async function uploadCommentAttachment(
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to upload attachment');
+    throw await toApiError(res, 'Failed to upload attachment');
   }
   return res.json();
 }
@@ -1293,8 +1277,7 @@ export async function deleteCommentAttachment(attachmentId: number): Promise<voi
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to delete attachment');
+    throw await toApiError(res, 'Failed to delete attachment');
   }
 }
 

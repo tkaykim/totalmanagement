@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -6,6 +7,9 @@ import { createClient } from '@/lib/supabase/server';
  * GET /api/push/tokens?userIds=id1,id2,id3
  */
 export async function GET(request: NextRequest) {
+    const guard = await requireActiveStaff();
+    if (isGuardFailure(guard)) return guard;
+
     try {
         const supabase = await createClient();
 

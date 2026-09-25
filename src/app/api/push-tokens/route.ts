@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -7,6 +8,9 @@ import { createClient } from '@/lib/supabase/server';
 
 // 푸시 토큰 조회
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 
@@ -38,6 +42,9 @@ export async function GET(request: NextRequest) {
 
 // 푸시 토큰 등록/업데이트
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 
@@ -96,6 +103,9 @@ export async function POST(request: NextRequest) {
 
 // 푸시 토큰 비활성화 (로그아웃 시)
 export async function DELETE(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 

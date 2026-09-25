@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import { getTodayKST } from '@/lib/timezone.server';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 /**
  * 관리자 전용: 날짜별 전체 사용자 업무일지 제출 현황 조회
@@ -8,6 +9,9 @@ import { getTodayKST } from '@/lib/timezone.server';
  * - 모든 사용자 목록 + 해당 날짜에 업무일지를 제출했는지 여부 반환
  */
 export async function GET(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const authSupabase = await createClient();
     const { data: { user } } = await authSupabase.auth.getUser();

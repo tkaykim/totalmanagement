@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { BU, BU_TITLES } from '../types';
+import { BU_CODES } from '@/lib/business-units';
 
 export interface BuTabsProps {
   bu: BU | 'ALL';
@@ -11,7 +12,7 @@ export interface BuTabsProps {
 }
 
 export function BuTabs({ bu, onChange, prefix, showAll = true }: BuTabsProps) {
-  const buKeys = (Object.keys(BU_TITLES) as BU[]);
+  const buKeys = BU_CODES;
   
   return (
     <div className="max-w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">

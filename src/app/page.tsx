@@ -76,7 +76,6 @@ import {
 import {
   dbProjectToFrontend,
   dbTaskToFrontend,
-  dbFinancialToFrontend,
   frontendProjectToDb,
   frontendTaskToDb,
   frontendFinancialToDb,
@@ -102,7 +101,17 @@ import { CreateOrgMemberModal, EditOrgMemberModal, CreateExternalWorkerModal, Ed
 import { EditUserModal, CreateUserModal } from '@/features/erp/components/UserModals';
 import { TasksView } from '@/features/erp/components/TasksView';
 import { OrganizationView } from '@/features/erp/components/OrganizationView';
+import { AccountStatusNotice, isAccountNoticeStatus, type AccountNoticeStatus } from '@/components/AccountStatusNotice';
 import { CreateFinanceModal, EditFinanceModal } from '@/features/erp/components/FinanceFormModals';
+import {
+  buildFinanceDateFields,
+  errorToMessage,
+  filterEntriesForTab,
+  summarizePnl,
+  toFinanceEntryView,
+  toPermUser,
+  type FinanceEntryView,
+} from '@/features/erp/finance-ui';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { PartnersView } from '@/features/partners/components/PartnersView';
 import { MeetingRoomView } from '@/features/reservations/components/MeetingRoomView';
@@ -139,6 +148,7 @@ import {
   BU_CHIP_STYLES,
   formatCurrency,
 } from '@/features/erp/types';
+import { BU_CODES } from '@/lib/business-units';
 
 const isDateInRange = (date: string, start?: string, end?: string) => {
   if (!start || !end) return true;
@@ -174,6 +184,8 @@ function HomePage() {
   const [customRange, setCustomRange] = useState<{ start?: string; end?: string }>({});
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // 승인 대기·거절 계정 안내 (spec R20)
+  const [accountNotice, setAccountNotice] = useState<{ status: AccountNoticeStatus; name: string | null } | null>(null);
 
   // 딥링크 진입 감지 (알림 클릭으로 특정 뷰로 직접 이동 시)
   const [isDeepLink, setIsDeepLink] = useState(() => {
@@ -359,7 +371,7 @@ function HomePage() {
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
   const [isFinanceModalOpen, setFinanceModalOpen] = useState<null | 'revenue' | 'expense'>(null);
   const [financeDefaultProjectId, setFinanceDefaultProjectId] = useState<string | null>(null);
-  const [isEditFinanceModalOpen, setEditFinanceModalOpen] = useState<FinancialEntry | null>(null);
+  const [isEditFinanceModalOpen, setEditFinanceModalOpen] = useState<FinanceEntryView | null>(null);
   const [isEditTaskModalOpen, setEditTaskModalOpen] = useState<TaskItem | null>(null);
   const [isEditProjectModalOpen, setEditProjectModalOpen] = useState<Project | null>(null);
   const [viewProjectDetail, setViewProjectDetail] = useState<Project | null>(null);
@@ -485,6 +497,13 @@ function HomePage() {
         .eq('id', user.id)
         .single();
 
+      // 승인 대기·거절 계정은 안내 화면만 본다 (spec R20)
+      if (isAccountNoticeStatus(appUser?.status)) {
+        setAccountNotice({ status: appUser.status, name: appUser.name ?? null });
+        setLoading(false);
+        return;
+      }
+
       // 퇴사 처리된 사용자는 로그인 불가
       if (appUser?.status === 'retired') {
         await supabase.auth.signOut();
@@ -495,12 +514,6 @@ function HomePage() {
       // bu_code가 null인 경우 로그인 페이지로 리디렉션
       if (!appUser?.bu_code) {
         router.push('/login');
-        return;
-      }
-
-      // artist role인 경우 /artist로 리다이렉션 (루트 페이지 접근 불가)
-      if (appUser.role === 'artist') {
-        router.push('/artist');
         return;
       }
 
@@ -564,7 +577,7 @@ function HomePage() {
     endDate: activePeriod.end,
   });
 
-  const allFinancial = useMemo(() => financialData.map(dbFinancialToFrontend) as FinancialEntry[], [financialData]);
+  const allFinancial = useMemo(() => financialData.map(toFinanceEntryView), [financialData]);
 
   // 프로젝트 상세 패널/편집 모달용: 상단 기간 필터와 무관하게 해당 project_id의 전체 재무를 별도 조회
   const { data: detailProjectFinancialData = [] } = useFinancialEntries(
@@ -572,7 +585,7 @@ function HomePage() {
     { enabled: !!viewProjectDetail },
   );
   const detailProjectFinancial = useMemo(
-    () => detailProjectFinancialData.map(dbFinancialToFrontend) as FinancialEntry[],
+    () => detailProjectFinancialData.map(toFinanceEntryView),
     [detailProjectFinancialData],
   );
 
@@ -581,7 +594,7 @@ function HomePage() {
     { enabled: !!isEditProjectModalOpen },
   );
   const editProjectFinancial = useMemo(
-    () => editProjectFinancialData.map(dbFinancialToFrontend) as FinancialEntry[],
+    () => editProjectFinancialData.map(toFinanceEntryView),
     [editProjectFinancialData],
   );
 
@@ -596,25 +609,26 @@ function HomePage() {
   const filteredRevenues = revenues;
   const filteredExpenses = expenses;
 
+  // 전사 합계 = 회사 손익(내부배부 제외, 취소 제외) (R26)
   const totals = useMemo(() => {
-    const totalRev = filteredRevenues.reduce((sum, r) => sum + r.amount, 0);
-    const totalExp = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-    return { totalRev, totalExp, totalProfit: totalRev - totalExp };
-  }, [filteredExpenses, filteredRevenues]);
+    const company = summarizePnl(allFinancial, 'ALL');
+    return { totalRev: company.revenue, totalExp: company.expense, totalProfit: company.profit };
+  }, [allFinancial]);
 
+  // 사업부 카드 = 행 사업부 기준 관리손익(내부배부 포함) (R26)
   const buCards = useMemo(
     () =>
-      (Object.keys(BU_TITLES) as BU[]).map((key) => {
-        const buProjects = projects.filter((p) => p.bu === key);
-        const buRev = filteredRevenues
-          .filter((r) => buProjects.some((p) => p.id === r.projectId))
-          .reduce((sum, r) => sum + r.amount, 0);
-        const buExp = filteredExpenses
-          .filter((e) => buProjects.some((p) => p.id === e.projectId))
-          .reduce((sum, e) => sum + e.amount, 0);
-        return { bu: key, projects: buProjects.length, revenue: buRev, expense: buExp, profit: buRev - buExp };
+      BU_CODES.map((key) => {
+        const pnl = summarizePnl(allFinancial, key);
+        return {
+          bu: key,
+          projects: projects.filter((p) => p.bu === key).length,
+          revenue: pnl.revenue,
+          expense: pnl.expense,
+          profit: pnl.profit,
+        };
       }),
-    [filteredExpenses, filteredRevenues, projects],
+    [allFinancial, projects],
   );
 
   const currentProjects = useMemo(
@@ -664,29 +678,30 @@ function HomePage() {
     };
   }, [activePeriod.end, activePeriod.start, expenses, modalProjectId, revenues]);
 
-  const settlementRows = useMemo(() => {
-    if (bu === 'ALL') {
-      const revRows = filteredRevenues;
-      const expRows = filteredExpenses;
-      return { revRows, expRows };
-    }
-    const buProjectIds = projects.filter((p) => p.bu === bu).map((p) => p.id);
-    const revRows = filteredRevenues.filter((r) => buProjectIds.includes(r.projectId));
-    const expRows = filteredExpenses.filter((e) => buProjectIds.includes(e.projectId));
-    return { revRows, expRows };
-  }, [bu, filteredExpenses, filteredRevenues, projects]);
+  // 정산 탭 행: '전체'는 전 행, 사업부 탭은 행 사업부(bu_code)가 그 사업부인 행 (R26)
+  const settlementRows = useMemo(
+    () => ({
+      revRows: filterEntriesForTab(filteredRevenues, bu),
+      expRows: filterEntriesForTab(filteredExpenses, bu),
+    }),
+    [bu, filteredExpenses, filteredRevenues],
+  );
 
+  // 사업부별 외부 매출 비중(회사 손익 기준, 내부배부·취소 제외)
   const revenueShare = useMemo(() => {
-    const total = filteredRevenues.reduce((sum, r) => sum + r.amount, 0);
-    return (Object.keys(BU_TITLES) as BU[]).map((key) => {
-      const buProjectIds = projects.filter((p) => p.bu === key).map((p) => p.id);
-      const amount = filteredRevenues
-        .filter((r) => buProjectIds.includes(r.projectId))
-        .reduce((sum, r) => sum + r.amount, 0);
+    const externalRevenues = filteredRevenues.filter(
+      (r) => r.status !== 'canceled' && r.entry_scope !== 'internal_allocation',
+    );
+    const total = externalRevenues.reduce((sum, r) => sum + r.amount, 0);
+    return BU_CODES.map((key) => {
+      const amount = externalRevenues.filter((r) => r.bu === key).reduce((sum, r) => sum + r.amount, 0);
       const ratio = total === 0 ? 0 : Math.round((amount / total) * 100);
       return { bu: key, amount, ratio };
     });
-  }, [filteredRevenues, projects]);
+  }, [filteredRevenues]);
+
+  // 매출·지출 버튼 표시용 사용자 (서버가 최종 판정)
+  const financePermUser = useMemo(() => toPermUser(user?.profile), [user?.profile]);
 
   const handlePeriodTypeChange = (type: 'all' | 'year' | 'quarter' | 'month' | 'custom') => {
     setPeriodType(type);
@@ -798,6 +813,9 @@ function HomePage() {
   const handleCreateProject = async (payload: {
     name: string;
     bu: BU;
+    brand_bu: BU;
+    delivery_bu: BU;
+    artist_management_bu?: BU | null;
     cat: string;
     startDate: string;
     endDate: string;
@@ -866,6 +884,9 @@ function HomePage() {
     id?: string;
     name: string;
     bu: BU;
+    brand_bu: BU;
+    delivery_bu: BU;
+    artist_management_bu?: BU | null;
     cat: string;
     startDate: string;
     endDate: string;
@@ -882,6 +903,9 @@ function HomePage() {
     try {
       const dbData = frontendProjectToDb({
         bu: payload.bu,
+        brand_bu: payload.brand_bu,
+        delivery_bu: payload.delivery_bu,
+        artist_management_bu: payload.artist_management_bu,
         name: payload.name,
         cat: payload.cat,
         startDate: payload.startDate,
@@ -912,7 +936,9 @@ function HomePage() {
       }
     } catch (error) {
       console.error('Failed to delete project:', error);
-      alert('프로젝트 삭제 중 오류가 발생했습니다.');
+      // 재무 기록이 있으면 서버가 409 "…보류로 바꾸세요"를 준다(R15). 그 문구를 그대로 보여 준다.
+      setDeleteProjectId(null);
+      alert(errorToMessage(error, '프로젝트 삭제 중 오류가 발생했습니다.'));
     }
   };
 
@@ -951,10 +977,15 @@ function HomePage() {
     type: 'revenue' | 'expense';
     projectId: string;
     bu: BU;
+    entryScope: 'external' | 'internal_allocation';
+    counterpartyBu?: BU | '';
+    memo?: string;
     cat: string;
     name: string;
     amount: string;
     date: string;
+    dueDate: string;
+    paidAtDate: string;
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
@@ -964,6 +995,8 @@ function HomePage() {
     if (!payload.cat) missingFields.push('구분');
     if (!payload.name) missingFields.push('항목명');
     if (!payload.amount) missingFields.push('금액');
+    if (payload.status === 'planned' && !payload.dueDate) missingFields.push('기한');
+    if (payload.status === 'paid' && !payload.paidAtDate) missingFields.push('입금·지급일');
 
     if (missingFields.length > 0) {
       return `다음 항목을 입력해주세요: ${missingFields.join(', ')}`;
@@ -978,22 +1011,33 @@ function HomePage() {
       const dbData = frontendFinancialToDb({
         projectId: payload.projectId,
         bu: payload.bu,
+        entry_scope: payload.entryScope,
+        counterparty_bu: payload.counterpartyBu || null,
+        memo: payload.memo || null,
         type: payload.type,
         category: payload.cat,
         name: payload.name,
         amount: amount,
         date: payload.date,
+        due_date: payload.dueDate || null,
         status: payload.status,
         partner_id: payload.partnerId ? Number(payload.partnerId) : null,
         payment_method: payload.paymentMethod || null,
         actual_amount: actualAmount,
       });
-      await createFinancialMutation.mutateAsync(dbData);
+      // 완료로 등록하면 입금·지급일(YYYY-MM-DD)을 함께 보낸다. 서버가 한국 자정으로 저장한다(R14).
+      const dateFields = buildFinanceDateFields({
+        originalStatus: null,
+        status: payload.status,
+        dueDate: payload.dueDate,
+        paidAtDate: payload.paidAtDate,
+      });
+      await createFinancialMutation.mutateAsync({ ...dbData, ...dateFields });
       setFinanceModalOpen(null);
       return null;
     } catch (error) {
       console.error('Failed to create financial entry:', error);
-      return '등록 중 오류가 발생했습니다.';
+      return errorToMessage(error, '등록 중 오류가 발생했습니다.');
     }
   };
 
@@ -1002,15 +1046,23 @@ function HomePage() {
     type: 'revenue' | 'expense';
     projectId: string;
     bu: BU;
+    entryScope: 'external' | 'internal_allocation';
+    counterpartyBu?: BU | '';
+    memo?: string;
     cat: string;
     name: string;
     amount: string;
     date: string;
+    dueDate: string;
+    paidAtDate: string;
     status: FinancialEntryStatus;
     partnerId?: string;
     paymentMethod?: 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment' | '';
-  }) => {
-    if (!payload.cat || !payload.name || !payload.amount) return;
+  }): Promise<string | null> => {
+    if (!payload.cat || !payload.name || !payload.amount) {
+      return '구분·항목명·금액을 입력해주세요.';
+    }
+    const original = isEditFinanceModalOpen?.id === payload.id ? isEditFinanceModalOpen : null;
     try {
       const today = getTodayKST();
       const amount = Number(payload.amount);
@@ -1018,21 +1070,41 @@ function HomePage() {
         ? calculateActualAmount(amount, payload.paymentMethod)
         : null;
 
-      const dbData = {
+      const dbData: Record<string, unknown> = {
+        entry_scope: payload.entryScope,
+        counterparty_bu_code: payload.entryScope === 'internal_allocation'
+          ? payload.counterpartyBu || null
+          : null,
+        memo: payload.memo || null,
         kind: payload.type,
         category: payload.cat,
         name: payload.name,
         amount: amount,
         occurred_at: payload.date || today,
-        status: payload.status,
         partner_id: payload.partnerId ? Number(payload.partnerId) : null,
         payment_method: payload.paymentMethod || null,
         actual_amount: actualAmount,
+        // 기한·입금일은 바뀐 칸만 보낸다(R14: 기한 없는 옛 완료·취소 행도 그대로 저장된다)
+        ...buildFinanceDateFields({
+          originalStatus: original ? original.status : payload.status,
+          status: payload.status,
+          dueDate: payload.dueDate,
+          paidAtDate: payload.paidAtDate,
+          original: original ?? { due_date: payload.dueDate || null, paid_at: null },
+        }),
       };
+      // 상태·사업부·프로젝트는 바뀐 경우에만 보낸다(전이·이동 권한은 서버가 판정한다)
+      if (!original || payload.status !== original.status) dbData.status = payload.status;
+      if (!original || payload.bu !== original.bu) dbData.bu_code = payload.bu;
+      if (original && payload.projectId && payload.projectId !== original.projectId) {
+        dbData.project_id = Number(payload.projectId);
+      }
       await updateFinancialMutation.mutateAsync({ id: Number(payload.id), data: dbData });
       setEditFinanceModalOpen(null);
+      return null;
     } catch (error) {
       console.error('Failed to update financial entry:', error);
+      return errorToMessage(error, '저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -1074,6 +1146,10 @@ function HomePage() {
       return '수정 중 오류가 발생했습니다.';
     }
   };
+
+  if (accountNotice) {
+    return <AccountStatusNotice status={accountNotice.status} name={accountNotice.name} />;
+  }
 
   if (loading) {
     return (
@@ -1330,7 +1406,7 @@ function HomePage() {
               rows={settlementRows}
               projects={projects}
               onEditFinance={setEditFinanceModalOpen}
-              canViewAllBu={(user?.profile?.role === 'admin' || user?.profile?.role === 'leader') && user?.profile?.bu_code === 'HEAD'}
+              canViewAllBu={canViewAllStats}
               canViewNetProfit={
                 user?.profile?.role === 'admin' ||
                 user?.profile?.role === 'leader' ||
@@ -1594,15 +1670,19 @@ function HomePage() {
       )}
       {isEditFinanceModalOpen && (
         <EditFinanceModal
+          key={isEditFinanceModalOpen.id}
           entry={isEditFinanceModalOpen}
+          currentUser={financePermUser}
           onClose={() => setEditFinanceModalOpen(null)}
           onSubmit={handleUpdateFinance}
           onDelete={async (id) => {
             try {
               await deleteFinancialMutation.mutateAsync(Number(id));
               setEditFinanceModalOpen(null);
+              return null;
             } catch (error) {
               console.error('Failed to delete financial entry:', error);
+              return errorToMessage(error, '삭제 중 오류가 발생했습니다.');
             }
           }}
           projects={projects}
@@ -1760,6 +1840,8 @@ function HomePage() {
             amount: f.amount,
             status: f.status,
             occurred_at: f.date,
+            entry_scope: f.entry_scope,
+            counterparty_bu: f.counterparty_bu,
           }))}
           tasksData={tasks
             .filter((t) => t.projectId === isEditProjectModalOpen.id)

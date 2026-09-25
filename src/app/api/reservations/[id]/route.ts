@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient, createClient } from '@/lib/supabase/server';
 import { notifyReservationUpdated, notifyReservationCancelled } from '@/lib/notification-sender';
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -19,6 +20,9 @@ async function getResourceName(pureClient: any, resourceType: string, resourceId
 }
 
 export async function GET(_request: NextRequest, context: RouteContext) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const params = await context.params;
     const id = params.id;
@@ -44,6 +48,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const params = await context.params;
     const id = params.id;
@@ -125,6 +132,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const params = await context.params;
     const id = params.id;

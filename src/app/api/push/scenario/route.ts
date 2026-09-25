@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createNotificationForUsers } from '@/lib/notification-sender';
@@ -10,6 +11,9 @@ import { getPushScenarioById } from '@/features/push-test/constants/push-scenari
  * - targetUserId 없으면 현재 로그인 사용자에게 발송
  */
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 
@@ -87,6 +91,9 @@ export async function POST(request: NextRequest) {
  * GET /api/push/scenario
  */
 export async function GET() {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
 

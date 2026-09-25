@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChartLine, Coins, DollarSign, PieChart, FileText, Search, Wallet } from 'lucide-react';
+import { ChartLine, Coins, DollarSign, Search, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BU,
@@ -13,10 +13,14 @@ import {
 import { BuTabs } from './BuTabs';
 import { StatCard } from './StatCard';
 import { Input } from '@/components/ui/input';
-import { ProjectShareTab, SettlementListTab } from '@/features/settlement/components';
 import { OutstandingTab } from './OutstandingTab';
+import { isInternalAllocation, summarizePnl } from '../finance-ui';
 
-type SettlementTabType = 'overview' | 'project-share' | 'outstanding' | 'settlements';
+/**
+ * 정산 화면: 사업부별 매출·지출(개요)과 미수 관리.
+ * 파트너 하위 탭(프로젝트별 분배, 정산서 관리)은 외부인 기능이라 숨긴다(R27). 코드는 남긴다.
+ */
+type SettlementTabType = 'overview' | 'outstanding';
 type FinanceViewType = 'revenue' | 'expense';
 
 export interface SettlementViewProps {
@@ -78,17 +82,18 @@ export function SettlementView({
     return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300';
   };
 
-  const totalRevenue = useMemo(() => {
-    return rows.revRows.reduce((sum, r) => sum + r.amount, 0);
-  }, [rows.revRows]);
-
-  const totalExpense = useMemo(() => {
-    return rows.expRows.reduce((sum, e) => sum + e.amount, 0);
-  }, [rows.expRows]);
-
-  const totalProfit = useMemo(() => {
-    return totalRevenue - totalExpense;
-  }, [totalRevenue, totalExpense]);
+  // R26: '전체' = 회사 손익(내부배부 제외), 사업부 탭 = 관리손익(내부배부 포함). 취소 제외.
+  // rows는 이미 탭(행 사업부)으로 걸러져 있으므로 여기서는 'ALL'/사업부 여부만 본다.
+  const isCompanyView = bu === 'ALL';
+  const pnl = useMemo(
+    () => summarizePnl([...rows.revRows, ...rows.expRows], isCompanyView ? 'ALL' : bu),
+    [rows.revRows, rows.expRows, isCompanyView, bu]
+  );
+  const totalRevenue = pnl.revenue;
+  const totalExpense = pnl.expense;
+  const totalProfit = pnl.profit;
+  const labelPrefix = isCompanyView ? '회사' : '관리';
+  const totalRowLabel = isCompanyView ? '합계(내부배부 제외)' : '합계(내부 포함)';
 
   const searchLower = searchQuery.trim().toLowerCase();
   const filteredRevRows = useMemo(() => {
@@ -119,19 +124,17 @@ export function SettlementView({
   }, [rows.expRows, searchLower, projects, partnerCompaniesData, partnerWorkersData]);
 
   const filteredTotalRevenue = useMemo(
-    () => filteredRevRows.reduce((sum, r) => sum + r.amount, 0),
-    [filteredRevRows]
+    () => summarizePnl(filteredRevRows, isCompanyView ? 'ALL' : bu).revenue,
+    [filteredRevRows, isCompanyView, bu]
   );
   const filteredTotalExpense = useMemo(
-    () => filteredExpRows.reduce((sum, e) => sum + e.amount, 0),
-    [filteredExpRows]
+    () => summarizePnl(filteredExpRows, isCompanyView ? 'ALL' : bu).expense,
+    [filteredExpRows, isCompanyView, bu]
   );
 
   const tabs = [
     { id: 'overview' as const, label: '전체 정산', icon: ChartLine },
-    { id: 'project-share' as const, label: '프로젝트별 분배', icon: PieChart },
     { id: 'outstanding' as const, label: '미수 관리', icon: Wallet },
-    { id: 'settlements' as const, label: '정산서 관리', icon: FileText },
   ];
 
   return (
@@ -161,10 +164,6 @@ export function SettlementView({
         </div>
       </div>
 
-      {activeTab === 'project-share' && (
-        <ProjectShareTab bu={bu} />
-      )}
-
       {activeTab === 'outstanding' && (
         <OutstandingTab
           revRows={rows.revRows}
@@ -177,34 +176,36 @@ export function SettlementView({
         />
       )}
 
-      {activeTab === 'settlements' && (
-        <SettlementListTab />
-      )}
-
       {activeTab === 'overview' && (
         <>
           <div className={cn("grid grid-cols-1 gap-4", canViewNetProfit ? "md:grid-cols-3" : "md:grid-cols-2")}>
             <StatCard
-              title="총 매출"
+              title={`${labelPrefix} 매출`}
               value={totalRevenue}
               icon={<DollarSign className="h-5 w-5 text-blue-500" />}
               accent="text-blue-600"
             />
             <StatCard
-              title="총 지출"
+              title={`${labelPrefix} 지출`}
               value={totalExpense}
               icon={<Coins className="h-5 w-5 text-red-500" />}
               accent="text-red-600"
             />
             {canViewNetProfit && (
               <StatCard
-                title="순익"
+                title={`${labelPrefix} 순익`}
                 value={totalProfit}
                 icon={<ChartLine className={cn('h-5 w-5', totalProfit >= 0 ? 'text-emerald-500' : 'text-red-500')} />}
                 accent={totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}
               />
             )}
           </div>
+
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            {isCompanyView
+              ? `회사 손익: 사업부 간 내부배부는 합계에서 뺍니다(취소 제외).${pnl.internalRevenue || pnl.internalExpense ? ` 제외된 내부배부 매출 ${formatCurrency(pnl.internalRevenue)} · 지출 ${formatCurrency(pnl.internalExpense)}` : ''}`
+              : `관리손익: 이 사업부 행 전체(내부배부 포함, 취소 제외).${pnl.internalRevenue || pnl.internalExpense ? ` 그중 내부 매출 ${formatCurrency(pnl.internalRevenue)} · 지출 ${formatCurrency(pnl.internalExpense)}` : ''}`}
+          </p>
 
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-md">
@@ -295,15 +296,22 @@ export function SettlementView({
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{getPartnerName(r)}</td>
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap text-[9px] sm:text-[11px]">{r.date}</td>
                           <td className="px-2 sm:px-4 py-3">
-                            <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(r.status))}>
-                              {getStatusLabel(r.status)}
-                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(r.status))}>
+                                {getStatusLabel(r.status)}
+                              </span>
+                              {isInternalAllocation(r) && (
+                                <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[8px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 sm:text-[9px]">
+                                  내부
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
                       <tr className="bg-blue-50/20 dark:bg-blue-900/30 border-t-2 border-blue-200 dark:border-blue-700">
                         <td colSpan={3} className="px-2 sm:px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
-                          {searchLower ? '필터 합계' : '합계'}
+                          {searchLower ? `검색 결과 ${totalRowLabel}` : totalRowLabel}
                         </td>
                         <td className="px-2 sm:px-4 py-3 font-black text-blue-600 dark:text-blue-400 italic whitespace-nowrap">{formatCurrency(filteredTotalRevenue)}</td>
                         <td colSpan={3} className="px-2 sm:px-4 py-3"></td>
@@ -332,15 +340,22 @@ export function SettlementView({
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{getPartnerName(e)}</td>
                           <td className="px-2 sm:px-4 py-3 font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap text-[9px] sm:text-[11px]">{e.date}</td>
                           <td className="px-2 sm:px-4 py-3">
-                            <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(e.status))}>
-                              {getStatusLabel(e.status)}
-                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold whitespace-nowrap', getStatusClass(e.status))}>
+                                {getStatusLabel(e.status)}
+                              </span>
+                              {isInternalAllocation(e) && (
+                                <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[8px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 sm:text-[9px]">
+                                  내부
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
                       <tr className="bg-red-50/20 dark:bg-red-900/30 border-t-2 border-red-200 dark:border-red-700">
                         <td colSpan={3} className="px-2 sm:px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
-                          {searchLower ? '필터 합계' : '합계'}
+                          {searchLower ? `검색 결과 ${totalRowLabel}` : totalRowLabel}
                         </td>
                         <td className="px-2 sm:px-4 py-3 font-black text-red-500 dark:text-red-400 italic whitespace-nowrap">{formatCurrency(filteredTotalExpense)}</td>
                         <td colSpan={3} className="px-2 sm:px-4 py-3"></td>

@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { canModifyAttendance } from '@/features/attendance/lib/permissions';
@@ -5,6 +6,9 @@ import { toKSTISOString } from '@/lib/timezone.server';
 import type { AppUser } from '@/types/database';
 
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     

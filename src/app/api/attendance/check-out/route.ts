@@ -1,3 +1,4 @@
+import { requireActiveStaff, isGuardFailure } from '@/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getNowKSTISO } from '@/lib/timezone.server';
@@ -5,6 +6,9 @@ import { createActivityLog } from '@/lib/activity-logger';
 import { notifyCheckOutToHeadAdmin } from '@/lib/notification-sender';
 
 export async function POST(request: NextRequest) {
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+
   try {
     const supabase = await createClient();
     

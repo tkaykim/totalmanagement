@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPureClient } from '@/lib/supabase/server';
+import { rejectUnauthorizedCron } from '@/lib/cron-auth';
 import { notifyOverdueSummary } from '@/lib/notification-sender';
 import { format, startOfDay, endOfDay } from 'date-fns';
 
@@ -11,17 +12,13 @@ const OVERDUE_SUMMARY_TITLE = '마감이 지난 할일·프로젝트가 있습�
  * 담당자·PM당 하나의 요약 알림만 발송 (알림 최소화)
  *
  * GET /api/notifications/overdue
- * Query params:
- *   - key: API 보안 키 (환경변수 CRON_SECRET과 비교)
+ * Header: Authorization: Bearer <CRON_SECRET> (미설정 시 401)
  */
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const cronSecret = searchParams.get('key');
-
-    if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // 크론 인증: Authorization: Bearer <CRON_SECRET>. 시크릿 미설정이면 거부.
+    const unauthorized = rejectUnauthorizedCron(request);
+    if (unauthorized) return unauthorized;
 
     const supabase = await createPureClient();
     const todayStr = format(new Date(), 'yyyy-MM-dd');

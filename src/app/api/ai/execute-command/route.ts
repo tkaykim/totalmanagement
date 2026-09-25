@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createPureClient } from '@/lib/supabase/server';
+import { createPureClient } from '@/lib/supabase/server';
 import { generateContent, isAllowedEmail } from '@/lib/ai/gemini';
 import { createActivityLog, createTaskAssignedLog } from '@/lib/activity-logger';
 import { notifyProjectPMAssigned, notifyTaskAssigned } from '@/lib/notification-sender';
+import { BU_CODES, type BuCode } from '@/lib/business-units';
+import { isGuardFailure, requireActiveStaff } from '@/lib/auth-guard';
+import { isAuditV2Enabled } from '@/lib/feature-flags';
+import { canCreateFinance, canViewProject, validateFinanceDates } from '@/lib/permissions';
+import { getTodayKST } from '@/lib/timezone.server';
+import { fetchAllRows } from '@/lib/supabase/fetch-all';
+import {
+  isEntryVisible,
+  seesAllFinance,
+  toPermProject,
+} from '@/app/api/financial-entries/_lib/finance-access';
 
 export const dynamic = 'force-dynamic';
-
-const BU_CODES = ['GRIGO', 'FLOW', 'REACT', 'MODOO', 'AST', 'HEAD'] as const;
-
-type BuCode = (typeof BU_CODES)[number];
 
 function parseJsonFromGemini(raw: string): Record<string, unknown> | null {
   const trimmed = raw.trim();
@@ -117,20 +124,21 @@ function buildPlanMessage(action: string, parsed: Record<string, unknown>): stri
     return `[진행 예정] 할일 삭제: 프로젝트 "${p.project_name_or_keyword}"의 "${p.task_title}". 확인 후 "실행"을 눌러 주세요.`;
   }
   if (a === 'create_financial') {
-    return `[진행 예정] 재무 등록: 프로젝트 "${p.project_name_or_keyword}"에 ${p.kind === 'revenue' ? '매출' : '지출'} "${p.name}" ${Number(p.amount)?.toLocaleString()}원 (${p.occurred_at || '오늘'}). 확인 후 "실행"을 눌러 주세요.`;
+    return `[진행 예정] 재무 등록: 프로젝트 "${p.project_name_or_keyword}"에 ${p.kind === 'revenue' ? '매출' : '지출'} "${p.name}" ${Number(p.amount)?.toLocaleString()}원 (${p.occurred_at || '오늘'}, 기한 ${p.due_date}). 확인 후 "실행"을 눌러 주세요.`;
   }
   return `[진행 예정] ${action}. 확인 후 "실행"을 눌러 주세요.`;
 }
 
 export async function POST(request: NextRequest) {
+  // 공통 가드(세션 → app_users → 재직) 뒤에 기존 이메일 허용 목록을 그대로 확인한다.
+  const guard = await requireActiveStaff();
+  if (isGuardFailure(guard)) return guard;
+  const { user: authUser, appUser } = guard;
+  if (!authUser?.email || !isAllowedEmail(authUser.email)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
-    const authSupabase = await createClient();
-    const {
-      data: { user: authUser },
-    } = await authSupabase.auth.getUser();
-    if (!authUser?.email || !isAllowedEmail(authUser.email)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -206,7 +214,7 @@ action 종류:
 - update_task: 할일 수정. 필드: project_name_or_keyword, task_title, status?, assignee_name?, due_date?
 - delete_task: 할일 삭제. 필드: project_name_or_keyword, task_title
 - financial_status: 재무 현황 질의. 필드: project_name_or_keyword
-- create_financial: 매출/지출 등록. 필드: project_name_or_keyword, kind, category, name, amount, occurred_at?, memo?
+- create_financial: 매출/지출 등록. 필드: project_name_or_keyword, kind, category, name, amount, due_date (YYYY-MM-DD, 받을/줄 기한), occurred_at?, memo?
 - person_busy: "OOO 바빠?", "OOO 상황 어때?" 등 특정 인물의 업무 부하·바쁨 질의. 필드: person_name (대상 인물 이름)
 - unassigned_summary: "담당자 미지정 할일/프로젝트 몇 건?" 등 미배정 건수 질의. 필드 없음.
 - none: 위에 해당 없음. 필드: message (1~2문장으로 짧게)
@@ -426,22 +434,33 @@ ${JSON.stringify(payload, null, 2)}
     if (action === 'financial_status' && projectKeyword) {
       const { data: projs } = await supabase
         .from('projects')
-        .select('id, name, bu_code')
+        .select('id, name, bu_code, pm_id, created_by, participants')
         .ilike('name', `%${projectKeyword}%`)
         .limit(10);
-      const pList = projs ?? [];
-      const pIds = pList.map((p: any) => p.id);
+      // 보기 범위(R9): 관리자·리더는 전체, 일반 직원은 볼 수 있는 프로젝트의 행
+      const pList = ((projs ?? []) as Record<string, unknown>[])
+        .filter((p) => seesAllFinance(appUser) || canViewProject(appUser, toPermProject(p)))
+        .map((p) => ({ id: p.id, name: p.name, bu_code: p.bu_code }));
+      const pIds = pList.map((p) => p.id);
       if (pIds.length === 0) {
         return NextResponse.json({
           message: `"${projectKeyword}"에 해당하는 프로젝트를 찾지 못했습니다.`,
           created: null,
         });
       }
-      const { data: entries } = await supabase
-        .from('financial_entries')
-        .select('id, project_id, kind, category, name, amount, occurred_at, status')
-        .in('project_id', pIds)
-        .order('occurred_at', { ascending: false });
+      const entryRows = await fetchAllRows<Record<string, unknown>>((from, to) =>
+        supabase
+          .from('financial_entries')
+          .select('id, project_id, bu_code, created_by, kind, category, name, amount, occurred_at, status')
+          .in('project_id', pIds)
+          .order('occurred_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to)
+      );
+      const visibleIds = seesAllFinance(appUser) ? null : new Set(pIds.map((pid) => String(pid)));
+      const entries = entryRows
+        .filter((e) => isEntryVisible(appUser, e, visibleIds))
+        .map(({ bu_code: _bu, created_by: _cb, ...rest }) => rest);
       const byProject: Record<number, any[]> = {};
       (entries ?? []).forEach((e: any) => {
         if (!byProject[e.project_id]) byProject[e.project_id] = [];
@@ -663,41 +682,61 @@ ${JSON.stringify(payload, null, 2)}
           created: null,
         });
       }
-      const { data: proj } = await supabase
+      const { data: projRow } = await supabase
         .from('projects')
-        .select('id, name, bu_code')
+        .select('id, name, bu_code, pm_id, created_by, participants')
         .ilike('name', `%${projectKeyword}%`)
         .limit(1)
-        .single();
-      if (!proj) {
+        .maybeSingle();
+      const permProject = projRow ? toPermProject(projRow as Record<string, unknown>) : null;
+      // 볼 수 없는 프로젝트는 없는 것처럼 답한다(spec 15절)
+      if (!projRow || !permProject || !canViewProject(appUser, permProject)) {
         return NextResponse.json({
           message: `"${projectKeyword}" 프로젝트를 찾지 못했습니다.`,
           created: null,
         });
       }
-      const occurredAt = (parsed?.occurred_at as string)?.trim() || new Date().toISOString().slice(0, 10);
+      const proj = projRow as { id: number; name: string; bu_code: BuCode };
+      // 매출·지출 API와 같은 권한(R11): 행 사업부 = 프로젝트 사업부
+      if (!canCreateFinance(appUser, permProject, proj.bu_code)) {
+        const msg = `[${proj.name}]에 매출·지출을 등록할 권한이 없습니다.`;
+        return NextResponse.json({ error: msg, message: msg, created: null }, { status: 403 });
+      }
+      const occurredAt = (parsed?.occurred_at as string)?.trim() || getTodayKST();
       const memo = (parsed?.memo as string)?.trim() || null;
+      const rawDue = typeof parsed?.due_date === 'string' ? parsed.due_date.trim() : '';
+      // 매출·지출 API와 같은 기한 검증(R14): 예정(planned) 행은 기한 필수
+      const dates = validateFinanceDates({ status: 'planned', due_date: rawDue || null });
+      if (!dates.ok) {
+        const msg = `${(dates as { error: string }).error} 받을/줄 기한(예: 2026-10-31)을 함께 알려 주세요.`;
+        return NextResponse.json({ error: msg, message: msg, created: null }, { status: 400 });
+      }
+      const dueDate = dates.due_date ?? null;
       if (!shouldExecute) {
         return NextResponse.json({
-          message: buildPlanMessage('create_financial', { ...parsed, project_name_or_keyword: projectKeyword, occurred_at: occurredAt }),
-          plan: { action: 'create_financial', project_name_or_keyword: projectKeyword, kind, name, amount, category, occurred_at: occurredAt, memo },
+          message: buildPlanMessage('create_financial', { ...parsed, project_name_or_keyword: projectKeyword, occurred_at: occurredAt, due_date: dueDate }),
+          plan: { action: 'create_financial', project_name_or_keyword: projectKeyword, kind, name, amount, category, occurred_at: occurredAt, due_date: dueDate, memo },
           executed: false,
         });
       }
+      const insertRow: Record<string, unknown> = {
+        project_id: proj.id,
+        bu_code: proj.bu_code,
+        entry_scope: 'external',
+        kind,
+        category,
+        name,
+        amount,
+        occurred_at: occurredAt,
+        due_date: dueDate,
+        status: 'planned',
+        memo,
+        created_by: appUser.id,
+      };
+      if (isAuditV2Enabled()) insertRow.updated_by = appUser.id;
       const { data: entry, error: finErr } = await supabase
         .from('financial_entries')
-        .insert({
-          project_id: proj.id,
-          bu_code: proj.bu_code,
-          kind,
-          category,
-          name,
-          amount,
-          occurred_at: occurredAt,
-          status: 'planned',
-          memo,
-          created_by: authUser.id,
-        })
+        .insert(insertRow)
         .select('id, name, kind, amount, occurred_at')
         .single();
       if (finErr) {

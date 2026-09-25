@@ -1,10 +1,18 @@
-export type BU = 'GRIGO' | 'REACT' | 'FLOW' | 'AST' | 'MODOO' | 'HEAD';
+export type BU = import('@/lib/business-units').BuCode;
 export type ProjectStatus = '준비중' | '진행중' | '운영중' | '기획중' | '보류' | '완료';
 export type TaskStatus = 'todo' | 'in_progress' | 'on_hold' | 'done';
 export type FinancialKind = 'revenue' | 'expense';
 export type FinancialStatus = 'planned' | 'paid' | 'canceled';
+export type FinancialEntryScope = 'external' | 'internal_allocation';
 export type PaymentMethod = 'vat_included' | 'tax_free' | 'withholding' | 'actual_payment';
 export type ERPRole = 'admin' | 'leader' | 'manager' | 'member' | 'viewer' | 'artist';
+/**
+ * app_users.status (text 칸). 재직 직원은 'active'뿐이다.
+ * pending(승인 대기)·rejected(가입 거절)·retired(퇴사)·dormant(휴면)는 모두 차단 대상이다(spec R1).
+ */
+export type AppUserStatus = 'active' | 'retired' | 'dormant' | 'pending' | 'rejected';
+/** 변경 기록의 출처: ERP 서버 쓰기(updated_by 있음) / 그 밖의 쓰기(reactstudio·워커 등) */
+export type ChangeLogSource = 'erp' | 'external';
 export type TaskPriority = 'high' | 'medium' | 'low';
 export type EquipmentStatus = 'available' | 'rented' | 'maintenance' | 'lost';
 export type ChannelStatus = 'active' | 'growing' | 'inactive' | 'archived';
@@ -92,6 +100,9 @@ export interface ProjectParticipant {
 export interface Project {
   id: number;
   bu_code: BU;
+  brand_bu_code: BU;
+  delivery_bu_code: BU;
+  artist_management_bu_code?: BU | null;
   name: string;
   category: string;
   description?: string | null; // 프로젝트 설명 (nullable)
@@ -149,19 +160,41 @@ export interface FinancialEntry {
   // 묶여 있어 NULL row가 자연스럽게 제외되므로 런타임 영향 없음.
   project_id: number | null;
   bu_code: BU;
+  entry_scope: FinancialEntryScope;
+  counterparty_bu_code?: BU | null;
   kind: FinancialKind;
   category: string;
   name: string;
   amount: number;
   occurred_at: string;
+  due_date?: string | null; // 납기일 (nullable, 신규 저장 시 필수)
   status: FinancialStatus;
   memo?: string;
   partner_id?: number | null;
   payment_method?: PaymentMethod | null;
   actual_amount?: number | null;
+  /** 실제 입금·지급일(timestamptz). ERP는 `YYYY-MM-DDT00:00:00+09:00`로 저장한다(R14). */
+  paid_at?: string | null;
   created_by?: string;
+  /** 변경자 전달 칸(R17). ERP_AUDIT_V2가 켜졌을 때만 서버가 쓴다. 트리거가 기록 뒤 비운다. */
+  updated_by?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** 매출·지출 변경 기록 (financial_entry_changes, R17) */
+export interface FinancialEntryChange {
+  id: number;
+  entry_id: number;
+  action: 'insert' | 'update';
+  /** 칸 이름. insert는 '*' */
+  field: string;
+  /** 변경 전 값(text). insert는 null */
+  old_value: string | null;
+  new_value: string | null;
+  changed_by: string | null;
+  source: ChangeLogSource;
+  changed_at: string;
 }
 
 export interface OrgUnit {
@@ -191,10 +224,27 @@ export interface AppUser {
   email?: string;
   role: ERPRole;
   bu_code?: BU;
+  /** 재직 상태(text). 'active'만 데이터에 접근한다. */
+  status?: AppUserStatus;
   position?: string;
   artist_id?: number;
+  /** 변경자 전달 칸(R19). ERP_AUDIT_V2가 켜졌을 때만 서버가 쓴다. 트리거가 기록 뒤 비운다. */
+  updated_by?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** 직원 역할·사업부·재직 상태 변경 기록 (app_user_changes, R19). action은 update만. */
+export interface AppUserChange {
+  id: number;
+  user_id: string;
+  action: 'update';
+  field: string;
+  old_value: string | null;
+  new_value: string | null;
+  changed_by: string | null;
+  source: ChangeLogSource;
+  changed_at: string;
 }
 
 export interface PartnerCompany {
@@ -576,4 +626,3 @@ export interface AttendanceLog {
   created_at: string;
   updated_at: string;
 }
-
