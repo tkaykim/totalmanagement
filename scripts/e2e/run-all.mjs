@@ -79,7 +79,7 @@ try {
   for (const r of u.results) {
     if (r.skipped) { lines.push(`### ${r.account}: 건너뜀(${r.skipped})`, ""); continue; }
     const bad = r.views.filter((x) => !x.ok);
-    lines.push(`### ${r.account} — 화면 ${r.views.length}개 중 실패 ${bad.length}`, `로그인 후: ${r.login?.url ?? ""} ${r.login?.error ?? ""}`);
+    lines.push(`### ${r.account} — 로그인 ${r.login?.ok ? "정상" : "실패"}(${r.login?.outcome ?? r.login?.error ?? ""}, 시도 ${r.login?.attempt ?? "-"}) · 화면 ${r.views.length}개 중 실패 ${bad.length}`, `로그인 직후 화면: ${r.login?.url ?? ""} — ${r.login?.text ?? ""}`);
     for (const x of bad) lines.push(`- ✗ ${x.view}: ${x.notes.join("; ")}`);
     const iss = r.issues.filter((i) => i.kind !== "console");
     for (const i of iss.slice(0, 30)) lines.push(`  - [${i.view}] ${i.kind} ${i.detail}`);

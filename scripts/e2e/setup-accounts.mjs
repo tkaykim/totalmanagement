@@ -6,7 +6,9 @@
  * - 계정 5개(`tests/api/README.md` 규칙): 관리자(HEAD)·FLOW 리더·REACT 멤버·승인 대기·퇴사.
  * - 이메일은 `e2e-` 접두. 비밀번호는 실행할 때마다 새로 만들어 `.env.e2e.local`에만 쓴다(.gitignore의 `.env*`).
  * - 이미 있으면 비밀번호·역할·사업부·상태만 맞춘다. 다른 계정은 건드리지 않는다.
- * - `--retire`: 끝난 뒤 테스트 계정 전부를 퇴사(retired)로 돌린다.
+ * - 재직 테스트 계정은 근무 상태(`user_work_status`)를 WORKING으로 맞춘다. 화면 E2E가 출근 화면에 막히지 않게 하기 위해서다.
+ *   출근 버튼(`/api/attendance/check-in`)은 본사 관리자에게 알림을 보내므로 E2E에서 누르지 않는다.
+ * - `--retire`: 끝난 뒤 테스트 계정 전부를 퇴사(retired)로 돌리고 근무 상태를 OFF_WORK로 되돌린다.
  *
  * 저장소가 공개이므로 이 파일에 실제 키·비밀번호를 적지 않는다.
  */
@@ -63,8 +65,12 @@ async function findAuthUser(email) {
 
 async function retireAll() {
   for (const a of ACCOUNTS) {
-    const { error } = await admin.from("app_users").update({ status: "retired" }).eq("email", a.email);
+    const { data, error } = await admin.from("app_users").update({ status: "retired" }).eq("email", a.email).select("id");
     if (error) throw error;
+    for (const row of data ?? []) {
+      const { error: wsErr } = await admin.from("user_work_status").upsert({ user_id: row.id, status: "OFF_WORK", updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+      if (wsErr) throw wsErr;
+    }
   }
   console.log("[e2e] 테스트 계정 5개를 퇴사(retired)로 돌렸습니다.");
 }
@@ -100,6 +106,10 @@ async function setup() {
     };
     const { error: upErr } = await admin.from("app_users").upsert(row, { onConflict: "id" });
     if (upErr) throw upErr;
+    if (a.status === "active") {
+      const { error: wsErr } = await admin.from("user_work_status").upsert({ user_id: user.id, status: "WORKING", updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+      if (wsErr) throw wsErr;
+    }
     lines.push(`ERP_TEST_${a.key}_EMAIL=${a.email}`, `ERP_TEST_${a.key}_PASSWORD=${password}`);
     console.log(`[e2e] ${a.key.padEnd(7)} ${a.email} → ${a.role}/${a.bu_code ?? "-"}/${a.status}`);
   }
