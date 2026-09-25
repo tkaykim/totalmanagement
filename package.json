@@ -12,7 +12,10 @@
     "cap:ios": "npx cap open ios",
     "cap:build": "npm run build && npx cap sync",
     "test": "vitest run",
-    "test:api": "vitest run --config vitest.api.config.ts"
+    "test:api": "vitest run --config vitest.api.config.ts",
+    "e2e:all": "node scripts/e2e/run-all.mjs",
+    "e2e:accounts": "node scripts/e2e/setup-accounts.mjs",
+    "e2e:ui": "node scripts/e2e/ui-e2e.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.1",

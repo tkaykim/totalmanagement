@@ -22,6 +22,21 @@ npm run test:api
 일부만 있으면 필요한 변수가 채워진 스위트만 돈다.
 건너뛴 스위트는 빠진 변수 이름을 경고로 출력한다.
 
+## 한 번에 실행 (`npm run e2e:all`)
+
+계정 준비부터 보고서까지 한 명령으로 돈다.
+`.env.local`에 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`가 있어야 한다.
+
+```bash
+npm run e2e:all
+```
+
+1. `scripts/e2e/setup-accounts.mjs`: `e2e-*@example.com` 계정 5개(관리자 HEAD·FLOW 리더·REACT 멤버·승인 대기·퇴사)를 만들거나 맞춘다. 비밀번호는 매번 새로 만들어 `.env.e2e.local`에만 쓴다(커밋 안 됨).
+2. 이 폴더의 API 테스트를 운영 주소(`ERP_TEST_BASE_URL`, 기본 `https://totalmanagement.vercel.app`)로 돌린다. `ERP_TEST_AUDIT_V2=1`이 기본이다(운영이 켜짐).
+3. `scripts/e2e/ui-e2e.mjs`: 역할별로 로그인 화면에서 로그인해 메뉴 화면을 차례로 열고 5xx·예외·재직 계정의 401/403·오류 문구·스크린샷을 모은다. 쓰기 버튼은 누르지 않는다.
+4. 테스트 계정 5개를 퇴사로 돌린다(`--keep-accounts`로 건너뜀). 다음 실행 때 1단계가 다시 맞춘다.
+5. 결과: `e2e-report/report.md`, `vitest.json`, `ui-results.json`, `shots/` (커밋 안 됨).
+
 ## 환경변수
 
 값은 셸이나 CI 비밀값으로만 넣는다.
@@ -72,5 +87,4 @@ Supabase REST `POST /auth/v1/token?grant_type=password`로 세션을 받는다.
 | `signup-contract.test.ts` | 가입 400(누락·8자 미만·사업부 오류), 기존 이메일 409, 가입 신청 목록 비로그인 401·본사 관리자 아님 403 | 주소 (+ PENDING·RETIRED·LEADER·MEMBER) |
 | `cron-auth.test.ts` | `GET /api/notifications/overdue` Bearer 없음·틀림·옛 `?key=` → 401 | 주소 |
 
-변경 기록 확인은 `ERP_AUDIT_V2`가 꺼진 배포를 전제로 한다.
-스위치를 켠 뒤에는 그 두 건이 실패하는 것이 정상이다.
+변경 기록 확인은 `ERP_TEST_AUDIT_V2`로 배포의 스위치 값을 알려 준다. `1`이면 켜짐 검증 3건(ERP 기록, 다른 사업부 리더 403, 직원 기록 배열)을, 비우면 꺼짐 검증 2건을 돈다.

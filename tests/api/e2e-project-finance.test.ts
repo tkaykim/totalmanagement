@@ -301,17 +301,42 @@ describe.skipIf(shouldSkip("[E2E] 프로젝트·재무 권한", VARS))("[E2E] �
     expect(rowsAfter.length).toBe(rowsBefore.length);
   });
 
-  // ---------------------------------------------------------------- 변경 기록 스위치 끔 (R32)
+  // ---------------------------------------------------------------- 변경 기록 (R32)
+  // 배포의 ERP_AUDIT_V2 값에 맞춰 ERP_TEST_AUDIT_V2=1(켜짐) 또는 비움(꺼짐)으로 실행한다.
 
-  it("스위치 끔: 매출·지출 변경 기록 API는 {changes:[], enabled:false}", async () => {
+  const auditOn = process.env.ERP_TEST_AUDIT_V2 === "1";
+
+  it.skipIf(auditOn)("스위치 끔: 매출·지출 변경 기록 API는 {changes:[], enabled:false}", async () => {
     const res = await api("GET", `/api/financial-entries/${paidRow.id}/changes`, { session: admin });
     expect(res.status, describeResult(res)).toBe(200);
     expect(res.body).toEqual({ changes: [], enabled: false });
   });
 
-  it("스위치 끔: 직원 변경 기록 API는 {changes:[], enabled:false}", async () => {
+  it.skipIf(auditOn)("스위치 끔: 직원 변경 기록 API는 {changes:[], enabled:false}", async () => {
     const res = await api("GET", `/api/users/${member.userId}/changes`, { session: admin });
     expect(res.status, describeResult(res)).toBe(200);
     expect(res.body).toEqual({ changes: [], enabled: false });
+  });
+
+  it.skipIf(!auditOn)("스위치 켬: paid 행의 되돌리기·복구가 ERP 변경 기록으로 남는다", async () => {
+    const res = await api<{ changes: Array<Record<string, unknown>>; enabled: boolean }>(
+      "GET", `/api/financial-entries/${paidRow.id}/changes`, { session: admin });
+    expect(res.status, describeResult(res)).toBe(200);
+    expect(res.body.enabled).toBe(true);
+    const statusChanges = res.body.changes.filter((c) => c.field === "status");
+    expect(statusChanges.length, describeResult(res)).toBeGreaterThanOrEqual(2);
+    expect(statusChanges.every((c) => c.source === "erp"), describeResult(res)).toBe(true);
+  });
+
+  it.skipIf(!auditOn)("스위치 켬: 리더는 다른 사업부 행의 변경 기록을 못 본다(403)", async () => {
+    const res = await api("GET", `/api/financial-entries/${paidRow.id}/changes`, { session: leader });
+    expect(res.status, describeResult(res)).toBe(403);
+  });
+
+  it.skipIf(!auditOn)("스위치 켬: 직원 변경 기록 API는 enabled:true와 배열을 돌려준다", async () => {
+    const res = await api<{ changes: unknown[]; enabled: boolean }>("GET", `/api/users/${member.userId}/changes`, { session: admin });
+    expect(res.status, describeResult(res)).toBe(200);
+    expect(res.body.enabled).toBe(true);
+    expect(Array.isArray(res.body.changes)).toBe(true);
   });
 });

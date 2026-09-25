@@ -57,3 +57,6 @@ ios/App/Pods/
 
 # 로컬 작업 공간
 .dryforge/
+
+# E2E 결과(스크린샷 포함, 커밋 금지)
+/e2e-report/
